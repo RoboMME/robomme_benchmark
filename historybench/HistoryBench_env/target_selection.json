@@ -2694,5 +2694,16 @@
     ],
     "target_target": "target_1",
     "button_task_index": 4
+  },
+  {
+    "historybench_seed": 31030,
+    "which_in_subset": 1,
+    "num_targets_to_pick": 2,
+    "which_targets_to_pick": [
+      "target_2",
+      "target_1"
+    ],
+    "target_target": "target_2",
+    "button_task_index": 2
   }
 ]

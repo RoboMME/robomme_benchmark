@@ -529,7 +529,7 @@ def main():
     """
 
     # 配置区：按需修改
-    num_episodes = 1  # 每个环境重复次数
+    num_episodes = 100  # 每个环境重复次数
     gui_render = True  # 是否开启 GUI 渲染
     max_steps_without_demonstration = 3000  # 演示间隔上限
     dataset_root = Path("/data/hongzefu/dataset_demonstration")
@@ -541,16 +541,16 @@ def main():
         # "ButtonUnmaskSwap",
         # "InsertPeg",
         # "MoveCube",
-        # "PatternLock",
-        # "PickHighlight",
-        # "PickXtimes",
-        "RouteStick",
-        # "StopCube",
-        # "SwingXtimes",
-        # "VideoPlaceButton",
-        # "VideoPlaceOrder",
-        # "VideoUnmask",
-        # "VideoUnmaskSwap",
+        #"PatternLock",
+        #"PickHighlight",
+        #"PickXtimes",
+        #"RouteStick",
+        #"StopCube",
+        #"SwingXtimes",
+        #"VideoPlaceButton",
+        #"VideoPlaceOrder",
+        #"VideoUnmask",
+        #"VideoUnmaskSwap",
     ]
 
     # GUI/无 GUI 渲染模式
@@ -574,7 +574,11 @@ def main():
             )
 
             for episode in range(num_episodes):
+                if episode !=3:
+                    continue
                 env, episode_dataset, seed, difficulty = resolver.make_env_for_episode(episode)
+                #import pdb ;pdb.set_trace()
+
                 seed_desc = seed if seed is not None else "default"
                 difficulty_desc = difficulty if difficulty else "default"
                 print(

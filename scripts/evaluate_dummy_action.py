@@ -38,10 +38,26 @@ def main():
     
 
 
-    env_id_list=['BinFill']
-    dataset_path= f"/data/hongzefu/dataset_demonstration/record_dataset_BinFill.h5"
-    dataset = h5py.File(dataset_path, "r")
-    metadata_path =  f"/data/hongzefu/dataset_demonstration/record_dataset_BinFill_metadata.json"
+    env_id_list = [
+        # "VideoRepick",
+        # "BinFill",
+        # "ButtonUnmask",
+        # "ButtonUnmaskSwap",
+        # "InsertPeg",
+        # "MoveCube",
+        "PatternLock",
+        # "PickHighlight",
+        # "PickXtimes",
+        # "RouteStick",
+        # "StopCube",
+        # "SwingXtimes",
+        # "VideoPlaceButton",
+        # "VideoPlaceOrder",
+        # "VideoUnmask",
+        # "VideoUnmaskSwap",
+    ]
+
+
 
     if gui_render==True:
         render_mode="human"
@@ -49,6 +65,10 @@ def main():
         render_mode="rgb_array"
 
     for env_id in env_id_list:
+        dataset_path= f"/data/hongzefu/dataset_demonstration/record_dataset_{env_id}.h5"
+        dataset = h5py.File(dataset_path, "r")
+        metadata_path =  f"/data/hongzefu/dataset_demonstration/record_dataset_{env_id}_metadata.json"
+
         resolver = EpisodeConfigResolver(
             env_id=env_id,
             dataset=None,
@@ -60,7 +80,7 @@ def main():
 
         for episode in range(num_episodes):
             env, episode_dataset, seed, difficulty = resolver.make_env_for_episode(episode)
-
+            import pdb ;pdb.set_trace()
            
             env.reset()
 
@@ -74,6 +94,7 @@ def main():
             subgoal = demonstration_data.get('subgoal', []) if demonstration_data else []
             subgoal_grounded = demonstration_data.get('subgoal_grounded', []) if demonstration_data else []
             language_goal = demonstration_data.get('language goal') if demonstration_data else None
+
 
             while True:
 

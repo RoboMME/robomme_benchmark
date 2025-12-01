@@ -188,6 +188,7 @@ class StopCube(BaseEnv):
             self.agent.reset(qpos)
             self.stop = False
             self.stop_timestep = None
+            self._task_failed_persistent = False
 
             # 使用 generator 生成 interval 值，在 20 的基础上上下浮动 5（范围 15-25）
             generator = torch.Generator()
@@ -290,8 +291,10 @@ class StopCube(BaseEnv):
 
 
     def evaluate(self,solve_complete_eval=False):
+        if not hasattr(self, "_task_failed_persistent"):
+            self._task_failed_persistent = False
         self.successflag=torch.tensor([False])
-        self.failureflag = torch.tensor([False])
+        self.failureflag = torch.tensor([True]) if self._task_failed_persistent else torch.tensor([False])
 
 
 
@@ -308,31 +311,33 @@ class StopCube(BaseEnv):
             else:
                 allow_subgoal_change_this_timestep=False
         all_tasks_completed, current_task_name, task_failed,self.current_task_specialflag = sequential_task_check(self, self.task_list,allow_subgoal_change_this_timestep=allow_subgoal_change_this_timestep)
+        task_failed = task_failed or self._task_failed_persistent#保证过冲会被覆盖
 
 
         if all_tasks_completed:
             correct=correct_timestep(self,time_range=self.stop_time_range,stop_timestep=self.stop_timestep)#识别第几次经过 按下了，停上去，次数错误
             if correct!= True:
                 task_failed=True
-    
+
         current_stop = self.stop or is_button_pressed(self, obj=self.button)#时间顺序问题额外检查！
         press_before = (not is_obj_stopped_onto(self, obj=self.cube, target=self.target, stop=current_stop)) and is_button_pressed(self, obj=self.button)
         #print(f"press_before",press_before)
         #没有stop在target上手动设置为fail
         if press_before== True:
+            #import pdb; pdb.set_trace()
             task_failed=True
 
 
 
         # 如果任务失败，立即标记失败
         if task_failed:
+            self._task_failed_persistent = True
             self.failureflag = torch.tensor([True])
             print(f"Task failed: {current_task_name}")
 
         # 如果static_check成功或者所有任务完成，则设置成功标志
         if all_tasks_completed and not task_failed:
             self.successflag = torch.tensor([True])
-
         return {
             "success": self.successflag,
             "fail": self.failureflag,

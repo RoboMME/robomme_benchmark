@@ -59,7 +59,7 @@ def _options_videorepick(env, planner, require_target, base) -> List[dict]:
 def _options_binfill(env, planner, require_target, base) -> List[dict]:
     options: List[dict] = [
         {
-            "label": "pickup (click segmentation)",
+            "label": "pick up the cube (click segmentation)",
             "solve": lambda require_target=require_target: solve_pickup(
                 env, planner, obj=require_target()
             ),
@@ -121,7 +121,7 @@ def _options_button_unmask_swap(env, planner, require_target, base) -> List[dict
     if button_obj_left is not None:
         options.append(
             {
-                "label": "press the left button",
+                "label": "press the right button",
                 "solve": lambda button_obj=button_obj_left: solve_button(
                     env, planner, obj=button_obj
                 ),
@@ -131,7 +131,7 @@ def _options_button_unmask_swap(env, planner, require_target, base) -> List[dict
     if button_obj_right is not None:
         options.append(
             {
-                "label": "press the right button",
+                "label": "press the left button",
                 "solve": lambda button_obj=button_obj_right: solve_button(
                     env, planner, obj=button_obj
                 ),
@@ -140,7 +140,7 @@ def _options_button_unmask_swap(env, planner, require_target, base) -> List[dict
 
 
     options.extend([{
-            "label": "pick up the container(click segmentation)",
+            "label": "pick up the container (click segmentation)",
             "solve": lambda require_target=require_target: solve_pickup_bin(
                 env, planner, obj=require_target()
             ),
@@ -382,8 +382,10 @@ def _options_patternlock(env, planner, require_target, base) -> List[dict]:
             dist = float(np.linalg.norm(delta))
             if dist < eps:
                 continue
+            if dist>0.2:
+                continue  # max distance threshold 不会选太远的点
             align = float(np.dot(delta / dist, vec))
-            score = (-align, dist)  # prioritize alignment, then closeness
+            score = (-align*0.5, dist)  # prioritize alignment, then closeness
             if best_score is None or score < best_score:
                 best_score = score
                 best = cand
@@ -401,7 +403,7 @@ def _options_patternlock(env, planner, require_target, base) -> List[dict]:
             return
 
         record_flag = getattr(base, "swing_qpos", None) is None
-        return solve_swingonto(env, planner, target=target, record_swing_qpos=record_flag)
+        return [solve_swingonto(env, planner, target=target),solve_swingonto(env, planner, target=target)]
 
     options: List[dict] = []
     for dir_label in directions:
@@ -646,7 +648,7 @@ def _options_videoplaceorder(env, planner, require_target, base) -> List[dict]:
     if target_cube is not None:
         options.append(
             {
-                "label": "droponto (click segmentation to choose target)",
+                "label": "drop onto (click segmentation)",
                 "solve": lambda require_target=require_target, target_cube=target_cube: solve_putonto_whenhold(
                     env, planner, obj=target_cube, target=require_target()
                 ),
@@ -669,7 +671,7 @@ def _options_videoplacebutton(env, planner, require_target, base) -> List[dict]:
     if target_cube is not None:
         options.append(
             {
-                "label": "droponto (click segmentation to choose target)",
+                "label": "drop onto (click segmentation)",
                 "solve": lambda require_target=require_target, target_cube=target_cube: solve_putonto_whenhold(
                     env, planner, obj=target_cube, target=require_target()
                 ),
@@ -694,17 +696,23 @@ def _options_stopcube(env, planner, require_target, base) -> List[dict]:
         )
 
     steps_press = getattr(base, "steps_press", None)
-    if steps_press is not None:
-        interval = getattr(base, "interval", 30)
-        abs_timestep = max(0, int(steps_press - interval))
-        options.append(
-            {
-                "label": "remain static",
-                "solve": lambda abs_timestep=abs_timestep: solve_hold_obj_absTimestep(
-                    env, planner, absTimestep=abs_timestep
-                ),
-            }
-        )
+    # if steps_press is not None:
+    #     interval = getattr(base, "interval", 30)
+    #     abs_timestep = max(0, int(steps_press - interval))
+    #     options.append(
+    #         {
+    #             "label": "remain static",
+    #             "solve": lambda abs_timestep=abs_timestep: solve_hold_obj_absTimestep(
+    #                 env, planner, absTimestep=abs_timestep
+    #             ),
+    #         }
+    #     )
+    options.append(
+                {
+                    "label": "remain static",
+                    "solve": lambda: solve_hold_obj(env, planner,static_steps=10),
+                }
+            )
 
     if button_obj is not None:
         options.append(

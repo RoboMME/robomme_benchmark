@@ -321,8 +321,7 @@ class PatternLock(BaseEnv):
             "name": f"move {direction(current_target, last_target)}",
             "subgoal_segment":f"move {direction(current_target, last_target)}",
             "demonstration": False,
-            "failure_func": None,
-            #lambda expected=current_target, last=last_target: self._wrong_button_touch(expected_button=expected, last_button=last),
+            "failure_func": lambda expected=current_target, last=last_target: self._wrong_button_touch(expected_button=expected, last_button=last),
             "solve": lambda env, planner, t=current_target: solve_swingonto(env, planner, target=t),
             #"segment":current_target,
         })  
