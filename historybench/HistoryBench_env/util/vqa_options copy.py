@@ -5,7 +5,9 @@ from historybench.HistoryBench_env.util.planner import (
     grasp_and_lift_peg_side,
     insert_peg,
     solve_button,
+    solve_button_ready,
     solve_hold_obj,
+    solve_hold_obj_absTimestep,
     solve_pickup,
     solve_pickup_bin,
     solve_push_to_target,
@@ -13,11 +15,11 @@ from historybench.HistoryBench_env.util.planner import (
     solve_putdown_whenhold,
     solve_putonto_whenhold,
     solve_putonto_whenhold_binspecial,
-    solve_strong_reset,
     solve_swingonto,
     solve_swingonto_withDirection,
+    solve_swingonto_whenhold,
+    solve_strong_reset,
 )
-from historybench.HistoryBench_env.util.evaluate import direction
 
 
 def _options_default(env, planner, require_target, base) -> List[dict]:
@@ -29,13 +31,13 @@ def _options_default(env, planner, require_target, base) -> List[dict]:
 def _options_videorepick(env, planner, require_target, base) -> List[dict]:
     options: List[dict] = [
         {
-            "label": "pickup (click segmentation to choose target cube)",
+            "label": "pick up the cube (click segmentation)",
             "solve": lambda require_target=require_target: solve_pickup(
-                env, planner, obj=require_target()
-            ),
+                env, planner, obj=require_target()),
+            "available": env.spawned_cubes
         },
         {
-            "label": "putdown (selected cube)",
+            "label": "put it down",
             "solve": lambda require_target=require_target: solve_putdown_whenhold(
                 env, planner, obj=require_target(), release_z=0.01
             ),
@@ -45,7 +47,7 @@ def _options_videorepick(env, planner, require_target, base) -> List[dict]:
     if button_obj is not None:
         options.append(
             {
-                "label": "press button",
+                "label": "press the button to finish",
                 "solve": lambda button_obj=button_obj: solve_button(
                     env, planner, obj=button_obj
                 ),
@@ -57,7 +59,7 @@ def _options_videorepick(env, planner, require_target, base) -> List[dict]:
 def _options_binfill(env, planner, require_target, base) -> List[dict]:
     options: List[dict] = [
         {
-            "label": "pickup (click segmentation to choose target cube)",
+            "label": "pick up the cube (click segmentation)",
             "solve": lambda require_target=require_target: solve_pickup(
                 env, planner, obj=require_target()
             ),
@@ -67,7 +69,7 @@ def _options_binfill(env, planner, require_target, base) -> List[dict]:
     if target is not None:
         options.append(
             {
-                "label": "put into bin (selected cube)",
+                "label": "put it into the bin",
                 "solve": lambda require_target=require_target, target=target: solve_putonto_whenhold_binspecial(
                     env, planner, obj=require_target(), target=target
                 ),
@@ -77,7 +79,7 @@ def _options_binfill(env, planner, require_target, base) -> List[dict]:
     if button_obj is not None:
         options.append(
             {
-                "label": "press button",
+                "label": "press the button",
                 "solve": lambda button_obj=button_obj: solve_button(
                     env, planner, obj=button_obj
                 ),
@@ -92,7 +94,7 @@ def _options_button_unmask(env, planner, require_target, base) -> List[dict]:
     if button_obj is not None:
         options.append(
             {
-                "label": "press button",
+                "label": "press the button",
                 "solve": lambda button_obj=button_obj: solve_button(
                     env, planner, obj=button_obj
                 ),
@@ -100,13 +102,13 @@ def _options_button_unmask(env, planner, require_target, base) -> List[dict]:
         )
 
     options.extend([{
-            "label": "pickup (click segmentation to choose target cube)",
+            "label": "pick up the container (click segmentation)",
             "solve": lambda require_target=require_target: solve_pickup_bin(
                 env, planner, obj=require_target()
             ),
         },
         {
-            "label": "putdown (selected cube)",
+            "label": "put down the container",
             "solve": lambda require_target=require_target: solve_putdown_whenhold(
                 env, planner, obj=require_target(), release_z=0.01
             ),
@@ -119,7 +121,7 @@ def _options_button_unmask_swap(env, planner, require_target, base) -> List[dict
     if button_obj_left is not None:
         options.append(
             {
-                "label": "press left button",
+                "label": "press the right button",
                 "solve": lambda button_obj=button_obj_left: solve_button(
                     env, planner, obj=button_obj
                 ),
@@ -129,7 +131,7 @@ def _options_button_unmask_swap(env, planner, require_target, base) -> List[dict
     if button_obj_right is not None:
         options.append(
             {
-                "label": "press right button",
+                "label": "press the left button",
                 "solve": lambda button_obj=button_obj_right: solve_button(
                     env, planner, obj=button_obj
                 ),
@@ -138,13 +140,13 @@ def _options_button_unmask_swap(env, planner, require_target, base) -> List[dict
 
 
     options.extend([{
-            "label": "pickup (click segmentation to choose target cube)",
+            "label": "pick up the container (click segmentation)",
             "solve": lambda require_target=require_target: solve_pickup_bin(
                 env, planner, obj=require_target()
             ),
         },
         {
-            "label": "putdown (selected cube)",
+            "label": "put down the container",
             "solve": lambda require_target=require_target: solve_putdown_whenhold(
                 env, planner, obj=require_target(), release_z=0.01
             ),
@@ -157,7 +159,7 @@ def _options_insertpeg(env, planner, require_target, base) -> List[dict]:
 
     options.append(
         {
-            "label": "pickup (click segmentation to choose peg end)",
+            "label": "pick up the peg by grasping one end (click segmentation)",
             "solve": lambda require_target=require_target: grasp_and_lift_peg_side(
                 env, planner, obj=require_target()
             ),
@@ -166,7 +168,7 @@ def _options_insertpeg(env, planner, require_target, base) -> List[dict]:
 
     options.append(
         {
-            "label": "Insert the peg from the right side of the box",
+            "label": "Insert the peg from the right side",
             "solve": lambda direction=1: insert_peg(
                 env,
                 planner,
@@ -179,7 +181,7 @@ def _options_insertpeg(env, planner, require_target, base) -> List[dict]:
     )
     options.append(
         {
-            "label": "Insert the peg from the left side of the box",#和subgoal保持一致
+            "label": "Insert the peg from the left side",#和subgoal保持一致
             "solve": lambda direction=-1: insert_peg(
                 env,
                 planner,
@@ -243,7 +245,7 @@ def _options_movecube(env, planner, require_target, base) -> List[dict]:
     if cube is not None and cube_goal is not None:
         options.append(
             {
-                "label": "Pickup the cube",
+                "label": "Pick up the cube",
                 "solve": lambda cube=cube: solve_pickup(env, planner, obj=cube),
             }
         )
@@ -261,7 +263,8 @@ def _options_movecube(env, planner, require_target, base) -> List[dict]:
 
 def _options_patternlock(env, planner, require_target, base) -> List[dict]:
     """
-    Provide 8-direction options; infer the current swing target from env state.
+    Dynamically pick the nearest target to the current TCP and move to the
+    closest neighbour along the requested direction.
     """
     directions = [
         "forward",
@@ -274,51 +277,133 @@ def _options_patternlock(env, planner, require_target, base) -> List[dict]:
         "backward-right",
     ]
 
-    def _current_patternlock_target():
-        buttons = list(getattr(base, "selected_buttons", []) or [])
-        if not buttons:
-            raise ValueError("PatternLock requires selected_buttons to be initialized.")
+    dir_vectors = {
+        "forward": np.array([1.0, 0.0]),
+        "backward": np.array([-1.0, 0.0]),
+        "left": np.array([0.0, 1.0]),
+        "right": np.array([0.0, -1.0]),
+        "forward-left": np.array([1.0, 1.0]) / np.sqrt(2.0),
+        "forward-right": np.array([1.0, -1.0]) / np.sqrt(2.0),
+        "backward-left": np.array([-1.0, 1.0]) / np.sqrt(2.0),
+        "backward-right": np.array([-1.0, -1.0]) / np.sqrt(2.0),
+    }
 
-        t = int(getattr(base, "timestep", 0) or 0)
-        num_buttons = len(buttons)
-        move_count = max(num_buttons - 1, 0)
+    # Quick half-plane filters so we only consider targets in the intended direction.
+    eps = 1e-6
+    dir_filters = {
+        "forward": lambda dx, dy: dx > eps,
+        "backward": lambda dx, dy: dx < -eps,
+        "left": lambda dx, dy: dy > eps,
+        "right": lambda dx, dy: dy < -eps,
+        "forward-left": lambda dx, dy: dx > eps and dy > eps,
+        "forward-right": lambda dx, dy: dx > eps and dy < -eps,
+        "backward-left": lambda dx, dy: dx < -eps and dy > eps,
+        "backward-right": lambda dx, dy: dx < -eps and dy < -eps,
+    }
 
-        if t <= 0:
-            return buttons[0], None, True  # first target, record swing_qpos
-        if 1 <= t <= move_count:
-            idx = t
-            return buttons[idx], buttons[idx - 1], False
-        if t == num_buttons:
-            return "reset_home", None, False
-        if t == num_buttons + 1:
-            return "reset_swing", None, False
-        if num_buttons + 2 <= t <= num_buttons + 1 + move_count:
-            idx = t - (num_buttons + 1)
-            return buttons[idx], buttons[idx - 1], False
-        return None, None, False
+    def _actor_xy(actor):
+        pose = getattr(actor, "pose", None)
+        if pose is None:
+            pose = actor.get_pose() if hasattr(actor, "get_pose") else None
+        pos = getattr(pose, "p", None)
+        if pos is None:
+            return None
+        arr = np.asarray(pos).reshape(-1)
+        return arr[:2] if arr.size >= 2 else None
+
+    def _collect_targets():
+        """
+        Gather all available target actors (targets_grid/buttons_grid/selected_buttons)
+        and deduplicate by object id.
+        """
+        buckets = (
+            getattr(base, "targets_grid", None),
+            getattr(base, "buttons_grid", None),
+            getattr(base, "selected_buttons", None),
+        )
+        seen = set()
+        targets = []
+        for bucket in buckets:
+            if not bucket:
+                continue
+            for t in bucket:
+                if t is None:
+                    continue
+                t_id = id(t)
+                if t_id in seen:
+                    continue
+                seen.add(t_id)
+                targets.append(t)
+        return targets
+
+    def _closest_target_to_tcp():
+        targets = _collect_targets()
+        if not targets:
+            raise ValueError("PatternLock requires targets_grid/buttons_grid to be initialized.")
+
+        tcp_pose = np.asarray(env.agent.tcp.pose.p).reshape(-1)
+        if tcp_pose.size < 2:
+            raise ValueError("TCP pose does not provide x/y coordinates.")
+        tcp_xy = tcp_pose[:2]
+
+        dist_list = []
+        for t in targets:
+            t_xy = _actor_xy(t)
+            if t_xy is None:
+                continue
+            dist = float(np.linalg.norm(t_xy - tcp_xy))
+            dist_list.append((dist, t, t_xy))
+
+        if not dist_list:
+            raise ValueError("PatternLock could not compute any valid target positions.")
+
+        dist_list.sort(key=lambda item: item[0])
+        return dist_list[0][1], dist_list[0][2], targets
+
+    def _target_for_direction(dir_label: str):
+        ref_target, ref_xy, candidates = _closest_target_to_tcp()
+        vec = dir_vectors[dir_label]
+        filt = dir_filters[dir_label]
+
+        best = None
+        best_score = None
+        for cand in candidates:
+            if cand is ref_target:
+                continue
+            c_xy = _actor_xy(cand)
+            if c_xy is None:
+                continue
+            delta = c_xy - ref_xy
+            if delta.shape[0] < 2:
+                continue
+            dx, dy = float(delta[0]), float(delta[1])
+            if not filt(dx, dy):
+                continue
+            dist = float(np.linalg.norm(delta))
+            if dist < eps:
+                continue
+            if dist>0.2:
+                continue  # max distance threshold 不会选太远的点
+            align = float(np.dot(delta / dist, vec))
+            score = (-align*0.5, dist)  # prioritize alignment, then closeness
+            if best_score is None or score < best_score:
+                best_score = score
+                best = cand
+
+        if best is None:
+            print(f"[PatternLock] No candidate in direction '{dir_label}', using nearest target.")
+            best = ref_target
+        return best
 
     def _solve_direction(chosen_dir: str):
-        target, last, need_record = _current_patternlock_target()
-        if target is None:
-            print(f"[PatternLock] No valid target for timestep {getattr(base, 'timestep', None)}")
+        try:
+            target = _target_for_direction(chosen_dir)
+        except ValueError as e:
+            print(f"[PatternLock] {e}")
             return
 
-        if target == "reset_home":
-            return solve_strong_reset(env, planner, gripper="stick")
-
-        if target == "reset_swing":
-            swing_qpos = getattr(base, "swing_qpos", None)
-            if swing_qpos is not None:
-                return solve_strong_reset(env, planner, gripper="stick", action=swing_qpos)
-            return solve_strong_reset(env, planner, gripper="stick")
-
-        if last is not None:
-            expected_dir = direction(target, last, direction=8)
-            if expected_dir != chosen_dir:
-                print(f"[PatternLock] Expected direction {expected_dir}, got {chosen_dir}; using expected target.")
-
-        record_flag = bool(need_record or getattr(base, "swing_qpos", None) is None)
-        return solve_swingonto(env, planner, target=target, record_swing_qpos=record_flag)
+        record_flag = getattr(base, "swing_qpos", None) is None
+        return [solve_swingonto(env, planner, target=target),solve_swingonto(env, planner, target=target)]
 
     options: List[dict] = []
     for dir_label in directions:
@@ -422,10 +507,10 @@ def _options_routestick(env, planner, require_target, base) -> List[dict]:
 
     options: List[dict] = []
     option_defs = [
-        ("left clockwise", "left", "clockwise"),
-        ("right clockwise", "right", "clockwise"),
-        ("left counterclockwise", "left", "counterclockwise"),
-        ("right counterclockwise", "right", "counterclockwise"),
+        ("move to the nearest left target by circling around the stick clockwise", "left", "clockwise"),
+        ("move to the nearest right target by circling around the stick clockwise", "right", "clockwise"),
+        ("move to the nearest left target by circling around the stick counterclockwise", "left", "counterclockwise"),
+        ("move to the nearest right target by circling around the stick counterclockwise", "right", "counterclockwise"),
     ]
     for label, side, direction in option_defs:
         options.append(
@@ -458,13 +543,13 @@ def _options_pickhighlight(env, planner, require_target, base) -> List[dict]:
     options.extend(
         [
             {
-                "label": "pickup (click segmentation to choose target cube)",
+                "label": "pick up the highlighted cube (click segmentation)",
                 "solve": lambda require_target=require_target: solve_pickup(
                     env, planner, obj=require_target()
                 ),
             },
             {
-                "label": "putdown (selected cube)",
+                "label": "place the cube onto the table",
                 "solve": lambda require_target=require_target: solve_putdown_whenhold(
                     env, planner, obj=require_target(), release_z=0.01
                 ),
@@ -479,19 +564,19 @@ def _options_pickxtimes(env, planner, require_target, base) -> List[dict]:
     options.extend(
         [
             {
-                "label": "pickup (click segmentation to choose target cube)",
+                "label": "pick up the cube (click segmentation)",
                 "solve": lambda require_target=require_target: solve_pickup(
                     env, planner, obj=require_target()
                 ),
             },
             {
-                "label": "putdown (selected cube)",
+                "label": "place the cube onto the target (click segmentation)",
                 "solve": lambda require_target=require_target: solve_putonto_whenhold(
                     env, planner, obj=require_target(), target=env.target
                 ),
             },
             {
-                "label": "press button",
+                "label": "press the button to stop",
                 "solve": lambda: solve_button(
                     env, planner, obj=env.button
                 ),
@@ -501,6 +586,177 @@ def _options_pickxtimes(env, planner, require_target, base) -> List[dict]:
 
     return options
 
+def _options_swingxtimes(env, planner, require_target, base) -> List[dict]:
+    options: List[dict] = []
+
+    options.append(
+        {
+            "label": "pick up the cube (click segmentation)",
+            "solve": lambda require_target=require_target: solve_pickup(
+                env, planner, obj=require_target()
+            ),
+        }
+    )
+
+    target_cube = getattr(base, "target_cube", None)
+    if target_cube is not None:
+        options.append(
+            {
+                "label": "move to the top of the target (click segmentation)",
+                "solve": lambda require_target=require_target, target_cube=target_cube: solve_swingonto_whenhold(
+                    env,
+                    planner,
+                    obj=target_cube,
+                    target=require_target(),
+                    height=0.1,
+                ),
+            }
+        )
+        options.append(
+            {
+                "label": "put the cube on the table",
+                "solve": lambda target_cube=target_cube: solve_putdown_whenhold(
+                    env, planner, obj=target_cube
+                ),
+            }
+        )
+
+    button_obj = getattr(base, "button", None) or getattr(base, "button_left", None)
+    if button_obj is not None:
+        options.append(
+            {
+                "label": "press the button",
+                "solve": lambda button_obj=button_obj: solve_button(
+                    env, planner, obj=button_obj
+                ),
+            }
+        )
+
+    return options
+
+def _options_videoplaceorder(env, planner, require_target, base) -> List[dict]:
+    options: List[dict] = [
+        {
+            "label": "pick up the cube (click segmentation)",
+            "solve": lambda require_target=require_target: solve_pickup(
+                env, planner, obj=require_target()
+            ),
+        },
+    ]
+
+    target_cube = getattr(base, "target_cube", None)
+    if target_cube is not None:
+        options.append(
+            {
+                "label": "drop onto (click segmentation)",
+                "solve": lambda require_target=require_target, target_cube=target_cube: solve_putonto_whenhold(
+                    env, planner, obj=target_cube, target=require_target()
+                ),
+            }
+        )
+
+
+    return options
+def _options_videoplacebutton(env, planner, require_target, base) -> List[dict]:
+    options: List[dict] = [
+        {
+            "label": "pick up the cube (click segmentation)",
+            "solve": lambda require_target=require_target: solve_pickup(
+                env, planner, obj=require_target()
+            ),
+        },
+    ]
+
+    target_cube = getattr(base, "target_cube", None)
+    if target_cube is not None:
+        options.append(
+            {
+                "label": "drop onto (click segmentation)",
+                "solve": lambda require_target=require_target, target_cube=target_cube: solve_putonto_whenhold(
+                    env, planner, obj=target_cube, target=require_target()
+                ),
+            }
+        )
+
+    return options
+
+
+def _options_stopcube(env, planner, require_target, base) -> List[dict]:
+    options: List[dict] = []
+    button_obj = getattr(base, "button", None)
+
+    if button_obj is not None:
+        options.append(
+            {
+                "label": "move to the top of the button to prepare",
+                "solve": lambda button_obj=button_obj: solve_button_ready(
+                    env, planner, obj=button_obj
+                ),
+            }
+        )
+
+    steps_press = getattr(base, "steps_press", None)
+    # if steps_press is not None:
+    #     interval = getattr(base, "interval", 30)
+    #     abs_timestep = max(0, int(steps_press - interval))
+    #     options.append(
+    #         {
+    #             "label": "remain static",
+    #             "solve": lambda abs_timestep=abs_timestep: solve_hold_obj_absTimestep(
+    #                 env, planner, absTimestep=abs_timestep
+    #             ),
+    #         }
+    #     )
+    options.append(
+                {
+                    "label": "remain static",
+                    "solve": lambda: solve_hold_obj(env, planner,static_steps=10),
+                }
+            )
+
+    if button_obj is not None:
+        options.append(
+            {
+                "label": "press button to stop the cube",
+                "solve": lambda button_obj=button_obj: solve_button(
+                    env, planner, obj=button_obj, without_hold=True
+                ),
+            }
+        )
+
+    return options
+def _options_video_unmask(env, planner, require_target, base) -> List[dict]:
+    options: List[dict] = []
+    options.extend([{
+            "label": "pick up the container (click segmentation)",
+            "solve": lambda require_target=require_target: solve_pickup_bin(
+                env, planner, obj=require_target()
+            ),
+        },
+        {
+            "label": "put down the container",
+            "solve": lambda require_target=require_target: solve_putdown_whenhold(
+                env, planner, obj=require_target(), release_z=0.01
+            ),
+        },])
+    return options
+
+def _options_video_unmask_swap(env, planner, require_target, base) -> List[dict]:
+    options: List[dict] = []
+    options: List[dict] = []
+    options.extend([{
+            "label": "pick up the container (click segmentation)",
+            "solve": lambda require_target=require_target: solve_pickup_bin(
+                env, planner, obj=require_target()
+            ),
+        },
+        {
+            "label": "put down the container",
+            "solve": lambda require_target=require_target: solve_putdown_whenhold(
+                env, planner, obj=require_target(), release_z=0.01
+            ),
+        },])
+    return options
 
 OPTION_BUILDERS: Dict[str, Callable] = {
     "VideoRepick": _options_videorepick,
@@ -513,6 +769,12 @@ OPTION_BUILDERS: Dict[str, Callable] = {
     "PickHighlight": _options_pickhighlight,
     "PickXtimes": _options_pickxtimes,
     "RouteStick": _options_routestick,
+    "SwingXtimes": _options_swingxtimes,
+    "StopCube": _options_stopcube,
+    "VideoPlaceButton": _options_videoplacebutton,
+    "VideoPlaceOrder": _options_videoplaceorder,
+    "VideoUnmask": _options_video_unmask,
+    "VideoUnmaskSwap": _options_video_unmask_swap,
     
 }
 

@@ -1,5 +1,6 @@
 import os
 import sys
+import select
 
 # 保证脚本直接运行时能找到工程根目录下的模块
 _ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -196,9 +197,10 @@ def _fetch_segmentation(env):
 
 
 def _compose_vertical_layout(
-    env,
     frame_idx,
     seg_vis,
+    base_frames,
+    wrist_frames,
     seg_hw=(360, 480),
     video_hw=(180, 240),
 ):
@@ -225,8 +227,8 @@ def _compose_vertical_layout(
     seg_rect = (seg_x, 0, seg_x + seg_w - 1, seg_h - 1)
 
     # 取历史帧（base/wrist）作为中部小图
-    base_frames = getattr(env, "frames", []) or []
-    wrist_frames = getattr(env, "wrist_frames", []) or []
+    base_frames = base_frames or []
+    wrist_frames = wrist_frames or []
 
     def _get_frame(arr, idx):
         if not arr:
@@ -355,6 +357,7 @@ def _prompt_next_task_gui(
     fps=12,
     seg_hw=(360, 480),
     video_hw=(180, 240),
+    use_segmentation=True,
 ):
     """
     播放演示并等待用户选择下一个 solve。
@@ -365,12 +368,14 @@ def _prompt_next_task_gui(
     """
     window_name = "Demonstration (press number to choose, q/Esc to stop)"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    # 创建弹窗并确保可调节大小，方便用户观察长视频或分割图
 
     try:
         language_goal = task_goal.get_language_goal(env, env_id)
     except Exception as exc:  # 防御性兜底，不影响主流程
         print(f"[warn] failed to get language goal: {exc}")
         language_goal = ""
+    # 尝试读取任务目标的自然语言描述，方便界面上方的说明栏显示
 
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.55
@@ -397,56 +402,285 @@ def _prompt_next_task_gui(
     frame_idx = 0
     paused = False
     selection = None
-    state = {"buttons": [], "selection": None, "seg_raw": None, "seg_rect": None}
+    state = {
+        "buttons": [],
+        "selection": None,
+        "seg_raw": None,
+        "seg_rect": None,
+        "pending_option": None,
+    }
+    # 初始化播放与交互状态，state 用于跨帧传递 button/seg 信息
 
-    def on_mouse(event, x, y, flags, param):
-        if event != cv2.EVENT_LBUTTONDOWN:
-            return
+    def _reset_selected_target():
+        selected_target["obj"] = None
+        selected_target["name"] = None
+        selected_target["seg_id"] = None
+        selected_target["click_point"] = None
+        selected_target["centroid_point"] = None
+    # 置空最近一次点击的目标信息，便于在用户重新选择时清理界面
 
+    def _collect_available_targets(selected_idx=None):#可用点
+        """
+        Gather candidate actors from option-provided 'available' lists.
+        When selected_idx is provided, only that option is considered.
+        Otherwise aggregate all options and, if still empty, fall back to
+        env.spawned_cubes. Filters out None and deduplicates by id. Nested
+        containers (e.g., [heads, tails]) are flattened.
+        """
+        # 构建候选 actor 列表，方便后续根据用户点击定位具体目标
+        candidates = []
+        seen = set()
+
+        def _flatten_items(item):
+            if item is None:
+                return []
+            if isinstance(item, dict):
+                flattened = []
+                for value in item.values():
+                    flattened.extend(_flatten_items(value))
+                return flattened
+            if isinstance(item, (list, tuple, set)):
+                flattened = []
+                for value in item:
+                    flattened.extend(_flatten_items(value))
+                return flattened
+            return [item]
+
+        def _extend_from_iterable(iterable):
+            added = False
+            for actor in iterable:
+                if actor is None:
+                    continue
+                identifier = id(actor)
+                if identifier in seen:
+                    continue
+                seen.add(identifier)
+                candidates.append(actor)
+                added = True
+            return added
+
+        def _extend_from_option(idx):
+            if idx is None or not (0 <= idx < len(options)):
+                return False
+            avail = options[idx].get("available")
+            if avail is None:
+                return False
+            flattened = _flatten_items(avail)
+            return _extend_from_iterable(flattened)
+
+        if selected_idx is not None:
+            _extend_from_option(selected_idx)
+            return candidates
+
+        for idx in range(len(options)):
+            _extend_from_option(idx)
+
+        if candidates:
+            return candidates
+
+        fallback = getattr(env, "spawned_cubes", None)
+        if fallback:
+            try:
+                iterable = list(fallback)
+            except TypeError:
+                iterable = []
+            _extend_from_iterable(iterable)
+
+        return candidates
+
+
+    def _handle_click(global_x, global_y):
+        """
+        Process a click in window coordinates; used by mouse and terminal.
+        Returns True if the click was consumed (seg map or button).
+        """
+        # 在整个窗口坐标系里响应点击，优先检测分割图再到按钮区域
+        target_chosen = False
         # 优先处理分割点击：右上角区域
         seg_rect = state.get("seg_rect")
         seg_raw = state.get("seg_raw")
         if seg_rect and seg_raw is not None:
             x1, y1, x2, y2 = seg_rect
-            if x1 <= x <= x2 and y1 <= y <= y2:
+            if x1 <= global_x <= x2 and y1 <= global_y <= y2:
                 disp_w = max(1, x2 - x1 + 1)
                 disp_h = max(1, y2 - y1 + 1)
                 seg_h, seg_w = seg_raw.shape[:2]
-                sx = int((x - x1) * seg_w / disp_w)
-                sy = int((y - y1) * seg_h / disp_h)
+                sx = int((global_x - x1) * seg_w / disp_w)
+                sy = int((global_y - y1) * seg_h / disp_h)
                 if 0 <= sx < seg_w and 0 <= sy < seg_h:
-                    seg_id = int(seg_raw[sy, sx])
-                    obj = getattr(env.unwrapped, "segmentation_id_map", {}).get(seg_id)
-                    if obj is not None:
+                    seg_id_map = getattr(env.unwrapped, "segmentation_id_map", {}) or {}
+                    pending_option = state.get("pending_option")
+                    if pending_option is None:
+                        print("Select an option button before choosing a target point.")
+                        return True
+
+                    available_targets = _collect_available_targets(pending_option)
+                    if not available_targets:
+                        print("The selected option has no available targets to click.")
+                        return True
+                    click_disp = (global_x - x1, global_y - y1)
+
+                    # 若存在可用列表(例如 VideoRepick)，优先选距离点击点最近的目标
+                    candidates = []
+                    for actor in available_targets:
+                        target_seg_id = None
+                        for sid, obj in seg_id_map.items():
+                            if obj is actor:
+                                target_seg_id = int(sid)
+                                break
+                        if target_seg_id is None:
+                            continue
+                        mask = seg_raw == target_seg_id
+                        if not np.any(mask):
+                            continue
+                        ys, xs = np.nonzero(mask)
+                        cx = float(xs.mean())
+                        cy = float(ys.mean())
+                        disp_cx = int(round(cx * disp_w / seg_w))
+                        disp_cy = int(round(cy * disp_h / seg_h))
+                        dist2 = (disp_cx - click_disp[0]) ** 2 + (disp_cy - click_disp[1]) ** 2
+                        candidates.append(
+                            {
+                                "actor": actor,
+                                "seg_id": target_seg_id,
+                                "disp_point": (disp_cx, disp_cy),
+                                "dist2": dist2,
+                            }
+                        )
+
+                    chosen = None
+                    if candidates:
+                        candidates.sort(key=lambda item: item["dist2"])
+                        chosen = candidates[0]
+
+                    if chosen is not None:
+                        obj = chosen["actor"]
+                        seg_id = chosen["seg_id"]
                         selected_target["obj"] = obj
                         selected_target["name"] = getattr(obj, "name", f"id_{seg_id}")
                         selected_target["seg_id"] = seg_id
-                        # 记录点击点用于可视化
-                        selected_target["click_point"] = (int((x - x1)), int((y - y1)))
-                        print(f"Selected target via segmentation id={seg_id}, obj name={selected_target['name']}")
+                        selected_target["click_point"] = (int(click_disp[0]), int(click_disp[1]))
+                        selected_target["centroid_point"] = chosen["disp_point"]
+                        target_chosen = True
+                        print(
+                            f"Selected nearest available target via segmentation id={seg_id}, "
+                            f"obj name={selected_target['name']}, click={selected_target['click_point']}, "
+                            f"centroid={selected_target['centroid_point']}"
+                        )
                     else:
-                        print(f"No object found for segmentation id={seg_id}")
-                return
+                        seg_id = int(seg_raw[sy, sx])
+                        obj = seg_id_map.get(seg_id)
+                        if obj is not None:
+                            selected_target["obj"] = obj
+                            selected_target["name"] = getattr(obj, "name", f"id_{seg_id}")
+                            selected_target["seg_id"] = seg_id
+                            selected_target["click_point"] = (int(click_disp[0]), int(click_disp[1]))
+                            mask = seg_raw == seg_id
+                            if np.any(mask):
+                                ys, xs = np.nonzero(mask)
+                                cx = int(round(xs.mean() * disp_w / seg_w))
+                                cy = int(round(ys.mean() * disp_h / seg_h))
+                                selected_target["centroid_point"] = (cx, cy)
+                            else:
+                                selected_target["centroid_point"] = None
+                            target_chosen = True
+                            print(
+                                f"Selected target via segmentation id={seg_id}, "
+                                f"obj name={selected_target['name']}, click={selected_target['click_point']}, "
+                                f"centroid={selected_target['centroid_point']}"
+                            )
+                        else:
+                            print(f"No object found for segmentation id={seg_id}")
+                return True
 
         # 支持鼠标点击底部按钮直接选择 solve
         for btn in state["buttons"]:
             x1, y1, x2, y2 = btn["rect"]
-            if x1 <= x <= x2 and y1 <= y <= y2:
-                state["selection"] = btn["idx"]
-                break
+            if x1 <= global_x <= x2 and y1 <= global_y <= y2:
+                idx = btn["idx"]
+                option_avail = _collect_available_targets(idx)
+                if option_avail:
+                    pending = state.get("pending_option")
+                    if pending == idx:
+                        obj = selected_target.get("obj")
+                        if obj is None:
+                            print("Target not selected yet; click on the segmentation view first.")
+                            return True
+                        ids = {id(actor) for actor in option_avail}
+                        if id(obj) not in ids:
+                            print("Selected target does not belong to this option; please reselect.")
+                            _reset_selected_target()
+                            return True
+                        state["selection"] = idx
+                        state["pending_option"] = None
+                    else:
+                        state["pending_option"] = idx
+                        state["selection"] = None
+                        _reset_selected_target()
+                        print(
+                            "Option armed. Click on the segmentation map to pick one of its targets, then click the same button again to confirm."
+                        )
+                else:
+                    state["selection"] = idx
+                    state["pending_option"] = None
+                return True
+        return False
+
+    def on_mouse(event, x, y, flags, param):
+        if event != cv2.EVENT_LBUTTONDOWN:
+            return
+        _handle_click(x, y)
 
     cv2.setMouseCallback(window_name, on_mouse)
 
+    # 打印可迭代选项，用户在终端也可以直接输入数字/坐标
+    print("\n可用选项（输入数字直接选择，或在终端输入 x y 坐标模拟点击，q 退出）:")
+    for idx, opt in enumerate(options):
+        label = opt.get("label", f"Option {idx + 1}")
+        print(f"  {idx + 1}: {label}")
+
+    # 主循环：不断刷新界面，等待用户交互或数字输入
     while True:
-        seg_raw = _fetch_segmentation(env)
-        seg_vis, seg_raw = _prepare_segmentation_visual(seg_raw, color_map, seg_hw)
+        # 每轮重新拉取分割数据，保证可点击的 target 一致
+        seg_data = _fetch_segmentation(env)
+        seg_vis = None
+        seg_raw = None
+        base_frames = getattr(env, "frames", []) or []
+        wrist_frames = getattr(env, "wrist_frames", []) or []
+        if use_segmentation:
+            seg_vis, seg_raw = _prepare_segmentation_visual(seg_data, color_map, seg_hw)
+        else:
+            # 依然尝试取得分割用于点击，但显示原始 base camera 画面
+            _, seg_raw = _prepare_segmentation_visual(seg_data, color_map, seg_hw) if seg_data is not None else (None, None)
+            base_frames = getattr(env, "frames", []) or []
+            if base_frames:
+                # 取 base camera 的最后一帧作为顶部展示
+                vis_frame = _prepare_frame(base_frames[-1])
+                vis_frame = cv2.cvtColor(vis_frame, cv2.COLOR_RGB2BGR)
+                if vis_frame.shape[:2] != seg_hw:
+                    vis_frame = cv2.resize(vis_frame, (seg_hw[1], seg_hw[0]), interpolation=cv2.INTER_LINEAR)
+                seg_vis = vis_frame
+            else:
+                seg_vis = np.zeros((seg_hw[0], seg_hw[1], 3), dtype=np.uint8)
 
         # 如果之前点击过，标记在分割可视化上
+        # 将最近的鼠标点击与重心反馈画在分割图上，方便识别
         if seg_vis is not None and selected_target.get("click_point"):
             cv2.circle(seg_vis, selected_target["click_point"], 6, (0, 0, 255), 2)
+        if seg_vis is not None and selected_target.get("centroid_point"):
+            cv2.circle(seg_vis, selected_target["centroid_point"], 6, (0, 255, 255), 2)
 
-        grid, seg_rect = _compose_vertical_layout(env, frame_idx, seg_vis, seg_hw=seg_hw, video_hw=video_hw)
-        combined, buttons = _draw_buttons_bottom(grid, options)
+        grid, seg_rect = _compose_vertical_layout(
+            frame_idx, seg_vis, base_frames, wrist_frames, seg_hw=seg_hw, video_hw=video_hw
+        )
+        numbered_options = []
+        for idx, opt in enumerate(options):
+            labeled = dict(opt)
+            labeled["label"] = f"{idx + 1}. {opt.get('label', f'Option {idx + 1}')}"
+            numbered_options.append(labeled)
+
+        # 组合画面：顶部分割/画面，中间视频，下部按钮
+        combined, buttons = _draw_buttons_bottom(grid, numbered_options)
         selected_name = selected_target.get("name") or "None"
         banner_lines = []
         if language_goal:
@@ -454,7 +688,7 @@ def _prompt_next_task_gui(
         banner_lines.append(f"Selected target: {selected_name}")
         banner_lines.extend(
             _wrap_text_line(
-                "Click segmentation to pick target cube; use buttons/number keys to run solve. Space pause, q/Esc exit.",
+                "Press/enter a number to arm, pick a target on the segmentation view (mouse or terminal 'x y'), then press the same number again to confirm. Options without targets run immediately. Space pause, q/Esc exit.",
                 combined.shape[1] - 20,
             )
         )
@@ -490,6 +724,7 @@ def _prompt_next_task_gui(
         state["seg_raw"] = seg_raw
         state["seg_rect"] = adjusted_seg_rect
 
+        # 展示窗口并读取键盘输入（带 pause 支持）
         cv2.imshow(window_name, combined)
         key = cv2.waitKey(100 if paused else delay) & 0xFF
 
@@ -501,15 +736,88 @@ def _prompt_next_task_gui(
         elif ord("1") <= key <= ord("9"):
             idx = key - ord("1")
             if idx < len(options):
-                selection = idx
-                break
+                option_avail = _collect_available_targets(idx)
+                if option_avail:
+                    if state.get("pending_option") == idx:
+                        obj = selected_target.get("obj")
+                        if obj is not None and any(id(obj) == id(actor) for actor in option_avail):
+                            selection = idx
+                            break
+                        print("Target not selected or mismatched; click segmentation then press the number again.")
+                    else:
+                        state["pending_option"] = idx
+                        state["selection"] = None
+                        _reset_selected_target()
+                        print("Option armed. Click on segmentation to pick target, then press the same number to confirm.")
+                else:
+                    selection = idx
+                    break
         elif state["selection"] is not None:
             selection = state["selection"]
             break
+
+        # 同步处理终端 stdin 输入，允许数字选择或模拟点击
+        try:
+            ready, _, _ = select.select([sys.stdin], [], [], 0)
+        except Exception:
+            ready = []
+        if ready:
+            line = sys.stdin.readline().strip()
+            if line:
+                lowered = line.lower()
+                if lowered in ("q", "quit", "exit"):
+                    selection = None
+                    break
+                tokens = line.replace(",", " ").split()
+                if len(tokens) == 1 and tokens[0].isdigit():
+                    idx = int(tokens[0]) - 1
+                    if 0 <= idx < len(options):
+                        option_avail = _collect_available_targets(idx)
+                        if option_avail:
+                            if state.get("pending_option") == idx:
+                                obj = selected_target.get("obj")
+                                if obj is not None and any(id(obj) == id(actor) for actor in option_avail):
+                                    selection = idx
+                                    break
+                                print("Target not selected or mismatched; enter coordinates then press the same number again.")
+                            else:
+                                state["pending_option"] = idx
+                                state["selection"] = None
+                                _reset_selected_target()
+                                print(
+                                    f"Option {idx + 1} armed via terminal. Enter 'x y' to pick a target, then press {idx + 1} again to confirm."
+                                )
+                        else:
+                            selection = idx
+                            break
+                    else:
+                        print(f"Invalid option index {tokens[0]}; valid range: 1-{len(options)}")
+                elif len(tokens) >= 2:
+                    try:
+                        cx = int(float(tokens[0]))
+                        cy = int(float(tokens[1]))
+                        handled = _handle_click(cx, cy)
+                        if not handled:
+                            seg_rect = state.get("seg_rect")
+                            if seg_rect is not None:
+                                x1, y1, x2, y2 = seg_rect
+                                disp_w = x2 - x1 + 1
+                                disp_h = y2 - y1 + 1
+                                # 若输入坐标落在分割区域局部坐标内，则视为局部坐标
+                                if 0 <= cx < disp_w and 0 <= cy < disp_h:
+                                    handled = _handle_click(x1 + cx, y1 + cy)
+                                    if handled:
+                                        print(f"Interpreted terminal click as segmentation-local: ({cx}, {cy})")
+                        if handled:
+                            continue
+                    except ValueError:
+                        print(f"Unrecognized input '{line}'. Enter a number to select or 'x y' to click.")
+                else:
+                    print(f"Unrecognized input '{line}'. Enter a number to select or 'x y' to click.")
         # 其他按键忽略
 
         if not paused:
-            # 播放索引自增；到达最后一帧后自动暂停等待用户操作
+            # 自动推进示范帧数，播放完毕后强制暂停并等待用户命令
             base_len = len(getattr(env, "frames", []) or [])
             if base_len and frame_idx < base_len - 1:
                 frame_idx += 1
@@ -528,19 +836,25 @@ def main():
     - 通过 GUI/数字键选择要执行的策略
     """
 
-    # 配置区：按需修改
-    num_episodes = 100  # 每个环境重复次数
-    gui_render = True  # 是否开启 GUI 渲染
-    max_steps_without_demonstration = 3000  # 演示间隔上限
+    # ===== 基础配置（按需修改）=====
+    # 每个环境最多重复评估多少集。典型只跑少量集用于验证 UI/流程。
+    num_episodes = 100
+    # 是否启用 GUI 渲染。True 走 sapiens 可视化窗口，False 只拿 rgb_array。
+    gui_render = True
+    # 连续多少步内如果没有演示/操作则强制结束一集，防止卡死。
+    max_steps_without_demonstration = 3000
+    # 演示数据集所在根目录；包含 record_dataset_*.h5 以及对应 metadata。
     dataset_root = Path("/data/hongzefu/dataset_demonstration")
+    use_segmentation=False#不使用分割
 
+    # 需要评估的环境列表；按需开启/关闭。默认只跑 VideoUnmaskSwap。
     env_id_list = [
-        # "VideoRepick",
-        # "BinFill",
-        # "ButtonUnmask",
-        # "ButtonUnmaskSwap",
-        # "InsertPeg",
-        # "MoveCube",
+        #"VideoRepick",
+        #"BinFill",
+        #"ButtonUnmask",
+        #"ButtonUnmaskSwap",
+        #"InsertPeg",
+        #"MoveCube",
         #"PatternLock",
         #"PickHighlight",
         #"PickXtimes",
@@ -550,13 +864,14 @@ def main():
         #"VideoPlaceButton",
         #"VideoPlaceOrder",
         #"VideoUnmask",
-        #"VideoUnmaskSwap",
+        "VideoUnmaskSwap",
     ]
 
-    # GUI/无 GUI 渲染模式
+    # 根据是否 GUI 选择渲染模式；sapiens 里 human 才会弹窗。
     render_mode = "human" if gui_render else "rgb_array"
 
     for env_id in env_id_list:
+        # 逐环境加载数据与元信息
         dataset_path = dataset_root / f"record_dataset_{env_id}.h5"
         metadata_path = dataset_root / f"record_dataset_{env_id}_metadata.json"
         if not dataset_path.exists():
@@ -564,6 +879,7 @@ def main():
             continue
 
         with h5py.File(dataset_path, "r") as dataset:
+            # EpisodeConfigResolver 负责按 episode idx 返回正确的 env/seed/difficulty
             resolver = EpisodeConfigResolver(
                 env_id=env_id,
                 dataset=dataset,
@@ -574,8 +890,10 @@ def main():
             )
 
             for episode in range(num_episodes):
-                if episode !=3:
+                # 如需只跑某一集，用这一行过滤（默认只跑第 79 集，便于快速调试）
+                if episode !=79:
                     continue
+                # 构造环境实例以及本集对应的演示数据与难度/随机种子
                 env, episode_dataset, seed, difficulty = resolver.make_env_for_episode(episode)
                 #import pdb ;pdb.set_trace()
 
@@ -591,9 +909,15 @@ def main():
                 # 分割颜色表与用户点击的目标对象占位
                 color_map = _generate_color_map()
                 _sync_table_color(env, color_map)
-                selected_target = {"obj": None, "name": None, "seg_id": None, "click_point": None}
+                selected_target = {
+                    "obj": None,
+                    "name": None,
+                    "seg_id": None,
+                    "click_point": None,
+                    "centroid_point": None,
+                }
 
-                # 根据环境类型选择不同的规划器
+                # 根据环境类型选择不同的规划器：带棍子的 Route/Pattern 走 stick solver，其余走 arm solver
                 if env_id in ("PatternLock", "RouteStick"):
                     planner = PandaStickMotionPlanningSolver(
                         env,
@@ -618,8 +942,10 @@ def main():
                 env.unwrapped.evaluate()
                 tasks = list(getattr(env.unwrapped, "task_list", []) or [])
 
+                # 根据环境与 planner 生成可用选项（含 label/solve/potential available targets）
                 solve_options = _build_solve_options(env, planner, selected_target, env_id)
 
+                # 没任务或没选项直接跳过
                 if not tasks:
                     print("No tasks defined for this environment; skipping execution")
                     env.close()
@@ -634,10 +960,22 @@ def main():
                 ordinal = 0
 
                 while True:
+                    #todo:base_frames 
+                    # wrist_frames 
+                    # vis_frame
+                    # 在这里抓取并传入_prompt_next_task_gui
+                    
                     # 实时显示视频并等待用户选择 solve；返回 None 代表退出
                     solve_idx = _prompt_next_task_gui(
-                        solve_options, env, color_map, selected_target, env_id, fps=120
+                        solve_options,
+                        env,
+                        color_map,
+                        selected_target,
+                        env_id,
+                        fps=120,
+                        use_segmentation=use_segmentation,
                     )
+                    
                     if solve_idx is None:
                         print("Stopping by user choice.")
                         break
