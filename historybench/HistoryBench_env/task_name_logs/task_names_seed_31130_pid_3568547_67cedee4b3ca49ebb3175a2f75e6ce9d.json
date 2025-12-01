@@ -1,0 +1,55 @@
+{
+  "historybench_seed": 31130,
+  "difficulty": "easy",
+  "tasks": [
+    {
+      "name": "pick up the cube"
+    },
+    {
+      "name": "drop the cube onto target"
+    },
+    {
+      "name": "pick up the cube"
+    },
+    {
+      "name": "drop the cube onto target"
+    },
+    {
+      "name": "pick up the cube"
+    },
+    {
+      "name": "drop the cube onto target"
+    },
+    {
+      "name": "press the button"
+    },
+    {
+      "name": "pick up the cube"
+    },
+    {
+      "name": "drop the cube onto target"
+    },
+    {
+      "name": "pick up the cube"
+    },
+    {
+      "name": "drop the cube onto table"
+    },
+    {
+      "name": "static"
+    },
+    {
+      "name": "static"
+    },
+    {
+      "name": "NO RECORD"
+    },
+    {
+      "name": "pick up the cube"
+    },
+    {
+      "name": "place the cube onto the correct target"
+    }
+  ],
+  "status": "success"
+}
