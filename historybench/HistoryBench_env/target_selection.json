@@ -2716,5 +2716,100 @@
     ],
     "target_target": "target_1",
     "button_task_index": 4
+  },
+  {
+    "historybench_seed": 31030,
+    "which_in_subset": 1,
+    "num_targets_to_pick": 2,
+    "which_targets_to_pick": [
+      "target_2",
+      "target_1"
+    ],
+    "target_target": "target_2",
+    "button_task_index": 2
+  },
+  {
+    "historybench_seed": 31030,
+    "which_in_subset": 1,
+    "num_targets_to_pick": 2,
+    "which_targets_to_pick": [
+      "target_2",
+      "target_1"
+    ],
+    "target_target": "target_2",
+    "button_task_index": 2
+  },
+  {
+    "historybench_seed": 31000,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 3,
+    "which_targets_to_pick": [
+      "target_2",
+      "target_1",
+      "target_0"
+    ],
+    "target_target": "target_1",
+    "button_task_index": 4
+  },
+  {
+    "historybench_seed": 31000,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 3,
+    "which_targets_to_pick": [
+      "target_2",
+      "target_1",
+      "target_0"
+    ],
+    "target_target": "target_1",
+    "button_task_index": 4
+  },
+  {
+    "historybench_seed": 31130,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_3",
+      "target_1",
+      "target_2",
+      "target_0"
+    ],
+    "target_target": "target_1",
+    "button_task_index": 6
+  },
+  {
+    "historybench_seed": 23000,
+    "which_in_subset": 1,
+    "num_targets_to_pick": 2,
+    "which_targets_to_pick": [
+      "target_1",
+      "target_2"
+    ],
+    "target_target": "target_1",
+    "button_task_index": 4
+  },
+  {
+    "historybench_seed": 23010,
+    "which_in_subset": 4,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_3",
+      "target_1",
+      "target_0",
+      "target_2"
+    ],
+    "target_target": "target_2",
+    "button_task_index": 4
+  },
+  {
+    "historybench_seed": 23020,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 3,
+    "which_targets_to_pick": [
+      "target_3",
+      "target_2",
+      "target_0"
+    ],
+    "target_target": "target_2",
+    "button_task_index": 2
   }
 ]

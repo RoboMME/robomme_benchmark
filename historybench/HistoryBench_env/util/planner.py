@@ -963,68 +963,69 @@ def solve_pickup_bin(env, planner, obj=None):
 #     return res
 
 
-def solve_putonto_whenhold(env, planner, obj=None,target=None):
+def solve_putonto_whenhold(env, planner,target=None):
     FINGER_LENGTH = 0.025
     env = env.unwrapped
 
-    # retrieves the object oriented bounding box (trimesh box object)
-    obb = get_actor_obb(obj)
+    # # retrieves the object oriented bounding box (trimesh box object)
+    # obb = get_actor_obb(obj)
 
-    approaching = np.array([0, 0, -1])
-    # get transformation matrix of the tcp pose, is default batched and on torch
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
-    # we can build a simple grasp pose using this information for Panda
-    grasp_info = compute_grasp_info_by_obb(
-        obb,
-        approaching=approaching,
-        target_closing=target_closing,
-        depth=FINGER_LENGTH,
-    )
-    closing, center = grasp_info["closing"], grasp_info["center"]
-    grasp_pose = env.agent.build_grasp_pose(approaching, closing, obj.pose.sp.p)
+    # approaching = np.array([0, 0, -1])
+    # # get transformation matrix of the tcp pose, is default batched and on torch
+    # target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
+    # # we can build a simple grasp pose using this information for Panda
+    # grasp_info = compute_grasp_info_by_obb(
+    #     obb,
+    #     approaching=approaching,
+    #     target_closing=target_closing,
+    #     depth=FINGER_LENGTH,
+    # )
+    # closing, center = grasp_info["closing"], grasp_info["center"]
+    # grasp_pose = env.agent.build_grasp_pose(approaching, closing, obj.pose.sp.p)
 
+    grasp_pose_q=env.agent.tcp.pose.q.tolist()[0]
 
     goal_pose_P_prepare=target.pose.p.tolist()[0]
     goal_pose_P_prepare[2]=0.15
-    goal_pose = sapien.Pose(goal_pose_P_prepare, grasp_pose.q)
+    goal_pose = sapien.Pose(goal_pose_P_prepare, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     goal_pose_P=target.pose.p.tolist()[0]
-    goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
+    goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     planner.open_gripper()
 
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[2]=0.15
-    goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
+    goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
     planner.close()
     return res
-def solve_swingonto_whenhold(env, planner, obj=None,target=None,height=0.05):
+def solve_swingonto_whenhold(env, planner,target=None,height=0.05):
     FINGER_LENGTH = 0.025
     env = env.unwrapped
 
-    # retrieves the object oriented bounding box (trimesh box object)
-    obb = get_actor_obb(obj)
+    # # retrieves the object oriented bounding box (trimesh box object)
+    # obb = get_actor_obb(obj)
 
-    approaching = np.array([0, 0, -1])
-    # get transformation matrix of the tcp pose, is default batched and on torch
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
-    # we can build a simple grasp pose using this information for Panda
-    grasp_info = compute_grasp_info_by_obb(
-        obb,
-        approaching=approaching,
-        target_closing=target_closing,
-        depth=FINGER_LENGTH,
-    )
-    closing, center = grasp_info["closing"], grasp_info["center"]
-    grasp_pose = env.agent.build_grasp_pose(approaching, closing, obj.pose.sp.p)
+    # approaching = np.array([0, 0, -1])
+    # # get transformation matrix of the tcp pose, is default batched and on torch
+    # target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
+    # # we can build a simple grasp pose using this information for Panda
+    # grasp_info = compute_grasp_info_by_obb(
+    #     obb,
+    #     approaching=approaching,
+    #     target_closing=target_closing,
+    #     depth=FINGER_LENGTH,
+    # )
+    # closing, center = grasp_info["closing"], grasp_info["center"]
+    # grasp_pose = env.agent.build_grasp_pose(approaching, closing, obj.pose.sp.p)
 
-
+    grasp_pose_q=env.agent.tcp.pose.q.tolist()[0]
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[2]=height
-    goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
+    goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
     planner.close()
     return res
@@ -1247,74 +1248,75 @@ def solve_reset(env, planner):
     planner.move_to_pose_with_screw(sapien.Pose(p=pose_p,q=pose_q))
     planner.open_gripper()
 
-def solve_putdown_whenhold(env, planner, obj=None,release_z=0.07):
+def solve_putdown_whenhold(env, planner,release_z=0.07):
     FINGER_LENGTH = 0.025
     env = env.unwrapped
 
-    # retrieves the object oriented bounding box (trimesh box object)
-    obb = get_actor_obb(obj)
+    # # retrieves the object oriented bounding box (trimesh box object)
+    # obb = get_actor_obb(obj)
 
-    approaching = np.array([0, 0, -1])
-    # get transformation matrix of the tcp pose, is default batched and on torch
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
-    # we can build a simple grasp pose using this information for Panda
-    grasp_info = compute_grasp_info_by_obb(
-        obb,
-        approaching=approaching,
-        target_closing=target_closing,
-        depth=FINGER_LENGTH,
-    )
-    closing, center = grasp_info["closing"], grasp_info["center"]
-    grasp_pose = env.agent.build_grasp_pose(approaching, closing, obj.pose.sp.p)
+    # approaching = np.array([0, 0, -1])
+    # # get transformation matrix of the tcp pose, is default batched and on torch
+    # target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
+    # # we can build a simple grasp pose using this information for Panda
+    # grasp_info = compute_grasp_info_by_obb(
+    #     obb,
+    #     approaching=approaching,
+    #     target_closing=target_closing,
+    #     depth=FINGER_LENGTH,
+    # )
+    # closing, center = grasp_info["closing"], grasp_info["center"]
+    # grasp_pose = env.agent.build_grasp_pose(approaching, closing, obj.pose.sp.p)
+    grasp_pose_q=env.agent.tcp.pose.q.tolist()[0]
 
-
-    goal_pose_P=obj.pose.p.tolist()[0]
+    goal_pose_P=env.agent.tcp.pose.p.tolist()[0]
     goal_pose_P[2]=release_z
     #goal_pose_P[0]+=0.1#test
-    goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
+    goal_pose = sapien.Pose(goal_pose_P,grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
     planner.open_gripper()
 
-    goal_pose_P=obj.pose.p.tolist()[0]
+    goal_pose_P=env.agent.tcp.pose.p.tolist()[0]
     goal_pose_P[2]=0.15
 
-    goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
+    goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
     planner.close()
     return res
 
 
-def solve_putonto_whenhold_binspecial(env, planner, obj=None,target=None):
+def solve_putonto_whenhold_binspecial(env, planner,target=None):
     FINGER_LENGTH = 0.025
     env = env.unwrapped
 
-    # retrieves the object oriented bounding box (trimesh box object)
-    obb = get_actor_obb(obj)
+    # # retrieves the object oriented bounding box (trimesh box object)
+    # obb = get_actor_obb(obj)
 
-    approaching = np.array([0, 0, -1])
-    # get transformation matrix of the tcp pose, is default batched and on torch
-    target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
-    # we can build a simple grasp pose using this information for Panda
-    grasp_info = compute_grasp_info_by_obb(
-        obb,
-        approaching=approaching,
-        target_closing=target_closing,
-        depth=FINGER_LENGTH,
-    )
-    closing, center = grasp_info["closing"], grasp_info["center"]
-    grasp_pose = env.agent.build_grasp_pose(approaching, closing, obj.pose.sp.p)
+    # approaching = np.array([0, 0, -1])
+    # # get transformation matrix of the tcp pose, is default batched and on torch
+    # target_closing = env.agent.tcp.pose.to_transformation_matrix()[0, :3, 1].cpu().numpy()
+    # # we can build a simple grasp pose using this information for Panda
+    # grasp_info = compute_grasp_info_by_obb(
+    #     obb,
+    #     approaching=approaching,
+    #     target_closing=target_closing,
+    #     depth=FINGER_LENGTH,
+    # )
+    # closing, center = grasp_info["closing"], grasp_info["center"]
+    #grasp_pose = env.agent.build_grasp_pose(approaching, closing, obj.pose.sp.p)
 
+    grasp_pose_q=env.agent.tcp.pose.q.tolist()[0]
 
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[2]=0.2
-    goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
+    goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
     planner.open_gripper()
 
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[0]=goal_pose_P[0]-0.1
     goal_pose_P[2]=0.2
-    goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
+    goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
     
     planner.close()

@@ -444,7 +444,7 @@ class VideoPlaceOrder(BaseEnv):
                     "subgoal_segment":f"drop the cube onto target at <>",
                     "demonstration": True,
                     "failure_func": None,
-                    "solve": lambda env, planner, i=i: solve_putonto_whenhold(env, planner, obj=self.target_cube, target=i),
+                    "solve": lambda env, planner, i=i: solve_putonto_whenhold(env, planner,  target=i),
                     "segment":i,
                 })
 
@@ -477,7 +477,7 @@ class VideoPlaceOrder(BaseEnv):
                 "subgoal_segment":f"drop the cube onto table",
                     "demonstration": True,
                     "failure_func": None,
-                    "solve": lambda env, planner: [solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.goal_site)],
+                    "solve": lambda env, planner: [solve_putonto_whenhold(env, planner,target=self.goal_site)],
              
             })
             tasks.append(       {
@@ -524,7 +524,7 @@ class VideoPlaceOrder(BaseEnv):
                     "subgoal_segment":f"place the cube onto the correct target at <>",
                     "demonstration": False,
                     "failure_func": (lambda: is_obj_dropped_onto_any(self,obj=self.target_cube,target=self.targets_not_true)),
-                    "solve": lambda env, planner: [solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.target_target),
+                    "solve": lambda env, planner: [solve_putonto_whenhold(env, planner,target=self.target_target),
                                                 ],
                     "segment":self.target_target
             

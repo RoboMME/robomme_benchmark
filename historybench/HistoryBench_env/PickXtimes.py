@@ -300,8 +300,12 @@ class PickXtimes(BaseEnv):
     def evaluate(self,solve_complete_eval=False):
 
 
-        self.successflag=torch.tensor([False])
-        self.failureflag = torch.tensor([False])
+        previous_failure = getattr(self, "failureflag", None)
+        self.successflag = torch.tensor([False])
+        if previous_failure is not None and bool(previous_failure.item()):
+            self.failureflag = previous_failure
+        else:
+            self.failureflag = torch.tensor([False])
 
         # 动态生成 N 次 pickup-drop 循环的任务列表
         tasks = []
@@ -322,7 +326,7 @@ class PickXtimes(BaseEnv):
                 "subgoal_segment": f"place the {self.target_color_name} cube onto the target at <>",
                 "demonstration": False,
                 "failure_func": lambda: [is_any_obj_pickup(self, self.non_target_cubes),is_button_pressed(self, obj=self.button)],
-                "solve": lambda env, planner: solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.target),
+                "solve": lambda env, planner: solve_putonto_whenhold(env, planner, target=self.target),
                 "segment":self.target
             })
 

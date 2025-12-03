@@ -341,7 +341,7 @@ class VideoRepick(BaseEnv):
                 "subgoal_segment":f"drop the cube on the table",
                 "demonstration": True,
                 "failure_func": lambda: None,
-                "solve": lambda env, planner: [solve_putdown_whenhold(env, planner, obj=self.target_cube_1,release_z=0.03)]
+                "solve": lambda env, planner: [solve_putdown_whenhold(env, planner,release_z=0.03)]
                 }, 
         ]
         if self.swap_times>=1:
@@ -407,7 +407,7 @@ class VideoRepick(BaseEnv):
                     "failure_func": lambda:[
                         is_any_obj_pickup(self,[cube for cube in self.spawned_cubes if cube != self.target_cube_1]),
                         timewindow(self, lambda: is_button_pressed(self, obj=self.button_left),min_steps=50,max_steps=500,timewindow_timer=3,),], 
-                    "solve": lambda env, planner: solve_putdown_whenhold(env, planner, obj=self.target_cube_1,release_z=0.01)
+                    "solve": lambda env, planner: solve_putdown_whenhold(env, planner,release_z=0.01)
                 })
 
         tasks.append({

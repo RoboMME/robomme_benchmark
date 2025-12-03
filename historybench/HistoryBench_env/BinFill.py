@@ -368,7 +368,7 @@ class BinFill(BaseEnv):
                         "demonstration": False,
                         "failure_func":  lambda:is_button_pressed(self, obj=self.button),
                         "solve": lambda env, planner, c=cube: [
-                            solve_putonto_whenhold_binspecial(env, planner, obj=c, target=self.board_with_hole),
+                            solve_putonto_whenhold_binspecial(env, planner, target=self.board_with_hole),
                         ],
                         "segment":[self.board_with_hole]
                     })

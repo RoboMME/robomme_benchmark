@@ -9,7 +9,7 @@ import colorsys
 import h5py
 from pathlib import Path
 
-# 保证脚本直接运行时能找到工程根目录下的模块
+# Ensure script can find root modules
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 _PARENT = os.path.dirname(_ROOT)
 for _path in (_PARENT, _ROOT):
@@ -29,6 +29,7 @@ try:
 except ImportError:
     Image = ImageDraw = ImageFont = None
 else:
+    # Adjust font path if necessary for your system
     _BANNER_FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
     try:
         _BANNER_FONT = ImageFont.truetype(_BANNER_FONT_PATH, 18)
@@ -44,7 +45,6 @@ from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
 
 
 def _render_text_with_pillow(image, lines, font, line_h, color=(0, 255, 0), offset=(10, 18)):
-    """用 Pillow 在给定图像绘制换行文本，返回依然为 BGR 的 numpy 图像。"""
     if font is None or Image is None or ImageDraw is None:
         for idx, line in enumerate(lines):
             y_pos = offset[1] + idx * line_h
@@ -69,7 +69,7 @@ def _render_text_with_pillow(image, lines, font, line_h, color=(0, 255, 0), offs
     return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
 
-def _get_font_height(font, sample_text="例"):
+def _get_font_height(font, sample_text="Example"):
     if font is None:
         return 0
     if hasattr(font, "getbbox"):
@@ -305,13 +305,20 @@ def _prompt_next_task_gui(
     fps=12,
     seg_hw=(360, 480),
     video_hw=(180, 240),
+    simulated_inputs=None,
 ):
     """
-    GUI函数：只负责渲染传入的静态图像，不进行环境数据获取。
+    Non-interactive GUI: Processes simulated_inputs list exclusively.
+    Renders the result briefly for visualization, then returns selection.
+    Does NOT wait for mouse or keyboard input.
     """
-    window_name = "Demonstration (press number to choose, q/Esc to stop)"
+    if simulated_inputs is None:
+        simulated_inputs = []
+
+    window_name = "Demonstration (Automated)"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
+    # --- 1. Setup Visual Resources ---
     try:
         language_goal = task_goal.get_language_goal(env, env_id)
     except Exception as exc:
@@ -321,6 +328,17 @@ def _prompt_next_task_gui(
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 0.55
     thickness = 1
+
+    # State container
+    state = {
+        "buttons": [],
+        "selection": None,
+        "seg_raw": seg_raw,
+        "seg_rect": None,
+        "pending_option": None,
+    }
+
+    # --- 2. Helper Functions (Logic only) ---
 
     def _wrap_text_line(text, max_width):
         words = (text or "").split()
@@ -338,18 +356,6 @@ def _prompt_next_task_gui(
                 current = word
         lines.append(current)
         return lines
-
-    delay = max(1, int(1000 / max(fps, 1)))
-    frame_idx = 0
-    paused = False
-    selection = None
-    state = {
-        "buttons": [],
-        "selection": None,
-        "seg_raw": seg_raw, # 直接使用传入的静态 seg_raw
-        "seg_rect": None,
-        "pending_option": None,
-    }
 
     def _reset_selected_target():
         selected_target["obj"] = None
@@ -378,26 +384,20 @@ def _prompt_next_task_gui(
             return [item]
 
         def _extend_from_iterable(iterable):
-            added = False
             for actor in iterable:
                 if actor is None:
                     continue
                 identifier = id(actor)
-                if identifier in seen:
-                    continue
-                seen.add(identifier)
-                candidates.append(actor)
-                added = True
-            return added
+                if identifier not in seen:
+                    seen.add(identifier)
+                    candidates.append(actor)
 
         def _extend_from_option(idx):
             if idx is None or not (0 <= idx < len(options)):
-                return False
+                return
             avail = options[idx].get("available")
-            if avail is None:
-                return False
-            flattened = _flatten_items(avail)
-            return _extend_from_iterable(flattened)
+            if avail is not None:
+                _extend_from_iterable(_flatten_items(avail))
 
         if selected_idx is not None:
             _extend_from_option(selected_idx)
@@ -406,72 +406,71 @@ def _prompt_next_task_gui(
         for idx in range(len(options)):
             _extend_from_option(idx)
 
-        if candidates:
-            return candidates
-
-        fallback = getattr(env, "spawned_cubes", None)
-        if fallback:
-            try:
-                iterable = list(fallback)
-            except TypeError:
-                iterable = []
-            _extend_from_iterable(iterable)
+        if not candidates:
+            fallback = getattr(env, "spawned_cubes", None)
+            if fallback:
+                try:
+                    _extend_from_iterable(list(fallback))
+                except TypeError:
+                    pass
 
         return candidates
 
-    def _handle_click(global_x, global_y):
-        target_chosen = False
+    def _handle_logic_click(global_x, global_y):
+        # Handles logic of a click without requiring actual mouse event
         seg_rect = state.get("seg_rect")
         seg_raw_local = state.get("seg_raw")
-        
+
         if seg_rect and seg_raw_local is not None:
             x1, y1, x2, y2 = seg_rect
+            # Check if inside segmentation rect
             if x1 <= global_x <= x2 and y1 <= global_y <= y2:
                 disp_w = max(1, x2 - x1 + 1)
                 disp_h = max(1, y2 - y1 + 1)
                 seg_h, seg_w = seg_raw_local.shape[:2]
                 sx = int((global_x - x1) * seg_w / disp_w)
                 sy = int((global_y - y1) * seg_h / disp_h)
-                
+
                 if 0 <= sx < seg_w and 0 <= sy < seg_h:
                     seg_id_map = getattr(env.unwrapped, "segmentation_id_map", {}) or {}
                     pending_option = state.get("pending_option")
+
                     if pending_option is None:
-                        print("Select an option button before choosing a target point.")
-                        return True
+                        print("AUTO: No option armed before coordinates.")
+                        return
 
                     available_targets = _collect_available_targets(pending_option)
-                    if not available_targets:
-                        print("The selected option has no available targets to click.")
-                        return True
                     click_disp = (global_x - x1, global_y - y1)
 
                     candidates = []
-                    for actor in available_targets:
-                        target_seg_id = None
-                        for sid, obj in seg_id_map.items():
-                            if obj is actor:
-                                target_seg_id = int(sid)
-                                break
-                        if target_seg_id is None:
-                            continue
-                        mask = seg_raw_local == target_seg_id
-                        if not np.any(mask):
-                            continue
-                        ys, xs = np.nonzero(mask)
-                        cx = float(xs.mean())
-                        cy = float(ys.mean())
-                        disp_cx = int(round(cx * disp_w / seg_w))
-                        disp_cy = int(round(cy * disp_h / seg_h))
-                        dist2 = (disp_cx - click_disp[0]) ** 2 + (disp_cy - click_disp[1]) ** 2
-                        candidates.append(
-                            {
-                                "actor": actor,
-                                "seg_id": target_seg_id,
-                                "disp_point": (disp_cx, disp_cy),
-                                "dist2": dist2,
-                            }
-                        )
+                    if available_targets:
+                        for actor in available_targets:
+                            target_seg_id = None
+                            for sid, obj in seg_id_map.items():
+                                if obj is actor:
+                                    target_seg_id = int(sid)
+                                    break
+                            if target_seg_id is None:
+                                continue
+
+                            mask = seg_raw_local == target_seg_id
+                            if not np.any(mask):
+                                continue
+
+                            ys, xs = np.nonzero(mask)
+                            cx = float(xs.mean())
+                            cy = float(ys.mean())
+                            disp_cx = int(round(cx * disp_w / seg_w))
+                            disp_cy = int(round(cy * disp_h / seg_h))
+                            dist2 = (disp_cx - click_disp[0]) ** 2 + (disp_cy - click_disp[1]) ** 2
+                            candidates.append(
+                                {
+                                    "actor": actor,
+                                    "seg_id": target_seg_id,
+                                    "disp_point": (disp_cx, disp_cy),
+                                    "dist2": dist2,
+                                }
+                            )
 
                     chosen = None
                     if candidates:
@@ -480,21 +479,17 @@ def _prompt_next_task_gui(
 
                     if chosen is not None:
                         obj = chosen["actor"]
-                        seg_id = chosen["seg_id"]
                         selected_target["obj"] = obj
-                        selected_target["name"] = getattr(obj, "name", f"id_{seg_id}")
-                        selected_target["seg_id"] = seg_id
+                        selected_target["name"] = getattr(obj, "name", f"id_{chosen['seg_id']}")
+                        selected_target["seg_id"] = chosen["seg_id"]
                         selected_target["click_point"] = (int(click_disp[0]), int(click_disp[1]))
                         selected_target["centroid_point"] = chosen["disp_point"]
-                        target_chosen = True
-                        print(
-                            f"Selected nearest available target via segmentation id={seg_id}, "
-                            f"obj name={selected_target['name']}"
-                        )
+                        print(f"AUTO: Target Selected -> {selected_target['name']}")
                     else:
+                        # Fallback to direct segmentation ID under pixel
                         seg_id = int(seg_raw_local[sy, sx])
                         obj = seg_id_map.get(seg_id)
-                        if obj is not None:
+                        if obj:
                             selected_target["obj"] = obj
                             selected_target["name"] = getattr(obj, "name", f"id_{seg_id}")
                             selected_target["seg_id"] = seg_id
@@ -505,223 +500,144 @@ def _prompt_next_task_gui(
                                 cx = int(round(xs.mean() * disp_w / seg_w))
                                 cy = int(round(ys.mean() * disp_h / seg_h))
                                 selected_target["centroid_point"] = (cx, cy)
-                            else:
-                                selected_target["centroid_point"] = None
-                            target_chosen = True
-                            print(
-                                f"Selected target via segmentation id={seg_id}, "
-                                f"obj name={selected_target['name']}"
-                            )
-                        else:
-                            print(f"No object found for segmentation id={seg_id}")
-                return True
+                            print(f"AUTO: Target Selected via ID -> {selected_target['name']}")
 
-        for btn in state["buttons"]:
-            x1, y1, x2, y2 = btn["rect"]
-            if x1 <= global_x <= x2 and y1 <= global_y <= y2:
-                idx = btn["idx"]
-                option_avail = _collect_available_targets(idx)
-                if option_avail:
-                    pending = state.get("pending_option")
-                    if pending == idx:
-                        obj = selected_target.get("obj")
-                        if obj is None:
-                            print("Target not selected yet; click on the segmentation view first.")
-                            return True
-                        ids = {id(actor) for actor in option_avail}
-                        if id(obj) not in ids:
-                            print("Selected target does not belong to this option; please reselect.")
-                            _reset_selected_target()
-                            return True
-                        state["selection"] = idx
-                        state["pending_option"] = None
-                    else:
-                        state["pending_option"] = idx
-                        state["selection"] = None
-                        _reset_selected_target()
-                        print(
-                            "Option armed. Click on the segmentation map to pick one of its targets, then click the same button again to confirm."
-                        )
-                else:
-                    state["selection"] = idx
-                    state["pending_option"] = None
-                return True
-        return False
+    # --- 3. Rendering Logic ---
 
-    def on_mouse(event, x, y, flags, param):
-        if event != cv2.EVENT_LBUTTONDOWN:
-            return
-        _handle_click(x, y)
-
-    cv2.setMouseCallback(window_name, on_mouse)
-
-    print("\n可用选项（输入数字直接选择，或在终端输入 x y 坐标模拟点击，q 退出）:")
-    for idx, opt in enumerate(options):
-        label = opt.get("label", f"Option {idx + 1}")
-        print(f"  {idx + 1}: {label}")
-
-    while True:
-        # 复制一份显示用的图像，以免 marker 污染原图
+    def render_current_state(simulated_step_idx, last_cmd):
+        """Renders the UI based on current state variables."""
+        # 1. Base Image Layout
         seg_vis_display = seg_vis.copy() if seg_vis is not None else None
 
-        if seg_vis_display is not None and selected_target.get("click_point"):
-            cv2.circle(seg_vis_display, selected_target["click_point"], 6, (0, 0, 255), 2)
-        if seg_vis_display is not None and selected_target.get("centroid_point"):
-            cv2.circle(seg_vis_display, selected_target["centroid_point"], 6, (0, 255, 255), 2)
+        # Draw target indicators
+        if seg_vis_display is not None:
+            if selected_target.get("click_point"):
+                cv2.circle(seg_vis_display, selected_target["click_point"], 6, (0, 0, 255), 2)
+            if selected_target.get("centroid_point"):
+                cv2.circle(seg_vis_display, selected_target["centroid_point"], 6, (0, 255, 255), 2)
 
-        # 这里直接使用传入的 base_frames 和 wrist_frames
+        # Compose Grid (Video + Seg)
         grid, seg_rect = _compose_vertical_layout(
-            frame_idx,
-            seg_vis_display,
-            base_frames,
-            wrist_frames,
-            seg_hw=seg_hw,
-            video_hw=video_hw,
+            0, seg_vis_display, base_frames, wrist_frames, seg_hw=seg_hw, video_hw=video_hw
         )
+
+        # 2. Prepare Buttons
         numbered_options = []
         for idx, opt in enumerate(options):
             labeled = dict(opt)
-            labeled["label"] = f"{idx + 1}. {opt.get('label', f'Option {idx + 1}')}"
+            # visual indicator if selected
+            prefix = "> " if (state["selection"] == idx or state["pending_option"] == idx) else ""
+            labeled["label"] = f"{idx + 1}. {prefix}{opt.get('label', 'Opt')}"
             numbered_options.append(labeled)
 
         combined, buttons = _draw_buttons_bottom(grid, numbered_options)
+
+        # 3. Banner
         selected_name = selected_target.get("name") or "None"
         banner_lines = []
         if language_goal:
             banner_lines.extend(_wrap_text_line(f"Goal: {language_goal}", combined.shape[1] - 20))
-        banner_lines.append(f"Selected target: {selected_name}")
-        banner_lines.extend(
-            _wrap_text_line(
-                "Press/enter a number to arm, pick a target on the segmentation view (mouse or terminal 'x y'), then press the same number again to confirm. Options without targets run immediately. Space pause, q/Esc exit.",
-                combined.shape[1] - 20,
-            )
-        )
+        banner_lines.append(f"State: {selected_name} | Cmd: {last_cmd}")
+
         line_h = 22
         if _BANNER_FONT is not None:
-            font_height = _get_font_height(_BANNER_FONT, "例") + 4
+            font_height = _get_font_height(_BANNER_FONT, "Ex") + 4
             line_h = max(line_h, font_height)
+
         banner_h = max(30, 12 + line_h * len(banner_lines))
         banner = np.zeros((banner_h, combined.shape[1], 3), dtype=np.uint8)
-        banner = _render_text_with_pillow(
-            banner,
-            banner_lines,
-            _BANNER_FONT,
-            line_h,
-            color=(0, 255, 0),
-            offset=(10, 18),
-        )
+        banner = _render_text_with_pillow(banner, banner_lines, _BANNER_FONT, line_h)
         combined = np.vstack([banner, combined])
-        banner_h = banner.shape[0]
 
-        adjusted_buttons = []
+        # 4. Update Rects in State (Crucial for coordinate simulation)
+        current_banner_h = banner.shape[0]
+        # Offset seg_rect by banner height
+        state["seg_rect"] = (
+            (seg_rect[0], seg_rect[1] + current_banner_h, seg_rect[2], seg_rect[3] + current_banner_h)
+            if seg_rect
+            else None
+        )
+
+        # Offset buttons
+        state["buttons"] = []
         for btn in buttons:
             x1, y1, x2, y2 = btn["rect"]
-            adjusted_buttons.append({"idx": btn["idx"], "rect": (x1, y1 + banner_h, x2, y2 + banner_h)})
-
-        adjusted_seg_rect = (
-            None
-            if seg_rect is None
-            else (seg_rect[0], seg_rect[1] + banner_h, seg_rect[2], seg_rect[3] + banner_h)
-        )
-
-        state["buttons"] = adjusted_buttons
-        state["seg_rect"] = adjusted_seg_rect
+            state["buttons"].append(
+                {
+                    "idx": btn["idx"],
+                    "rect": (x1, y1 + current_banner_h, x2, y2 + current_banner_h),
+                }
+            )
 
         cv2.imshow(window_name, combined)
-        key = cv2.waitKey(100 if paused else delay) & 0xFF
+        cv2.waitKey(500)  # Display for 500ms so user can see what happened
 
-        if key in (ord("q"), 27):
-            selection = None
-            break
-        elif key == ord(" "):
-            paused = not paused
-        elif ord("1") <= key <= ord("9"):
-            idx = key - ord("1")
-            if idx < len(options):
+    # --- 4. Main Processing Loop ---
+
+    # Render once initially to calculate rects (needed for coordinate inputs)
+    render_current_state(-1, "START")
+
+    print(f"Processing {len(simulated_inputs)} simulated inputs...")
+
+    for i, cmd in enumerate(simulated_inputs):
+        cmd = str(cmd).strip()
+        print(f"AUTO INPUT [{i}]: {cmd}")
+
+        tokens = cmd.replace(",", " ").split()
+
+        # CASE A: Option Selection (e.g. "1")
+        if len(tokens) == 1 and tokens[0].isdigit():
+            idx = int(tokens[0]) - 1
+            if 0 <= idx < len(options):
                 option_avail = _collect_available_targets(idx)
+
+                # Logic: If option needs target, arm it. If confirmed, select it.
                 if option_avail:
                     if state.get("pending_option") == idx:
+                        # Trying to confirm
                         obj = selected_target.get("obj")
-                        if obj is not None and any(id(obj) == id(actor) for actor in option_avail):
-                            selection = idx
-                            break
-                        print("Target not selected or mismatched; click segmentation then press the number again.")
+                        if obj is not None:
+                            state["selection"] = idx
+                        else:
+                            print("AUTO: Cannot confirm, no target selected.")
                     else:
                         state["pending_option"] = idx
                         state["selection"] = None
                         _reset_selected_target()
-                        print("Option armed. Click on segmentation to pick target, then press the same number to confirm.")
+                        print(f"AUTO: Option {idx + 1} armed.")
                 else:
-                    selection = idx
-                    break
-        elif state["selection"] is not None:
-            selection = state["selection"]
+                    # No target needed
+                    state["selection"] = idx
+            else:
+                print(f"AUTO: Invalid index {idx}")
+
+        # CASE B: Coordinates (e.g. "150 150")
+        elif len(tokens) >= 2:
+            try:
+                cx = int(float(tokens[0]))
+                cy = int(float(tokens[1]))
+
+                # Try to use existing rects to resolve click
+                # If coords are small (relative), assume they are inside seg rect
+                seg_rect = state.get("seg_rect")
+                if seg_rect:
+                    # Assuming local crop coords (e.g. 0-360, 0-480) relative to image start
+                    global_x = seg_rect[0] + cx
+                    global_y = seg_rect[1] + cy
+                    _handle_logic_click(global_x, global_y)
+            except ValueError:
+                print("AUTO: Coord parse error")
+
+        # Render result of this step
+        render_current_state(i, cmd)
+
+        # If we have a finalized selection, stop early
+        if state["selection"] is not None:
+            print("AUTO: Selection finalized.")
             break
 
-        try:
-            ready, _, _ = select.select([sys.stdin], [], [], 0)
-        except Exception:
-            ready = []
-        if ready:
-            line = sys.stdin.readline().strip()
-            if line:
-                lowered = line.lower()
-                if lowered in ("q", "quit", "exit"):
-                    selection = None
-                    break
-                tokens = line.replace(",", " ").split()
-                if len(tokens) == 1 and tokens[0].isdigit():
-                    idx = int(tokens[0]) - 1
-                    if 0 <= idx < len(options):
-                        option_avail = _collect_available_targets(idx)
-                        if option_avail:
-                            if state.get("pending_option") == idx:
-                                obj = selected_target.get("obj")
-                                if obj is not None and any(id(obj) == id(actor) for actor in option_avail):
-                                    selection = idx
-                                    break
-                                print("Target not selected or mismatched; enter coordinates then press the same number again.")
-                            else:
-                                state["pending_option"] = idx
-                                state["selection"] = None
-                                _reset_selected_target()
-                                print(
-                                    f"Option {idx + 1} armed via terminal. Enter 'x y' to pick a target, then press {idx + 1} again to confirm."
-                                )
-                        else:
-                            selection = idx
-                            break
-                    else:
-                        print(f"Invalid option index {tokens[0]}; valid range: 1-{len(options)}")
-                elif len(tokens) >= 2:
-                    try:
-                        cx = int(float(tokens[0]))
-                        cy = int(float(tokens[1]))
-                        handled = _handle_click(cx, cy)
-                        if not handled:
-                            seg_rect = state.get("seg_rect")
-                            if seg_rect is not None:
-                                x1, y1, x2, y2 = seg_rect
-                                disp_w = x2 - x1 + 1
-                                disp_h = y2 - y1 + 1
-                                if 0 <= cx < disp_w and 0 <= cy < disp_h:
-                                    handled = _handle_click(x1 + cx, y1 + cy)
-                        if handled:
-                            continue
-                    except ValueError:
-                        print(f"Unrecognized input '{line}'.")
-                else:
-                    print(f"Unrecognized input '{line}'.")
-
-        if not paused:
-            # 这里的 base_frames 是外部传入的固定列表
-            if base_frames and frame_idx < len(base_frames) - 1:
-                frame_idx += 1
-            else:
-                paused = True
-
     cv2.destroyWindow(window_name)
-    return selection
+    return state["selection"]
 
 
 def main():
@@ -729,26 +645,16 @@ def main():
     gui_render = True
     max_steps_without_demonstration = 3000
     dataset_root = Path("/data/hongzefu/dataset_demonstration")
-    use_segmentation = False  # 不使用分割显示模式
+    use_segmentation = False
 
     env_id_list = [
-        #"VideoRepick",
-        #"BinFill",
-        #"ButtonUnmask",
-        #"ButtonUnmaskSwap",
-        # "InsertPeg",
-        # "MoveCube",
-        # "PatternLock",
-        # "PickHighlight",
-        # "PickXtimes",
-        # "RouteStick",
-        # "StopCube",
-        # "SwingXtimes",
-        # "VideoPlaceButton",
-        # "VideoPlaceOrder",
-        # "VideoUnmask",
-        #"VideoUnmaskSwap",
+        "VideoRepick",
     ]
+
+    # --- SIMULATED INPUTS CONFIGURATION ---
+    # Define your sequence of commands here.
+    # Example: ["1", "150 150", "1"] -> Select Opt 1, click (150, 150), Confirm Opt 1
+    auto_commands = ["1", "150 150", "1"]
 
     render_mode = "human" if gui_render else "rgb_array"
 
@@ -772,16 +678,10 @@ def main():
             for episode in range(num_episodes):
                 if episode != 79:
                     continue
-                
-                env, episode_dataset, seed, difficulty = resolver.make_env_for_episode(episode)
-                
-                seed_desc = seed if seed is not None else "default"
-                difficulty_desc = difficulty if difficulty else "default"
-                print(
-                    f"--- Running online evaluation for episode:{episode}, env:{env_id}, "
-                    f"seed:{seed_desc}, difficulty:{difficulty_desc} ---"
-                )
 
+                env, episode_dataset, seed, difficulty = resolver.make_env_for_episode(episode)
+
+                print(f"--- Running online evaluation for episode:{episode} ---")
                 env.reset()
 
                 color_map = _generate_color_map()
@@ -818,95 +718,74 @@ def main():
                 tasks = list(getattr(env.unwrapped, "task_list", []) or [])
                 solve_options = _build_solve_options(env, planner, selected_target, env_id)
 
-                if not tasks:
-                    print("No tasks defined for this environment; skipping execution")
+                if not tasks or not solve_options:
                     env.close()
                     continue
-                if not solve_options:
-                    print("No solve options available; skipping execution")
-                    env.close()
-                    continue
-
-                print(f"{env_id}: Task list has {len(tasks)} tasks; {len(solve_options)} solve options available")
 
                 ordinal = 0
 
                 while True:
-                    # 在调用 GUI 之前获取并处理好所有图像数据
                     base_frames = getattr(env, "frames", []) or []
                     wrist_frames = getattr(env, "wrist_frames", []) or []
-                    
-                    # 尝试获取 segmentation 数据用于后续点击计算
                     seg_data = _fetch_segmentation(env)
-                    
+
                     seg_vis = None
                     seg_raw = None
                     seg_hw = (360, 480)
 
                     if use_segmentation:
-                        # 模式1: 使用分割图作为主视图
                         seg_vis, seg_raw = _prepare_segmentation_visual(seg_data, color_map, seg_hw)
                     else:
-                        # 模式2: 使用 RGB 图作为主视图
-                        # 依然需要准备 seg_raw 用于点击逻辑(如果 seg_data 存在)
-                        _, seg_raw = _prepare_segmentation_visual(seg_data, color_map, seg_hw) if seg_data is not None else (None, None)
-                        
-                        # 准备 用于选择的 RGB/分割 视图
+                        _, seg_raw = (
+                            _prepare_segmentation_visual(seg_data, color_map, seg_hw)
+                            if seg_data is not None
+                            else (None, None)
+                        )
                         if base_frames:
                             vis_frame = _prepare_frame(base_frames[-1])
                             vis_frame = cv2.cvtColor(vis_frame, cv2.COLOR_RGB2BGR)
                             if vis_frame.shape[:2] != seg_hw:
-                                vis_frame = cv2.resize(vis_frame, (seg_hw[1], seg_hw[0]), interpolation=cv2.INTER_LINEAR)
+                                vis_frame = cv2.resize(
+                                    vis_frame, (seg_hw[1], seg_hw[0]), interpolation=cv2.INTER_LINEAR
+                                )
                             seg_vis = vis_frame
                         else:
                             seg_vis = np.zeros((seg_hw[0], seg_hw[1], 3), dtype=np.uint8)
 
-                    # 调用纯渲染的 GUI 函数
+                    # EXECUTE AUTOMATED GUI
                     solve_idx = _prompt_next_task_gui(
                         solve_options,
                         env,
                         selected_target,
                         env_id,
-                        seg_vis=seg_vis,          # 传入处理好的主显示图
-                        seg_raw=seg_raw,          # 传入处理好的原始分割ID图
-                        base_frames=base_frames,  # 传入当前积累的视频列表
-                        wrist_frames=wrist_frames,# 传入当前积累的视频列表
+                        seg_vis=seg_vis,
+                        seg_raw=seg_raw,
+                        base_frames=base_frames,
+                        wrist_frames=wrist_frames,
                         fps=120,
-                        seg_hw=seg_hw
+                        seg_hw=seg_hw,
+                        simulated_inputs=auto_commands,
                     )
-                    
+
                     if solve_idx is None:
-                        print("Stopping by user choice.")
+                        print("Stopping: No selection made (simulated inputs ran out).")
                         break
 
                     ordinal += 1
                     solve_entry = solve_options[solve_idx]
-                    solve_name = solve_entry.get("label", f"Solve {solve_idx}")
-                    print(f"Executing selected solve {ordinal}: {solve_name}")
+                    print(f"Executing: {solve_entry.get('label')}")
+                    solve_entry.get("solve")()
 
-                    solve_callable = solve_entry.get("solve")
-                    if not callable(solve_callable):
-                        raise ValueError(f"Solve '{solve_name}' must be callable.")
-
-                    env.unwrapped.evaluate(solve_complete_eval=True)
-                    solve_callable()
                     evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
-                    fail_flag = evaluation.get("fail", False)
-                    success_flag = evaluation.get("success", False)
-
-                    print(evaluation)
-
-                    if _tensor_to_bool(fail_flag):
-                        print("Encountered failure condition; stopping task sequence.")
+                    if _tensor_to_bool(evaluation.get("fail", False)):
+                        print("Failure condition.")
                         break
-
-                    if _tensor_to_bool(success_flag):
-                        print("All tasks completed successfully.")
+                    if _tensor_to_bool(evaluation.get("success", False)):
+                        print("Success.")
                         break
 
                 env.unwrapped.evaluate()
                 env.close()
-                print(f"--- Finished online evaluation for episode:{episode}, env:{env_id} ---")
 
 
 if __name__ == "__main__":

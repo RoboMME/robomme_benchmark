@@ -397,7 +397,7 @@ class VideoPlaceButton(BaseEnv):
                     "subgoal_segment":f"drop the cube onto target at <>",
                     "demonstration": True,
                     "failure_func": None,
-                    "solve": lambda env, planner: solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.target_2),
+                    "solve": lambda env, planner: solve_putonto_whenhold(env, planner,target=self.target_2),
                     'segment':self.target_2,
             })
 ############
@@ -416,7 +416,7 @@ class VideoPlaceButton(BaseEnv):
                 "subgoal_segment":f"drop the cube onto target at <>",
                 "demonstration": True,
                 "failure_func": None,
-                "solve": lambda env, planner: solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.target_0),
+                "solve": lambda env, planner: solve_putonto_whenhold(env, planner,target=self.target_0),
                 'segment':self.target_0,
          })
 ############
@@ -446,7 +446,7 @@ class VideoPlaceButton(BaseEnv):
                             "subgoal_segment":f"drop the cube onto target at <>",
                             "demonstration": True,
                             "failure_func": None,
-                            "solve": lambda env, planner: solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.target_3),
+                            "solve": lambda env, planner: solve_putonto_whenhold(env, planner,target=self.target_3),
                             'segment':self.target_3,
             })
 ############
@@ -465,7 +465,7 @@ class VideoPlaceButton(BaseEnv):
                 "subgoal_segment":f"drop the cube onto target at <>",
                 "demonstration": True,
                 "failure_func": None,
-                "solve": lambda env, planner: solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.target_1),
+                "solve": lambda env, planner: solve_putonto_whenhold(env, planner, target=self.target_1),
                 'segment':self.target_1,
             
          })
@@ -486,7 +486,7 @@ class VideoPlaceButton(BaseEnv):
                 "subgoal_segment":f"drop the cube onto table",
                 "demonstration": True,
                 "failure_func": None,
-                "solve": lambda env, planner: [solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.goal_site), 
+                "solve": lambda env, planner: [solve_putonto_whenhold(env, planner,target=self.goal_site), 
                                               ],
 
          })
@@ -534,7 +534,7 @@ class VideoPlaceButton(BaseEnv):
                 "subgoal_segment":f"place the cube onto the correct target at <>",
                 "demonstration": False,
                 "failure_func": (lambda: is_obj_dropped_onto_any(self,obj=self.target_cube,target=self.targets_not_true)),
-                "solve": lambda env, planner: [solve_putonto_whenhold(env, planner, obj=self.target_cube,target=self.target_target),],
+                "solve": lambda env, planner: [solve_putonto_whenhold(env, planner,target=self.target_target),],
                 'segment':self.target_target,
         
          })

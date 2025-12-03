@@ -268,7 +268,7 @@ class VideoUnmask(BaseEnv):
                     "subgoal_segment":"put down the container",
                     "demonstration": False,
                     "failure_func": lambda:is_any_bin_pickup(self,[bin for bin in self.spawned_bins if bin != self.bin_0]),
-                    "solve": lambda env, planner: solve_putdown_whenhold(env, planner, obj=self.bin_0),
+                    "solve": lambda env, planner: solve_putdown_whenhold(env, planner),
 
                 })
             tasks.append(
@@ -278,7 +278,7 @@ class VideoUnmask(BaseEnv):
                     "subgoal_segment":f"pick up the container at <> that hides the {self.color_names[1]} cube",
                     "demonstration": False,
                     "failure_func": lambda: is_any_bin_pickup(self,[bin for bin in self.spawned_bins if bin != self.bin_1]),
-                    "solve": lambda env, planner: solve_pickup_bin(env, planner, obj=self.bin_1),
+                    "solve": lambda env, planner: solve_pickup_bin(env, planner),
                     "segment":self.bin_1,
                 })
         

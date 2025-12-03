@@ -510,7 +510,7 @@ class MoveCube(BaseEnv):
                     "subgoal_segment":f"place the cube onto the target at <>",
                     "demonstration": True,
                     "failure_func":  None, 
-                    "solve": lambda env, planner: [solve_putonto_whenhold(env, planner, obj=self.cube,target=self.goal_site)],
+                    "solve": lambda env, planner: [solve_putonto_whenhold(env, planner,target=self.goal_site)],
                                         "segment":[self.goal_site],
                                         },
 
@@ -548,7 +548,7 @@ class MoveCube(BaseEnv):
                     "subgoal_segment":f"place the cube onto the target at <>",
                     "demonstration": False,
                     "failure_func":  None, 
-                    "solve": lambda env, planner: [solve_putonto_whenhold(env, planner, obj=self.cube,target=self.goal_site)],
+                    "solve": lambda env, planner: [solve_putonto_whenhold(env, planner,target=self.goal_site)],
                                         "segment":[self.goal_site],
                                         },
 

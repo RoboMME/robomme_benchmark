@@ -342,8 +342,12 @@ class SwingXtimes(BaseEnv):
 
 
     def evaluate(self,solve_complete_eval=False):
-        self.successflag=torch.tensor([False])
-        self.failureflag = torch.tensor([False])
+        previous_failure = getattr(self, "failureflag", None)
+        self.successflag = torch.tensor([False])
+        if previous_failure is not None and bool(previous_failure.item()):
+            self.failureflag = previous_failure
+        else:
+            self.failureflag = torch.tensor([False])
 
         # 为测试“超出摆动上限”场景，强行降低上限（例如 1 次）
         # 这样第二次落点就会触发 too_many_swings 失败逻辑，便于验证
@@ -371,7 +375,7 @@ class SwingXtimes(BaseEnv):
                 "subgoal_segment":f"move to the top of the right-side target for the {ordinal} time at <>",
                 "demonstration": False,
                 "failure_func": lambda:  [is_any_obj_pickup(self, self.non_target_cubes),is_button_pressed(self, obj=self.button),too_many_swings(self)],
-                "solve": lambda env, planner: [solve_swingonto_whenhold(env, planner, obj=self.target_cube,target=self.target_right,height=0.1),
+                "solve": lambda env, planner: [solve_swingonto_whenhold(env, planner,target=self.target_right,height=0.1),
                                                ],
                 'segment':self.target_right,
             })
@@ -381,7 +385,7 @@ class SwingXtimes(BaseEnv):
                 "subgoal_segment":f"move to the top of the left-side target for the {ordinal} time at <>",
                 "demonstration": False,
                 "failure_func": lambda:  [is_any_obj_pickup(self, self.non_target_cubes),is_button_pressed(self, obj=self.button),too_many_swings(self)],
-                "solve": lambda env, planner: [solve_swingonto_whenhold(env, planner, obj=self.target_cube,target=self.target_left,height=0.1),
+                "solve": lambda env, planner: [solve_swingonto_whenhold(env, planner, target=self.target_left,height=0.1),
                                             ],
                 'segment':self.target_left,
             })
@@ -393,7 +397,7 @@ class SwingXtimes(BaseEnv):
                 "subgoal_segment":f"put the {self.target_color_name} cube on the table",
                 "demonstration": False,
                 "failure_func":  lambda: [is_any_obj_pickup(self, self.non_target_cubes),is_button_pressed(self, obj=self.button),too_many_swings(self)],
-                "solve": lambda env, planner: solve_putdown_whenhold(env, planner, obj=self.target_cube),
+                "solve": lambda env, planner: solve_putdown_whenhold(env, planner,),
             })
         tasks.append({
                 "func": lambda: is_button_pressed(self, obj=self.button),
