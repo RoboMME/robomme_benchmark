@@ -8,12 +8,12 @@ import shutil
 import json
 
 from openpi_client import websocket_client_policy as _websocket_client_policy
-from utils import suppress_warnings, pack_buffer, check_args
+from history_bench_sim.utils import suppress_warnings, pack_buffer, check_args
 
 from historybench.env_record_wrapper import DemonstrationWrapper
 from historybench.HistoryBench_env import *
 
-from examples.history_bench_sim.utils import RolloutRecorder
+from history_bench_sim.utils import RolloutRecorder
 
 TASK_NAME_LIST=  [      
     "BinFill",
@@ -168,7 +168,7 @@ def eval_one_episode(
         
     if args.symbolic_memory in ["simple_subgoal", "grounded_subgoal"]:
         if args.use_gemini:
-            from examples.history_bench_sim.chat_api.gemini import Gemini as RobotInstructionAgent
+            from history_bench_sim.chat_api.gemini import Gemini as RobotInstructionAgent
             gemini_save_ep_dir = save_dir / "conversation" / env_name
             gemini_save_ep_dir.mkdir(parents=True, exist_ok=True)
             system_prompt = RobotInstructionAgent.get_system_prompt(task_goal)

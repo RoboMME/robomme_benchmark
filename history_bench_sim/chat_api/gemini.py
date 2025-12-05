@@ -8,7 +8,7 @@ import numpy as np
 from moviepy import VideoFileClip
 from copy import deepcopy
 import re
-from prompts import *
+from history_bench_sim.chat_api.prompts import *
 import cv2
 
 
