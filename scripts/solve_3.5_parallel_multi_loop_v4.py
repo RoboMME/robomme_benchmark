@@ -61,25 +61,25 @@ from planner_fail_safe import (
 
 
 DEFAULT_ENVS =[
-"PickXtimes",
-"StopCube",
-"SwingXtimes",
-"BinFill",
+# "PickXtimes",
+# "StopCube",
+# "SwingXtimes",
+# "BinFill",
 
-"VideoUnmaskSwap",
-"VideoUnmask",
-"ButtonUnmaskSwap",
-"ButtonUnmask",
+# "VideoUnmaskSwap",
+# "VideoUnmask",
+# "ButtonUnmaskSwap",
+# "ButtonUnmask",
 
-"VideoRepick",
-"VideoPlaceButton",
-"VideoPlaceOrder",
-"PickHighlight",
+# "VideoRepick",
+# "VideoPlaceButton",
+# "VideoPlaceOrder",
+# "PickHighlight",
 
 "InsertPeg",
-'MoveCube',
-"PatternLock",
-"RouteStick"
+# 'MoveCube',
+# "PatternLock",
+# "RouteStick"
 
 ]
 ENV_ID_TO_CODE = {name: idx + 1 for idx, name in enumerate(DEFAULT_ENVS)}
@@ -452,7 +452,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=32,
+        default=10,
         help="Number of episodes to generate per environment (default: 50)",
     )
 

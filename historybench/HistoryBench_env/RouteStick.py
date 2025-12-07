@@ -480,7 +480,7 @@ class RouteStick(BaseEnv):
 
 
         # 如果任务失败，立即标记失败
-        if task_failed:
+        if task_failed or self.direction_fail():
             self.failureflag = torch.tensor([True])
             print(f"Task failed: {current_task_name}")
 

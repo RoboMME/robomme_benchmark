@@ -29,7 +29,7 @@ from .util.evaluate import static_check
 from .util import subgoal_language
 from .util.object_generation import spawn_fixed_cube, build_board_with_hole
 from .util import reset_panda
-
+from .util import evaluate
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -352,7 +352,7 @@ class InsertPeg(BaseEnv):
                     "segment":self.grasp_target
                 },
                 {
-                    "func": lambda: is_A_insert_notB(self, self.insert_target, self.grasp_target, self.box),
+                    "func": lambda: is_A_insert_notB(self, self.insert_target, self.grasp_target, self.box,direction=self.direction),
                     "name": f"Insert the peg from the {self.insert_way} side of the box",
                     "subgoal_segment":f"Insert the peg from the {self.insert_way} side of the box at <>",
                     "demonstration": True,
@@ -394,12 +394,13 @@ class InsertPeg(BaseEnv):
                     "segment":self.grasp_target
                 },
                 {
-                    "func": lambda: is_A_insert_notB(self, self.insert_target, self.grasp_target, self.box,mark_end_flag=True),
+                    "func": lambda: is_A_insert_notB(self, self.insert_target, self.grasp_target,self.box,direction=self.direction,mark_end_flag=True),
                     "name": f"Insert the peg from the {self.insert_way} side",
                     "subgoal_segment":f"Insert the peg from the {self.insert_way} side at <>",
                     "demonstration": False,
                     "failure_func": lambda: [
                         is_A_insert_notB(self, self.grasp_target, self.insert_target, self.box),
+                        is_A_insert_notB(self, self.insert_target, self.grasp_target, self.box, direction=-self.direction),
                         is_any_obj_pickup(self, [head for i, head in enumerate(self.peg_heads) if self.pegs[i] is not self.peg] +
                                             [tail for i, tail in enumerate(self.peg_tails) if self.pegs[i] is not self.peg])
                     ],
@@ -487,7 +488,7 @@ class InsertPeg(BaseEnv):
 
 
 
-        if is_A_insert_notB(self, self.insert_target, self.grasp_target, self.box):
+        if is_A_insert_notB(self, self.insert_target, self.grasp_target, self.box,direction=self.direction):
             self.start_step=cur_step
 
 

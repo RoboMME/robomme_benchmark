@@ -442,28 +442,35 @@ def is_A_pickup_notB(self, A, B):
     # 两个条件都满足
 
     return is_obj_pickup & is_A_closer
-def is_A_insert_notB(self, A, B,box,mark_end_flag=False,threashold=0.05):
-    # 检查物体A的z坐标是否大于0.1
-    is_obj_insert=(  np.linalg.norm(A.pose.p - box.pose.p, axis=-1) < threashold)
-    
+def is_A_insert_notB(self, A, B,box,direction=None,mark_end_flag=False,threashold=0.05):
+    """Check peg insertion with optional direction constraint."""
+    def _to_np(vec):
+        if isinstance(vec, torch.Tensor):
+            vec = vec.detach().cpu().numpy()
+        return np.asarray(vec, dtype=np.float32).reshape(-1)
 
-    # 计算A和gripper的距离
-    dist_A_gripper = np.linalg.norm(A.pose.p - box.pose.p, axis=-1)
-    
-    # 计算B和gripper的距离
-    dist_B_gripper = np.linalg.norm(B.pose.p - box.pose.p, axis=-1)
-    
-    # A距离gripper更近
+    A_pos = _to_np(A.pose.p)
+    B_pos = _to_np(B.pose.p)
+    box_pos = _to_np(box.pose.p)
+
+    is_obj_insert = np.linalg.norm(A_pos - box_pos, axis=-1) < threashold
+    dist_A_gripper = np.linalg.norm(A_pos - box_pos, axis=-1)
+    dist_B_gripper = np.linalg.norm(B_pos - box_pos, axis=-1)
     is_A_closer = dist_A_gripper < dist_B_gripper
-    
-    #print( np.linalg.norm(A.pose.p - box.pose.p, axis=-1))
 
-    if is_obj_insert & is_A_closer:
-        if mark_end_flag==True:
-            print("marked end step!",self.elapsed_steps+3)
-            self.end_steps=int(getattr(self, "elapsed_steps", 0))
-    # 两个条件都满足
-    return is_obj_insert & is_A_closer
+    direction_ok = True
+    if direction is not None:
+        gripper_pos = _to_np(self.agent.tcp.pose.p)
+        side_indicator = gripper_pos[1] - box_pos[1]
+        if abs(side_indicator) < 1e-3:
+            side_indicator = B_pos[1] - box_pos[1]
+        direction_ok = side_indicator * direction < 0
+
+    success = bool(is_obj_insert and is_A_closer and direction_ok)
+    if success and mark_end_flag:
+        print("marked end step!",self.elapsed_steps+3)
+        self.end_steps=int(getattr(self, "elapsed_steps", 0))
+    return success
 
 
 
