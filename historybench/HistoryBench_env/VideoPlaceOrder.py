@@ -144,7 +144,7 @@ class VideoPlaceOrder(BaseEnv):
                 self.difficulty = "medium"
             else:  # seed_mod == 2
                 self.difficulty = "hard"
-            self.difficulty = "easy"
+            # keep the difficulty selected by the seed instead of forcing it to easy
         
 
 
