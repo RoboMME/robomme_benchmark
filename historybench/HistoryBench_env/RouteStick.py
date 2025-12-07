@@ -498,40 +498,42 @@ class RouteStick(BaseEnv):
                 if callable(func) and hasattr(func, "__code__") and "is_obj_swing_onto" in func.__code__.co_names:
                     target = func.__defaults__[0] if func.__defaults__ else None
                     history = self._swing_success_history
-                    last_success = history[-1] if history else None
                     if target is not None and (not history or history[-1]["target"] is not target):
                         # 记录这次摆动完成的时间戳与目标；仅保留最近两条（必须目标不同）
                         expected_dir = None
                         if isinstance(prev_task, dict):
                             expected_dir = prev_task.get("expected_dir")
-                        new_entry = {"step": cur_step, "target": target, "expected_dir": expected_dir}
-                        # 直接使用当前目标与上一次成功目标进行侧向判断
-                        if last_success is not None and last_success["target"] is not target:
-                            pair_key = (last_success["step"], new_entry["step"])
-                            if self._last_swing_pair_reported_step != pair_key:
-                                start, end = last_success["step"], new_entry["step"]
-                                segment = [(s, xy) for s, xy in self._gripper_xy_trace if start <= s <= end]
-                                self._gripper_xy_trace = [(s, xy) for s, xy in self._gripper_xy_trace if s >= start]
-
-                                t1 = torch.as_tensor(last_success["target"].pose.p[0][:2]).detach().cpu()
-                                t2 = torch.as_tensor(target.pose.p[0][:2]).detach().cpu()
-                                line_vec = t2 - t1
-                                cross_vals = []
-                                for _, xy in segment:
-                                    rel = xy - t1
-                                    cross_vals.append(float(line_vec[0] * rel[1] - line_vec[1] * rel[0]))
-
-                                if cross_vals:
-                                    avg_cross = sum(cross_vals) / len(cross_vals)
-                                    side = "clockwise" if avg_cross > 0 else "counterclockwise" if avg_cross < 0 else "on the line"
-                                    expected_dir = new_entry.get("expected_dir")
-                                    if expected_dir and side != "on the line" and side != expected_dir:
-                                        print("direction mistake!!!")
-                                        self.direction_mistake_flag = True
-                                    print(f"Gripper path from step {start} to {end} stayed on the {side} side of the directed line between the last two targets.")
-                                self._last_swing_pair_reported_step = pair_key
-                        history.append(new_entry)
+                        history.append({"step": cur_step, "target": target, "expected_dir": expected_dir})
                         self._swing_success_history = history[-2:]
+
+            # 当存在最近两次摆动成功（目标不同）时，判断夹爪轨迹在两目标连线的左右侧并打印
+            if len(self._swing_success_history) == 2:
+                first, second = self._swing_success_history
+                pair_key = (first["step"], second["step"])
+                if first["target"] is not second["target"] and self._last_swing_pair_reported_step != pair_key:
+                    start, end = first["step"], second["step"]
+                    segment = [(s, xy) for s, xy in self._gripper_xy_trace if start <= s <= end]
+                    # 只保留从第一次时间戳开始的轨迹，避免列表无限增长
+                    self._gripper_xy_trace = [(s, xy) for s, xy in self._gripper_xy_trace if s >= start]
+
+                    t1 = torch.as_tensor(first["target"].pose.p[0][:2]).detach().cpu()
+                    t2 = torch.as_tensor(second["target"].pose.p[0][:2]).detach().cpu()
+                    line_vec = t2 - t1
+                    cross_vals = []
+                    for _, xy in segment:
+                        rel = xy - t1
+                        cross_vals.append(float(line_vec[0] * rel[1] - line_vec[1] * rel[0]))
+
+                    if cross_vals:
+                        avg_cross = sum(cross_vals) / len(cross_vals)
+                        # 根据当前坐标系，正叉积方向应视为顺时针
+                        side = "clockwise" if avg_cross > 0 else "counterclockwise" if avg_cross <0 else "on the line"
+                        expected_dir = second.get("expected_dir")
+                        if expected_dir and side != "on the line" and side != expected_dir:
+                            print("direction mistake!!!")
+                            self.direction_mistake_flag=True
+                        print(f"Gripper path from step {start} to {end} stayed on the {side} side of the directed line between the last two targets.")
+                    self._last_swing_pair_reported_step = pair_key
 
         return {
             "success": self.successflag,
