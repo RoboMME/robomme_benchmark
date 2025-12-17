@@ -1050,7 +1050,7 @@ class OracleGradioService:
                 )
             
             # Initialize API
-            model_name = "gemini-2.5-pro"
+            model_name = "gemini-2.5-flash"
             self.save_dir = f"oracle_planning_gui/{model_name}/{env_id}/ep{episode_idx}"
             if os.path.exists(self.save_dir):
                 shutil.rmtree(self.save_dir)

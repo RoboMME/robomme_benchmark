@@ -36,33 +36,36 @@ def main():
     )
     
     env_id_list = [
-        #"PickXtimes",
+        # "PickXtimes",
         # "StopCube",
-        #"SwingXtimes",
-        #"BinFill",
-        "VideoUnmaskSwap",
+        # "SwingXtimes",
+        # "BinFill",
+
+        #"VideoUnmaskSwap",
         #"VideoUnmask",
-        #"ButtonUnmaskSwap",
+        # "ButtonUnmaskSwap",
         # "ButtonUnmask",
+
         # "VideoRepick",
-         #"VideoPlaceButton",
+        # "VideoPlaceButton",
         # "VideoPlaceOrder",
-        #"PickHighlight",
-        #"InsertPeg",
-        #'MoveCube',
-        #"PatternLock",
-        #"RouteStick"
+        # "PickHighlight",
+
+        "InsertPeg",
+        'MoveCube',
+        "PatternLock",
+        "RouteStick"
     ]
 
     for env_id in env_id_list:
         num_episodes = oracle_resolver.get_num_episodes(env_id)
 
-        for episode in range(4):
+        for episode in range(10):
             # if episode !=2:
             #     continue
 
             env, planner, color_map, language_goal = oracle_resolver.initialize_episode(env_id, episode)
-            model_name = "gemini-2.5-flash"  # "gemini-2.5-pro" # "gpt-4o-mini", "gemini-er", "qwen-vl"
+            model_name = "gemini-2.5-pro"  # "gemini-2.5-pro" # "gpt-4o-mini", "gemini-er", "qwen-vl"
             success = "fail"
             save_dir = f"oracle_planning/{model_name}/{env_id}/ep{episode}"
                         
