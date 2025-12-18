@@ -7,6 +7,8 @@ import traceback
 from PIL import Image, ImageDraw
 from oracle_logic import OracleSession
 from concurrent.futures import ThreadPoolExecutor
+from user_manager import user_manager
+from logger import log_session
 
 # --- Global Session Storage ---
 GLOBAL_SESSIONS = {}
@@ -31,6 +33,103 @@ def create_session():
     session = OracleSession()
     GLOBAL_SESSIONS[uid] = session
     return uid
+
+# --- User Management Helpers ---
+
+def login_and_load_task(username, uid):
+    """
+    Handle user login and load their current task.
+    """
+    if not uid:
+        uid = create_session()
+    
+    success, msg, status = user_manager.login(username)
+    
+    if not success:
+        # Login failed
+        return (
+            uid,
+            gr.update(visible=True), # login_group
+            gr.update(visible=False), # main_interface
+            msg, # login_message
+            None, None, # img, status
+            gr.update(choices=[], value=None), # options
+            "", "", # goal, coords
+            None, None, # combined_video, demo_video
+            "", "", # task_info, progress_info
+            gr.update(interactive=True) # login_btn
+        )
+    
+    # Login success - Load current task
+    if status["is_done_all"]:
+        return (
+            uid,
+            gr.update(visible=False), # login_group
+            gr.update(visible=True), # main_interface
+            f"Welcome {username}. You have completed all tasks!", # login_message (hidden)
+            None, "All tasks completed! Thank you.", 
+            gr.update(choices=[], value=None),
+            "All tasks completed.", "", 
+            None, None,
+            "No active task", f"Progress: {status['completed_count']}/{status['total_tasks']} (100%)",
+            gr.update(interactive=True)
+        )
+
+    current_task = status["current_task"]
+    env_id = current_task["env_id"]
+    ep_num = current_task["episode_idx"]
+    
+    # Load the environment
+    session = get_session(uid)
+    print(f"Loading {env_id} Ep {ep_num} for {uid} (User: {username})")
+    
+    img, load_msg = session.load_episode(env_id, int(ep_num))
+    
+    if img is None:
+         return (
+            uid,
+            gr.update(visible=False),
+            gr.update(visible=True),
+            f"Error loading task for {username}",
+            None, f"Error: {load_msg}",
+            gr.update(choices=[], value=None),
+            "", "", 
+            None, None,
+            f"Task: {env_id} (Ep {ep_num})", f"Progress: {status['current_index'] + 1}/{status['total_tasks']}",
+            gr.update(interactive=True)
+        )
+        
+    # Success loading
+    goal_text = f"{session.language_goal}"
+    options = session.available_options
+    radio_choices = [(opt_label, opt_idx) for opt_label, opt_idx in options]
+    
+    demo_video_path = None
+    if session.demonstration_frames:
+        try:
+            demo_video_path = save_video(session.demonstration_frames, "demo")
+        except: pass
+
+    return (
+        uid,
+        gr.update(visible=False), # Login hidden
+        gr.update(visible=True),  # Main visible
+        f"Logged in as {username}", 
+        img, 
+        f"Ready. Task {status['current_index'] + 1}/{status['total_tasks']}: {env_id}",
+        gr.update(choices=radio_choices, value=None),
+        goal_text, 
+        "", 
+        None, 
+        demo_video_path,
+        f"Current Task: {env_id} (Episode {ep_num})",
+        f"Progress: {status['current_index'] + 1}/{status['total_tasks']} Completed: {status['completed_count']}",
+        gr.update(interactive=True)
+    )
+
+def load_next_task_wrapper(username, uid):
+    """Wrapper to just reload the user's current status (which should be next task if updated)."""
+    return login_and_load_task(username, uid)
 
 def save_video(frames, suffix=""):
     """
@@ -236,13 +335,13 @@ def on_map_click(uid, evt: gr.SelectData):
     coords_str = f"{x}, {y}"
     return marked_img, coords_str
 
-def execute_step(uid, option_idx, coords_str):
+def execute_step(uid, username, option_idx, coords_str):
     session = get_session(uid)
     if not session:
-        return None, "Session Error", None
+        return None, "Session Error", None, gr.update(), gr.update()
     
     if option_idx is None:
-        return session.get_pil_image(), "Error: No action selected", None
+        return session.get_pil_image(), "Error: No action selected", None, gr.update(), gr.update()
 
     # Parse coords
     click_coords = None
@@ -276,10 +375,43 @@ def execute_step(uid, option_idx, coords_str):
         print(f"Error generating combined video: {e}")
         traceback.print_exc()
     
+    progress_update = gr.update()
+    task_update = gr.update()
+    
     if done:
         status += " [EPISODE COMPLETE]"
         
-    return img, status, combined_video_path
+        # Log session data to experiment_logs.jsonl
+        try:
+            log_session({
+                "uid": uid,
+                "username": username if username else "unknown",
+                "env_id": session.env_id,
+                "episode_idx": session.episode_idx,
+                "language_goal": session.language_goal,
+                "total_steps": len(session.history) if hasattr(session, 'history') and session.history else 0,
+                "total_frames": len(session.base_frames) if hasattr(session, 'base_frames') else 0,
+                "finished": True,
+                "status": "completed"
+            })
+        except Exception as e:
+            print(f"Error logging session: {e}")
+            traceback.print_exc()
+        
+        # Update user progress
+        if username:
+            user_status = user_manager.complete_current_task(username)
+            if user_status:
+                if user_status["is_done_all"]:
+                    task_update = "All tasks completed!"
+                    progress_update = f"Progress: {user_status['completed_count']}/{user_status['total_tasks']} (100%)"
+                else:
+                    next_env = user_status["current_task"]["env_id"]
+                    next_ep = user_status["current_task"]["episode_idx"]
+                    task_update = f"Task Completed! Next: {next_env} (Ep {next_ep})"
+                    progress_update = f"Progress: {user_status['current_index'] + 1}/{user_status['total_tasks']} Completed: {user_status['completed_count']}"
+        
+    return img, status, combined_video_path, task_update, progress_update
 
 # --- JS for Video (no sync needed for single video) ---
 SYNC_JS = ""  # No longer needed since we have a single combined video
@@ -299,57 +431,123 @@ with gr.Blocks(title="Oracle Planner Interface", js=SYNC_JS, css=CSS) as demo:
     
     # State
     uid_state = gr.State(value=None)
+    username_state = gr.State(value="")
     
-    with gr.Row():
-        # --- Left Column: Controls (Scale 1) ---
-        with gr.Column(scale=1):
-            with gr.Group():
-                gr.Markdown("### 1. Environment Settings")
-                env_dd = gr.Dropdown(choices=ENV_IDS, value="PickXtimes", label="Environment ID")
-                ep_num = gr.Number(value=0, label="Episode Index", precision=0)
-                load_btn = gr.Button("Load Environment", variant="primary")
-            
-            with gr.Group():
-                gr.Markdown("### 2. Task Goal")
-                goal_box = gr.Textbox(label="Instruction", lines=2, interactive=False)
-            
-            with gr.Group():
-                gr.Markdown("### 3. Action & Interaction")
-                options_radio = gr.Radio(choices=[], label="Available Actions", type="value")
-                coords_box = gr.Textbox(label="Selected Coordinates (x, y)", value="")
-                
-                exec_btn = gr.Button("Execute Action", variant="stop")
-            
-            gr.Markdown("### 4. Logs")
-            log_output = gr.Textbox(label="System Log", lines=5, interactive=False)
+    # --- Login Section ---
+    with gr.Group(visible=True) as login_group:
+        gr.Markdown("### User Login")
+        with gr.Row():
+            # Get available usernames from user_manager
+            available_users = list(user_manager.user_tasks.keys())
+            username_input = gr.Dropdown(
+                choices=available_users,
+                label="Username",
+                value=None
+            )
+            login_btn = gr.Button("Login", variant="primary")
+        login_msg = gr.Markdown("")
 
-        # --- Right Column: Visuals (Scale 2) ---
-        with gr.Column(scale=2):
-            # Top: Image & Demo Video
-            with gr.Row():
-                img_display = gr.Image(label="Live Observation (Click to Select)", interactive=True, type="pil")
-                # Placeholder for demo video if needed, or maybe just hidden if no data
-                video_elem_id = "demo_video" if RESTRICT_VIDEO_PLAYBACK else None
-                video_autoplay = True if RESTRICT_VIDEO_PLAYBACK else False
+    # --- Main Interface (Hidden initially) ---
+    with gr.Group(visible=False) as main_interface:
+        with gr.Row():
+            # --- Left Column: Controls (Scale 1) ---
+            with gr.Column(scale=1):
+                with gr.Group():
+                    gr.Markdown("### 1. Task Info")
+                    task_info_box = gr.Textbox(label="Current Task", interactive=False)
+                    progress_info_box = gr.Textbox(label="Progress", interactive=False)
+                    
+                    with gr.Row():
+                        next_task_btn = gr.Button("Load Next / Current Task", variant="secondary")
+                    
+                    # Hidden fields for compatibility if needed, or just remove usage
+                    # keeping them defined but hidden/unused for now to minimize structure change impact if referenced elsewhere
+                    # env_dd = gr.Dropdown(choices=ENV_IDS, value="PickXtimes", label="Environment ID", visible=False)
+                    # ep_num = gr.Number(value=0, label="Episode Index", precision=0, visible=False)
+                    # load_btn = gr.Button("Load Environment", variant="primary", visible=False)
                 
-                video_display = gr.Video(
-                    label="Demonstration", 
-                    interactive=False, 
-                    height=300, 
-                    elem_id=video_elem_id, 
-                    autoplay=video_autoplay
-                )
-            
-            # Bottom: Execution Feedback (Combined View)
-            combined_display = gr.Video(label="Desk View (Left) | Robot View (Right)", elem_id="combined_view", interactive=False, autoplay=True)
+                with gr.Group():
+                    gr.Markdown("### 2. Task Goal")
+                    goal_box = gr.Textbox(label="Instruction", lines=2, interactive=False)
+                
+                with gr.Group():
+                    gr.Markdown("### 3. Action & Interaction")
+                    options_radio = gr.Radio(choices=[], label="Available Actions", type="value")
+                    coords_box = gr.Textbox(label="Selected Coordinates (x, y)", value="")
+                    
+                    exec_btn = gr.Button("Execute Action", variant="stop")
+                
+                gr.Markdown("### 4. Logs")
+                log_output = gr.Textbox(label="System Log", lines=5, interactive=False)
+
+            # --- Right Column: Visuals (Scale 2) ---
+            with gr.Column(scale=2):
+                # Top: Image & Demo Video
+                with gr.Row():
+                    img_display = gr.Image(label="Live Observation (Click to Select)", interactive=True, type="pil")
+                    # Placeholder for demo video if needed, or maybe just hidden if no data
+                    video_elem_id = "demo_video" if RESTRICT_VIDEO_PLAYBACK else None
+                    video_autoplay = True if RESTRICT_VIDEO_PLAYBACK else False
+                    
+                    video_display = gr.Video(
+                        label="Demonstration", 
+                        interactive=False, 
+                        height=300, 
+                        elem_id=video_elem_id, 
+                        autoplay=video_autoplay
+                    )
+                
+                # Bottom: Execution Feedback (Combined View)
+                combined_display = gr.Video(label="Desk View (Left) | Robot View (Right)", elem_id="combined_view", interactive=False, autoplay=True)
 
     # --- Event Wiring ---
 
-    # 1. Load
-    load_btn.click(
-        fn=load_env,
-        inputs=[uid_state, env_dd, ep_num],
-        outputs=[uid_state, img_display, log_output, options_radio, goal_box, coords_box, combined_display, video_display]
+    # 1. Login
+    login_btn.click(
+        fn=login_and_load_task,
+        inputs=[username_input, uid_state],
+        outputs=[
+            uid_state, 
+            login_group, 
+            main_interface, 
+            login_msg, 
+            img_display, 
+            log_output, 
+            options_radio, 
+            goal_box, 
+            coords_box, 
+            combined_display, 
+            video_display,
+            task_info_box,
+            progress_info_box,
+            login_btn
+        ]
+    ).then(
+        fn=lambda u: u,
+        inputs=[username_input],
+        outputs=[username_state]
+    )
+    
+    # 1.5 Next Task
+    next_task_btn.click(
+        fn=load_next_task_wrapper,
+        inputs=[username_state, uid_state],
+        outputs=[
+            uid_state, 
+            login_group, 
+            main_interface, 
+            login_msg, 
+            img_display, 
+            log_output, 
+            options_radio, 
+            goal_box, 
+            coords_box, 
+            combined_display, 
+            video_display,
+            task_info_box,
+            progress_info_box,
+            login_btn
+        ]
     )
 
     # 2. Image Click
@@ -362,8 +560,8 @@ with gr.Blocks(title="Oracle Planner Interface", js=SYNC_JS, css=CSS) as demo:
     # 3. Execute
     exec_btn.click(
         fn=execute_step,
-        inputs=[uid_state, options_radio, coords_box],
-        outputs=[img_display, log_output, combined_display]
+        inputs=[uid_state, username_state, options_radio, coords_box],
+        outputs=[img_display, log_output, combined_display, task_info_box, progress_info_box]
     )
     
     # 5. Timer for Streaming (Keep-Alive / Real-time view)

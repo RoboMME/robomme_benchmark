@@ -1,0 +1,77 @@
+{
+  "user1_VideoPlaceOrder": [
+    {"env_id": "VideoPlaceOrder", "episode_idx": 0},
+    {"env_id": "VideoPlaceOrder", "episode_idx": 1},
+    {"env_id": "VideoPlaceOrder", "episode_idx": 2}
+  ],
+  "user2_PickXtimes": [
+    {"env_id": "PickXtimes", "episode_idx": 0},
+    {"env_id": "PickXtimes", "episode_idx": 1},
+    {"env_id": "PickXtimes", "episode_idx": 2}
+  ],
+  "user3_StopCube": [
+    {"env_id": "StopCube", "episode_idx": 0},
+    {"env_id": "StopCube", "episode_idx": 1},
+    {"env_id": "StopCube", "episode_idx": 2}
+  ],
+  "user4_SwingXtimes": [
+    {"env_id": "SwingXtimes", "episode_idx": 0},
+    {"env_id": "SwingXtimes", "episode_idx": 1},
+    {"env_id": "SwingXtimes", "episode_idx": 2}
+  ],
+  "user5_BinFill": [
+    {"env_id": "BinFill", "episode_idx": 0},
+    {"env_id": "BinFill", "episode_idx": 1},
+    {"env_id": "BinFill", "episode_idx": 2}
+  ],
+  "user6_VideoUnmaskSwap": [
+    {"env_id": "VideoUnmaskSwap", "episode_idx": 0},
+    {"env_id": "VideoUnmaskSwap", "episode_idx": 1},
+    {"env_id": "VideoUnmaskSwap", "episode_idx": 2}
+  ],
+  "user7_VideoUnmask": [
+    {"env_id": "VideoUnmask", "episode_idx": 0},
+    {"env_id": "VideoUnmask", "episode_idx": 1},
+    {"env_id": "VideoUnmask", "episode_idx": 2}
+  ],
+  "user8_ButtonUnmaskSwap": [
+    {"env_id": "ButtonUnmaskSwap", "episode_idx": 0},
+    {"env_id": "ButtonUnmaskSwap", "episode_idx": 1},
+    {"env_id": "ButtonUnmaskSwap", "episode_idx": 2}
+  ],
+  "user9_ButtonUnmask": [
+    {"env_id": "ButtonUnmask", "episode_idx": 0},
+    {"env_id": "ButtonUnmask", "episode_idx": 1},
+    {"env_id": "ButtonUnmask", "episode_idx": 2}
+  ],
+  "user10_VideoRepick": [
+    {"env_id": "VideoRepick", "episode_idx": 0},
+    {"env_id": "VideoRepick", "episode_idx": 1},
+    {"env_id": "VideoRepick", "episode_idx": 2}
+  ],
+  "user11_VideoPlaceButton": [
+    {"env_id": "VideoPlaceButton", "episode_idx": 0},
+    {"env_id": "VideoPlaceButton", "episode_idx": 1},
+    {"env_id": "VideoPlaceButton", "episode_idx": 2}
+  ],
+  "user12_InsertPeg": [
+    {"env_id": "InsertPeg", "episode_idx": 0},
+    {"env_id": "InsertPeg", "episode_idx": 1},
+    {"env_id": "InsertPeg", "episode_idx": 2}
+  ],
+  "user13_MoveCube": [
+    {"env_id": "MoveCube", "episode_idx": 0},
+    {"env_id": "MoveCube", "episode_idx": 1},
+    {"env_id": "MoveCube", "episode_idx": 2}
+  ],
+  "user14_PatternLock": [
+    {"env_id": "PatternLock", "episode_idx": 0},
+    {"env_id": "PatternLock", "episode_idx": 1},
+    {"env_id": "PatternLock", "episode_idx": 2}
+  ],
+  "user15_RouteStick": [
+    {"env_id": "RouteStick", "episode_idx": 0},
+    {"env_id": "RouteStick", "episode_idx": 1},
+    {"env_id": "RouteStick", "episode_idx": 2}
+  ]
+}
