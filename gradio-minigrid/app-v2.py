@@ -4,14 +4,19 @@ import numpy as np
 import tempfile
 import os
 import traceback
+from datetime import datetime
 from PIL import Image, ImageDraw
 from oracle_logic import OracleSession
 from concurrent.futures import ThreadPoolExecutor
 from user_manager import user_manager
-from logger import log_session
+from logger import log_session, log_user_action
 
 # --- Global Session Storage ---
 GLOBAL_SESSIONS = {}
+
+# --- Coordinate Click Tracking (between actions) ---
+# 跟踪每个session从上次action_execute到现在的所有coordinate_click
+COORDINATE_CLICKS = {}  # {uid: [{"x": x, "y": y, "coords_str": "...", "timestamp": "..."}, ...]}
 
 ENV_IDS = [
     "VideoPlaceOrder", "PickXtimes", "StopCube", "SwingXtimes", 
@@ -82,6 +87,10 @@ def login_and_load_task(username, uid):
     # Load the environment
     session = get_session(uid)
     print(f"Loading {env_id} Ep {ep_num} for {uid} (User: {username})")
+    
+    # 清空该session的coordinate_clicks（新episode开始）
+    if uid in COORDINATE_CLICKS:
+        COORDINATE_CLICKS[uid] = []
     
     img, load_msg = session.load_episode(env_id, int(ep_num))
     
@@ -278,6 +287,10 @@ def load_env(uid, env_id, ep_num):
     session = get_session(uid)
     print(f"Loading {env_id} Ep {ep_num} for {uid}")
     
+    # 清空该session的coordinate_clicks（新episode开始）
+    if uid in COORDINATE_CLICKS:
+        COORDINATE_CLICKS[uid] = []
+    
     img, msg = session.load_episode(env_id, int(ep_num))
     
     if img is None:
@@ -319,7 +332,7 @@ def load_env(uid, env_id, ep_num):
         demo_video_path # Demonstration video
     )
 
-def on_map_click(uid, evt: gr.SelectData):
+def on_map_click(uid, username, evt: gr.SelectData):
     session = get_session(uid)
     if not session:
         return None, "Session Error"
@@ -333,7 +346,59 @@ def on_map_click(uid, evt: gr.SelectData):
     marked_img = draw_marker(base_img, x, y)
     
     coords_str = f"{x}, {y}"
+    
+    # 将坐标点击存储到临时列表，等待在action_execute时一起记录
+    if uid not in COORDINATE_CLICKS:
+        COORDINATE_CLICKS[uid] = []
+    
+    COORDINATE_CLICKS[uid].append({
+        "coordinates": {"x": x, "y": y},
+        "coords_str": coords_str,
+        "timestamp": datetime.now().isoformat()
+    })
+    
     return marked_img, coords_str
+
+def on_option_select(uid, username, option_value):
+    """
+    处理选项选择事件，记录用户选择了哪个选项
+    """
+    if option_value is None:
+        return
+    
+    session = get_session(uid)
+    if not session:
+        return
+    
+    # option_value 是 (label, idx) 元组或直接是 idx
+    if isinstance(option_value, tuple):
+        option_label, option_idx = option_value
+    else:
+        option_idx = option_value
+        # 从 available_options 中查找标签
+        option_label = None
+        if session.available_options:
+            for label, idx in session.available_options:
+                if idx == option_idx:
+                    option_label = label
+                    break
+    
+    # 记录选项选择操作
+    if username and session.env_id is not None and session.episode_idx is not None:
+        try:
+            log_user_action(
+                username=username,
+                env_id=session.env_id,
+                episode_idx=session.episode_idx,
+                action_data={
+                    "action_type": "option_select",
+                    "option_idx": option_idx,
+                    "option_label": option_label
+                }
+            )
+        except Exception as e:
+            print(f"Error logging option select: {e}")
+            traceback.print_exc()
 
 def execute_step(uid, username, option_idx, coords_str):
     session = get_session(uid)
@@ -359,6 +424,43 @@ def execute_step(uid, username, option_idx, coords_str):
     # Execute
     print(f"Executing step: Opt {option_idx}, Coords {click_coords}")
     img, status, done = session.execute_action(option_idx, click_coords)
+    
+    # 记录执行操作（包含从上次action到这次action之间的所有coordinate_click）
+    if username and session.env_id is not None and session.episode_idx is not None:
+        try:
+            # 获取选项标签
+            option_label = None
+            if session.available_options:
+                for label, idx in session.available_options:
+                    if idx == option_idx:
+                        option_label = label
+                        break
+            
+            # 获取从上次action_execute到现在的所有coordinate_click
+            coordinate_clicks_between_actions = []
+            if uid in COORDINATE_CLICKS:
+                coordinate_clicks_between_actions = COORDINATE_CLICKS[uid].copy()
+                # 清空列表，为下次action做准备
+                COORDINATE_CLICKS[uid] = []
+            
+            log_user_action(
+                username=username,
+                env_id=session.env_id,
+                episode_idx=session.episode_idx,
+                action_data={
+                    "action_type": "action_execute",
+                    "option_idx": option_idx,
+                    "option_label": option_label,
+                    "coordinates": {"x": click_coords[0], "y": click_coords[1]} if click_coords else None,
+                    "coords_str": coords_str if coords_str else "",
+                    "coordinate_clicks_between_actions": coordinate_clicks_between_actions,
+                    "status": status,
+                    "done": done
+                }
+            )
+        except Exception as e:
+            print(f"Error logging action execute: {e}")
+            traceback.print_exc()
     
     # 只取新增的帧来生成视频（从 execute action 之后新增的帧开始）
     new_base_frames = session.base_frames[pre_base_frame_count:]
@@ -553,8 +655,15 @@ with gr.Blocks(title="Oracle Planner Interface", js=SYNC_JS, css=CSS) as demo:
     # 2. Image Click
     img_display.select(
         fn=on_map_click,
-        inputs=[uid_state],
+        inputs=[uid_state, username_state],
         outputs=[img_display, coords_box]
+    )
+    
+    # 2.5. Option Select
+    options_radio.change(
+        fn=on_option_select,
+        inputs=[uid_state, username_state],
+        outputs=[]
     )
 
     # 3. Execute
