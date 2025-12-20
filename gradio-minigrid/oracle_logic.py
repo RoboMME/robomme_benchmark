@@ -157,6 +157,7 @@ class OracleSession:
         self.env_id = None
         self.episode_idx = None
         self.language_goal = ""
+        self.difficulty = None
         self.history = [] # Logs interaction steps
         
         # State caches
@@ -194,6 +195,7 @@ class OracleSession:
             self.env.reset()
             self.env_id = env_id
             self.episode_idx = episode_idx
+            self.difficulty = difficulty
             
             # Demonstration data
             demonstration_data = getattr(self.env, "demonstration_data", {}) or {}

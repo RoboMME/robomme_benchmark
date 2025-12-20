@@ -740,8 +740,7 @@ def execute_step(uid, username, option_idx, coords_str):
                 "env_id": session.env_id,
                 "episode_idx": session.episode_idx,
                 "language_goal": session.language_goal,
-                "total_steps": len(session.history) if hasattr(session, 'history') and session.history else 0,
-                "total_frames": len(session.base_frames) if hasattr(session, 'base_frames') else 0,
+                "difficulty": session.difficulty if hasattr(session, 'difficulty') and session.difficulty is not None else None,
                 "finished": True,
                 "status": final_log_status
             })

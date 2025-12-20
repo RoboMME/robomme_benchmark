@@ -1,9 +1,6 @@
-{"username": "user9_ButtonUnmask", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:05:23.124879"}
-{"username": "user7_VideoUnmask", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:15:16.634884"}
-{"username": "user5_BinFill", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:18:47.243912"}
-{"username": "user8_ButtonUnmaskSwap", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:22:07.794933"}
-{"username": "user6_VideoUnmaskSwap", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:25:57.294069"}
-{"username": "user6_VideoUnmaskSwap", "current_task_index": 2, "completed_tasks": [0, 1], "timestamp": "2025-12-20T18:26:04.593786"}
-{"username": "user6_VideoUnmaskSwap", "current_task_index": 3, "completed_tasks": [0, 1, 2], "timestamp": "2025-12-20T18:26:13.620879"}
-{"username": "user6_VideoUnmaskSwap", "current_task_index": 4, "completed_tasks": [0, 1, 2, 3], "timestamp": "2025-12-20T18:26:27.530399"}
-{"username": "user5_BinFill", "current_task_index": 2, "completed_tasks": [0, 1], "timestamp": "2025-12-20T19:00:09.321956"}
+{"username": "user5_BinFill", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T19:13:15.074165"}
+{"username": "user1_VideoPlaceOrder", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T19:13:27.426835"}
+{"username": "user1_VideoPlaceOrder", "current_task_index": 2, "completed_tasks": [0, 1], "timestamp": "2025-12-20T19:14:34.716898"}
+{"username": "user1_VideoPlaceOrder", "current_task_index": 3, "completed_tasks": [0, 1, 2], "timestamp": "2025-12-20T19:14:53.922711"}
+{"username": "user1_VideoPlaceOrder", "current_task_index": 4, "completed_tasks": [0, 1, 2, 3], "timestamp": "2025-12-20T19:15:11.054216"}
+{"username": "user1_VideoPlaceOrder", "current_task_index": 5, "completed_tasks": [0, 1, 2, 3, 4], "timestamp": "2025-12-20T19:15:37.441077"}
