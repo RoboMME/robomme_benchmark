@@ -83,9 +83,9 @@ def login_and_load_task(username, uid):
             gr.update(visible=True), # login_group
             gr.update(visible=False), # main_interface
             msg, # login_message
-            None, None, # img, status
+            gr.update(value=None, interactive=False), None, # img, status
             gr.update(choices=[], value=None), # options
-            "", "", # goal, coords
+            "", "No need for coordinates", # goal, coords
             None, None, # combined_video, demo_video
             "", "", # task_info, progress_info
             gr.update(interactive=True), # login_btn
@@ -107,9 +107,9 @@ def login_and_load_task(username, uid):
             gr.update(visible=False), # login_group
             gr.update(visible=True), # main_interface
             f"Welcome {username}. You have completed all tasks!", # login_message (hidden)
-            None, "All tasks completed! Thank you.", 
+            gr.update(value=None, interactive=False), "All tasks completed! Thank you.", 
             gr.update(choices=[], value=None),
-            "All tasks completed.", "", 
+            "All tasks completed.", "No need for coordinates", 
             None, None,
             "No active task", f"Progress: {total}/{total}",
             gr.update(interactive=True),
@@ -146,9 +146,9 @@ def login_and_load_task(username, uid):
             gr.update(visible=False),
             gr.update(visible=True),
             f"Error loading task for {username}",
-            None, f"Error: {load_msg}",
+            gr.update(value=None, interactive=False), f"Error: {load_msg}",
             gr.update(choices=[], value=None),
-            "", "", 
+            "", "No need for coordinates", 
             None, None,
             f"Task: {env_id} (Ep {ep_num})", f"Progress: {task_idx + 1}/{total}",
             gr.update(interactive=True),
@@ -185,11 +185,11 @@ def login_and_load_task(username, uid):
         gr.update(visible=False), # Login hidden
         gr.update(visible=True),  # Main visible
         f"Logged in as {username}", 
-        img, 
+        gr.update(value=img, interactive=False), 
         f"Ready. Task {task_idx + 1}/{total}: {env_id}",
         gr.update(choices=radio_choices, value=None),
         goal_text, 
-        "", 
+        "No need for coordinates", 
         None, 
         demo_video_path,
         f"Current Task: {env_id} (Episode {ep_num})",
@@ -375,11 +375,11 @@ def load_env(uid, env_id, ep_num):
     if img is None:
         return (
             uid, 
-            None, 
+            gr.update(value=None, interactive=False), 
             "Error loading episode", 
             gr.update(choices=[], value=None), 
             "", 
-            "", 
+            "No need for coordinates", 
             None, None
         )
 
@@ -402,20 +402,53 @@ def load_env(uid, env_id, ep_num):
             
     return (
         uid,
-        img, 
+        gr.update(value=img, interactive=False), 
         f"Loaded {env_id} Ep {ep_num}. Status: Ready", 
         gr.update(choices=radio_choices, value=None), 
         goal_text, 
-        "", # Clear coords
+        "No need for coordinates", # Clear coords
         None, # Clear combined video
         demo_video_path # Demonstration video
     )
 
-def on_map_click(uid, username, evt: gr.SelectData):
+def on_map_click(uid, username, option_value, evt: gr.SelectData):
+#     如果 用户选择选项 (on_option_select):
+#     如果 选项需要目标 (available=True):
+#         UI变更为: 图片可点击 (interactive=True), 提示 "Please click"
+#     否则:
+#         UI变更为: 图片不可点击 (interactive=False), 提示 "No need"
+
+# 如果 用户点击图片 (on_map_click):
+#     后端检查: 当前选项是否真的需要目标?
+#     如果 不需要:
+#         拦截点击，不记录坐标，不画点，返回 "No need"
+#     如果 需要:
+#         记录坐标，画红点，返回坐标值
     session = get_session(uid)
     if not session:
         return None, "Session Error"
+        
+    # Check if current option actually needs coordinates
+    needs_coords = False
+    if option_value is not None:
+        # Parse option index similar to on_option_select
+        option_idx = None
+        if isinstance(option_value, tuple):
+             _, option_idx = option_value
+        else:
+             option_idx = option_value
+             
+        if option_idx is not None and 0 <= option_idx < len(session.raw_solve_options):
+             opt = session.raw_solve_options[option_idx]
+             if opt.get("available"):
+                 needs_coords = True
     
+    if not needs_coords:
+        # Return current state without changes (or reset to default message if needed, but it should already be there)
+        # We return the clean image and the "No need" message to enforce state
+        base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
+        return base_img, "No need for coordinates"
+
     x, y = evt.index[0], evt.index[1]
     
     # Get clean image from session
@@ -457,12 +490,14 @@ def on_option_select(uid, username, option_value):
     """
     处理选项选择事件，记录用户选择了哪个选项
     """
+    default_msg = "No need for coordinates"
+    
     if option_value is None:
-        return
+        return default_msg, gr.update(interactive=False)
     
     session = get_session(uid)
     if not session:
-        return
+        return default_msg, gr.update(interactive=False)
     
     # option_value 是 (label, idx) 元组或直接是 idx
     if isinstance(option_value, tuple):
@@ -487,6 +522,14 @@ def on_option_select(uid, username, option_value):
         "timestamp": datetime.now().isoformat()
     })
 
+    # Determine coords message
+    if 0 <= option_idx < len(session.raw_solve_options):
+        opt = session.raw_solve_options[option_idx]
+        if opt.get("available"):
+             return "please click the image", gr.update(interactive=True)
+    
+    return default_msg, gr.update(interactive=False)
+
 def init_app(request: gr.Request):
     """
     Handle initial page load. 
@@ -503,9 +546,9 @@ def init_app(request: gr.Request):
         gr.update(visible=True), # login_group (show it)
         gr.update(visible=False), # main_interface
         "", 
-        None, None, 
+        gr.update(value=None, interactive=False), None, 
         gr.update(choices=[], value=None), 
-        "", "", 
+        "", "No need for coordinates", 
         None, None, 
         "", "", 
         gr.update(interactive=True), 
@@ -696,6 +739,7 @@ def execute_step(uid, username, option_idx, coords_str):
         
     next_task_update = gr.update(interactive=True) if done else gr.update(interactive=False)
     exec_btn_update = gr.update(interactive=False) if done else gr.update(interactive=True)
+    
     return img, status, combined_video_path, task_update, progress_update, next_task_update, exec_btn_update
 
 # --- JS for Video (no sync needed for single video) ---
@@ -794,7 +838,7 @@ with gr.Blocks(title="Oracle Planner Interface", js=SYNC_JS, css=CSS) as demo:
                  gr.Markdown("### Live Observation (交互主视图)")
                  img_display = gr.Image(
                     label="Live Observation", 
-                    interactive=True, 
+                    interactive=False, 
                     type="pil", 
                     elem_id="live_obs",
                     show_label=False
@@ -878,7 +922,7 @@ with gr.Blocks(title="Oracle Planner Interface", js=SYNC_JS, css=CSS) as demo:
     # 2. Image Click
     img_display.select(
         fn=on_map_click,
-        inputs=[uid_state, username_state],
+        inputs=[uid_state, username_state, options_radio],
         outputs=[img_display, coords_box]
     )
     
@@ -886,7 +930,7 @@ with gr.Blocks(title="Oracle Planner Interface", js=SYNC_JS, css=CSS) as demo:
     options_radio.change(
         fn=on_option_select,
         inputs=[uid_state, username_state, options_radio],
-        outputs=[]
+        outputs=[coords_box, img_display]
     )
 
     # 3. Execute
