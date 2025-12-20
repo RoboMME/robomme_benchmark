@@ -592,6 +592,34 @@ def execute_step(uid, username, option_idx, coords_str):
     if option_idx is None:
         return session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW), "Error: No action selected", None, gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True)
 
+    # 检查当前选项是否需要坐标
+    needs_coords = False
+    if option_idx is not None and 0 <= option_idx < len(session.raw_solve_options):
+        opt = session.raw_solve_options[option_idx]
+        if opt.get("available"):
+            needs_coords = True
+    
+    # 如果选项需要坐标，检查是否已经点击了图片
+    if needs_coords:
+        # 检查 coords_str 是否是有效的坐标（不是提示信息）
+        is_valid_coords = False
+        if coords_str and "," in coords_str:
+            try:
+                parts = coords_str.split(",")
+                x = int(parts[0].strip())
+                y = int(parts[1].strip())
+                # 如果成功解析为数字，且不是提示信息，则认为是有效坐标
+                if coords_str.strip() not in ["please click the image", "No need for coordinates"]:
+                    is_valid_coords = True
+            except:
+                pass
+        
+        # 如果需要坐标但没有有效坐标，返回错误提示
+        if not is_valid_coords:
+            current_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
+            error_msg = "please click the image before execute!"
+            return current_img, error_msg, None, gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True)
+
     # Parse coords
     click_coords = None
     if coords_str and "," in coords_str:
@@ -743,7 +771,99 @@ def execute_step(uid, username, option_idx, coords_str):
     return img, status, combined_video_path, task_update, progress_update, next_task_update, exec_btn_update
 
 # --- JS for Video (no sync needed for single video) ---
-SYNC_JS = ""  # No longer needed since we have a single combined video
+SYNC_JS = """
+(function() {
+    function findCoordsBox() {
+        // 尝试多种选择器查找包含"please click the image"的textarea
+        const selectors = [
+            '#coords_box textarea',
+            '[id*="coords_box"] textarea',
+            'textarea[data-testid*="coords"]',
+            'textarea'
+        ];
+        
+        for (const selector of selectors) {
+            const elements = document.querySelectorAll(selector);
+            for (const el of elements) {
+                const value = el.value || '';
+                if (value.trim() === 'please click the image') {
+                    return el;
+                }
+            }
+        }
+        return null;
+    }
+    
+    function checkCoordsBeforeExecute() {
+        const coordsBox = findCoordsBox();
+        if (coordsBox) {
+            const coordsValue = coordsBox.value || '';
+            // 如果值是"please click the image"，说明需要坐标但用户没有点击
+            if (coordsValue.trim() === 'please click the image') {
+                alert('please click the image before execute!');
+                return false; // 阻止执行
+            }
+        }
+        return true;
+    }
+    
+    // 监听所有按钮点击，找到EXECUTE按钮并添加检查
+    function initExecuteButtonListener() {
+        // 使用MutationObserver等待Gradio加载完成
+        const observer = new MutationObserver(function(mutations) {
+            // 查找所有按钮，找到包含"EXECUTE"文本的按钮
+            const buttons = document.querySelectorAll('button');
+            
+            for (const btn of buttons) {
+                const btnText = btn.textContent || btn.innerText || '';
+                if (btnText.trim().includes('EXECUTE') && !btn.dataset.coordsCheckAttached) {
+                    btn.addEventListener('click', function(e) {
+                        if (!checkCoordsBeforeExecute()) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            return false;
+                        }
+                    }, true); // 使用捕获阶段，确保在其他处理之前执行
+                    btn.dataset.coordsCheckAttached = 'true';
+                }
+            }
+        });
+        
+        // 开始观察
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        // 立即执行一次，处理已经加载的按钮
+        setTimeout(() => {
+            const buttons = document.querySelectorAll('button');
+            for (const btn of buttons) {
+                const btnText = btn.textContent || btn.innerText || '';
+                if (btnText.trim().includes('EXECUTE') && !btn.dataset.coordsCheckAttached) {
+                    btn.addEventListener('click', function(e) {
+                        if (!checkCoordsBeforeExecute()) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            return false;
+                        }
+                    }, true);
+                    btn.dataset.coordsCheckAttached = 'true';
+                }
+            }
+        }, 2000);
+    }
+    
+    // 页面加载完成后初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initExecuteButtonListener);
+    } else {
+        initExecuteButtonListener();
+    }
+})();
+"""
 
 CSS = """
 #live_obs { border: 4px solid #3b82f6; border-radius: 8px; }
@@ -857,10 +977,10 @@ with gr.Blocks(title="Oracle Planner Interface", js=SYNC_JS, css=CSS) as demo:
                      # Right sub-column: Coords & Execute
                      with gr.Column(scale=1):
                          gr.Markdown("**2. Coords**")
-                         coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False)
+                         coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False, elem_id="coords_box")
                          
                          gr.Markdown("**3. Execute**")
-                         exec_btn = gr.Button("EXECUTE", variant="stop", size="lg")
+                         exec_btn = gr.Button("EXECUTE", variant="stop", size="lg", elem_id="exec_btn")
                          
                          gr.Markdown("---")
                          next_task_btn = gr.Button("Next Task", variant="secondary", interactive=False)
