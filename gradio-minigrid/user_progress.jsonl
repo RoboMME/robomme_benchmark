@@ -2,3 +2,8 @@
 {"username": "user7_VideoUnmask", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:15:16.634884"}
 {"username": "user5_BinFill", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:18:47.243912"}
 {"username": "user8_ButtonUnmaskSwap", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:22:07.794933"}
+{"username": "user6_VideoUnmaskSwap", "current_task_index": 1, "completed_tasks": [0], "timestamp": "2025-12-20T18:25:57.294069"}
+{"username": "user6_VideoUnmaskSwap", "current_task_index": 2, "completed_tasks": [0, 1], "timestamp": "2025-12-20T18:26:04.593786"}
+{"username": "user6_VideoUnmaskSwap", "current_task_index": 3, "completed_tasks": [0, 1, 2], "timestamp": "2025-12-20T18:26:13.620879"}
+{"username": "user6_VideoUnmaskSwap", "current_task_index": 4, "completed_tasks": [0, 1, 2, 3], "timestamp": "2025-12-20T18:26:27.530399"}
+{"username": "user5_BinFill", "current_task_index": 2, "completed_tasks": [0, 1], "timestamp": "2025-12-20T19:00:09.321956"}

@@ -965,25 +965,21 @@ with gr.Blocks(title="Oracle Planner Interface", js=SYNC_JS, css=CSS) as demo:
                  )
 
             # Right: Control Panel
-            with gr.Column(scale=2, elem_id="control_panel"):
+            with gr.Column(scale=2):
                  gr.Markdown("### Control Panel")
                  
-                 with gr.Row():
-                     # Left sub-column: Actions
-                     with gr.Column(scale=1):
-                         gr.Markdown("**1. Action**")
-                         options_radio = gr.Radio(choices=[], label="Action", type="value", show_label=False)
+                 with gr.Group(elem_id="control_panel"):
+                     gr.Markdown("**1. Action**")
+                     options_radio = gr.Radio(choices=[], label="Action", type="value", show_label=False)
                      
-                     # Right sub-column: Coords & Execute
-                     with gr.Column(scale=1):
-                         gr.Markdown("**2. Coords**")
-                         coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False, elem_id="coords_box")
-                         
-                         gr.Markdown("**3. Execute**")
-                         exec_btn = gr.Button("EXECUTE", variant="stop", size="lg", elem_id="exec_btn")
-                         
-                         gr.Markdown("---")
-                         next_task_btn = gr.Button("Next Task", variant="secondary", interactive=False)
+                     gr.Markdown("**2. Coords**")
+                     coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False, elem_id="coords_box")
+                     
+                     gr.Markdown("**3. Execute**")
+                     exec_btn = gr.Button("EXECUTE", variant="stop", size="lg", elem_id="exec_btn")
+                     
+                     gr.Markdown("---")
+                     next_task_btn = gr.Button("Next Task", variant="secondary", interactive=False)
 
     # --- Event Wiring ---
 
