@@ -8,7 +8,7 @@ from datetime import datetime
 from PIL import Image, ImageDraw
 from oracle_logic import OracleSession
 from concurrent.futures import ThreadPoolExecutor
-from user_manager import user_manager
+from user_manager import user_manager, LeaseLost
 from logger import log_session, log_user_action, create_new_attempt, has_existing_actions
 
 # --- Global Session Storage ---
@@ -74,7 +74,8 @@ def login_and_load_task(username, uid):
     if not uid:
         uid = create_session()
     
-    success, msg, status = user_manager.login(username)
+    # Pass uid to login for force takeover mechanism
+    success, msg, status = user_manager.login(username, uid)
     
     if not success:
         # Login failed
@@ -205,7 +206,14 @@ def load_next_task_wrapper(username, uid):
     如果当前任务已有 actions，则创建新的 attempt。
     """
     if username:
-        success, msg, status = user_manager.login(username)
+        # Check lease before proceeding
+        try:
+            user_manager.assert_lease(username, uid)
+        except LeaseLost as e:
+            # Raise error to be caught by Gradio and displayed
+            raise gr.Error(f"You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.\n{str(e)}")
+        
+        success, msg, status = user_manager.login(username, uid)
         if success and not status["is_done_all"]:
             current_task = status["current_task"]
             env_id = current_task["env_id"]
@@ -424,6 +432,13 @@ def on_map_click(uid, username, option_value, evt: gr.SelectData):
 #         拦截点击，不记录坐标，不画点，返回 "No need"
 #     如果 需要:
 #         记录坐标，画红点，返回坐标值
+    # Check lease
+    if username:
+        try:
+            user_manager.assert_lease(username, uid)
+        except LeaseLost as e:
+            raise gr.Error(f"You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.\n{str(e)}")
+    
     session = get_session(uid)
     if not session:
         return None, "Session Error"
@@ -494,6 +509,13 @@ def on_option_select(uid, username, option_value):
     
     if option_value is None:
         return default_msg, gr.update(interactive=False)
+    
+    # Check lease
+    if username:
+        try:
+            user_manager.assert_lease(username, uid)
+        except LeaseLost as e:
+            raise gr.Error(f"You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.\n{str(e)}")
     
     session = get_session(uid)
     if not session:
@@ -585,6 +607,13 @@ def init_app(request: gr.Request):
     return default_outputs
 
 def execute_step(uid, username, option_idx, coords_str):
+    # Check lease first
+    if username:
+        try:
+            user_manager.assert_lease(username, uid)
+        except LeaseLost as e:
+            raise gr.Error(f"LeaseLost: {str(e)}")
+    
     session = get_session(uid)
     if not session:
         return None, "Session Error", None, gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=False)
@@ -855,11 +884,80 @@ SYNC_JS = """
         }, 2000);
     }
     
+    // 监听 Gradio 错误，捕获 LeaseLost 错误
+    function initLeaseLostHandler() {
+        // 监听全局错误事件
+        window.addEventListener('error', function(e) {
+            const errorMsg = e.message || e.error?.message || '';
+            if (errorMsg.includes('LeaseLost') || errorMsg.includes('lease lost')) {
+                e.preventDefault();
+                alert('You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.');
+                // 可选：自动刷新页面
+                // window.location.reload();
+            }
+        });
+        
+        // 监听 Gradio 的错误提示（Gradio 使用 toast 显示错误）
+        // 通过 MutationObserver 监听 DOM 变化，查找错误消息
+        const errorObserver = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        // 查找包含错误消息的元素
+                        const text = node.textContent || node.innerText || '';
+                        if (text.includes('LeaseLost') || text.includes('lease lost') || 
+                            text.includes('logged in elsewhere') || text.includes('no longer valid')) {
+                            // 显示自定义弹窗
+                            setTimeout(() => {
+                                alert('You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.');
+                            }, 100);
+                        }
+                    }
+                });
+            });
+        });
+        
+        // 观察整个文档的变化
+        errorObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        // 拦截 fetch 请求，检查响应中的错误
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            return originalFetch.apply(this, args).then(function(response) {
+                // 检查响应中是否包含 LeaseLost 错误
+                if (response.ok) {
+                    return response.clone().json().then(function(data) {
+                        // Gradio API 返回的数据结构
+                        if (data && typeof data === 'object') {
+                            const dataStr = JSON.stringify(data);
+                            if (dataStr.includes('LeaseLost') || dataStr.includes('lease lost')) {
+                                setTimeout(() => {
+                                    alert('You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.');
+                                }, 100);
+                            }
+                        }
+                        return response;
+                    }).catch(function() {
+                        return response;
+                    });
+                }
+                return response;
+            });
+        };
+    }
+    
     // 页面加载完成后初始化
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initExecuteButtonListener);
+        document.addEventListener('DOMContentLoaded', function() {
+            initExecuteButtonListener();
+            initLeaseLostHandler();
+        });
     } else {
         initExecuteButtonListener();
+        initLeaseLostHandler();
     }
 })();
 """

@@ -4,6 +4,11 @@ import datetime
 from pathlib import Path
 import threading
 
+
+class LeaseLost(Exception):
+    """Exception raised when a session loses its lease (logged out elsewhere)."""
+    pass
+
 class UserManager:
     def __init__(self, tasks_file="user_tasks.json", progress_file="user_progress.jsonl"):
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +19,10 @@ class UserManager:
         # In-memory cache for tasks and progress
         self.user_tasks = {}
         self.user_progress = {}
+        
+        # Session management: track active uid for each username
+        # {username: active_uid} - maps username to the uid that currently owns the lease
+        self.active_uid = {}  # {username: uid}
         
         self.load_tasks()
         self.load_progress()
@@ -78,9 +87,15 @@ class UserManager:
             except Exception as e:
                 print(f"Error saving progress for {username}: {e}")
 
-    def login(self, username):
+    def login(self, username, uid=None):
         """
         Validate user and return their session info.
+        If username is already in use by another uid, force takeover (kick old session).
+        
+        Args:
+            username: The username to login
+            uid: The session uid requesting login (optional, but recommended)
+        
         Returns: (success, message, progress_info)
         """
         if not username:
@@ -95,8 +110,37 @@ class UserManager:
                 "current_task_index": 0,
                 "completed_tasks": set()
             }
+        
+        # Force takeover: if username is already in use by another uid, override it
+        # The old uid will fail on next assert_lease() call
+        if uid:
+            with self.lock:
+                old_uid = self.active_uid.get(username)
+                if old_uid and old_uid != uid:
+                    print(f"Force takeover: {username} was used by {old_uid}, now taken by {uid}")
+                self.active_uid[username] = uid
             
         return True, f"Welcome, {username}!", self.get_user_status(username)
+    
+    def assert_lease(self, username, uid):
+        """
+        Assert that the given uid owns the lease for the username.
+        Raises LeaseLost exception if the lease is not owned by this uid.
+        
+        Args:
+            username: The username to check
+            uid: The uid claiming the lease
+        
+        Raises:
+            LeaseLost: If the uid does not own the lease for this username
+        """
+        if not username or not uid:
+            raise LeaseLost(f"Invalid username or uid")
+        
+        with self.lock:
+            active_uid = self.active_uid.get(username)
+            if active_uid != uid:
+                raise LeaseLost(f"Lease lost: {username} is now owned by another session. You have been logged out elsewhere.")
 
     def get_user_status(self, username):
         """Get current status for a user."""
