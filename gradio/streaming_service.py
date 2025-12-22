@@ -11,7 +11,6 @@ from fastapi.responses import StreamingResponse
 from state_manager import (
     get_session, 
     get_frame_queue_info, 
-    set_frame_queue_info,
     FRAME_QUEUES
 )
 from image_utils import concatenate_frames_horizontally
@@ -34,15 +33,22 @@ class FrameQueueManager:
                 "streaming_active": True
             }
         else:
+            old_queue_size = FRAME_QUEUES[uid]["frame_queue"].qsize()
             FRAME_QUEUES[uid]["streaming_active"] = True
             FRAME_QUEUES[uid]["last_base_count"] = pre_base_count
             FRAME_QUEUES[uid]["last_wrist_count"] = pre_wrist_count
-            # 清空之前的队列（新action开始）
-            while not FRAME_QUEUES[uid]["frame_queue"].empty():
-                try:
-                    FRAME_QUEUES[uid]["frame_queue"].get_nowait()
-                except queue.Empty:
-                    break
+            
+            # 只有在队列中有frames且pre_base_count/pre_wrist_count不为0时才清空队列
+            # 如果pre_base_count/pre_wrist_count为0，说明这是第一次初始化，应该保留队列中的初始frames
+            should_clear = old_queue_size > 0 and (pre_base_count > 0 or pre_wrist_count > 0)
+            
+            if should_clear:
+                # 清空之前的队列（新action开始）
+                while not FRAME_QUEUES[uid]["frame_queue"].empty():
+                    try:
+                        FRAME_QUEUES[uid]["frame_queue"].get_nowait()
+                    except queue.Empty:
+                        break
         
         # 启动监控线程
         monitor_thread = threading.Thread(
@@ -103,11 +109,9 @@ def monitor_frames_and_enqueue(uid, pre_base_count, pre_wrist_count):
         # 拼接并加入队列
         if new_base or new_wrist:
             concatenated = concatenate_frames_horizontally(new_base, new_wrist)
-            frames_added = 0
             for frame in concatenated:
                 try:
                     queue_info["frame_queue"].put(frame, block=False)
-                    frames_added += 1
                 except queue.Full:
                     # 队列已满，跳过此帧（可选：可以限制队列大小）
                     print(f"Warning: Frame queue full for {uid}, dropping frame")

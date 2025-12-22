@@ -4,7 +4,7 @@ UI布局模块
 """
 import gradio as gr
 from user_manager import user_manager
-from config import RESTRICT_VIDEO_PLAYBACK
+from config import RESTRICT_VIDEO_PLAYBACK, REFERENCE_VIEW_HEIGHT
 from gradio_callbacks import (
     login_and_load_task,
     load_next_task_wrapper,
@@ -43,7 +43,7 @@ SYNC_JS = """
         const coordsBox = findCoordsBox();
         if (coordsBox) {
             const coordsValue = coordsBox.value || '';
-            // 如果值是"please click the image"，说明需要坐标但用户没有点击
+            // 如果值是"please click the image", 说明需要坐标但用户没有点击
             if (coordsValue.trim() === 'please click the image') {
                 alert('please click the image before execute!');
                 return false; // 阻止执行
@@ -52,27 +52,36 @@ SYNC_JS = """
         return true;
     }
     
-    // 监听所有按钮点击，找到EXECUTE按钮并添加检查
+    // 为EXECUTE按钮添加坐标检查监听器
+    function attachCoordsCheckToButton(btn) {
+        if (!btn.dataset.coordsCheckAttached) {
+            btn.addEventListener('click', function(e) {
+                if (!checkCoordsBeforeExecute()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            }, true);
+            btn.dataset.coordsCheckAttached = 'true';
+        }
+    }
+    
+    // 监听所有按钮点击, 找到EXECUTE按钮并添加检查
     function initExecuteButtonListener() {
-        // 使用MutationObserver等待Gradio加载完成
-        const observer = new MutationObserver(function(mutations) {
-            // 查找所有按钮，找到包含"EXECUTE"文本的按钮
+        function attachToExecuteButtons() {
             const buttons = document.querySelectorAll('button');
-            
             for (const btn of buttons) {
                 const btnText = btn.textContent || btn.innerText || '';
-                if (btnText.trim().includes('EXECUTE') && !btn.dataset.coordsCheckAttached) {
-                    btn.addEventListener('click', function(e) {
-                        if (!checkCoordsBeforeExecute()) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            return false;
-                        }
-                    }, true); // 使用捕获阶段，确保在其他处理之前执行
-                    btn.dataset.coordsCheckAttached = 'true';
+                if (btnText.trim().includes('EXECUTE')) {
+                    attachCoordsCheckToButton(btn);
                 }
             }
+        }
+        
+        // 使用MutationObserver等待Gradio加载完成
+        const observer = new MutationObserver(function(mutations) {
+            attachToExecuteButtons();
         });
         
         // 开始观察
@@ -81,27 +90,11 @@ SYNC_JS = """
             subtree: true
         });
         
-        // 立即执行一次，处理已经加载的按钮
-        setTimeout(() => {
-            const buttons = document.querySelectorAll('button');
-            for (const btn of buttons) {
-                const btnText = btn.textContent || btn.innerText || '';
-                if (btnText.trim().includes('EXECUTE') && !btn.dataset.coordsCheckAttached) {
-                    btn.addEventListener('click', function(e) {
-                        if (!checkCoordsBeforeExecute()) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            return false;
-                        }
-                    }, true);
-                    btn.dataset.coordsCheckAttached = 'true';
-                }
-            }
-        }, 2000);
+        // 立即执行一次, 处理已经加载的按钮
+        setTimeout(attachToExecuteButtons, 2000);
     }
     
-    // 监听 Gradio 错误，捕获 LeaseLost 错误
+    // 监听 Gradio 错误, 捕获 LeaseLost 错误
     function initLeaseLostHandler() {
         // 监听全局错误事件
         window.addEventListener('error', function(e) {
@@ -109,13 +102,13 @@ SYNC_JS = """
             if (errorMsg.includes('LeaseLost') || errorMsg.includes('lease lost')) {
                 e.preventDefault();
                 alert('You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.');
-                // 可选：自动刷新页面
+                // 可选: 自动刷新页面
                 // window.location.reload();
             }
         });
         
-        // 监听 Gradio 的错误提示（Gradio 使用 toast 显示错误）
-        // 通过 MutationObserver 监听 DOM 变化，查找错误消息
+        // 监听 Gradio 的错误提示 (Gradio 使用 toast 显示错误)
+        // 通过 MutationObserver 监听 DOM 变化, 查找错误消息
         const errorObserver = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 mutation.addedNodes.forEach(function(node) {
@@ -140,7 +133,7 @@ SYNC_JS = """
             subtree: true
         });
         
-        // 拦截 fetch 请求，检查响应中的错误
+        // 拦截 fetch 请求, 检查响应中的错误
         const originalFetch = window.fetch;
         window.fetch = function(...args) {
             return originalFetch.apply(this, args).then(function(response) {
@@ -166,26 +159,205 @@ SYNC_JS = """
         };
     }
     
+    // Apply blue flashing border to coords_group element and live_obs
+    function applyCoordsGroupHighlight() {
+        function removeHighlightStyles(group) {
+            group.style.removeProperty('border');
+            group.style.removeProperty('border-radius');
+            group.style.removeProperty('padding');
+            group.style.removeProperty('animation');
+            group.classList.remove('coords-group-highlight');
+            if (group.id === 'coords_group') {
+                group.removeAttribute('id');
+            }
+        }
+        
+        function removeLiveObsHighlight(liveObs) {
+            if (liveObs) {
+                liveObs.style.removeProperty('border');
+                liveObs.style.removeProperty('border-radius');
+                liveObs.style.removeProperty('animation');
+                liveObs.classList.remove('live-obs-highlight');
+            }
+        }
+        
+        function applyLiveObsHighlight(liveObs) {
+            if (liveObs) {
+                const computedStyle = window.getComputedStyle(liveObs);
+                const needsStyle = (
+                    computedStyle.borderColor !== 'rgb(59, 130, 246)' || 
+                    computedStyle.borderWidth !== '3px' ||
+                    computedStyle.animationName === 'none' ||
+                    !computedStyle.animationName.includes('bluePulse')
+                );
+                
+                if (needsStyle) {
+                    liveObs.classList.add('live-obs-highlight');
+                    liveObs.style.setProperty('border', '3px solid #3b82f6', 'important');
+                    liveObs.style.setProperty('border-radius', '8px', 'important');
+                    liveObs.style.setProperty('animation', 'bluePulse 1s ease-in-out infinite', 'important');
+                }
+            }
+        }
+        
+        function checkForCoordsGroup() {
+            const coordsBox = document.querySelector('[id*="coords_box"]');
+            const liveObs = document.querySelector('#live_obs');
+            let targetGroup = null;
+            let shouldHighlightLiveObs = false;
+            
+            if (coordsBox) {
+                // Check if coords_box value indicates that point selection is complete
+                const coordsTextarea = coordsBox.querySelector('textarea') || coordsBox;
+                const coordsValue = (coordsTextarea.value || '').trim();
+                const isCoordsSelected = coordsValue !== 'please click the image';
+                
+                // Find the direct parent group that contains coords_box
+                let parentGroup = coordsBox.parentElement;
+                while (parentGroup && !parentGroup.classList.contains('gr-group')) {
+                    parentGroup = parentGroup.parentElement;
+                }
+                
+                // If Execute button is in this group, find a more specific parent
+                if (parentGroup && parentGroup.querySelector('[id*="exec_btn"]') !== null) {
+                    const allGroups = document.querySelectorAll('.gr-group');
+                    for (let group of allGroups) {
+                        if (group.contains(coordsBox) && !group.querySelector('[id*="exec_btn"]')) {
+                            parentGroup = group;
+                            break;
+                        }
+                    }
+                }
+                
+                if (parentGroup && !parentGroup.querySelector('[id*="exec_btn"]')) {
+                    const computedStyle = window.getComputedStyle(parentGroup);
+                    const isVisible = parentGroup.offsetParent !== null && computedStyle.display !== 'none';
+                    const hasCSSAnimation = computedStyle.animationName !== 'none' && computedStyle.animationName.includes('bluePulse');
+                    
+                    // Don't highlight if:
+                    // 1. coords_group is hidden (not visible)
+                    // 2. coords are already selected (value is not "please click the image")
+                    if (!isVisible || isCoordsSelected) {
+                        // Remove highlight if it exists
+                        const hasBluePulseAnimation = parentGroup.style.animation && parentGroup.style.animation.includes('bluePulse');
+                        if (hasBluePulseAnimation || hasCSSAnimation) {
+                            removeHighlightStyles(parentGroup);
+                            // Also remove the class that triggers CSS
+                            parentGroup.classList.remove('coords-group-highlight');
+                        }
+                        // Remove live_obs highlight
+                        removeLiveObsHighlight(liveObs);
+                    } else {
+                        // Apply highlight only if visible and coords not selected
+                        targetGroup = parentGroup;
+                        shouldHighlightLiveObs = true;
+                        if (!parentGroup.id || !parentGroup.id.includes('coords_group')) {
+                            parentGroup.id = 'coords_group';
+                        }
+                        
+                        // Add class to enable CSS highlight
+                        parentGroup.classList.add('coords-group-highlight');
+                        
+                        const needsStyle = (
+                            computedStyle.borderColor === 'rgb(0, 0, 0)' || 
+                            computedStyle.borderWidth === '0px' || 
+                            computedStyle.borderStyle === 'none' ||
+                            computedStyle.animationName === 'none' ||
+                            !computedStyle.animationName.includes('bluePulse')
+                        );
+                        
+                        if (needsStyle) {
+                            parentGroup.style.setProperty('border', '3px solid #3b82f6', 'important');
+                            parentGroup.style.setProperty('border-radius', '8px', 'important');
+                            parentGroup.style.setProperty('padding', '15px', 'important');
+                            parentGroup.style.setProperty('animation', 'bluePulse 1s ease-in-out infinite', 'important');
+                        }
+                    }
+                }
+            }
+            
+            // Apply or remove live_obs highlight based on shouldHighlightLiveObs
+            if (shouldHighlightLiveObs && liveObs) {
+                const liveObsComputedStyle = window.getComputedStyle(liveObs);
+                const isLiveObsVisible = liveObs.offsetParent !== null && liveObsComputedStyle.display !== 'none';
+                if (isLiveObsVisible) {
+                    applyLiveObsHighlight(liveObs);
+                } else {
+                    removeLiveObsHighlight(liveObs);
+                }
+            } else {
+                removeLiveObsHighlight(liveObs);
+            }
+            
+            // Remove styles from groups that shouldn't have highlight
+            const allGroups = document.querySelectorAll('.gr-group');
+            allGroups.forEach(group => {
+                if (group === targetGroup) return;
+                const hasExecBtn = group.querySelector('[id*="exec_btn"]') !== null;
+                const hasCoordsBox = group.querySelector('[id*="coords_box"]') !== null;
+                const hasBluePulseAnimation = group.style.animation && group.style.animation.includes('bluePulse');
+                const hasHighlightClass = group.classList.contains('coords-group-highlight');
+                const computedStyle = window.getComputedStyle(group);
+                const hasCSSAnimation = computedStyle.animationName !== 'none' && computedStyle.animationName.includes('bluePulse');
+                
+                if ((hasExecBtn || !hasCoordsBox) && (hasBluePulseAnimation || hasHighlightClass || hasCSSAnimation)) {
+                    removeHighlightStyles(group);
+                }
+            });
+        }
+        
+        setInterval(checkForCoordsGroup, 500);
+    }
+    
     // 页面加载完成后初始化
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             initExecuteButtonListener();
             initLeaseLostHandler();
+            setTimeout(() => {
+                applyCoordsGroupHighlight();
+            }, 2000);
         });
     } else {
         initExecuteButtonListener();
         initLeaseLostHandler();
+        setTimeout(() => {
+            applyCoordsGroupHighlight();
+        }, 2000);
     }
 })();
 """
 
-CSS = """
-#live_obs { border: 4px solid #3b82f6; border-radius: 8px; }
-#control_panel { border: 1px solid #e5e7eb; padding: 15px; border-radius: 8px; background-color: #f9fafb; }
-.compact-log textarea { max-height: 120px !important; font-family: monospace; font-size: 0.85em; }
-.ref-zone { border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px; }
+CSS = f"""#live_obs {{ }}
+#control_panel {{ border: 1px solid #e5e7eb; padding: 15px; border-radius: 8px; background-color: #f9fafb; }}
+.compact-log textarea {{ max-height: 120px !important; font-family: monospace; font-size: 0.85em; }}
+.ref-zone {{ border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px; }}
 #combined_view_html img {{ max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border: 2px solid #3b82f6; border-radius: 8px; object-fit: contain; }}
-"""
+/* Target coords_group by ID or by containing coords_box (but not exec_btn) - only when highlight class is present */
+#coords_group.coords-group-highlight,
+.gr-group.coords-group-highlight:has([id*="coords_box"]):not(:has([id*="exec_btn"])) {{
+    border: 3px solid #3b82f6 !important;
+    border-radius: 8px;
+    padding: 15px;
+    animation: bluePulse 1s ease-in-out infinite;
+}}
+/* Live Observation highlight - only when highlight class is present */
+#live_obs.live-obs-highlight {{
+    border: 3px solid #3b82f6 !important;
+    border-radius: 8px;
+    animation: bluePulse 1s ease-in-out infinite;
+}}
+
+@keyframes bluePulse {{
+    0%, 100% {{ 
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.8);
+    }}
+    50% {{ 
+        border-color: #2563eb;
+        box-shadow: 0 0 20px 8px rgba(59, 130, 246, 0.6);
+    }}
+}}"""
 if RESTRICT_VIDEO_PLAYBACK:
     CSS += """
     #demo_video {
@@ -298,8 +470,10 @@ def create_ui_blocks():
                              gr.Markdown("**1. Action**")
                              options_radio = gr.Radio(choices=[], label="Action", type="value", show_label=False)
                              
-                             gr.Markdown("**2. Coords**")
-                             coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False, elem_id="coords_box")
+                             # Coords Group (conditionally visible)
+                             with gr.Group(visible=False, elem_id="coords_group") as coords_group:
+                                 gr.Markdown("**2. Coords**")
+                                 coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False, elem_id="coords_box")
                              
                              gr.Markdown("**3. Execute**")
                              exec_btn = gr.Button("EXECUTE", variant="stop", size="lg", elem_id="exec_btn")
@@ -333,7 +507,8 @@ def create_ui_blocks():
                 demo_video_group,
                 combined_view_group,
                 operation_zone_group,
-                confirm_demo_btn
+                confirm_demo_btn,
+                coords_group
             ]
         ).then(
             fn=lambda u: u,
@@ -365,7 +540,8 @@ def create_ui_blocks():
                 demo_video_group,
                 combined_view_group,
                 operation_zone_group,
-                confirm_demo_btn
+                confirm_demo_btn,
+                coords_group
             ]
         )
         
@@ -378,7 +554,8 @@ def create_ui_blocks():
                 combined_view_group,
                 operation_zone_group,
                 confirm_demo_btn,
-                exec_btn
+                exec_btn,
+                coords_group
             ]
         )
 
@@ -393,14 +570,14 @@ def create_ui_blocks():
         options_radio.change(
             fn=on_option_select,
             inputs=[uid_state, username_state, options_radio],
-            outputs=[coords_box, img_display]
+            outputs=[coords_box, img_display, coords_group]
         )
 
         # 3. Execute
         exec_btn.click(
             fn=execute_step,
             inputs=[uid_state, username_state, options_radio, coords_box],
-            outputs=[img_display, log_output, task_info_box, progress_info_box, next_task_btn, exec_btn]
+            outputs=[img_display, log_output, task_info_box, progress_info_box, next_task_btn, exec_btn, coords_group]
         )
         
         # 5. Auto Login on Load (Timer 已移除，使用 MJPEG 流式传输)
@@ -429,7 +606,8 @@ def create_ui_blocks():
                 demo_video_group,
                 combined_view_group,
                 operation_zone_group,
-                confirm_demo_btn
+                confirm_demo_btn,
+                coords_group
             ]
         )
     

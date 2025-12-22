@@ -6,6 +6,7 @@ import gradio as gr
 import numpy as np
 import time
 import traceback
+import queue
 from datetime import datetime
 from state_manager import (
     get_session,
@@ -23,11 +24,10 @@ from state_manager import (
     reset_ui_phase,
 )
 from streaming_service import FrameQueueManager, cleanup_frame_queue
-from image_utils import draw_marker, save_video
-from oracle_logic import OracleSession
+from image_utils import draw_marker, save_video, concatenate_frames_horizontally
 from user_manager import user_manager, LeaseLost
 from logger import log_session, log_user_action, create_new_attempt, has_existing_actions
-from config import USE_SEGMENTED_VIEW, REFERENCE_VIEW_HEIGHT
+from config import USE_SEGMENTED_VIEW, REFERENCE_VIEW_HEIGHT, should_show_demo_video
 
 
 def login_and_load_task(username, uid):
@@ -147,7 +147,8 @@ def login_and_load_task(username, uid):
     
     demo_video_path = None
     has_demo_video = False
-    if session.demonstration_frames:
+    # 只有ENV_IDS为video的才显示demonstration videos
+    if session.demonstration_frames and should_show_demo_video(env_id):
         try:
             demo_video_path = save_video(session.demonstration_frames, "demo")
             has_demo_video = True
@@ -169,14 +170,6 @@ def login_and_load_task(username, uid):
         # 有示范视频：第一阶段 - 观看示范视频
         reset_ui_phase(uid)  # 设置为 "watching_demo"
         
-        # #region agent log
-        try:
-            import json
-            with open('/data/hongzefu/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"id":"log_has_demo","timestamp":int(time.time()*1000),"location":"gradio_callbacks.py:168","message":"login_and_load_task has demo video","data":{"uid":uid,"combined_view_visible":"False (correct for watching_demo phase)"},"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}) + '\n')
-        except: pass
-        # #endregion
-        
         return (
             uid,
             gr.update(visible=False), # Login hidden
@@ -197,19 +190,36 @@ def login_and_load_task(username, uid):
             gr.update(visible=True),  # demo_video_group (第一阶段显示)
             gr.update(visible=False), # combined_view_group (第一阶段隐藏，正确)
             gr.update(visible=False), # operation_zone_group (第一阶段隐藏)
-            gr.update(visible=True)   # confirm_demo_btn (第一阶段显示)
+            gr.update(visible=True),  # confirm_demo_btn (第一阶段显示)
+            gr.update(visible=False)  # coords_group (初始化时隐藏)
         )
     else:
         # 没有示范视频：直接进入执行阶段
         set_ui_phase(uid, "executing_task")
         
-        # #region agent log
-        try:
-            import json
-            with open('/data/hongzefu/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"id":"log_no_demo","timestamp":int(time.time()*1000),"location":"gradio_callbacks.py:194","message":"login_and_load_task no demo video","data":{"uid":uid,"combined_view_visible":"False (should be True)"},"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}) + '\n')
-        except: pass
-        # #endregion
+        # 初始化Reference Views队列（如果没有demo video，需要立即显示Reference Views）
+        if session.base_frames or session.wrist_frames:
+            from state_manager import FRAME_QUEUES
+            
+            # 初始化队列（如果还没有）
+            # 注意：使用0作为pre_base_count/pre_wrist_count，表示这是初始frames，不应该被清空
+            if uid not in FRAME_QUEUES:
+                FrameQueueManager.init_queue(uid, 0, 0)
+            
+            # 拼接初始frames
+            initial_frames = concatenate_frames_horizontally(
+                session.base_frames, 
+                session.wrist_frames
+            )
+            
+            # 将初始frames加入队列
+            queue_info = FRAME_QUEUES.get(uid)
+            if queue_info:
+                for frame in initial_frames:
+                    try:
+                        queue_info["frame_queue"].put(frame, block=False)
+                    except queue.Full:
+                        break
         
         return (
             uid,
@@ -231,7 +241,8 @@ def login_and_load_task(username, uid):
             gr.update(visible=False), # demo_video_group (无视频，隐藏)
             gr.update(visible=True),  # combined_view_group (修复：应该显示)
             gr.update(visible=True),  # operation_zone_group (直接显示)
-            gr.update(visible=False)  # confirm_demo_btn (无视频，隐藏)
+            gr.update(visible=False), # confirm_demo_btn (无视频，隐藏)
+            gr.update(visible=False)  # coords_group (初始化时隐藏)
         )
 
 
@@ -239,14 +250,6 @@ def confirm_demo_watched(uid, username):
     """
     用户确认已观看示范视频，切换到执行任务阶段
     """
-    # #region agent log
-    import json
-    try:
-        with open('/data/hongzefu/.cursor/debug.log', 'a') as f:
-            f.write(json.dumps({"id":"log_confirm_demo","timestamp":int(time.time()*1000),"location":"gradio_callbacks.py:220","message":"confirm_demo_watched called","data":{"uid":uid,"username":username},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
-    except: pass
-    # #endregion
-    
     # Check lease
     if username:
         try:
@@ -257,12 +260,30 @@ def confirm_demo_watched(uid, username):
     # 设置阶段为执行任务
     set_ui_phase(uid, "executing_task")
     
-    # #region agent log
-    try:
-        with open('/data/hongzefu/.cursor/debug.log', 'a') as f:
-            f.write(json.dumps({"id":"log_confirm_demo_return","timestamp":int(time.time()*1000),"location":"gradio_callbacks.py:242","message":"confirm_demo_watched returning","data":{"combined_view_visible":"False (should be True)"},"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}) + '\n')
-    except: pass
-    # #endregion
+    # 初始化Reference Views队列（确认demo后，需要显示Reference Views）
+    session = get_session(uid)
+    if session and (session.base_frames or session.wrist_frames):
+        from state_manager import FRAME_QUEUES
+        
+        # 初始化队列（如果还没有）
+        # 使用0作为pre_base_count/pre_wrist_count，表示这是初始frames
+        if uid not in FRAME_QUEUES:
+            FrameQueueManager.init_queue(uid, 0, 0)
+        
+        # 拼接初始frames
+        initial_frames = concatenate_frames_horizontally(
+            session.base_frames, 
+            session.wrist_frames
+        )
+        
+        # 将初始frames加入队列
+        queue_info = FRAME_QUEUES.get(uid)
+        if queue_info:
+            for frame in initial_frames:
+                try:
+                    queue_info["frame_queue"].put(frame, block=False)
+                except queue.Full:
+                    break
     
     # 返回UI更新：隐藏示范视频，显示Combined View和操作区域
     # 同时更新 exec_btn 为可交互状态
@@ -271,7 +292,8 @@ def confirm_demo_watched(uid, username):
         gr.update(visible=True),   # combined_view_group (修复：应该显示)
         gr.update(visible=True),   # operation_zone_group
         gr.update(visible=False),  # confirm_demo_btn
-        gr.update(interactive=True)  # exec_btn - 启用执行按钮
+        gr.update(interactive=True),  # exec_btn - 启用执行按钮
+        gr.update(visible=False)   # coords_group (确认demo后，还未选择选项，隐藏)
     )
 
 
@@ -378,7 +400,7 @@ def on_option_select(uid, username, option_value):
     default_msg = "No need for coordinates"
     
     if option_value is None:
-        return default_msg, gr.update(interactive=False)
+        return default_msg, gr.update(interactive=False), gr.update(visible=False)
     
     # Check lease
     if username:
@@ -389,7 +411,7 @@ def on_option_select(uid, username, option_value):
     
     session = get_session(uid)
     if not session:
-        return default_msg, gr.update(interactive=False)
+        return default_msg, gr.update(interactive=False), gr.update(visible=False)
     
     # option_value 是 (label, idx) 元组或直接是 idx
     if isinstance(option_value, tuple):
@@ -415,9 +437,9 @@ def on_option_select(uid, username, option_value):
     if 0 <= option_idx < len(session.raw_solve_options):
         opt = session.raw_solve_options[option_idx]
         if opt.get("available"):
-             return "please click the image", gr.update(interactive=True)
+             return "please click the image", gr.update(interactive=True), gr.update(visible=True)
     
-    return default_msg, gr.update(interactive=False)
+    return default_msg, gr.update(interactive=False), gr.update(visible=False)
 
 
 def init_app(request: gr.Request):
@@ -429,7 +451,7 @@ def init_app(request: gr.Request):
     username = params.get('user')
     
     # Default outputs if no auto-login
-    # uid, loading_group, login_group, main_interface, login_msg, img, log, options, goal, coords, combined, video, task, progress, login_btn, next_btn, exec_btn, username_state, demo_video_group, combined_view_group, operation_zone_group, confirm_demo_btn
+    # uid, loading_group, login_group, main_interface, login_msg, img, log, options, goal, coords, combined, video, task, progress, login_btn, next_btn, exec_btn, username_state, demo_video_group, combined_view_group, operation_zone_group, confirm_demo_btn, coords_group
     default_outputs = (
         None, 
         gr.update(visible=False), # loading_group (hide it)
@@ -448,7 +470,8 @@ def init_app(request: gr.Request):
         gr.update(visible=False), # demo_video_group
         gr.update(visible=False), # combined_view_group
         gr.update(visible=False), # operation_zone_group
-        gr.update(visible=False)  # confirm_demo_btn
+        gr.update(visible=False), # confirm_demo_btn
+        gr.update(visible=False)  # coords_group (初始化时隐藏)
     )
     
     if username:
@@ -489,10 +512,60 @@ def execute_step(uid, username, option_idx, coords_str):
     
     session = get_session(uid)
     if not session:
-        return None, "Session Error", gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=False)
+        return None, "Session Error", gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=False), gr.update(visible=False)
+    
+    # 检查并初始化Reference Views（如果frames为空或队列不存在）
+    from state_manager import FRAME_QUEUES
+    frames_exist = session.base_frames or session.wrist_frames
+    queue_exists = uid in FRAME_QUEUES
+    
+    if not frames_exist:
+        # 从环境中读取初始frames
+        session.update_observation(use_segmentation=USE_SEGMENTED_VIEW)
+        
+        # 如果有frames了，将初始frames加入队列
+        if session.base_frames or session.wrist_frames:
+            
+            # 初始化队列（如果还没有）
+            if uid not in FRAME_QUEUES:
+                FrameQueueManager.init_queue(uid, 0, 0)
+            
+            # 拼接初始frames
+            initial_frames = concatenate_frames_horizontally(
+                session.base_frames, 
+                session.wrist_frames
+            )
+            
+            # 将初始frames加入队列
+            queue_info = FRAME_QUEUES.get(uid)
+            if queue_info:
+                for frame in initial_frames:
+                    try:
+                        queue_info["frame_queue"].put(frame, block=False)
+                    except queue.Full:
+                        break
+    elif frames_exist and not queue_exists:
+        # frames存在但队列不存在，初始化队列并加入frames
+        # 初始化队列
+        FrameQueueManager.init_queue(uid, len(session.base_frames), len(session.wrist_frames))
+        
+        # 拼接初始frames
+        initial_frames = concatenate_frames_horizontally(
+            session.base_frames, 
+            session.wrist_frames
+        )
+        
+        # 将初始frames加入队列
+        queue_info = FRAME_QUEUES.get(uid)
+        if queue_info:
+            for frame in initial_frames:
+                try:
+                    queue_info["frame_queue"].put(frame, block=False)
+                except queue.Full:
+                    break
     
     if option_idx is None:
-        return session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW), "Error: No action selected", gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True)
+        return session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW), "Error: No action selected", gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True), gr.update(visible=False)
 
     # 检查当前选项是否需要坐标
     needs_coords = False
@@ -520,7 +593,7 @@ def execute_step(uid, username, option_idx, coords_str):
         if not is_valid_coords:
             current_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
             error_msg = "please click the image before execute!"
-            return current_img, error_msg, gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True)
+            return current_img, error_msg, gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True), gr.update(visible=True)
 
     # Parse coords
     click_coords = None
@@ -535,8 +608,22 @@ def execute_step(uid, username, option_idx, coords_str):
     pre_base_frame_count = len(session.base_frames)
     pre_wrist_frame_count = len(session.wrist_frames)
     
+    # 检查是否是第一次execute（队列已存在且有frames，且pre_base_count等于当前frames数量）
+    # 如果是第一次execute，不应该清空队列中的初始frames
+    is_first_execute = False
+    if uid in FRAME_QUEUES:
+        queue_info = FRAME_QUEUES.get(uid)
+        if queue_info and queue_info["frame_queue"].qsize() > 0:
+            # 如果pre_base_count等于当前frames数量，说明这是第一次execute，不应该清空队列
+            if pre_base_frame_count == len(session.base_frames) and pre_wrist_frame_count == len(session.wrist_frames):
+                is_first_execute = True
+    
     # 初始化队列和启动监控线程（用于流式输出）
-    FrameQueueManager.init_queue(uid, pre_base_frame_count, pre_wrist_frame_count)
+    # 如果是第一次execute，使用0作为pre_base_count/pre_wrist_count，避免清空队列
+    if is_first_execute:
+        FrameQueueManager.init_queue(uid, 0, 0)
+    else:
+        FrameQueueManager.init_queue(uid, pre_base_frame_count, pre_wrist_frame_count)
     
     # 在执行前获取当前图片（用于记录最后执行的坐标对应的图片）
     pre_execute_image = None
@@ -665,4 +752,7 @@ def execute_step(uid, username, option_idx, coords_str):
     next_task_update = gr.update(interactive=True) if done else gr.update(interactive=False)
     exec_btn_update = gr.update(interactive=False) if done else gr.update(interactive=True)
     
-    return img, status, task_update, progress_update, next_task_update, exec_btn_update
+    # 执行后隐藏Coords区域
+    coords_group_update = gr.update(visible=False)
+    
+    return img, status, task_update, progress_update, next_task_update, exec_btn_update, coords_group_update

@@ -111,12 +111,6 @@ def get_frame_queue_info(uid):
         return FRAME_QUEUES.get(uid)
 
 
-def set_frame_queue_info(uid, queue_info):
-    """设置帧队列信息"""
-    with _state_lock:
-        FRAME_QUEUES[uid] = queue_info
-
-
 def get_ui_phase(uid):
     """获取UI阶段"""
     with _state_lock:
@@ -138,17 +132,3 @@ def reset_ui_phase(uid):
     """重置UI阶段为初始阶段（watching_demo）"""
     with _state_lock:
         UI_PHASE_MAP[uid] = "watching_demo"
-
-
-def clear_session_data(uid):
-    """清理指定session的所有相关数据"""
-    with _state_lock:
-        # 清理坐标点击
-        if uid in COORDINATE_CLICKS:
-            COORDINATE_CLICKS[uid] = []
-        # 清理选项选择
-        if uid in OPTION_SELECTS:
-            OPTION_SELECTS[uid] = []
-        # 注意：不清理 GLOBAL_SESSIONS 和 TASK_INDEX_MAP，因为它们可能仍在使用
-        # FRAME_QUEUES 由 streaming_service 管理清理
-        # UI_PHASE_MAP 在加载新任务时会重置

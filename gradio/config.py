@@ -12,3 +12,23 @@ ENV_IDS = [
     "ButtonUnmask", "VideoRepick", "VideoPlaceButton", "InsertPeg", 
     "MoveCube", "PatternLock", "RouteStick"
 ]
+
+# 应该显示demonstration videos的环境ID列表
+DEMO_VIDEO_ENV_IDS = [
+    "VideoPlaceOrder",
+    "VideoUnmaskSwap",
+    "VideoUnmask",
+    "VideoRepick",
+    "VideoPlaceButton",
+    "InsertPeg",
+    "MoveCube",
+    "PatternLock",
+    "RouteStick"
+]
+
+def should_show_demo_video(env_id):
+    """
+    判断指定的环境ID是否应该显示demonstration video
+    只有DEMO_VIDEO_ENV_IDS列表中的环境才显示demonstration videos
+    """
+    return env_id in DEMO_VIDEO_ENV_IDS
