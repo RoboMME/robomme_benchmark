@@ -6,6 +6,11 @@ RESTRICT_VIDEO_PLAYBACK = True  # Set to False to enable controls
 USE_SEGMENTED_VIEW = False  # Set to True to use segmented view, False to use original image
 REFERENCE_VIEW_HEIGHT = "40vh"  # Height of the reference view image
 
+# Operation Zone 三列宽度比例 (Live Observation : Action : Control)
+LIVE_OBSERVATION_SCALE = 3  # Live Observation 列的宽度比例
+ACTION_SCALE = 3  # Action 列的宽度比例
+CONTROL_SCALE = 3  # Control 列的宽度比例
+
 ENV_IDS = [
     "VideoPlaceOrder", "PickXtimes", "StopCube", "SwingXtimes", 
     "BinFill", "VideoUnmaskSwap", "VideoUnmask", "ButtonUnmaskSwap", 

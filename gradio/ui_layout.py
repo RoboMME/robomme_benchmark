@@ -4,7 +4,7 @@ UI布局模块
 """
 import gradio as gr
 from user_manager import user_manager
-from config import RESTRICT_VIDEO_PLAYBACK, REFERENCE_VIEW_HEIGHT
+from config import RESTRICT_VIDEO_PLAYBACK, REFERENCE_VIEW_HEIGHT, LIVE_OBSERVATION_SCALE, ACTION_SCALE, CONTROL_SCALE
 from gradio_callbacks import (
     login_and_load_task,
     load_next_task_wrapper,
@@ -333,6 +333,21 @@ CSS = f"""#live_obs {{ }}
 .compact-log textarea {{ max-height: 120px !important; font-family: monospace; font-size: 0.85em; }}
 .ref-zone {{ border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px; }}
 #combined_view_html img {{ max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border: 2px solid #3b82f6; border-radius: 8px; object-fit: contain; }}
+/* Action Radio - 每个选项占满一行 */
+#action_radio .form-radio {{
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+}}
+#action_radio .form-radio label {{
+    width: 100% !important;
+    display: block !important;
+}}
+#action_radio label {{
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+}}
 /* Target coords_group by ID or by containing coords_box (but not exec_btn) - only when highlight class is present */
 #coords_group.coords-group-highlight,
 .gr-group.coords-group-highlight:has([id*="coords_box"]):not(:has([id*="exec_btn"])) {{
@@ -452,7 +467,7 @@ def create_ui_blocks():
             with gr.Group(visible=False) as operation_zone_group:
                 with gr.Row():
                     # Left: Live Observation (Main)
-                    with gr.Column(scale=1):
+                    with gr.Column(scale=LIVE_OBSERVATION_SCALE):
                          gr.Markdown("### Live Observation (交互主视图)")
                          img_display = gr.Image(
                             label="Live Observation", 
@@ -462,24 +477,25 @@ def create_ui_blocks():
                             show_label=False
                          )
 
+                    # Middle: Action Selection
+                    with gr.Column(scale=ACTION_SCALE):
+                         gr.Markdown("### Action")
+                         options_radio = gr.Radio(choices=[], label="Action", type="value", show_label=False, elem_id="action_radio")
+
                     # Right: Control Panel
-                    with gr.Column(scale=2):
-                         gr.Markdown("### Control Panel")
+                    with gr.Column(scale=CONTROL_SCALE):
+                         gr.Markdown("### Control")
                          
-                         with gr.Group(elem_id="control_panel"):
-                             gr.Markdown("**1. Action**")
-                             options_radio = gr.Radio(choices=[], label="Action", type="value", show_label=False)
-                             
-                             # Coords Group (conditionally visible)
-                             with gr.Group(visible=False, elem_id="coords_group") as coords_group:
-                                 gr.Markdown("**2. Coords**")
-                                 coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False, elem_id="coords_box")
-                             
-                             gr.Markdown("**3. Execute**")
-                             exec_btn = gr.Button("EXECUTE", variant="stop", size="lg", elem_id="exec_btn")
-                             
-                             gr.Markdown("---")
-                             next_task_btn = gr.Button("Next Task", variant="secondary", interactive=False)
+                         # Coords Group (conditionally visible)
+                         with gr.Group(visible=False, elem_id="coords_group") as coords_group:
+                             gr.Markdown("**Coords**")
+                             coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False, elem_id="coords_box")
+                         
+                         gr.Markdown("**Execute**")
+                         exec_btn = gr.Button("EXECUTE", variant="stop", size="lg", elem_id="exec_btn")
+                         
+                         gr.Markdown("---")
+                         next_task_btn = gr.Button("Next Task", variant="secondary", interactive=False)
 
         # --- Event Wiring ---
 
