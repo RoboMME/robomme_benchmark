@@ -136,6 +136,80 @@ def find_free_port(start_port=7860):
     return 7860
 
 
+def get_all_network_ips():
+    """获取所有网络接口的 IP 地址"""
+    ips = []
+    
+    # 方法1: 使用 socket 连接外部地址获取默认路由 IP
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            # 连接到一个远程地址（不需要实际连接）
+            s.connect(('8.8.8.8', 80))
+            local_ip = s.getsockname()[0]
+            if local_ip and local_ip != "127.0.0.1":
+                ips.append(("default", local_ip))
+        except Exception:
+            pass
+        finally:
+            s.close()
+    except Exception:
+        pass
+    
+    # 方法2: 尝试使用 netifaces 获取所有接口（如果可用）
+    try:
+        import netifaces
+        interfaces = netifaces.interfaces()
+        for interface in interfaces:
+            addrs = netifaces.ifaddresses(interface)
+            if netifaces.AF_INET in addrs:
+                for addr_info in addrs[netifaces.AF_INET]:
+                    ip = addr_info.get('addr')
+                    if ip and ip != "127.0.0.1" and ip not in [ip_addr for _, ip_addr in ips]:
+                        ips.append((interface, ip))
+    except ImportError:
+        # netifaces 不可用，跳过
+        pass
+    except Exception:
+        pass
+    
+    # 方法3: 使用 psutil（如果可用）
+    try:
+        import psutil
+        for interface, addrs in psutil.net_if_addrs().items():
+            for addr in addrs:
+                if addr.family == socket.AF_INET:
+                    ip = addr.address
+                    if ip and ip != "127.0.0.1" and ip not in [ip_addr for _, ip_addr in ips]:
+                        ips.append((interface, ip))
+    except ImportError:
+        # psutil 不可用，跳过
+        pass
+    except Exception:
+        pass
+    
+    # 方法4: 使用 ip 命令（Linux）
+    try:
+        import subprocess
+        import re
+        result = subprocess.run(['ip', 'addr', 'show'], 
+                              capture_output=True, text=True, timeout=2)
+        if result.returncode == 0:
+            # 解析 ip addr show 的输出
+            pattern = r'inet\s+(\d+\.\d+\.\d+\.\d+)/\d+'
+            matches = re.findall(pattern, result.stdout)
+            for ip in matches:
+                if ip and ip != "127.0.0.1" and ip not in [ip_addr for _, ip_addr in ips]:
+                    ips.append(("interface", ip))
+    except (ImportError, FileNotFoundError):
+        pass
+    except Exception:
+        # 包括 subprocess.TimeoutExpired 等其他异常
+        pass
+    
+    return ips
+
+
 if __name__ == "__main__":
     # Ensure session created for imports
     create_session()
@@ -163,6 +237,9 @@ if __name__ == "__main__":
         js=SYNC_JS
     )
     
+    # 获取所有网络接口 IP
+    network_ips = get_all_network_ips()
+    
     print("\n" + "="*60)
     print("SERVER STARTING:")
     print("="*60)
@@ -170,13 +247,27 @@ if __name__ == "__main__":
     print(f"MJPEG stream endpoint: http://0.0.0.0:{port}/video_feed/{{uid}}")
     print("="*60)
     
-    # 打印每个用户的登录链接
+    # 打印所有可用的公共 IP 地址
+    if network_ips:
+        print("\n所有可用的 Gradio 公共 IP 地址:")
+        print("-" * 60)
+        for interface, ip in network_ips:
+            print(f"  {interface:15s} -> http://{ip}:{port}")
+        print("-" * 60)
+        print(f"共 {len(network_ips)} 个网络接口")
+    else:
+        print("\n⚠️  警告: 无法获取网络接口 IP 地址")
+        print("   请使用 http://0.0.0.0:{port} 或 http://localhost:{port} 访问")
+    
+    # 打印每个用户的登录链接（使用第一个可用 IP）
     available_users = list(user_manager.user_tasks.keys())
     if available_users:
         print("\n用户登录链接:")
         print("-" * 60)
+        # 使用第一个可用 IP，如果没有则使用 localhost
+        base_ip = network_ips[0][1] if network_ips else "localhost"
         for username in sorted(available_users):
-            login_link = f"http://0.0.0.0:{port}/?user={username}"
+            login_link = f"http://{base_ip}:{port}/?user={username}"
             print(f"  {username:20s} -> {login_link}")
         print("-" * 60)
         print(f"共 {len(available_users)} 个用户")

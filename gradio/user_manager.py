@@ -10,11 +10,14 @@ class LeaseLost(Exception):
     pass
 
 class UserManager:
-    def __init__(self, tasks_file="user_tasks.json", progress_file="user_progress.jsonl"):
+    def __init__(self, tasks_file="user_tasks.json", progress_dir="user_progress"):
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.tasks_file = os.path.join(self.base_dir, tasks_file)
-        self.progress_file = os.path.join(self.base_dir, progress_file)
+        self.progress_dir = os.path.join(self.base_dir, progress_dir)
         self.lock = threading.Lock()
+        
+        # 创建进度目录（如果不存在）
+        os.makedirs(self.progress_dir, exist_ok=True)
         
         # In-memory cache for tasks and progress
         self.user_tasks = {}
@@ -40,33 +43,48 @@ class UserManager:
         except Exception as e:
             print(f"Error loading tasks file: {e}")
 
+    def _get_user_progress_file(self, username):
+        """获取用户特定的进度文件路径"""
+        safe_username = username.replace("/", "_").replace("\\", "_")
+        return os.path.join(self.progress_dir, f"{safe_username}.jsonl")
+    
     def load_progress(self):
-        """Load user progress from JSONL file. 
-        Reconstructs the latest state by reading all lines."""
-        if not os.path.exists(self.progress_file):
+        """Load user progress from individual JSONL files. 
+        Reconstructs the latest state by reading all user files."""
+        if not os.path.exists(self.progress_dir):
             return
 
         try:
-            with open(self.progress_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    if not line.strip():
-                        continue
-                    try:
-                        record = json.loads(line)
-                        username = record.get("username")
-                        if username:
-                            # Update in-memory state with latest record
-                            self.user_progress[username] = {
-                                "current_task_index": record.get("current_task_index", 0),
-                                "completed_tasks": set(record.get("completed_tasks", []))
-                            }
-                    except json.JSONDecodeError:
-                        continue
+            # 遍历进度目录中的所有用户文件
+            for filename in os.listdir(self.progress_dir):
+                if not filename.endswith('.jsonl'):
+                    continue
+                
+                user_file = os.path.join(self.progress_dir, filename)
+                try:
+                    with open(user_file, 'r', encoding='utf-8') as f:
+                        # 读取该用户文件的所有记录，保留最新的状态
+                        for line in f:
+                            if not line.strip():
+                                continue
+                            try:
+                                record = json.loads(line)
+                                username = record.get("username")
+                                if username:
+                                    # Update in-memory state with latest record
+                                    self.user_progress[username] = {
+                                        "current_task_index": record.get("current_task_index", 0),
+                                        "completed_tasks": set(record.get("completed_tasks", []))
+                                    }
+                            except json.JSONDecodeError:
+                                continue
+                except Exception as e:
+                    print(f"Error loading progress file {user_file}: {e}")
         except Exception as e:
-            print(f"Error loading progress file: {e}")
+            print(f"Error loading progress directory: {e}")
 
     def save_progress_record(self, username, current_index, completed_tasks):
-        """Append a progress record to the JSONL file."""
+        """Append a progress record to the user-specific JSONL file."""
         record = {
             "username": username,
             "current_task_index": current_index,
@@ -76,7 +94,8 @@ class UserManager:
         
         with self.lock:
             try:
-                with open(self.progress_file, 'a', encoding='utf-8') as f:
+                user_progress_file = self._get_user_progress_file(username)
+                with open(user_progress_file, 'a', encoding='utf-8') as f:
                     f.write(json.dumps(record) + "\n")
                 
                 # Update cache

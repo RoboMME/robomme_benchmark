@@ -496,6 +496,12 @@ CSS = f"""#live_obs {{ }}
         border-color: #2563eb;
         box-shadow: 0 0 20px 8px rgba(59, 130, 246, 0.6);
     }}
+}}
+/* Next Task Button - 与 confirm 按钮一致（primary 样式） */
+#next_task_btn:disabled,
+#next_task_btn[disabled],
+#next_task_btn.disabled {{
+    opacity: 0.5 !important;
 }}"""
 if RESTRICT_VIDEO_PLAYBACK:
     CSS += """
@@ -622,7 +628,7 @@ def create_ui_blocks():
                          exec_btn = gr.Button("EXECUTE 🤖", variant="stop", size="lg", elem_id="exec_btn")
                          
                          gr.Markdown("---")
-                         next_task_btn = gr.Button("Next Task 🔄", variant="secondary", interactive=False)
+                         next_task_btn = gr.Button("Next Task 🔄", variant="primary", interactive=False, elem_id="next_task_btn")
 
         # --- Event Wiring ---
 
