@@ -1,31 +1,43 @@
 """
 状态管理模块
 管理所有全局状态和Session生命周期
+
+本模块负责：
+1. 创建和管理 ProcessSessionProxy 实例（每个用户一个）
+2. 存储任务索引、坐标点击、选项选择等UI状态
+3. 管理视频帧队列（用于MJPEG流式传输）
+4. 提供线程安全的访问接口
+
+注意：GLOBAL_SESSIONS 中存储的是 ProcessSessionProxy 对象，而不是 OracleSession。
+实际的 OracleSession 运行在独立的工作进程中，通过代理对象进行通信。
 """
 import uuid
 import threading
-from oracle_logic import OracleSession
+from process_session import ProcessSessionProxy
 
-# --- Global Session Storage ---
+# --- 全局会话存储 ---
+# 存储所有用户的 ProcessSessionProxy 实例
+# 每个用户登录时会创建一个代理，代理会启动一个独立的工作进程运行 OracleSession
 GLOBAL_SESSIONS = {}
 
-# --- Task Index Storage (for Progress display) ---
+# --- 任务索引存储（用于进度显示） ---
 # 存储每个session的任务索引和总任务数，用于直接读取Progress
 TASK_INDEX_MAP = {}  # {uid: {"task_index": int, "total_tasks": int}}
 
-# --- Coordinate Click Tracking (between actions) ---
+# --- 坐标点击跟踪（两次动作之间） ---
 # 跟踪每个session从上次action_execute到现在的所有coordinate_click
 COORDINATE_CLICKS = {}  # {uid: [{"coordinates": {"x": x, "y": y}, "coords_str": "...", "image_array": ..., "timestamp": "..."}, ...]}
 
-# --- Option Select Tracking (between actions) ---
+# --- 选项选择跟踪（两次动作之间） ---
 # 跟踪每个session从上次action_execute到现在的所有option_select
 OPTION_SELECTS = {}  # {uid: [{"option_idx": idx, "option_label": label, "timestamp": "..."}, ...]}
 
-# --- Frame Queue Storage for Streaming ---
+# --- 视频帧队列存储（用于流式传输） ---
 # 全局队列存储：{uid: {"frame_queue": queue.Queue, "last_base_count": int, "last_wrist_count": int, "streaming_active": bool}}
+# 注意：帧数据来自 ProcessSessionProxy 的本地缓存，由后台同步线程从工作进程实时更新
 FRAME_QUEUES = {}
 
-# --- UI Phase Storage ---
+# --- UI阶段存储 ---
 # 存储每个session的UI阶段："watching_demo" 或 "executing_task"
 UI_PHASE_MAP = {}  # {uid: "watching_demo" | "executing_task"}
 
@@ -34,15 +46,34 @@ _state_lock = threading.Lock()
 
 
 def get_session(uid):
-    """获取指定uid的session"""
+    """
+    获取指定uid的session（ProcessSessionProxy实例）
+    
+    Args:
+        uid: 会话ID
+        
+    Returns:
+        ProcessSessionProxy: 代理对象，提供与 OracleSession 相同的接口
+    """
     with _state_lock:
         return GLOBAL_SESSIONS.get(uid)
 
 
 def create_session():
-    """创建新的session并返回uid"""
+    """
+    创建新的session并返回uid
+    
+    此函数会：
+    1. 生成一个唯一的会话ID（UUID）
+    2. 创建一个 ProcessSessionProxy 实例
+    3. ProcessSessionProxy 会自动启动一个独立的工作进程运行 OracleSession
+    4. 将代理对象存储到 GLOBAL_SESSIONS 中
+    
+    Returns:
+        str: 新创建的会话ID
+    """
     uid = str(uuid.uuid4())
-    session = OracleSession()
+    session = ProcessSessionProxy()
     with _state_lock:
         GLOBAL_SESSIONS[uid] = session
     return uid

@@ -1,6 +1,14 @@
 """
 流媒体服务模块
 处理MJPEG流、帧队列和后台监控线程
+
+本模块负责：
+1. 从 ProcessSessionProxy 的本地缓存读取视频帧
+2. 监控帧变化并将新帧加入队列
+3. 生成MJPEG流式视频供浏览器播放
+
+注意：session.base_frames 和 session.wrist_frames 来自 ProcessSessionProxy 的本地缓存，
+这些数据由后台同步线程从工作进程实时更新。
 """
 import queue
 import threading
@@ -83,6 +91,9 @@ def monitor_frames_and_enqueue(uid, pre_base_count, pre_wrist_count):
     """
     监控session的帧变化，将新帧加入队列
     
+    此函数从 ProcessSessionProxy 的本地缓存读取帧数据。
+    这些帧由代理的后台同步线程从工作进程实时更新。
+    
     Args:
         uid: session ID
         pre_base_count: 上次检查时的base_frames数量
@@ -99,7 +110,7 @@ def monitor_frames_and_enqueue(uid, pre_base_count, pre_wrist_count):
     if not queue_info["streaming_active"]:
         return pre_base_count, pre_wrist_count
     
-    # 检查新帧
+    # 检查新帧（从 ProcessSessionProxy 的本地缓存读取）
     current_base_count = len(session.base_frames)
     current_wrist_count = len(session.wrist_frames)
     
