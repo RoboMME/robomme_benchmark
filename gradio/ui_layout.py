@@ -616,7 +616,7 @@ def create_ui_blocks():
                          
                          play_video_btn = gr.Button("Start Demonstration Video🎬", variant="primary", size="lg", visible=True, interactive=True, elem_id="play_video_btn")
                          
-                         confirm_demo_btn = gr.Button("Start Task", variant="secondary", size="lg", visible=True, interactive=True)
+                         confirm_demo_btn = gr.Button("Start Task", variant="secondary", size="lg", visible=True, interactive=False)
                      
                      # Combined View Group (第一阶段隐藏)
                      with gr.Group(visible=False) as combined_view_group:
@@ -732,7 +732,7 @@ def create_ui_blocks():
         play_video_btn.click(
             fn=play_demo_video,
             inputs=[play_video_btn],
-            outputs=[play_video_btn]
+            outputs=[play_video_btn, confirm_demo_btn]
         )
         
         # 1.6 Confirm Demo Watched

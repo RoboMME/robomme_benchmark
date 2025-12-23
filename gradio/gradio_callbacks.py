@@ -70,7 +70,9 @@ def login_and_load_task(username, uid):
         task_idx = task_info["task_index"]
         total = task_info["total_tasks"]
         # 生成 HTML 内容，包含 MJPEG 流（添加时间戳防止缓存）
-        combined_html = f'<div id="combined_view_html"><img src="/video_feed/{uid}?t={int(time.time()*1000)}" style="max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border-radius: 8px; object-fit: contain;" alt="Desk View | Robot View" /></div>'
+        import random
+        random_id = random.randint(0, 1000000)
+        combined_html = f'<div id="combined_view_html"><img src="/video_feed/{uid}?r={random_id}" style="max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border-radius: 8px; object-fit: contain;" alt="Desk View | Robot View" /></div>'
         # 已完成所有任务，直接显示操作区域
         set_ui_phase(uid, "executing_task")
         return (
@@ -117,7 +119,9 @@ def login_and_load_task(username, uid):
          task_idx = task_info["task_index"]
          total = task_info["total_tasks"]
          # 生成 HTML 内容，包含 MJPEG 流
-         combined_html = f'<div id="combined_view_html"><img src="/video_feed/{uid}" style="max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border-radius: 8px; object-fit: contain;" alt="Desk View | Robot View" /></div>'
+         import random
+         random_id = random.randint(0, 1000000)
+         combined_html = f'<div id="combined_view_html"><img src="/video_feed/{uid}?r={random_id}" style="max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border-radius: 8px; object-fit: contain;" alt="Desk View | Robot View" /></div>'
          # 加载失败，直接进入执行阶段
          set_ui_phase(uid, "executing_task")
          return (
@@ -167,7 +171,10 @@ def login_and_load_task(username, uid):
     img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
     
     # 生成 HTML 内容，包含 MJPEG 流
-    combined_html = f'<div id="combined_view_html"><img src="/video_feed/{uid}" style="max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border-radius: 8px; object-fit: contain;" alt="Desk View | Robot View" /></div>'
+    # 使用随机参数强制浏览器重新建立连接，避免缓存旧流导致显示问题
+    import random
+    random_id = random.randint(0, 1000000)
+    combined_html = f'<div id="combined_view_html"><img src="/video_feed/{uid}?r={random_id}" style="max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border-radius: 8px; object-fit: contain;" alt="Desk View | Robot View" /></div>'
     
     # 根据是否有示范视频决定UI阶段
     if has_demo_video:
@@ -194,7 +201,7 @@ def login_and_load_task(username, uid):
             gr.update(visible=True),  # demo_video_group (第一阶段显示)
             gr.update(visible=False), # combined_view_group (第一阶段隐藏，正确)
             gr.update(visible=False), # operation_zone_group (第一阶段隐藏)
-            gr.update(visible=True),  # confirm_demo_btn (第一阶段显示)
+            gr.update(visible=True, interactive=False),  # confirm_demo_btn (第一阶段显示，初始禁用)
             gr.update(visible=True, interactive=True),  # play_video_btn (第一阶段显示)
             gr.update(visible=False)  # coords_group (初始化时隐藏)
         )
@@ -204,40 +211,38 @@ def login_and_load_task(username, uid):
 
         
         # 初始化Reference Views队列（如果没有demo video，需要立即显示Reference Views）
+        # 注意：即使手动添加了初始帧，generate_mjpeg_stream 也有 fallback 机制直接从 session 获取帧
+        # 这确保了即使队列初始化时序有问题，用户也能看到当前状态
         if session.base_frames or session.wrist_frames:
             from state_manager import FRAME_QUEUES
             
-            # 初始化队列（如果还没有）
-            # 传入当前frames数量，这样监控线程就知道这些frames已存在，不会将它们作为"新"frames加入队列
+            # 初始化队列：传入当前frames数量作为监控起始点
+            # 监控线程会从这些帧之后开始检测新帧，不会重复添加已存在的帧
             current_base_count = len(session.base_frames) if session.base_frames else 0
             current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
             
             if uid not in FRAME_QUEUES:
                 FrameQueueManager.init_queue(uid, current_base_count, current_wrist_count)
             
-            # 只获取最后一帧并拼接
+            # 手动添加最后一帧到队列（重复多次），确保初始显示
+            # 这是可选的优化，因为 generate_mjpeg_stream 有 fallback 机制
             last_base_frame = session.base_frames[-1] if session.base_frames else None
             last_wrist_frame = session.wrist_frames[-1] if session.wrist_frames else None
             
             if last_base_frame is not None or last_wrist_frame is not None:
-                # 使用concatenate_frames_horizontally处理单帧（传入只包含最后一帧的列表）
                 last_frames = concatenate_frames_horizontally(
                     [last_base_frame] if last_base_frame is not None else [],
                     [last_wrist_frame] if last_wrist_frame is not None else []
                 )
                 
-                # 只加入最后一帧（重复多次以确保持续显示）
                 queue_info = FRAME_QUEUES.get(uid)
                 if queue_info and last_frames:
                     last_frame = last_frames[0]
-                    # 重复加入最后一帧10次，确保即使被快速消费也能持续显示
-                    frames_added = 0
+                    # 重复加入最后一帧10次，确保初始显示
                     for _ in range(10):
                         try:
-                            # 复制帧以避免引用问题
                             frame_copy = np.copy(last_frame) if isinstance(last_frame, np.ndarray) else last_frame
                             queue_info["frame_queue"].put(frame_copy, block=False)
-                            frames_added += 1
                         except queue.Full:
                             break
         
@@ -269,10 +274,10 @@ def login_and_load_task(username, uid):
 
 def play_demo_video(play_btn):
     """
-    播放示范视频并禁用按钮
+    播放示范视频并禁用按钮，同时启用Start Task按钮
     """
-    # 返回禁用状态的按钮
-    return gr.update(interactive=False)
+    # 返回禁用状态的播放按钮，和启用状态的确认按钮
+    return gr.update(interactive=False), gr.update(interactive=True)
 
 
 def confirm_demo_watched(uid, username):
