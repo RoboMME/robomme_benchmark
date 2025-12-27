@@ -107,6 +107,11 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
                 session.last_base_frame_idx = len(session.base_frames)
                 session.last_wrist_frame_idx = len(session.wrist_frames)
                 
+                # 获取演示状态（从 DemonstrationWrapper 获取）
+                is_demonstration = False
+                if session.env:
+                    is_demonstration = getattr(session.env, 'current_task_demonstration', False)
+                
                 # 构建状态更新（完整同步，因为这是加载操作）
                 state_update = {
                     "env_id": session.env_id,
@@ -118,7 +123,8 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
                     "wrist_frames": session.wrist_frames,  # 加载时完整同步
                     "available_options": session.available_options,
                     "raw_solve_options": _sanitize_options(session.raw_solve_options),
-                    "seg_vis": session.seg_vis
+                    "seg_vis": session.seg_vis,
+                    "is_demonstration": is_demonstration
                 }
                 result_queue.put({"status": "success", "result": res, "state": state_update})
                 
@@ -138,11 +144,17 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
                 if new_base or new_wrist:
                     stream_queue.put({"base": new_base, "wrist": new_wrist})
 
+                # 获取演示状态（从 DemonstrationWrapper 获取）
+                is_demonstration = False
+                if session.env:
+                    is_demonstration = getattr(session.env, 'current_task_demonstration', False)
+
                 # 构建状态更新（只更新选项和分割视图，帧通过流队列同步）
                 state_update = {
                     "available_options": session.available_options,
                     "raw_solve_options": _sanitize_options(session.raw_solve_options),
-                    "seg_vis": session.seg_vis
+                    "seg_vis": session.seg_vis,
+                    "is_demonstration": is_demonstration
                 }
                 result_queue.put({"status": "success", "result": res, "state": state_update})
 
@@ -165,12 +177,18 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
                 # 如果有新帧，推送到流队列
                 if new_base or new_wrist:
                     stream_queue.put({"base": new_base, "wrist": new_wrist})
+                
+                # 获取演示状态（从 DemonstrationWrapper 获取）
+                is_demonstration = False
+                if session.env:
+                    is_demonstration = getattr(session.env, 'current_task_demonstration', False)
                     
                 # 构建状态更新
                 state_update = {
                     "available_options": session.available_options,
                     "raw_solve_options": _sanitize_options(session.raw_solve_options),
-                    "seg_vis": session.seg_vis
+                    "seg_vis": session.seg_vis,
+                    "is_demonstration": is_demonstration
                 }
                 result_queue.put({"status": "success", "result": res, "state": state_update})
                 
@@ -231,6 +249,7 @@ class ProcessSessionProxy:
         self.available_options = []
         self.raw_solve_options = []
         self.seg_vis = None
+        self.is_demonstration = False  # 演示模式标志
         
         # 帧同步线程：从流队列接收新帧并更新本地缓存
         self.stop_sync = False

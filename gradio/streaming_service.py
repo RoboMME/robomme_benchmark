@@ -25,6 +25,8 @@ from image_utils import concatenate_frames_horizontally
 
 # --- Streaming Configuration ---
 STREAMING_MONITOR_INTERVAL = 0.1  # 监控线程检查间隔（秒）
+TARGET_FPS = 30  # 目标帧率（每秒最大帧数）
+MIN_FRAME_INTERVAL = 1.0 / TARGET_FPS  # 最小帧间隔（秒），约 0.0333 秒
 
 # Global map for stream generations to prevent race conditions
 STREAM_GENERATIONS = {}  # {uid: int_generation_id}
@@ -46,14 +48,16 @@ class FrameQueueManager:
         逻辑说明：
         - 如果队列不存在，创建新队列
         - 如果队列已存在，更新监控起始点；如果队列中有旧帧且 pre_count > 0，清空队列（新任务开始）
-        - 启动后台监控线程，持续监控帧变化并加入队列
+        - 检查是否已有后台监控线程在运行，避免重复启动导致帧重复
+        - 如果没有正在运行的线程，启动后台监控线程，持续监控帧变化并加入队列
         """
         if uid not in FRAME_QUEUES:
             FRAME_QUEUES[uid] = {
                 "frame_queue": queue.Queue(),
                 "last_base_count": pre_base_count,
                 "last_wrist_count": pre_wrist_count,
-                "streaming_active": True
+                "streaming_active": True,
+                "monitor_thread": None
             }
         else:
             old_queue_size = FRAME_QUEUES[uid]["frame_queue"].qsize()
@@ -73,13 +77,22 @@ class FrameQueueManager:
                     except queue.Empty:
                         break
         
-        # 启动后台监控线程，持续监控帧变化
-        monitor_thread = threading.Thread(
-            target=continuous_frame_monitor,
-            args=(uid, pre_base_count, pre_wrist_count),
-            daemon=True
-        )
-        monitor_thread.start()
+        # 检查是否需要启动监控线程
+        should_start_thread = True
+        if uid in FRAME_QUEUES and "monitor_thread" in FRAME_QUEUES[uid]:
+            thread = FRAME_QUEUES[uid]["monitor_thread"]
+            if thread and thread.is_alive():
+                should_start_thread = False
+
+        if should_start_thread:
+            # 启动后台监控线程，持续监控帧变化
+            monitor_thread = threading.Thread(
+                target=continuous_frame_monitor,
+                args=(uid, pre_base_count, pre_wrist_count),
+                daemon=True
+            )
+            monitor_thread.start()
+            FRAME_QUEUES[uid]["monitor_thread"] = monitor_thread
     
     @staticmethod
     def cleanup_queue(uid):
@@ -140,6 +153,14 @@ def monitor_frames_and_enqueue(uid, pre_base_count, pre_wrist_count):
     queue_info = FRAME_QUEUES[uid]
     if not queue_info["streaming_active"]:
         return pre_base_count, pre_wrist_count
+    
+    # 检查是否为演示模式：如果是演示模式，不添加帧到队列
+    is_demonstration = getattr(session, 'is_demonstration', False)
+    if is_demonstration:
+        # 演示模式下，仍然更新帧计数，但不添加帧到队列
+        current_base_count = len(session.base_frames) if session.base_frames else 0
+        current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
+        return current_base_count, current_wrist_count
     
     # 检查新帧（从 ProcessSessionProxy 的本地缓存读取）
     current_base_count = len(session.base_frames) if session.base_frames else 0
@@ -232,6 +253,9 @@ def generate_mjpeg_stream(uid: str):
     last_yielded_frame_bytes = None
     last_yield_time = time.time()
     KEEP_ALIVE_INTERVAL = 0.5  # 至少每 0.5 秒发送一帧
+    
+    # 帧率控制：记录上次发送帧的时间
+    last_frame_sent_time = 0
     
     while True:
         # 检查流是否已被新任务替换（cleanup_queue 会递增 generation ID）
@@ -328,6 +352,17 @@ def generate_mjpeg_stream(uid: str):
                     # 按照 MJPEG 格式发送帧
                     current_bytes = jpeg_bytes.tobytes()
                     last_yielded_frame_bytes = current_bytes  # Update cache
+                    
+                    # 帧率控制：确保不超过 30fps
+                    current_time = time.time()
+                    time_since_last_frame = current_time - last_frame_sent_time
+                    if time_since_last_frame < MIN_FRAME_INTERVAL:
+                        sleep_time = MIN_FRAME_INTERVAL - time_since_last_frame
+                        time.sleep(sleep_time)
+                        current_time = time.time()  # 重新获取时间，考虑 sleep 的误差
+                    
+                    last_frame_sent_time = current_time
+                    
                     try:
                         yield (b'--' + boundary + b'\r\n'
                                b'Content-Type: image/jpeg\r\n'
