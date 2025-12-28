@@ -600,24 +600,39 @@ def create_ui_blocks():
                 with gr.Column(scale=7):
                      # Demo Video Group (第一阶段显示)
                      with gr.Group(visible=True) as demo_video_group:
-                         gr.Markdown("### Watch video and remember robot actions 👀✍️")
+                         # Title row
+                         with gr.Row():
+                             with gr.Column(scale=3):
+                                 gr.Markdown("### Watch video and remember robot actions 👀✍️")
+                             with gr.Column(scale=1):
+                                 gr.Markdown("### Task Hint 💡")
                          
-                         video_elem_id = "demo_video" if RESTRICT_VIDEO_PLAYBACK else None
-                         video_autoplay = False  # 不自动播放，等待用户点击按钮
-                         
-                         video_display = gr.Video(
-                            label="Demonstration Video", 
-                            interactive=False,  # 禁用用户控制
-                            height=300, 
-                            elem_id=video_elem_id, 
-                            autoplay=video_autoplay,
-                            show_label=False,
-                            visible=True
-                         )
-                         
-                         play_video_btn = gr.Button("Start Demonstration Video🎬", variant="primary", size="lg", visible=True, interactive=True, elem_id="play_video_btn")
-                         
-                         confirm_demo_btn = gr.Button("Start Task", variant="secondary", size="lg", visible=True, interactive=False)
+                         # Content row
+                         with gr.Row():
+                             with gr.Column(scale=3):
+                                 video_elem_id = "demo_video" if RESTRICT_VIDEO_PLAYBACK else None
+                                 video_autoplay = False  # 不自动播放，等待用户点击按钮
+                                 
+                                 video_display = gr.Video(
+                                    label="Demonstration Video", 
+                                    interactive=False,  # 禁用用户控制
+                                    height=300, 
+                                    elem_id=video_elem_id, 
+                                    autoplay=video_autoplay,
+                                    show_label=False,
+                                    visible=True
+                                 )
+                                 
+                                 play_video_btn = gr.Button("Start Demonstration Video🎬", variant="primary", size="lg", visible=True, interactive=True, elem_id="play_video_btn")
+                                 
+                                 confirm_demo_btn = gr.Button("Start Task", variant="secondary", size="lg", visible=True, interactive=False)
+                             
+                             # Right: Task Hint for demo video group
+                             with gr.Column(scale=1):
+                                 note2_demo = gr.Markdown(
+                                     value=get_task_hint(""),
+                                     elem_id="note2_demo"
+                                 )
 
                      # Combined View Group (第一阶段隐藏)
                      with gr.Group(visible=False) as combined_view_group:
@@ -718,7 +733,8 @@ def create_ui_blocks():
                 play_video_btn,
                 coords_group,
                 note1,
-                note2
+                note2,
+                note2_demo
             ]
         ).then(
             fn=lambda u: u,
@@ -754,7 +770,8 @@ def create_ui_blocks():
                 play_video_btn,
                 coords_group,
                 note1,
-                note2
+                note2,
+                note2_demo
             ]
         )
         
@@ -778,7 +795,8 @@ def create_ui_blocks():
                 exec_btn,
                 coords_group,
                 note1,
-                note2
+                note2,
+                note2_demo
             ]
         )
 
@@ -831,7 +849,10 @@ def create_ui_blocks():
                 operation_zone_group,
                 confirm_demo_btn,
                 play_video_btn,
-                coords_group
+                coords_group,
+                note1,
+                note2,
+                note2_demo
             ]
         )
     

@@ -68,7 +68,8 @@ def login_and_load_task(username, uid):
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
             gr.update(value=get_coordinate_information()),  # note1
-            gr.update(value=get_task_hint(""))  # note2
+            gr.update(value=get_task_hint("")),  # note2
+            gr.update(value=get_task_hint(""))  # note2_demo
         )
     
     # Login success - Load current task
@@ -104,7 +105,8 @@ def login_and_load_task(username, uid):
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
             gr.update(value=get_coordinate_information()),  # note1
-            gr.update(value=get_task_hint(""))  # note2
+            gr.update(value=get_task_hint("")),  # note2
+            gr.update(value=get_task_hint(""))  # note2_demo
         )
 
     current_task = status["current_task"]
@@ -164,13 +166,27 @@ def login_and_load_task(username, uid):
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
             gr.update(value=get_coordinate_information()),  # note1
-            gr.update(value=get_task_hint(env_id))  # note2
+            gr.update(value=get_task_hint(env_id)),  # note2
+            gr.update(value=get_task_hint(env_id))  # note2_demo
         )
         
     # Success loading
     goal_text = f"{session.language_goal}"
     options = session.available_options
-    radio_choices = [(opt_label, opt_idx) for opt_label, opt_idx in options]
+    # 生成选项列表，如果选项需要坐标选择，在标签后添加提示
+    radio_choices = []
+    for opt_label, opt_idx in options:
+        # 检查该选项是否需要坐标
+        if 0 <= opt_idx < len(session.raw_solve_options):
+            opt = session.raw_solve_options[opt_idx]
+            if opt.get("available"):
+                # 需要坐标，在英文标签后添加提示
+                opt_label_with_hint = f"{opt_label} (click mouse 🖱️ to select 🎯)"
+            else:
+                opt_label_with_hint = opt_label
+        else:
+            opt_label_with_hint = opt_label
+        radio_choices.append((opt_label_with_hint, opt_idx))
     
     # 保存任务索引到全局映射，供Progress直接读取
     set_task_index(uid, status['current_index'], status['total_tasks'])
@@ -228,7 +244,8 @@ def login_and_load_task(username, uid):
             gr.update(visible=True, interactive=True),  # play_video_btn (第一阶段显示)
             gr.update(visible=False),  # coords_group (初始化时隐藏)
             gr.update(value=get_coordinate_information()),  # note1
-            gr.update(value=get_task_hint(env_id))  # note2
+            gr.update(value=get_task_hint(env_id)),  # note2
+            gr.update(value=get_task_hint(env_id))  # note2_demo
         )
     else:
         # 没有示范视频：直接进入执行阶段
@@ -295,7 +312,8 @@ def login_and_load_task(username, uid):
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group (初始化时隐藏)
             gr.update(value=get_coordinate_information()),  # note1
-            gr.update(value=get_task_hint(env_id))  # note2
+            gr.update(value=get_task_hint(env_id)),  # note2
+            gr.update(value=get_task_hint(env_id))  # note2_demo
         )
 
 
@@ -374,7 +392,8 @@ def confirm_demo_watched(uid, username):
         gr.update(interactive=True),  # exec_btn - 启用执行按钮
         gr.update(visible=False),   # coords_group (确认demo后，还未选择选项，隐藏)
         gr.update(value=get_coordinate_information()),  # note1
-        gr.update(value=get_task_hint(env_id))  # note2
+        gr.update(value=get_task_hint(env_id)),  # note2
+        gr.update(value=get_task_hint(env_id))  # note2_demo
     )
 
 
@@ -566,7 +585,8 @@ def init_app(request: gr.Request):
         gr.update(visible=False, interactive=True),  # play_video_btn
         gr.update(visible=False),  # coords_group (初始化时隐藏)
         gr.update(value=get_coordinate_information()),  # note1
-        gr.update(value=get_task_hint(""))  # note2
+        gr.update(value=get_task_hint("")),  # note2
+        gr.update(value=get_task_hint(""))  # note2_demo
     )
     
     if username:
