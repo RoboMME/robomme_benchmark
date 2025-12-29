@@ -12,7 +12,6 @@ from PIL import Image
 lock = threading.Lock()
 # 使用基于 logger.py 文件位置的绝对路径，确保日志文件始终保存在 gradio/data/ 目录下
 BASE_DIR = Path(__file__).parent.absolute()
-LOG_FILE = str(BASE_DIR / "data" / "experiment_logs.jsonl")
 USER_ACTION_LOG_DIR = str(BASE_DIR / "data" / "user_action_logs")
 
 def _get_current_attempt_index(f):
@@ -125,104 +124,6 @@ def _ensure_hdf5_file(username, env_id, episode_idx, create_new_attempt=False):
         import traceback
         traceback.print_exc()
         return None, None, -1
-
-def _add_coordinate_click_to_hdf5(clicks_group, click_index, coordinates, coords_str, image_array, timestamp):
-    """
-    将坐标点击及其图片数组添加到 HDF5 文件的 coordinate_clicks 组中。
-    
-    Args:
-        clicks_group: h5py.Group 对象，表示 coordinate_clicks 组
-        click_index: 点击索引（用于生成唯一的 click 组名）
-        coordinates: 坐标字典 {"x": x, "y": y}
-        coords_str: 坐标字符串
-        image_array: numpy array，形状为 [H, W, 3] 的 RGB 图片数组
-        timestamp: ISO 格式的时间戳字符串
-    """
-    try:
-        click_name = f"click_{click_index}"
-        
-        # 创建 click 组
-        click_group = clicks_group.create_group(click_name)
-        
-        # 存储坐标（作为 dataset）
-        click_group.create_dataset("coordinates", data=np.array([coordinates["x"], coordinates["y"]], dtype=np.int32))
-        
-        # 存储坐标字符串（作为 dataset）
-        click_group.create_dataset("coords_str", data=coords_str.encode('utf-8'), dtype=h5py.string_dtype(encoding='utf-8'))
-        
-        # 存储图片数组（使用压缩）
-        if image_array is not None:
-            # 确保是 uint8 类型
-            if image_array.dtype != np.uint8:
-                image_array = image_array.astype(np.uint8)
-            
-            # 确保是 RGB 格式 [H, W, 3]
-            if len(image_array.shape) == 2:
-                # 灰度图转 RGB
-                image_array = np.stack([image_array] * 3, axis=-1)
-            elif len(image_array.shape) == 3 and image_array.shape[2] == 4:
-                # RGBA 转 RGB
-                image_array = image_array[:, :, :3]
-            
-            # 在图片上画圈可视化点击位置
-            try:
-                # 确保数组在内存中是连续的，并且是副本以防副作用
-                if not image_array.flags['C_CONTIGUOUS']:
-                    image_array = np.ascontiguousarray(image_array)
-                else:
-                    image_array = image_array.copy()
-                
-                # 画红色圆圈: 中心点, 半径5, 颜色(255,0,0), 线宽2
-                cv2.circle(image_array, (int(coordinates["x"]), int(coordinates["y"])), 5, (255, 0, 0), 2)
-            except Exception as e:
-                print(f"Error drawing circle on coordinate click image: {e}")
-
-            click_group.create_dataset(
-                "image",
-                data=image_array,
-                compression="gzip",
-                compression_opts=9,
-                dtype=np.uint8
-            )
-            
-            # 存储图片尺寸（作为 dataset）
-            click_group.create_dataset("image_shape", data=np.array(image_array.shape, dtype=np.int32))
-        
-        # 存储时间戳
-        click_group.create_dataset("timestamp", data=timestamp.encode('utf-8'), dtype=h5py.string_dtype(encoding='utf-8'))
-        
-    except Exception as e:
-        print(f"Error adding coordinate click to HDF5: {e}")
-        import traceback
-        traceback.print_exc()
-
-def _add_option_select_to_hdf5(option_selects_group, select_index, option_idx, option_label, timestamp):
-    """
-    将选项选择添加到 HDF5 文件的 option_selects 组中。
-    
-    Args:
-        option_selects_group: h5py.Group 对象，表示 option_selects 组
-        select_index: 选择索引（用于生成唯一的 select 组名）
-        option_idx: 选项索引
-        option_label: 选项标签
-        timestamp: ISO 格式的时间戳字符串
-    """
-    try:
-        select_name = f"select_{select_index}"
-        
-        # 创建 select 组
-        select_group = option_selects_group.create_group(select_name)
-        
-        # 存储选项信息
-        select_group.create_dataset("option_idx", data=np.int32(option_idx))
-        if option_label is not None:
-            select_group.create_dataset("option_label", data=str(option_label).encode('utf-8'), dtype=h5py.string_dtype(encoding='utf-8'))
-        select_group.create_dataset("timestamp", data=timestamp.encode('utf-8'), dtype=h5py.string_dtype(encoding='utf-8'))
-        
-    except Exception as e:
-        print(f"Error adding option select to HDF5: {e}")
-        import traceback
-        traceback.print_exc()
 
 def _normalize_image(image_array):
     """
@@ -530,21 +431,6 @@ def _add_action_to_hdf5(attempt_group, action_index, action_data):
         print(f"Error adding action to HDF5: {e}")
         import traceback
         traceback.print_exc()
-
-def log_session(session_data):
-    """
-    将单个会话的数据追加写入到 JSONL 文件中。
-    session_data 应该是一个字典。
-    """
-    # 确保目录存在
-    os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-    
-    # 添加写入时间戳
-    session_data["logged_at"] = datetime.now().isoformat()
-    
-    with lock:
-        with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(session_data, ensure_ascii=False) + "\n")
 
 def log_user_action_hdf5(username, env_id, episode_idx, action_data, option_list=None,
                          status=None, difficulty=None, language_goal=None, seed=None):

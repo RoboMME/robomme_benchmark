@@ -50,13 +50,15 @@ def get_task_hint(env_id):
 
         """,
         "SwingXtimes": """
-        First, pick up the correct color cube. Swing it on the right and left targets, repeating this action X times. Then, put the cube down on the table and press the button to stop.
+        First, pick up the correct color cube. Swing it on the right side target,then swing it on the left side target, repeating this action X times. Then, put the cube down on the table and press the button to stop.
 
         The targets are the two white-grey disks. Select "Move to the top of the target" and then click the target to trigger the swing.
 
         Note: You must pick up the cube before swinging and put it down on the table after swinging.
 
         Once the swinging action is complete, press the button to stop!
+
+        CHECK THE COORDINATE INFORMATION TO UNDERSTAND THE RELATIONSHIP BETWEEN LEFT AND RIGHT SIDE.
         """,
         
         "BinFill": """
@@ -69,41 +71,43 @@ def get_task_hint(env_id):
         """,
         
         "VideoUnmaskSwap": """
-        Watch the video carefully. It shows cubes being hidden by containers, and you need to remember the color of the cube inside each one.
+        Watch the video carefully. Cubes will be hidden by containers, and you need to memorize the color of the cube inside each one.
 
-        You also need to track the containers as they swap positions!
+        You must also track the containers as they swap positions!
 
-        After watching the video, you need to pick up the cubes in the correct order.
+        After the video, you need to pick up the cubes in the correct order.
 
-        Note that you must put down the previous container before picking up the next one.
+        Note: You must put down the current container before picking up the next one.
         """,
         
         "VideoUnmask": """
-        Watch the video carefully. It shows cubes being hidden by containers, and you need to remember the color of the cube inside each one.
+        Watch the video carefully. Cubes will be hidden by containers, and you need to memorize the color of the cube inside each one.
 
-        After watching the video, you need to pick up the cubes in the correct order.
+        After the video, you need to pick up the cubes in the correct order.
 
-        Note that you must put down the previous container before picking up the next one.
+        Note: You must put down the current container before picking up the next one.
         """,
         
         "ButtonUnmaskSwap": 
         f"""
-        Press the buttons sequentially. When the robots is pressing buttons, cubes will be hidden inside the containers, and you need to remember the color of the cube inside each one.
+        Press the buttons sequentially. While the robot is pressing the buttons, cubes will be hidden inside the containers, and you need to memorize the color of the cube inside each one.
 
         You also need to track the containers as they swap positions!
 
-        After pressing the buttons, you need to pick up the cubes in the correct order.
-        
-        Note that you must put down the previous container before picking up the next one.
+        After the buttons are pressed, pick up the cubes in the correct order.
+
+        Note: You must put down the current container before picking up the next one.
         
         """,
         
         "ButtonUnmask":"""
-        Press the buttons sequentially. When the robots is pressing buttons, cubes will be hidden inside the containers, and you need to remember the color of the cube inside each one.
+        Press the buttons sequentially. While the robot is pressing the buttons, cubes will be hidden inside the containers, and you need to memorize the color of the cube inside each one.
 
-        After pressing the buttons, you need to pick up the cubes in the correct order.
-        
-        Note that you must put down the previous container before picking up the next one.
+        You also need to track the containers as they swap positions!
+
+        After the buttons are pressed, pick up the cubes in the correct order.
+
+        Note: You must put down the current container before picking up the next one.
         
         """,
         
@@ -119,28 +123,28 @@ def get_task_hint(env_id):
         
         "VideoPlaceButton": 
         """
-        Watch the video carefully. It shows a robot placing the cube onto differnet targets sequentially.
+        Watch the video carefully. It shows a robot placing a cube on different targets in sequence.
 
-        It also will press the button once during the placing action.
+        The robot will also press the button once during the action.
 
         Remember the order of the targets and the button press!
 
-        After all the placing actions, some targets might be swapped positions. You need to track the targets as they swap!
+        After the placements, some targets may change positions. Keep track of the targets as they swap!
 
-        After watching the video, you need to place the cube on the target in the correct place as the task goal specifies.
+        After the video, you must place the cube on the target as the task goal requires.
         """
         ,
         
         "VideoPlaceOrder":  """
-        Watch the video carefully. It shows a robot placing the cube onto differnet targets sequentially.
+        Watch the video carefully. It shows a robot placing a cube on different targets in sequence.
 
-        It also will press the button once during the placing action.
+        The robot will also press the button once during the action.
 
         Remember the order of the targets and the button press!
 
-        After all the placing actions, some targets might be swapped positions. You need to track the targets as they swap!
+        After the placements, some targets may change positions. Keep track of the targets as they swap!
 
-        After watching the video, you need to place the cube on the target in the correct place as the task goal specifies.
+        After the video, you must place the cube on the target as the task goal requires.
         """,
         
         "PickHighlight": """
@@ -153,44 +157,44 @@ def get_task_hint(env_id):
         """,
         
         "InsertPeg": """
-        Watch the video carefully. It shows a robot first picking up the peg then inserting it into the hole.
+        Watch the video carefully. It shows a robot picking up a peg and then inserting it into a hole.
 
-        After watching the video, you need to pickup and insert the peg into the hole in the correct way as the video shows.
+        After watching the video, you need to pick up and insert the peg into the hole exactly as shown.
 
-        The peg consists of two parts with different color, you need to pick up the correct part of the peg.
+        The peg consists of two parts with different colors; you need to pick up the correct part of the peg.
 
         CHECK THE COORDINATE INFORMATION TO UNDERSTAND THE RELATIONSHIP BETWEEN LEFT AND RIGHT SIDE.
         """,
         
         "MoveCube": """
-        Watch the video carefully. It shows a robot moving a cube to the target with different ways.
+        Watch the video carefully. It shows a robot moving a cube to a target using different methods.
 
-        It could be picking up and placing the cube on the target, or pushing the cube to the target with the gripper or hooking the cube to the target with the peg.
+        The robot might pick up and place the cube, push it with the gripper, or hook it using a peg.
 
-        Remember the order of the actions and the way of moving the cube!
+        Remember the order of the actions and the specific method used to move the cube!
 
-        After watching the video, you need to move the cube to the target in the same way as the video shows.
+        After watching the video, you need to move the cube to the target exactly as shown.
         
         """,
         
         "PatternLock": """
-        Watch the video carefully. It shows a robot tracing a pattern with the stick.
+        Watch the video carefully. It shows a robot tracing a pattern with a stick.
 
-        Remember the order of the actions and the way of tracing the pattern!
+        Remember the sequence of movements and the path of the tracing!
 
-        After watching the video, you need to trace the pattern with the stick in the same way as the video shows.
+        After watching the video, you need to trace the pattern with the stick exactly as shown.
 
         CHECK THE COORDINATE INFORMATION TO UNDERSTAND THE RELATIONSHIP BETWEEN LEFT AND RIGHT SIDE.
         """,
         
         "RouteStick": """
-        Watch the video carefully. It shows a robot navigating from one target to another target by circling around the stick.
+        Watch the video carefully. It shows a robot navigating from one target to another by circling around a stick.
 
-        It can either be clockwise or counterclockwise and the stick could be on the left or right side.
+        The movement can be clockwise or counter-clockwise, and the stick may be on the left or right side.
 
-        Remember the order of the actions!
+        Remember the sequence of actions!
 
-        After watching the video, you need to navigate the sticks in the same way as the video shows.
+        After watching the video, you need to navigate around the sticks exactly as shown.
 
         CHECK THE COORDINATE INFORMATION TO UNDERSTAND THE RELATIONSHIP BETWEEN LEFT AND RIGHT SIDE.
         """,

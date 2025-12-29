@@ -90,7 +90,6 @@ gradio_callbacks.py (控制层 - 主进程)
   │
   └── logger.py
       └── 功能：日志记录
-          - log_session: 记录会话信息
           - log_user_action: 记录用户操作
           - create_new_attempt: 创建新的尝试记录
           - has_existing_actions: 检查是否存在已有操作

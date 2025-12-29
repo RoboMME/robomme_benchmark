@@ -47,9 +47,10 @@ class FrameQueueManager:
         
         逻辑说明：
         - 如果队列不存在，创建新队列
-        - 如果队列已存在，更新监控起始点；如果队列中有旧帧且 pre_count > 0，清空队列（新任务开始）
-        - 检查是否已有后台监控线程在运行，避免重复启动导致帧重复
-        - 如果没有正在运行的线程，启动后台监控线程，持续监控帧变化并加入队列
+        - 如果队列已存在，更新监控起始点
+        - 【重要修复】如果已有监控线程在运行，先停止旧线程再启动新线程
+          这确保新线程使用正确的起始点参数，避免重复添加旧帧导致livestream跳回开头
+        - 启动后台监控线程，持续监控帧变化并加入队列
         """
         if uid not in FRAME_QUEUES:
             FRAME_QUEUES[uid] = {
@@ -60,39 +61,32 @@ class FrameQueueManager:
                 "monitor_thread": None
             }
         else:
-            old_queue_size = FRAME_QUEUES[uid]["frame_queue"].qsize()
+            # 队列已存在，更新监控起始点
             FRAME_QUEUES[uid]["streaming_active"] = True
             FRAME_QUEUES[uid]["last_base_count"] = pre_base_count
             FRAME_QUEUES[uid]["last_wrist_count"] = pre_wrist_count
-            
-            # 如果队列中有旧帧且 pre_count > 0，说明是新任务开始，需要清空队列
-            # 如果 pre_count = 0，说明是第一次初始化，保留队列中的初始帧
-            should_clear = old_queue_size > 0 and (pre_base_count > 0 or pre_wrist_count > 0)
-            
-            if should_clear:
-                # 清空之前的队列（新任务开始）
-                while not FRAME_QUEUES[uid]["frame_queue"].empty():
-                    try:
-                        FRAME_QUEUES[uid]["frame_queue"].get_nowait()
-                    except queue.Empty:
-                        break
         
-        # 检查是否需要启动监控线程
-        should_start_thread = True
+        # 【重要修复】检查是否需要启动监控线程
+        # 如果已有监控线程在运行，先停止旧线程再启动新线程
+        # 这确保新线程使用正确的起始点参数，避免重复添加旧帧
         if uid in FRAME_QUEUES and "monitor_thread" in FRAME_QUEUES[uid]:
             thread = FRAME_QUEUES[uid]["monitor_thread"]
             if thread and thread.is_alive():
-                should_start_thread = False
-
-        if should_start_thread:
-            # 启动后台监控线程，持续监控帧变化
-            monitor_thread = threading.Thread(
-                target=continuous_frame_monitor,
-                args=(uid, pre_base_count, pre_wrist_count),
-                daemon=True
-            )
-            monitor_thread.start()
-            FRAME_QUEUES[uid]["monitor_thread"] = monitor_thread
+                # 通过设置 streaming_active = False 让旧线程自动退出
+                FRAME_QUEUES[uid]["streaming_active"] = False
+                # 等待一小段时间让旧线程有机会退出
+                time.sleep(0.15)
+                # 重新激活 streaming
+                FRAME_QUEUES[uid]["streaming_active"] = True
+        
+        # 启动新的后台监控线程，使用正确的起始点参数
+        monitor_thread = threading.Thread(
+            target=continuous_frame_monitor,
+            args=(uid, pre_base_count, pre_wrist_count),
+            daemon=True
+        )
+        monitor_thread.start()
+        FRAME_QUEUES[uid]["monitor_thread"] = monitor_thread
     
     @staticmethod
     def cleanup_queue(uid):

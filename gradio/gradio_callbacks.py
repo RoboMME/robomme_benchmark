@@ -795,25 +795,25 @@ def execute_step(uid, username, option_idx, coords_str):
             pass
     
     # 在执行 action 之前记录当前帧数
+    # 这些帧数将作为监控线程的起始点，确保只监控新产生的帧
     pre_base_frame_count = len(session.base_frames)
     pre_wrist_frame_count = len(session.wrist_frames)
     
-    # 检查是否是第一次execute（队列已存在且有frames，且pre_base_count等于当前frames数量）
-    # 如果是第一次execute，不应该清空队列中的初始frames
-    is_first_execute = False
+    # 【重要修复】清空队列中的旧帧，确保从当前execute的第一个frame开始播放
+    # 修复问题：当第一个任务执行完毕但livestream还没播放完时，直接执行下一个任务
+    # 会导致livestream跳回开头重新播放。通过清空队列，确保每次execute都从新帧开始
     if uid in FRAME_QUEUES:
         queue_info = FRAME_QUEUES.get(uid)
-        if queue_info and queue_info["frame_queue"].qsize() > 0:
-            # 如果pre_base_count等于当前frames数量，说明这是第一次execute，不应该清空队列
-            if pre_base_frame_count == len(session.base_frames) and pre_wrist_frame_count == len(session.wrist_frames):
-                is_first_execute = True
+        if queue_info:
+            while not queue_info["frame_queue"].empty():
+                try:
+                    queue_info["frame_queue"].get_nowait()
+                except queue.Empty:
+                    break
     
     # 初始化队列和启动监控线程（用于流式输出）
-    # 如果是第一次execute，使用0作为pre_base_count/pre_wrist_count，避免清空队列
-    if is_first_execute:
-        FrameQueueManager.init_queue(uid, 0, 0)
-    else:
-        FrameQueueManager.init_queue(uid, pre_base_frame_count, pre_wrist_frame_count)
+    # 使用当前帧数作为起始点，这样监控线程只会添加execute后新产生的帧
+    FrameQueueManager.init_queue(uid, pre_base_frame_count, pre_wrist_frame_count)
     
     # 在执行前获取当前图片（用于记录最后执行的坐标对应的图片）
     pre_execute_image = None
