@@ -1,0 +1,32 @@
+# Large files
+*.hdf5
+*.h5
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# PID files
+*.pid
+
+# Logs
+logs/
+*.log
+
+# Video files
+*.mp4
+*.avi
+*.mov
+
+# Gradio certificates
+.gradio/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
