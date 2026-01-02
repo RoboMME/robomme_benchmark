@@ -2,7 +2,7 @@ from .base import SYSTEM_PROMPT_with_DEMO, SYSTEM_PROMPT_ORACLE_PLANNER
 
 notes = """
 Notes:
-The robot base frame is the origin. The front camera is looking at the robot. 'move forward' means gripper moves away from the robot base (appears moving backward in the front camera). 'move backward' means gripper moves toward the robot base (appears moving forward in the front camera). 'move left' means gripper moves to the right in the front camera. 'move right' means gripper moves to the left in the front camera.
+The robot base frame is the origin. The front camera is looking at the robot. 'move left' means gripper moves to the right in the front camera. 'move right' means gripper moves to the left in the front camera.
 """
 
 

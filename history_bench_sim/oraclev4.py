@@ -170,25 +170,25 @@ def main():
     )
     
     env_id_list = [
-        "PickXtimes",
-        "StopCube",
-        "SwingXtimes",
-        "BinFill",
+        # "PickXtimes",
+        # "StopCube",
+        # "SwingXtimes",
+        # "BinFill",
 
-        "VideoUnmaskSwap",
-        "VideoUnmask",
-        "ButtonUnmaskSwap",
-        "ButtonUnmask",
+        # "VideoUnmaskSwap",
+        # "VideoUnmask",
+        # "ButtonUnmaskSwap",
+        # "ButtonUnmask",
 
-        "VideoRepick",
-        "VideoPlaceButton",
-         "VideoPlaceOrder",
-        "PickHighlight",
+        # "VideoRepick",
+        # "VideoPlaceButton",
+        #  "VideoPlaceOrder",
+        # "PickHighlight",
 
-        "InsertPeg",
-        'MoveCube',
+        # "InsertPeg",
+        # 'MoveCube',
         "PatternLock",
-        "RouteStick"
+        # "RouteStick"
     ]
 
     for env_id in env_id_list:
@@ -295,9 +295,9 @@ def main():
                         
                         # 数据准备
                         # 如果env_id是PatternLock，先处理图片（旋转180度并添加坐标轴）
-                        processed_frames = process_patternlock_images(base_frames[frame_idx:], env_id)
+                        # processed_frames = process_patternlock_images(base_frames[frame_idx:], env_id)
                         # 如果它因为任何原因（如帧数据为空、IO错误）失败抛出异常，也会触发外层的 except 块，导致环境销毁和重建。
-                        input_data = api.prepare_input_data(processed_frames, text_query, step_idx)
+                        input_data = api.prepare_input_data(base_frames[frame_idx:], text_query, step_idx)
 
                     #使用gui画出图
                         # cv2.imshow("base_frames[-1]", base_frames[-1])
@@ -366,8 +366,8 @@ def main():
                     # 如果代码能走到这里（没有报错），说明本 Episode 跑通了。
                     if response is not None:
                         # 如果env_id是PatternLock，先处理图片（旋转180度并添加坐标轴）
-                        processed_frames = process_patternlock_images(base_frames[frame_idx:], env_id)
-                        api.prepare_input_data(processed_frames, text_query, step_idx)
+                        # processed_frames = process_patternlock_images(base_frames[frame_idx:], env_id)
+                        api.prepare_input_data(base_frames[frame_idx:], text_query, step_idx)
                     else:
                         success = "api_error"
                     

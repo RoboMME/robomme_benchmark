@@ -1,12 +1,23 @@
 from .base import SYSTEM_PROMPT_with_DEMO, GROUNDED_SUBGOAL_INFORMATION, SYSTEM_PROMPT_ORACLE_PLANNER
 
 
+# notes = """
+# Notes:
+# 1. You need to reconstruct the whole trajectory of the robot by watching the pre-recorded video. then issue the subgoal sequence during execution
+
+# 2. When the subgoal target (white grey disk) is reached, the target will turn red.
+# """
+
 notes = """
 Notes:
-1. You need to reconstruct the whole trajectory of the robot by watching the pre-recorded video. then issue the subgoal sequence during execution
+1. The robot base frame is the origin. The video or image I give to you is the front camera is looking at the robot. 'move forward' means gripper moves away from the robot base (appears moving backward in the front camera). 'move backward' means gripper moves toward the robot base (appears moving forward in the front camera). 'move left' means gripper moves to the right in the front camera. 'move right' means gripper moves to the left in the front camera. Be sure to understand this transformation.
 
-2. When the subgoal target (white grey disk) is reached, the target will turn red.
+2. You need to reconstruct the whole trajectory of the robot by watching the pre-recorded video. then issue the subgoal sequence during execution
+
+3. When the subgoal target (white grey disk) is reached, the target will turn red.
+
 """
+
 
 subgoals = """
 - move forward
