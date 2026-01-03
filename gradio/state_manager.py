@@ -56,11 +56,6 @@ EXECUTE_COUNTS = {}  # {task_key: count}
 # 值: ISO 格式的时间字符串
 TASK_START_TIMES = {}  # {task_key: "2025-12-28T14:01:25.372278"}
 
-# --- 试玩模式标记 ---
-# 跟踪每个 session 是否处于试玩模式及其参数
-# {uid: {"enabled": bool, "env_id": str, "episode_idx": int}}
-TRIAL_MODE = {}
-
 # 线程锁，用于保护全局状态的访问
 _state_lock = threading.Lock()
 
@@ -287,39 +282,6 @@ def clear_task_start_time(username, env_id, episode_idx):
             del TASK_START_TIMES[task_key]
 
 
-# --- 试玩模式辅助方法 ---
-def set_trial_mode(uid, enabled, env_id=None, episode_idx=None):
-    """设置或清除试玩模式标记"""
-    with _state_lock:
-        if not enabled:
-            if uid in TRIAL_MODE:
-                del TRIAL_MODE[uid]
-            return
-        TRIAL_MODE[uid] = {
-            "enabled": True,
-            "env_id": env_id,
-            "episode_idx": episode_idx,
-        }
-
-
-def clear_trial_mode(uid):
-    """清除试玩模式标记"""
-    set_trial_mode(uid, False)
-
-
-def is_trial_mode(uid):
-    """是否处于试玩模式"""
-    with _state_lock:
-        info = TRIAL_MODE.get(uid)
-        return bool(info and info.get("enabled"))
-
-
-def get_trial_mode(uid):
-    """获取试玩模式信息"""
-    with _state_lock:
-        return TRIAL_MODE.get(uid)
-
-
 def cleanup_session(uid):
     """
     清理指定会话的所有资源
@@ -404,11 +366,6 @@ def cleanup_session(uid):
         if uid in UI_PHASE_MAP:
             del UI_PHASE_MAP[uid]
             print(f"Session {uid}: UI phase cleaned up")
-
-        # 8. 清理试玩标记
-        if uid in TRIAL_MODE:
-            del TRIAL_MODE[uid]
-            print(f"Session {uid}: trial mode cleaned up")
         
         # 注意：不清理 EXECUTE_COUNTS，因为它是按任务跟踪的，不是按 session 跟踪的
         # 如果需要清理，应该在任务切换时调用 reset_execute_count
