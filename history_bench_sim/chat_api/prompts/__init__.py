@@ -4,7 +4,7 @@ from .SwingXtimes import SwingXtimes_SYSTEM_PROMPT, SwingXtimes_SYSTEM_PROMPT_GR
 from .PickXtimes import PickXtimes_SYSTEM_PROMPT, PickXtimes_SYSTEM_PROMPT_GROUNDED, PickXtimes_SYSTEM_PROMPT_ORACLE_PLANNER
 from .StopCube import StopCube_SYSTEM_PROMPT, StopCube_SYSTEM_PROMPT_GROUNDED, StopCube_SYSTEM_PROMPT_ORACLE_PLANNER
 from .InsertPeg import InsertPeg_SYSTEM_PROMPT, InsertPeg_SYSTEM_PROMPT_GROUNDED, InsertPeg_SYSTEM_PROMPT_ORACLE_PLANNER
-from .PatternLock import PatternLock_SYSTEM_PROMPT, PatternLock_SYSTEM_PROMPT_GROUNDED, PatternLock_SYSTEM_PROMPT_ORACLE_PLANNER
+from .PatternLock import PatternLock_SYSTEM_PROMPT_ORACLE_PLANNER
 from .ButtonUnmask import ButtonUnmask_SYSTEM_PROMPT, ButtonUnmask_SYSTEM_PROMPT_GROUNDED, ButtonUnmask_SYSTEM_PROMPT_ORACLE_PLANNER
 from .VideoUnmask import VideoUnmask_SYSTEM_PROMPT, VideoUnmask_SYSTEM_PROMPT_GROUNDED, VideoUnmask_SYSTEM_PROMPT_ORACLE_PLANNER
 from .VideoUnmaskSwap import VideoUnmaskSwap_SYSTEM_PROMPT, VideoUnmaskSwap_SYSTEM_PROMPT_GROUNDED, VideoUnmaskSwap_SYSTEM_PROMPT_ORACLE_PLANNER
@@ -25,7 +25,6 @@ prompt_dict_simple = {
     "PickXtimes": PickXtimes_SYSTEM_PROMPT,
     "StopCube": StopCube_SYSTEM_PROMPT,
     "InsertPeg": InsertPeg_SYSTEM_PROMPT,
-    "PatternLock": PatternLock_SYSTEM_PROMPT,
     "ButtonUnmask": ButtonUnmask_SYSTEM_PROMPT,
     "VideoUnmask": VideoUnmask_SYSTEM_PROMPT,
     "VideoUnmaskSwap": VideoUnmaskSwap_SYSTEM_PROMPT,
@@ -41,7 +40,6 @@ prompt_dict_grounded = {
     "ButtonUnmask": ButtonUnmask_SYSTEM_PROMPT_GROUNDED,
     "ButtonUnmaskSwap": ButtonUnmaskSwap_SYSTEM_PROMPT_GROUNDED,
     "InsertPeg": InsertPeg_SYSTEM_PROMPT_GROUNDED,
-    "PatternLock": PatternLock_SYSTEM_PROMPT_GROUNDED,
     "MoveCube": MoveCube_SYSTEM_PROMPT_GROUNDED,
     "PickHighlight": PickHighlight_SYSTEM_PROMPT_GROUNDED,
     "PickXtimes": PickXtimes_SYSTEM_PROMPT_GROUNDED,

@@ -4,7 +4,7 @@ UI布局模块
 """
 import gradio as gr
 from user_manager import user_manager
-from config import RESTRICT_VIDEO_PLAYBACK, REFERENCE_VIEW_HEIGHT, LIVE_OBSERVATION_SCALE, ACTION_SCALE, CONTROL_SCALE
+from config import RESTRICT_VIDEO_PLAYBACK, REFERENCE_VIEW_HEIGHT, LIVE_OBSERVATION_SCALE, ACTION_SCALE, CONTROL_SCALE, ENV_IDS
 from note_content import get_task_hint
 from gradio_callbacks import (
     login_and_load_task,
@@ -14,7 +14,8 @@ from gradio_callbacks import (
     execute_step,
     init_app,
     confirm_demo_watched,
-    play_demo_video
+    play_demo_video,
+    start_trial_mode
 )
 
 SYNC_JS = """
@@ -573,6 +574,14 @@ def create_ui_blocks():
                     value=None
                 )
                 login_btn = gr.Button("Login", variant="primary")
+            # 试玩模式入口
+        with gr.Row():
+            trial_env_dropdown = gr.Dropdown(
+                choices=ENV_IDS,
+                label="试玩环境ID",
+                value=ENV_IDS[0] if ENV_IDS else None
+            )
+            start_trial_btn = gr.Button("进入试玩模式", variant="secondary")
             login_msg = gr.Markdown("")
 
         # --- Main Interface (Hidden initially) ---
@@ -694,6 +703,42 @@ def create_ui_blocks():
         login_btn.click(
             fn=login_and_load_task,
             inputs=[username_input, uid_state],
+            outputs=[
+                uid_state, 
+                login_group, 
+                main_interface, 
+                login_msg, 
+                img_display, 
+                log_output, 
+                options_radio, 
+                goal_box, 
+                coords_box, 
+                combined_display, 
+                video_display,
+                task_info_box,
+                progress_info_box,
+                login_btn,
+                next_task_btn,
+                exec_btn,
+                demo_video_group,
+                combined_view_group,
+                operation_zone_group,
+                confirm_demo_btn,
+                play_video_btn,
+                coords_group,
+                note2,
+                note2_demo
+            ]
+        ).then(
+            fn=lambda u: u,
+            inputs=[username_input],
+            outputs=[username_state]
+        )
+        
+        # 1.2 Start Trial Mode (episode=100)
+        start_trial_btn.click(
+            fn=start_trial_mode,
+            inputs=[username_input, uid_state, trial_env_dropdown],
             outputs=[
                 uid_state, 
                 login_group, 

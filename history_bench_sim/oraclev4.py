@@ -170,36 +170,36 @@ def main():
     )
     
     env_id_list = [
-        # "PickXtimes",
-        # "StopCube",
-        # "SwingXtimes",
-        # "BinFill",
+        "PickXtimes",
+        "StopCube",
+        "SwingXtimes",
+        "BinFill",
 
-        # "VideoUnmaskSwap",
-        # "VideoUnmask",
-        # "ButtonUnmaskSwap",
-        # "ButtonUnmask",
+        "VideoUnmaskSwap",
+        "VideoUnmask",
+        "ButtonUnmaskSwap",
+        "ButtonUnmask",
 
-        # "VideoRepick",
-        # "VideoPlaceButton",
-        #  "VideoPlaceOrder",
-        # "PickHighlight",
+        "VideoRepick",
+        "VideoPlaceButton",
+         "VideoPlaceOrder",
+        "PickHighlight",
 
-        # "InsertPeg",
-        # 'MoveCube',
-        "PatternLock",
-        # "RouteStick"
+        "InsertPeg",
+        'MoveCube',
+        #"PatternLock",
+        "RouteStick"
     ]
 
     for env_id in env_id_list:
         num_episodes = oracle_resolver.get_num_episodes(env_id)
 
-        for episode in range(num_episodes):
-        #for episode in range(100):
+        #for episode in range(num_episodes):
+        for episode in range(10):
             # if episode !=2:
             #     continue
             
-            model_name = "local"  # "gemini-2.5-pro" # "gpt-4o-mini", "gemini-er", "qwen-vl"， "local" 
+            model_name = "gemini-2.5-pro"  # "gemini-2.5-pro" # "gpt-4o-mini", "gemini-er", "qwen-vl"， "local" 
             save_dir = os.path.join("/home/hongzefu", "oracle_planning_results", model_name, env_id, f"ep{episode}")
             
             # 获取language_goal用于检查（需要先初始化才能获取，但我们可以先检查保存的文件）

@@ -163,3 +163,34 @@ The output should be:
 }}
 ```
 """ + ORACLE_MORE_EXPLANATION
+
+# PatternLock 专用（无定位信息，point 恒为 null）
+SYSTEM_PROMPT_PATTERNLOCK_ORACLE = """You are assisting with predicting the next language subgoal for a robot.
+
+Possible subgoals:{subgoals}
+
+Example:{example}
+
+Output Format:
+If the input is a pre-recorded video, the output should be:
+```json
+{{
+    "subgoal_sequence": "According to the pre-recorded video, the robot has travelled to X diffrent white and gray disks, thus there are X subgoals. The task subgoal sequence could be: 1, 2, 3, ...",
+    "subgoal": {{"action":"predict the first subgoal", "point": null}}
+}}
+```
+
+If the input is ongoing new video clips showing the robot current execution, the output should be:
+```json
+{{
+    "description": "According to the pre-recorded video and the pre-planned subgoal sequence, the robot need to travel X subgoals, and it has already travelled Y subgoals, thus the next subgoal is the (Y+1)th subgoal. Thus the next subgoal is ...",
+    "subgoal": {{"action":"predict the next subgoal", "point": null}}
+}}
+```
+
+Notes:
+- PatternLock does not require grounding; always set "point" to null.
+- Keep the JSON structure strictly consistent with the above.
+- When outputing the subgoal sequence, you need to first think about how many subgoals are there, then output the subgoal sequence accordingly. Be sure to follow this reasoning process.
+- There could not be more than 10 subgoals! Be sure to follow this rule.
+"""

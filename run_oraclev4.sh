@@ -12,6 +12,9 @@ LOG_FILE="$LOG_DIR/oraclev4_$(date +%Y%m%d_%H%M%S).log"
 PID_FILE="$LOG_DIR/oraclev4.pid"
 MICROMAMBA_ENV_PATH="/home/hongzefu/micromamba/envs/maniskillenv1228"
 
+# 环境变量配置
+export GOOGLE_API_KEY="AIzaSyBozLZAq6up8sCd2VSjXWW4CPwvtNHUu8s"
+
 # 创建日志目录
 mkdir -p "$LOG_DIR"
 

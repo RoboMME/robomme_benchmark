@@ -12,7 +12,7 @@
 ### 1. 启动脚本
 
 ```bash
-cd /home/hongzefu/historybench-v5.6.1b5-adjustHumanEval
+cd /home/hongzefu/historybench-v5.6.1b7-videoStream
 bash run_oraclev4.sh start
 ```
 

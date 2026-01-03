@@ -26,6 +26,10 @@ from state_manager import (
     increment_execute_count,
     reset_execute_count,
     set_task_start_time,
+    set_trial_mode,
+    clear_trial_mode,
+    is_trial_mode,
+    get_trial_mode,
 )
 from streaming_service import FrameQueueManager, cleanup_frame_queue
 from image_utils import draw_marker, save_video, concatenate_frames_horizontally
@@ -36,10 +40,12 @@ from process_session import ScrewPlanFailureError
 from note_content import get_task_hint
 
 
-def login_and_load_task(username, uid):
+def login_and_load_task(username, uid, trial_env_id=None, trial_episode_idx=100):
     """
     Handle user login and load their current task.
     """
+    is_trial = trial_env_id is not None
+    
     if not uid:
         uid = create_session()
     
@@ -71,8 +77,16 @@ def login_and_load_task(username, uid):
             gr.update(value=get_task_hint(""))  # note2_demo
         )
     
+    # 标记试玩模式
+    if is_trial:
+        if trial_episode_idx is None:
+            trial_episode_idx = 100
+        set_trial_mode(uid, True, trial_env_id, trial_episode_idx)
+    else:
+        clear_trial_mode(uid)
+    
     # Login success - Load current task
-    if status["is_done_all"]:
+    if (not is_trial) and status["is_done_all"]:
         # 保存任务索引（已完成所有任务）
         set_task_index(uid, status['total_tasks'] - 1, status['total_tasks'])
         task_info = get_task_index(uid)
@@ -107,7 +121,10 @@ def login_and_load_task(username, uid):
             gr.update(value=get_task_hint(""))  # note2_demo
         )
 
-    current_task = status["current_task"]
+    if is_trial:
+        current_task = {"env_id": trial_env_id, "episode_idx": trial_episode_idx}
+    else:
+        current_task = status["current_task"]
     env_id = current_task["env_id"]
     ep_num = current_task["episode_idx"]
     
@@ -127,17 +144,25 @@ def login_and_load_task(username, uid):
     
     img, load_msg = session.load_episode(env_id, int(ep_num))
     
-    # 成功加载 episode 后，记录任务开始时间
-    if img is not None:
+    # 成功加载 episode 后，记录任务开始时间（非试玩）
+    if img is not None and (not is_trial):
         start_time = datetime.now().isoformat()
         set_task_start_time(username, env_id, int(ep_num), start_time)
     
     if img is None:
-         # 即使加载失败，也保存任务索引
-         set_task_index(uid, status['current_index'], status['total_tasks'])
-         task_info = get_task_index(uid)
-         task_idx = task_info["task_index"]
-         total = task_info["total_tasks"]
+         # 计算进度显示与下一步按钮状态
+         if not is_trial:
+             set_task_index(uid, status['current_index'], status['total_tasks'])
+             task_info = get_task_index(uid)
+             task_idx = task_info["task_index"]
+             total = task_info["total_tasks"]
+             progress_text = f"Progress: {task_idx + 1}/{total}"
+             next_btn_update = gr.update(value="Next Task 🔄", interactive=True)
+         else:
+             task_idx = 0
+             total = 1
+             progress_text = "Trial mode (no record saved)"
+             next_btn_update = gr.update(value="Exit Trial 🔙", interactive=True)
          # 生成 HTML 内容，包含 MJPEG 流
          import random
          random_id = random.randint(0, 1000000)
@@ -148,14 +173,14 @@ def login_and_load_task(username, uid):
             uid,
             gr.update(visible=False),
             gr.update(visible=True),
-            f"Error loading task for {username}",
+            f"{'Trial' if is_trial else 'Error'} loading task for {username}",
             gr.update(value=None, interactive=False), f"Error: {load_msg}",
             gr.update(choices=[], value=None),
             "", "No need for coordinates", 
             gr.update(value=combined_html), None,
-            f"Task: {env_id} (Ep {ep_num})", f"Progress: {task_idx + 1}/{total}",
+            f"Task: {env_id} (Ep {ep_num})", progress_text,
             gr.update(interactive=True),
-            gr.update(interactive=False),
+            next_btn_update,
             gr.update(interactive=False), # exec_btn
             gr.update(visible=False), # demo_video_group
             gr.update(visible=False), # combined_view_group
@@ -185,8 +210,9 @@ def login_and_load_task(username, uid):
             opt_label_with_hint = opt_label
         radio_choices.append((opt_label_with_hint, opt_idx))
     
-    # 保存任务索引到全局映射，供Progress直接读取
-    set_task_index(uid, status['current_index'], status['total_tasks'])
+    # 保存任务索引到全局映射，供Progress直接读取（试玩模式跳过持久化索引）
+    if not is_trial:
+        set_task_index(uid, status['current_index'], status['total_tasks'])
     
     demo_video_path = None
     has_demo_video = False
@@ -198,10 +224,20 @@ def login_and_load_task(username, uid):
         except: pass
 
 
-    # 从TASK_INDEX_MAP直接读取Progress
-    task_info = get_task_index(uid)
-    task_idx = task_info["task_index"]
-    total = task_info["total_tasks"]
+    # 读取进度（试玩模式使用占位显示）
+    if not is_trial:
+        task_info = get_task_index(uid)
+        task_idx = task_info["task_index"]
+        total = task_info["total_tasks"]
+        progress_text = f"Progress: {task_idx + 1}/{total}"
+        next_btn_demo = gr.update(value="Next Task 🔄", interactive=False)
+        next_btn_execute = gr.update(value="Next Task 🔄", interactive=False)
+    else:
+        task_idx = 0
+        total = 1
+        progress_text = "Trial mode (no record saved)"
+        next_btn_demo = gr.update(value="Exit Trial 🔙", interactive=True)
+        next_btn_execute = gr.update(value="Exit Trial 🔙", interactive=True)
     
     # 根据视图模式重新获取图片
     img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
@@ -211,6 +247,8 @@ def login_and_load_task(username, uid):
     import random
     random_id = random.randint(0, 1000000)
     combined_html = f'<div id="combined_view_html"><img src="/video_feed/{uid}?r={random_id}" style="max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border-radius: 8px; object-fit: contain;" alt="Desk View | Robot View" /></div>'
+    login_text = f"Trial mode - {username}" if is_trial else f"Logged in as {username}"
+    ready_text = f"Trial Ready: {env_id} (Ep {ep_num})" if is_trial else f"Ready. Task {task_idx + 1}/{total}: {env_id}"
     
     # 根据是否有示范视频决定UI阶段
     if has_demo_video:
@@ -221,18 +259,18 @@ def login_and_load_task(username, uid):
             uid,
             gr.update(visible=False), # Login hidden
             gr.update(visible=True),  # Main visible
-            f"Logged in as {username}", 
+            login_text, 
             gr.update(value=img, interactive=False), 
-            f"Ready. Task {task_idx + 1}/{total}: {env_id}",
+            ready_text,
             gr.update(choices=radio_choices, value=None),
             goal_text, 
             "No need for coordinates", 
             gr.update(value=combined_html), 
             demo_video_path,
             f"Current Task: {env_id} (Episode {ep_num})",
-            f"Progress: {task_idx + 1}/{total}",
+            progress_text,
             gr.update(interactive=True),
-            gr.update(interactive=False),
+            next_btn_demo,
             gr.update(interactive=False), # exec_btn (第一阶段禁用)
             gr.update(visible=True),  # demo_video_group (第一阶段显示)
             gr.update(visible=False), # combined_view_group (第一阶段隐藏，正确)
@@ -290,18 +328,18 @@ def login_and_load_task(username, uid):
             uid,
             gr.update(visible=False), # Login hidden
             gr.update(visible=True),  # Main visible
-            f"Logged in as {username}", 
+            login_text, 
             gr.update(value=img, interactive=False), 
-            f"Ready. Task {task_idx + 1}/{total}: {env_id}",
+            ready_text,
             gr.update(choices=radio_choices, value=None),
             goal_text, 
             "No need for coordinates", 
             gr.update(value=combined_html), 
             None,  # demo_video_path
             f"Current Task: {env_id} (Episode {ep_num})",
-            f"Progress: {task_idx + 1}/{total}",
+            progress_text,
             gr.update(interactive=True),
-            gr.update(interactive=False),
+            next_btn_execute,
             gr.update(interactive=True), # exec_btn
             gr.update(visible=False), # demo_video_group (无视频，隐藏)
             gr.update(visible=True),  # combined_view_group (修复：应该显示)
@@ -398,6 +436,11 @@ def load_next_task_wrapper(username, uid):
     Wrapper to just reload the user's current status (which should be next task if updated).
     如果当前任务已有 actions，则创建新的 attempt。
     """
+    # 试玩模式下，Next Task 按钮行为为退出试玩并回到正常任务
+    if uid and is_trial_mode(uid):
+        clear_trial_mode(uid)
+        return login_and_load_task(username, uid)
+    
     if username:
         # Check lease before proceeding
         try:
@@ -417,6 +460,12 @@ def load_next_task_wrapper(username, uid):
                 create_new_attempt(username, env_id, ep_num)
     
     return login_and_load_task(username, uid)
+
+def start_trial_mode(username, uid, trial_env_id):
+    """
+    启动试玩模式（episode_idx 固定为 100）
+    """
+    return login_and_load_task(username, uid, trial_env_id=trial_env_id, trial_episode_idx=100)
 
 
 def on_map_click(uid, username, option_value, evt: gr.SelectData):
@@ -659,6 +708,8 @@ def execute_step(uid, username, option_idx, coords_str):
     if not session:
         return None, "Session Error", gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=False), gr.update(visible=False)
     
+    trial_mode = is_trial_mode(uid)
+    
     # 检查 execute 次数限制（在执行前检查，如果达到限制则模拟失败状态）
     execute_limit_reached = False
     if username and session.env_id is not None and session.episode_idx is not None:
@@ -891,7 +942,7 @@ def execute_step(uid, username, option_idx, coords_str):
         # 停止流式输出，continuous_frame_monitor线程会检测到并退出
         FRAME_QUEUES[uid]["streaming_active"] = False
     
-    # 记录执行操作（包含从上次action到这次action之间的所有coordinate_click）
+    # 记录执行操作（包含从上次action到这次action之间的所有coordinate_click），试玩模式跳过持久化
     if username and session.env_id is not None and session.episode_idx is not None:
         try:
             # 获取选项标签
@@ -937,28 +988,29 @@ def execute_step(uid, username, option_idx, coords_str):
             if hasattr(session, 'seed') and session.seed is not None:
                 task_seed = session.seed
             
-            log_user_action(
-                username=username,
-                env_id=session.env_id,
-                episode_idx=session.episode_idx,
-                action_data={
-                    "execute_timestamp": execute_timestamp,  # 用户按下 execute 按钮的瞬间时间戳
-                    "option_idx": option_idx,  # execute时使用的option（最后一次选择的）
-                    "option_label": option_label,
-                    "final_coordinates": final_coordinates,  # 最后执行的坐标
-                    "final_coords_str": final_coords_str,  # 最后执行的坐标字符串
-                    "final_image_array": final_image_array,  # 最后执行时的图片
-                    "option_selects_before_execute": option_selects_before_execute,  # execute之前所有的option选择
-                    "coordinate_clicks_before_execute": coordinate_clicks_before_execute,  # execute之前所有的坐标点击（已包含 image_array）
-                    "status": status,
-                    "done": done
-                },
-                option_list=option_list,
-                status=task_status,
-                difficulty=task_difficulty,
-                language_goal=task_language_goal,
-                seed=task_seed
-            )
+            if not trial_mode:
+                log_user_action(
+                    username=username,
+                    env_id=session.env_id,
+                    episode_idx=session.episode_idx,
+                    action_data={
+                        "execute_timestamp": execute_timestamp,  # 用户按下 execute 按钮的瞬间时间戳
+                        "option_idx": option_idx,  # execute时使用的option（最后一次选择的）
+                        "option_label": option_label,
+                        "final_coordinates": final_coordinates,  # 最后执行的坐标
+                        "final_coords_str": final_coords_str,  # 最后执行的坐标字符串
+                        "final_image_array": final_image_array,  # 最后执行时的图片
+                        "option_selects_before_execute": option_selects_before_execute,  # execute之前所有的option选择
+                        "coordinate_clicks_before_execute": coordinate_clicks_before_execute,  # execute之前所有的坐标点击（已包含 image_array）
+                        "status": status,
+                        "done": done
+                    },
+                    option_list=option_list,
+                    status=task_status,
+                    difficulty=task_difficulty,
+                    language_goal=task_language_goal,
+                    seed=task_seed
+                )
         except Exception as e:
             print(f"Error logging action execute: {e}")
             traceback.print_exc()
@@ -989,8 +1041,8 @@ def execute_step(uid, username, option_idx, coords_str):
 ********************************
   ---please press next task----   """
 
-        # Update user progress (但不更新 progress_info_box，等用户按 next task/refresh 时再更新)
-        if username:
+        # Update user progress (试玩模式跳过持久化)
+        if (not trial_mode) and username:
             # 获取 seed（直接使用 session.seed，如果不存在则为 None）
             seed = getattr(session, 'seed', None)
             
@@ -1012,11 +1064,13 @@ def execute_step(uid, username, option_idx, coords_str):
                     next_ep = user_status["current_task"]["episode_idx"]
                     task_update = f"Task Completed! Next: {next_env} (Ep {next_ep})"
                     # progress_update 保持为 gr.update()，不改变
+        elif trial_mode:
+            task_update = "Trial finished. Press Exit Trial to return."
     
     # 根据视图模式重新获取图片
     img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
         
-    next_task_update = gr.update(interactive=True) if done else gr.update(interactive=False)
+    next_task_update = gr.update(interactive=True) if (done or trial_mode) else gr.update(interactive=False)
     exec_btn_update = gr.update(interactive=False) if done else gr.update(interactive=True)
     
     # 执行后隐藏Coords区域
