@@ -32,42 +32,50 @@ def get_task_hint(env_id):
     # Order follows solve_3.5_parallel_multi_loop_v4.py DEFAULT_ENVS list
     hints = {
         "PickXtimes": """
-        You need to pick up the target color cube and place it on the purple disc target, repeating this action X times, then press the button to stop.
-        
-        The required number and color is specified in the task goal.
-        
-        Note that you must pick up each cube before placing it on the target.
+       Typical action selection sequence for the environment:
+
+       1.Pick up the cube.Use mouse click to select the cube with the correct color.
+
+       2.Place the cube on the target.Repeat the action X times.
+
+       3.Press the button to stop.
         """,
         
         "StopCube": """
-        You need to stop the cube on the target by pressing the button. The cube must be stopped on its x-th pass over the target.    
+        Typical action selection sequence for the environment:
+
+       1.Move to the top of the button to prepare.
         
-        The cube will automatically oscillate back and forth on the table.
+       2.Remain static. For each static phase, the robot will hold its position for a random duration. Repeat the action X times.
 
-        First, hover above the button to prepare, then remain static. For each static phase, the robot will hold its position for a random duration.
-
-        Observe the cube's movement via the Execution LiveStream, and press the button slightly before the cube reaches the target to account for the robot's reaction time!
-
+       3.Press the button to stop the cube. Observe the cube's movement via the Execution LiveStream, and press the button slightly before the cube reaches the target to account for the robot's reaction time!
         """,
+
         "SwingXtimes": """
-        First, pick up the correct color cube. Swing it on the right side target,then swing it on the left side target, repeating this action X times. Then, put the cube down on the table and press the button to stop.
 
-        The targets are the two white-grey disks. Select "Move to the top of the target" and then click the target to trigger the swing.
+        Typical action selection sequence for the environment:
 
-        Note: You must pick up the cube before swinging and put it down on the table after swinging.
+       1.Pick up the cube.Use mouse click to select the cube with the correct color.
 
-        Once the swinging action is complete, press the button to stop!
+       2.Swing it on the right side target,then swing it on the left side target, repeating this action X times. 
+       The targets are the two white-grey disks. Select "Move to the top of the target" and then click the target to trigger the swing.
+        
+       3.Put the cube down on the table 
+        
+       4.Press the button to stop.
 
-        CHECK THE COORDINATE INFORMATION TO UNDERSTAND THE RELATIONSHIP BETWEEN LEFT AND RIGHT SIDE.
         """,
         
         "BinFill": """
-        You need to place the correct number of cubes of the target color into the bin, then press the button to stop. 
-        
-        The required number and color is specified in the task goal. 
-        
-        Note that you must pick up each cube before placing it into the bin.
+        Typical action selection sequence for the environment:
 
+       1.Pick up the cube.Use mouse click to select the cube with the correct color.
+
+       2.Place the cube on the target.
+
+       3. Repeat 1 and 2 for X times.
+
+       4.Press the button to stop.
         """,
         
         "VideoUnmaskSwap": """
@@ -75,17 +83,25 @@ def get_task_hint(env_id):
 
         You must also track the containers as they swap positions!
 
-        After the video, you need to pick up the cubes in the correct order.
+        Typical action selection sequence for the environment:
 
-        Note: You must put down the current container before picking up the next one.
+        1.Pick up the container.Use mouse click to select the container.
+
+        2.Drop the container down.
+
+        3. Pick up another container if needed.
         """,
         
         "VideoUnmask": """
         Watch the video carefully. Cubes will be hidden by containers, and you need to memorize the color of the cube inside each one.
 
-        After the video, you need to pick up the cubes in the correct order.
+        Typical action selection sequence for the environment:
 
-        Note: You must put down the current container before picking up the next one.
+        1.Pick up the container.Use mouse click to select the container.
+
+        2.Drop the container down.
+
+        3. Pick up another container if needed.
         """,
         
         "ButtonUnmaskSwap": 
@@ -94,20 +110,32 @@ def get_task_hint(env_id):
 
         You also need to track the containers as they swap positions!
 
-        After the buttons are pressed, pick up the cubes in the correct order.
+        Typical action selection sequence for the environment:
 
-        Note: You must put down the current container before picking up the next one.
+        1.Press the first button.
+
+        2.Press the second button.
+
+        3.Pick up the container.Use mouse click to select the container.
+
+        4.Drop the container down.
+
+        5. Pick up another container if needed.
         
         """,
         
         "ButtonUnmask":"""
         Press the buttons sequentially. While the robot is pressing the buttons, cubes will be hidden inside the containers, and you need to memorize the color of the cube inside each one.
 
-        You also need to track the containers as they swap positions!
+        Typical action selection sequence for the environment:
 
-        After the buttons are pressed, pick up the cubes in the correct order.
+        1.Press the button.
 
-        Note: You must put down the current container before picking up the next one.
+        3.Pick up the container.Use mouse click to select the container.
+
+        4.Drop the container down.
+
+        5. Pick up another container if needed.
         
         """,
         
@@ -116,9 +144,15 @@ def get_task_hint(env_id):
 
         After the robot picking up and putting down the cube, the cubes might be swapped positions. You need to track the cubes as they swap!
 
-        Then you need to pick up the same cube and put it down on the table, repeating this action X times, then press the button to stop.
+        Typical action selection sequence for the environment:
 
-        Note that you must put down the cube before picking up again.
+        1.Pick up the cube.Use mouse click to select the cube with the correct color.
+
+        2.Put the cube down on the table.
+
+        3. Repeat 1 and 2 for X times.
+
+        4.Press the button to stop.
         """,
         
         "VideoPlaceButton": 
@@ -131,7 +165,12 @@ def get_task_hint(env_id):
 
         After the placements, some targets may change positions. Keep track of the targets as they swap!
 
-        After the video, you must place the cube on the target as the task goal requires.
+        Typical action selection sequence for the environment:
+
+        1.Pick up the cube.Use mouse click to select the cube with the correct color.
+
+        2.Put the cube down on the target. Use mouse click to select the target.
+
         """
         ,
         
@@ -144,7 +183,11 @@ def get_task_hint(env_id):
 
         After the placements, some targets may change positions. Keep track of the targets as they swap!
 
-        After the video, you must place the cube on the target as the task goal requires.
+        Typical action selection sequence for the environment:
+
+        1.Pick up the cube.Use mouse click to select the cube with the correct color.
+
+        2.Put the cube down on the target. Use mouse click to select the target.
         """,
         
         "PickHighlight": """
@@ -152,8 +195,15 @@ def get_task_hint(env_id):
 
         After pressing the buttons, you need to pick up each highlighted cube. THE ORDER OF THE CUBES IS NOT IMPORTANT.
         
-        Note that you must put down the previous container before picking up the next one.
-        
+        Typical action selection sequence for the environment:
+
+        1.Press the button.
+
+        2.Pick up the cube.Use mouse click to select the cube with the correct color.
+.
+        3.Put the cube down on the table. 
+
+        4. Repeat 2 and 3 for X times with DIFFERENT CUBES.
         """,
         
         "InsertPeg": """
@@ -163,7 +213,11 @@ def get_task_hint(env_id):
 
         The peg consists of two parts with different colors; you need to pick up the correct part of the peg.
 
-        CHECK THE COORDINATE INFORMATION TO UNDERSTAND THE RELATIONSHIP BETWEEN LEFT AND RIGHT SIDE.
+        Typical action selection sequence for the environment:
+
+        1.Pick up the peg.Use mouse click to select the correct peg and the correct part of the peg.
+
+        2.Insert the peg into the hole either on the left or right side.
         """,
         
         "MoveCube": """
@@ -184,7 +238,6 @@ def get_task_hint(env_id):
 
         After watching the video, you need to trace the pattern with the stick exactly as shown.
 
-        CHECK THE COORDINATE INFORMATION TO UNDERSTAND THE RELATIONSHIP BETWEEN LEFT AND RIGHT SIDE.
         """,
         
         "RouteStick": """
@@ -196,8 +249,9 @@ def get_task_hint(env_id):
 
         After watching the video, you need to navigate around the sticks exactly as shown.
 
-        CHECK THE COORDINATE INFORMATION TO UNDERSTAND THE RELATIONSHIP BETWEEN LEFT AND RIGHT SIDE.
         """,
+
+        
     }
     
     # Normalize env_id to handle case-insensitive matching
