@@ -275,7 +275,8 @@ class PickHighlight(BaseEnv):
                     "failure_func": lambda:
                         [is_any_obj_pickup(self,[cube for cube in self.all_cubes if cube not in self.target_cubes] ),
                         timewindow(self,lambda: is_button_pressed(self, obj=self.button),min_steps=50,max_steps=500,timewindow_timer=0,),],
-                    "solve": lambda env, planner, c=cube: solve_pickup(env, planner, obj=c),
+                    #"solve": lambda env, planner, c=cube: solve_pickup(env, planner, obj=c),
+                    "solve": lambda env, planner:solve_button(env, planner, obj=self.button),
                     "segment":cube,
                 })
                 if cube_idx!=num_targets-1:

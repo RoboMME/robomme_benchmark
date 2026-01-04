@@ -12,6 +12,9 @@ LIVE_OBSERVATION_SCALE = 3  # Live Observation 列的宽度比例
 ACTION_SCALE = 3  # Action 列的宽度比例
 CONTROL_SCALE = 3  # Control 列的宽度比例
 
+# Session超时配置
+SESSION_TIMEOUT = 30  # Session超时时间（秒），如果30秒内没有execute_step操作，将自动回收session
+
 
 ENV_IDS = [
     "VideoPlaceOrder", "PickXtimes", "StopCube", "SwingXtimes", 

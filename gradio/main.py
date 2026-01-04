@@ -158,7 +158,7 @@ import gradio as gr
 from fastapi import FastAPI
 from streaming_service import create_video_feed_route
 from ui_layout import create_ui_blocks, CSS, SYNC_JS
-from state_manager import create_session
+from state_manager import create_session, start_timeout_monitor
 from user_manager import user_manager
 
 
@@ -248,6 +248,9 @@ def get_all_network_ips():
 if __name__ == "__main__":
     # Ensure session created for imports
     create_session()
+    
+    # 启动session超时监控线程
+    start_timeout_monitor()
     
     # 创建 FastAPI 应用
     fastapi_app = FastAPI(title="HistoryBench Oracle Planner")

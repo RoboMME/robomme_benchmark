@@ -35,7 +35,7 @@ def count_episode_results(task_dir):
     }
 
 def main():
-    base_dir = Path('/home/hongzefu/oracle_planning_results/gemini-2.5-pro')
+    base_dir = Path('/home/hongzefu/oracle_planning_results/local')
     
     if not base_dir.exists():
         print(f"错误：目录不存在 {base_dir}")

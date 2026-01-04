@@ -39,7 +39,7 @@ def main():
     """
 
     num_episodes = 1
-    env_id_list=["InsertPeg"]
+    env_id_list=["PickHighlight"]
     for env_id in env_id_list:
         dataset_path = Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
         for episode in range(num_episodes):
@@ -50,7 +50,7 @@ def main():
             env_kwargs = dict(
                 obs_mode="rgb+depth+segmentation",
                 control_mode="pd_joint_pos",
-                render_mode="rgb_array",
+                render_mode="rgb_array",  # 使用 rgb_array 而不是 human，避免在无头服务器上创建窗口
                 reward_mode="dense",
                 HistoryBench_seed=33000,
                 max_episode_steps=200,

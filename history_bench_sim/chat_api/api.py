@@ -213,6 +213,7 @@ class BaseModel(ABC):
         image_path = input_data.get('image_path')
         video_path = input_data.get('video_path')
         text_query = input_data.get('text_query', '')
+        num_frames = input_data.get('num_frames', None)  # 获取帧数信息
         
         try:
             print('--------------------------------')
@@ -224,8 +225,10 @@ class BaseModel(ABC):
             elif video_path is not None:
                 print(f"Processing video: {video_path}")
                 print(f"Text query: {text_query}")
+                if num_frames is not None:
+                    print(f"Number of frames: {num_frames}")
                 print("calling api...")
-                response = self._process_video(video_path, text_query)
+                response = self._process_video(video_path, text_query, num_frames=num_frames)
             else:
                 print(f"Text query: {text_query}")
                 print("calling api...")
@@ -416,7 +419,8 @@ class GeminiModel(BaseModel):
         return response.text
     
     def _process_video(self, video_path: str, 
-                      text_query: str = "What should the robot do based on this video?") -> str:
+                      text_query: str = "What should the robot do based on this video?",
+                      num_frames: Optional[int] = None) -> str:
         video_file = genai.upload_file(path=video_path)
         self.all_uploaded_file_names.append(video_file.name)
         
@@ -728,23 +732,38 @@ class LocalModel(BaseModel):
         self.use_multi_images_as_video = False
 
     def prepare_input_data(self, image_query: Union[np.ndarray, List[np.ndarray]], text_query: str, step_idx: int) -> dict:
-        """Override: 始终将当前帧序列打包成mp4供视频模型使用"""
+        """Override: 将当前帧序列打包成mp4供视频模型使用，但如果只有1帧则保存为图像"""
         if isinstance(image_query, list):
             if len(image_query) == 0:
                 raise ValueError(f"image_query is empty at step {step_idx}. Cannot prepare input data without images.")
             frames = image_query
         else:
             frames = [image_query]
-        video_path = os.path.join(self.save_dir, f"step_{step_idx}_video.mp4")
-        # 将当前帧序列编码为 mp4，供后续视频模型直接消费
-        imageio.mimsave(video_path, frames, fps=30)
+        
         self.total_images.extend(frames)
         self.subgoals.extend([self.last_subgoal] * len(frames))
-        return {
-            "image_path": None,
-            "video_path": video_path,
-            "text_query": text_query,
-        }
+        num_frames = len(frames)
+        
+        # 如果只有1帧，保存为图像而不是视频（因为Qwen3VL无法处理单帧视频）
+        if num_frames == 1:
+            image_path = os.path.join(self.save_dir, f"step_{step_idx}_image.jpg")
+            imageio.imwrite(image_path, frames[0])
+            return {
+                "image_path": image_path,
+                "video_path": None,
+                "text_query": text_query,
+                "num_frames": num_frames,
+            }
+        else:
+            # 多帧：保存为视频
+            video_path = os.path.join(self.save_dir, f"step_{step_idx}_video.mp4")
+            imageio.mimsave(video_path, frames, fps=30)
+            return {
+                "image_path": None,
+                "video_path": video_path,
+                "text_query": text_query,
+                "num_frames": num_frames,
+            }
 
     def _encode_image(self, image_path: str) -> str:
         with open(image_path, "rb") as f:
@@ -817,19 +836,27 @@ class LocalModel(BaseModel):
         
         return assistant_message
 
-    def _process_video(self, video_path: str, text_query: str) -> str:
+    def _process_video(self, video_path: str, text_query: str, num_frames: Optional[int] = None) -> str:
         """
         处理视频输入并调用API获取响应
+        
+        注意：此方法只处理多帧视频（>=2帧）。单帧视频会被 prepare_input_data 保存为图像，
+        并通过 _process_image 方法处理，以避免 Qwen3VL 的单帧视频处理错误。
         
         步骤：
         1. 读取本地视频文件并转换为base64编码
         2. 构建data URL格式的视频数据
         3. 组装包含视频和文本查询的消息内容
         4. 将用户消息添加到对话历史
-        5. 调用API进行视频理解
+        5. 调用API进行视频理解（启用帧采样）
         6. 提取并保存助手回复
         7. 记录到会话历史
         8. 返回助手消息
+        
+        Args:
+            video_path: 视频文件路径
+            text_query: 文本查询
+            num_frames: 视频帧数（可选，用于日志输出）
         """
         # 步骤 1：读取本地视频文件并转换为base64编码
         # 将本地 mp4 转为 data:video/mp4;base64 直接随消息发送，无需额外上传
@@ -856,11 +883,15 @@ class LocalModel(BaseModel):
             "content": content
         })
         
-        # 步骤 5：调用API进行视频理解，传入完整的对话历史
+        # 步骤 5：调用API进行视频理解，启用帧采样（因为这里只处理多帧视频）
+        extra_body = {"mm_processor_kwargs": {"fps": 2, "do_sample_frames": True}}
+        
+        # 步骤 6：调用API进行视频理解，传入完整的对话历史
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=self.messages,
-            max_tokens=2048
+            max_tokens=2048,
+            extra_body=extra_body
         )
         
         # 步骤 6：从API响应中提取助手回复内容

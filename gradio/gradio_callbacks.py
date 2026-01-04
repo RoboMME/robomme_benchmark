@@ -26,12 +26,14 @@ from state_manager import (
     increment_execute_count,
     reset_execute_count,
     set_task_start_time,
+    update_session_activity,
+    get_session_activity,
 )
 from streaming_service import FrameQueueManager, cleanup_frame_queue
 from image_utils import draw_marker, save_video, concatenate_frames_horizontally
 from user_manager import user_manager, LeaseLost
 from logger import log_user_action, create_new_attempt, has_existing_actions
-from config import USE_SEGMENTED_VIEW, REFERENCE_VIEW_HEIGHT, should_show_demo_video
+from config import USE_SEGMENTED_VIEW, REFERENCE_VIEW_HEIGHT, should_show_demo_video, SESSION_TIMEOUT
 from process_session import ScrewPlanFailureError
 from note_content import get_task_hint
 
@@ -1137,6 +1139,16 @@ def init_app(request: gr.Request):
 def execute_step(uid, username, option_idx, coords_str):
     # 记录用户按下 execute 按钮的瞬间时间戳
     execute_timestamp = datetime.now().isoformat()
+    
+    # 检查session是否超时（在更新活动时间之前检查）
+    last_activity = get_session_activity(uid)
+    if last_activity is not None:
+        elapsed = time.time() - last_activity
+        if elapsed > SESSION_TIMEOUT:
+            raise gr.Error(f"Session已超时：超过 {SESSION_TIMEOUT} 秒未活动。请刷新页面重新登录。")
+    
+    # 更新session的最后活动时间
+    update_session_activity(uid)
     
     # Check lease first
     if username:

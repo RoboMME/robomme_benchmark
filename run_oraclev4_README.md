@@ -12,7 +12,7 @@
 ### 1. 启动脚本
 
 ```bash
-cd /home/hongzefu/historybench-v5.6.1b7-videoStream
+cd /home/hongzefu/historybench-v5.6.3b1-CorrectGeminiDirection
 bash run_oraclev4.sh start
 ```
 

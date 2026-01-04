@@ -3,7 +3,12 @@ from .base import SYSTEM_PROMPT_PATTERNLOCK_ORACLE
 
 notes = """
 Notes:
-1. The robot base frame is the origin. The video or image I give to you is the front camera is looking at the robot. 'move forward' means gripper moves away from the robot base (appears moving backward in the front camera). 'move backward' means gripper moves toward the robot base (appears moving forward in the front camera). 'move left' means gripper moves to the right in the front camera. 'move right' means gripper moves to the left in the front camera. Be sure to understand this transformation.
+1. The robot base frame is the origin. The video or image I give to you is the front camera is looking at the robot. 
+'move forward' means gripper moves away from the robot base (appears moving backward in the front camera). 
+'move backward' means gripper moves toward the robot base (appears moving forward in the front camera). 
+'move left' means gripper moves to the right in the front camera. 
+'move right' means gripper moves to the left in the front camera. 
+Be sure to understand this transformation.
 
 2. You need to reconstruct the whole trajectory of the robot by watching the pre-recorded video. then issue the subgoal sequence during execution.
 
@@ -13,6 +18,9 @@ Notes:
 
 5. There could not be more than 10 subgoals! Be sure to follow this rule.
 """
+
+
+
 
 subgoals_oracle_planner = """
 - {"action": "move forward", "point": null}

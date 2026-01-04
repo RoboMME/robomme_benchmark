@@ -38,7 +38,6 @@ import json
 import shutil
 import torch
 import gc
-import glob
 
 
 from history_bench_sim.chat_api.api import *
@@ -133,34 +132,78 @@ TASK_WITH_DEMO = [
     "VideoRepick", "MoveCube", "InsertPeg", "PatternLock", "RouteStick"
 ]
 
-def check_episode_completed(save_dir, episode, language_goal):
+def load_episode_status(json_path):
     """
-    检查episode是否已完成
-    返回: (is_completed, reason)
+    读取JSON状态文件
+    返回: 状态字典，如果文件不存在则返回空字典
     """
-    # 检查保存目录是否存在
-    if not os.path.exists(save_dir):
-        return False, "save_dir不存在"
+    if not os.path.exists(json_path):
+        return {}
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Warning: Failed to load episode status from {json_path}: {e}")
+        return {}
+
+def save_episode_status(json_path, model_name, env_id, episode, status):
+    """
+    保存episode状态到JSON文件
+    使用原子写入（先写临时文件再重命名）确保数据一致性
     
-    # 检查conversation.json是否存在
-    conversation_file = os.path.join(save_dir, "conversation.json")
-    if not os.path.exists(conversation_file):
-        return False, "conversation.json不存在"
+    Args:
+        json_path: JSON文件路径
+        model_name: 模型名称
+        env_id: 环境ID
+        episode: episode编号
+        status: 状态 ("success", "fail", "sim_error")
+    """
+    # 生成episode key
+    episode_key = f"{model_name}/{env_id}/ep{episode}"
     
-    # 检查父目录中是否有对应的视频文件
-    parent_dir = os.path.dirname(save_dir)
-    video_pattern = f"*_ep{episode}_*.mp4"
-    matching_videos = glob.glob(os.path.join(parent_dir, video_pattern))
+    # 加载现有状态
+    status_dict = load_episode_status(json_path)
     
-    if not matching_videos:
-        return False, "视频文件不存在"
+    # 更新状态
+    status_dict[episode_key] = status
     
-    # 检查视频文件是否完整（文件大小大于0）
-    for video_path in matching_videos:
-        if os.path.getsize(video_path) == 0:
-            return False, "视频文件为空"
+    # 确保目录存在
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
     
-    return True, "所有文件都存在且完整"
+    # 原子写入：先写临时文件，再重命名
+    temp_path = json_path + ".tmp"
+    try:
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            json.dump(status_dict, f, indent=2, ensure_ascii=False)
+        os.replace(temp_path, json_path)
+    except Exception as e:
+        print(f"Warning: Failed to save episode status to {json_path}: {e}")
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+def check_episode_status(json_path, model_name, env_id, episode):
+    """
+    检查episode是否已有记录状态
+    
+    Args:
+        json_path: JSON文件路径
+        model_name: 模型名称
+        env_id: 环境ID
+        episode: episode编号
+    
+    Returns:
+        (has_status, status): (是否有记录, 状态值) 如果没有记录则返回 (False, None)
+    """
+    episode_key = f"{model_name}/{env_id}/ep{episode}"
+    status_dict = load_episode_status(json_path)
+    
+    if episode_key in status_dict:
+        status = status_dict[episode_key]
+        # 只返回success、fail、sim_error，忽略api_error
+        if status in ["success", "fail", "sim_error"]:
+            return True, status
+    
+    return False, None
 
 def main():    
     # Initialization Wrapper
@@ -170,50 +213,45 @@ def main():
     )
     
     env_id_list = [
-        "PickXtimes",
-        "StopCube",
-        "SwingXtimes",
-        "BinFill",
+        # "PickXtimes",
+        # "StopCube",
+        # "SwingXtimes",
+         "BinFill",
 
-        "VideoUnmaskSwap",
-        "VideoUnmask",
-        "ButtonUnmaskSwap",
-        "ButtonUnmask",
+    #     "VideoUnmaskSwap",
+    #     "VideoUnmask",
+    #     "ButtonUnmaskSwap",
+    #     "ButtonUnmask",
 
-        "VideoRepick",
-        "VideoPlaceButton",
-         "VideoPlaceOrder",
-        "PickHighlight",
+    #     "VideoRepick",
+    #     "VideoPlaceButton",
+    #      "VideoPlaceOrder",
+    #     "PickHighlight",
 
-        "InsertPeg",
-        'MoveCube',
-        #"PatternLock",
-        "RouteStick"
+    #     "InsertPeg",
+    #     'MoveCube',
+    #     "PatternLock",
+    #     "RouteStick"
     ]
 
+    # 定义JSON状态文件路径
+    status_json_path = os.path.join("/home/hongzefu", "oracle_planning_results", "episode_status.json")
+    
     for env_id in env_id_list:
         num_episodes = oracle_resolver.get_num_episodes(env_id)
 
         #for episode in range(num_episodes):
-        for episode in range(10):
-            # if episode !=2:
+        for episode in range(50):
+            # if episode !=1:
             #     continue
             
             model_name = "gemini-2.5-pro"  # "gemini-2.5-pro" # "gpt-4o-mini", "gemini-er", "qwen-vl"， "local" 
             save_dir = os.path.join("/home/hongzefu", "oracle_planning_results", model_name, env_id, f"ep{episode}")
             
-            # 获取language_goal用于检查（需要先初始化才能获取，但我们可以先检查保存的文件）
-            # 先尝试读取已保存的language_goal.txt
-            language_goal_for_check = None
-            language_goal_file = os.path.join(save_dir, "language_goal.txt")
-            if os.path.exists(language_goal_file):
-                with open(language_goal_file, "r") as f:
-                    language_goal_for_check = f.read().strip()
-            
-            # 检查episode是否已完成
-            is_completed, reason = check_episode_completed(save_dir, episode, language_goal_for_check)
-            if is_completed:
-                print(f"[断点继续] Episode {episode} 已完成，跳过执行。原因: {reason}")
+            # 检查episode状态（断点继续）- 只使用JSON状态判断
+            has_status, recorded_status = check_episode_status(status_json_path, model_name, env_id, episode)
+            if has_status:
+                print(f"[断点继续] Episode {episode} 已有状态记录: {recorded_status}，跳过执行。")
                 continue
             
             current_episode_try = 0
@@ -377,6 +415,9 @@ def main():
                     del api
                     del env
                     #import pdb; pdb.set_trace()
+                    # 记录状态（success或fail，api_error不记录）
+                    if success in ["success", "fail"]:
+                        save_episode_status(status_json_path, model_name, env_id, episode, success)
                     break # Success break out of retry loop
 
                 except Exception as e:
@@ -406,6 +447,8 @@ def main():
                     # 判断是否放弃
                     if current_episode_try >= max_episode_retries:
                         print(f"Skipping episode {episode} due to persistent errors.")
+                        # 记录sim_error状态
+                        save_episode_status(status_json_path, model_name, env_id, episode, "sim_error")
                         break
                       
     oracle_resolver.close()

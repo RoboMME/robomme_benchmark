@@ -17,6 +17,7 @@ import uuid
 import threading
 import traceback
 import queue
+import time
 from process_session import ProcessSessionProxy
 
 # --- 全局会话存储 ---
@@ -56,6 +57,11 @@ EXECUTE_COUNTS = {}  # {task_key: count}
 # 值: ISO 格式的时间字符串
 TASK_START_TIMES = {}  # {task_key: "2025-12-28T14:01:25.372278"}
 
+# --- Session活动时间跟踪 ---
+# 跟踪每个session的最后活动时间（用于超时检测）
+SESSION_LAST_ACTIVITY = {}  # {uid: timestamp} - timestamp是time.time()返回的浮点数
+SESSION_TIMEOUT_WARNED = {}  # {uid: bool} - 跟踪已警告的session，避免重复警告
+
 # 线程锁，用于保护全局状态的访问
 _state_lock = threading.Lock()
 
@@ -83,6 +89,7 @@ def create_session():
     2. 创建一个 ProcessSessionProxy 实例
     3. ProcessSessionProxy 会自动启动一个独立的工作进程运行 OracleSession
     4. 将代理对象存储到 GLOBAL_SESSIONS 中
+    5. 初始化最后活动时间为当前时间
     
     Returns:
         str: 新创建的会话ID
@@ -91,6 +98,7 @@ def create_session():
     session = ProcessSessionProxy()
     with _state_lock:
         GLOBAL_SESSIONS[uid] = session
+        SESSION_LAST_ACTIVITY[uid] = time.time()
     return uid
 
 
@@ -367,7 +375,159 @@ def cleanup_session(uid):
             del UI_PHASE_MAP[uid]
             print(f"Session {uid}: UI phase cleaned up")
         
+        # 8. 清理活动时间跟踪
+        if uid in SESSION_LAST_ACTIVITY:
+            del SESSION_LAST_ACTIVITY[uid]
+            print(f"Session {uid}: last activity time cleaned up")
+        
+        # 9. 清理超时警告标志
+        if uid in SESSION_TIMEOUT_WARNED:
+            del SESSION_TIMEOUT_WARNED[uid]
+            print(f"Session {uid}: timeout warning flag cleaned up")
+        
         # 注意：不清理 EXECUTE_COUNTS，因为它是按任务跟踪的，不是按 session 跟踪的
         # 如果需要清理，应该在任务切换时调用 reset_execute_count
     
     print(f"Session {uid}: all resources cleaned up successfully")
+
+
+def update_session_activity(uid):
+    """
+    更新指定session的最后活动时间为当前时间
+    
+    Args:
+        uid: 会话ID
+    """
+    with _state_lock:
+        SESSION_LAST_ACTIVITY[uid] = time.time()
+        # 如果之前被警告过，清除警告标志
+        if uid in SESSION_TIMEOUT_WARNED:
+            del SESSION_TIMEOUT_WARNED[uid]
+
+
+def get_session_activity(uid):
+    """
+    获取指定session的最后活动时间
+    
+    Args:
+        uid: 会话ID
+        
+    Returns:
+        float: 最后活动时间戳（time.time()），如果session不存在则返回None
+    """
+    with _state_lock:
+        return SESSION_LAST_ACTIVITY.get(uid)
+
+
+def check_and_cleanup_timeout_sessions():
+    """
+    检查所有session，清理超时的session
+    
+    此函数会：
+    1. 检查所有活跃session的最后活动时间
+    2. 如果超过SESSION_TIMEOUT秒且未警告，设置警告标志并记录日志
+    3. 如果已警告且超过警告时间（再等5秒），调用cleanup_session清理资源
+    """
+    from config import SESSION_TIMEOUT
+    
+    current_time = time.time()
+    timeout_sessions = []
+    warned_sessions_to_cleanup = []
+    
+    with _state_lock:
+        # 获取所有活跃的session uid
+        active_uids = list(GLOBAL_SESSIONS.keys())
+    
+    # 在锁外检查，避免长时间持有锁
+    for uid in active_uids:
+        with _state_lock:
+            last_activity = SESSION_LAST_ACTIVITY.get(uid)
+            is_warned = SESSION_TIMEOUT_WARNED.get(uid, False)
+        
+        if last_activity is None:
+            # 如果session没有活动记录，跳过（可能是刚创建的）
+            continue
+        
+        elapsed = current_time - last_activity
+        
+        if elapsed > SESSION_TIMEOUT:
+            if not is_warned:
+                # 首次超时，设置警告标志
+                with _state_lock:
+                    SESSION_TIMEOUT_WARNED[uid] = True
+                timeout_sessions.append(uid)
+                print(f"Session {uid}: 超时警告 - 已超过 {SESSION_TIMEOUT} 秒未活动")
+            elif elapsed > SESSION_TIMEOUT + 5:
+                # 已警告且再等5秒仍未活动，标记为需要清理
+                warned_sessions_to_cleanup.append(uid)
+    
+    # 清理超时的session
+    for uid in warned_sessions_to_cleanup:
+        print(f"Session {uid}: 超时清理 - 已超过 {SESSION_TIMEOUT + 5} 秒未活动，开始清理资源")
+        cleanup_session(uid)
+        # cleanup_session内部会清理SESSION_LAST_ACTIVITY和SESSION_TIMEOUT_WARNED
+
+
+# 后台监控线程相关变量
+_timeout_monitor_thread = None
+_timeout_monitor_running = False
+_timeout_monitor_lock = threading.Lock()
+
+
+def _timeout_monitor_loop():
+    """
+    后台监控线程的主循环
+    每5秒检查一次所有session的超时状态
+    """
+    global _timeout_monitor_running
+    while _timeout_monitor_running:
+        try:
+            check_and_cleanup_timeout_sessions()
+        except Exception as e:
+            print(f"Error in timeout monitor loop: {e}")
+            traceback.print_exc()
+        
+        # 每5秒检查一次
+        for _ in range(50):  # 5秒 = 50 * 0.1秒
+            if not _timeout_monitor_running:
+                break
+            time.sleep(0.1)
+
+
+def start_timeout_monitor():
+    """
+    启动后台监控线程
+    在应用启动时调用此函数
+    """
+    global _timeout_monitor_thread, _timeout_monitor_running
+    
+    with _timeout_monitor_lock:
+        if _timeout_monitor_running:
+            print("Timeout monitor is already running")
+            return
+        
+        _timeout_monitor_running = True
+        _timeout_monitor_thread = threading.Thread(
+            target=_timeout_monitor_loop,
+            daemon=True,
+            name="SessionTimeoutMonitor"
+        )
+        _timeout_monitor_thread.start()
+        print("Session timeout monitor started")
+
+
+def stop_timeout_monitor():
+    """
+    停止后台监控线程
+    在应用关闭时调用此函数
+    """
+    global _timeout_monitor_thread, _timeout_monitor_running
+    
+    with _timeout_monitor_lock:
+        if not _timeout_monitor_running:
+            return
+        
+        _timeout_monitor_running = False
+        if _timeout_monitor_thread:
+            _timeout_monitor_thread.join(timeout=2.0)
+            print("Session timeout monitor stopped")

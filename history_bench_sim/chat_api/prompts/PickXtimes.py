@@ -34,12 +34,16 @@ subgoals_grounded = """
 """
 
 example_grounded = """
-If the task goal is the pick up the green cube two times, a typical task subgoal sequence for this task could be:
+If the task goal is the pick up the green cube four times, a typical task subgoal sequence for this task could be:
 1. pick up the green cube at <356, 499> for the first time
 2. place the green cube onto the target at <472, 700>
 3. pick up the green cube at <472, 700> for the second time
 4. place the green cube onto the target at <472, 700>
-5. press the button to stop at <180, 376>
+5. pick up the green cube at <472, 700> for the third time
+6. place the green cube onto the target at <472, 700>
+7. pick up the green cube at <472, 700> for the fourth time
+8. place the green cube onto the target at <472, 700>
+9. press the button to stop at <180, 376>
 """
 
 PickXtimes_SYSTEM_PROMPT_GROUNDED = SYSTEM_PROMPT.format(
