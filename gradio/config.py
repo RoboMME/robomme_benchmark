@@ -13,14 +13,17 @@ ACTION_SCALE = 3  # Action 列的宽度比例
 CONTROL_SCALE = 3  # Control 列的宽度比例
 
 # Session超时配置
-SESSION_TIMEOUT = 30  # Session超时时间（秒），如果30秒内没有execute_step操作，将自动回收session
+SESSION_TIMEOUT = 300  # Session超时时间（秒），如果30秒内没有execute_step操作，将自动回收session
 
 
+# 【环境ID列表】
+# 所有可用的测试环境ID，共16个环境
+# 注意：PickHighlight 已添加到列表中，确保所有环境ID都可用
 ENV_IDS = [
     "VideoPlaceOrder", "PickXtimes", "StopCube", "SwingXtimes", 
     "BinFill", "VideoUnmaskSwap", "VideoUnmask", "ButtonUnmaskSwap", 
     "ButtonUnmask", "VideoRepick", "VideoPlaceButton", "InsertPeg", 
-    "MoveCube", "PatternLock", "RouteStick"
+    "MoveCube", "PatternLock", "RouteStick", "PickHighlight"  # 【新增】PickHighlight 环境ID
 ]
 
 # 应该显示demonstration videos的环境ID列表

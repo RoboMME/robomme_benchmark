@@ -44,6 +44,7 @@ UI布局模块
 │        ├─ note2 - 任务提示（可折叠手风琴）
 │        └─ combined_display - 执行实时流显示（HTML组件）
 │
+
 └─ 底部容器：操作区域 (Operation Zone)
    ├─ 左侧列：动作选择 (Action Selection)
    │  └─ options_radio - 动作单选按钮组
@@ -90,7 +91,9 @@ from gradio_callbacks import (
     select_env_id,
     switch_to_record_mode,
     switch_to_test_mode,
-    back_to_landing_page  # 回退到模式选择页面的函数
+    back_to_landing_page,  # 回退到模式选择页面的函数
+    show_task_hint,  # 【新增导入】任务提示延迟加载函数：根据当前session的env_id加载任务提示内容
+    show_loading_info  # 【新增导入】显示加载环境提示信息的函数
 )
 
 SYNC_JS = """
@@ -572,6 +575,34 @@ CSS = f"""#live_obs {{ }}
     width: 100% !important;
     margin-bottom: 8px !important;
 }}
+/* 【环境选择按钮颜色分类样式】
+ * 为不同类别的环境按钮定义浅色背景和深色文字，通过颜色区分任务类型：
+ * - Counting (计数): 浅蓝色背景 (#dbeafe)，深蓝色文字 (#1e40af)，蓝色边框
+ * - Persistence (恒常): 浅绿色背景 (#dcfce7)，深绿色文字 (#166534)，绿色边框
+ * - Reference (参考): 浅黄色背景 (#fef9c3)，深黄色文字 (#854d0e)，黄色边框
+ * - Behavior (行为): 浅红色背景 (#fee2e2)，深红色文字 (#991b1b)，红色边框
+ * 这些样式类通过 elem_classes 参数应用到对应的按钮上，实现视觉分类效果
+ */
+.btn-counting {{
+    background-color: #dbeafe !important;  /* 浅蓝色背景 - Counting类别 */
+    color: #1e40af !important;              /* 深蓝色文字 */
+    border: 1px solid #bfdbfe !important;   /* 蓝色边框 */
+}}
+.btn-persistence {{
+    background-color: #dcfce7 !important;  /* 浅绿色背景 - Persistence类别 */
+    color: #166534 !important;              /* 深绿色文字 */
+    border: 1px solid #bbf7d0 !important;   /* 绿色边框 */
+}}
+.btn-reference {{
+    background-color: #fef9c3 !important;  /* 浅黄色背景 - Reference类别 */
+    color: #854d0e !important;              /* 深黄色文字 */
+    border: 1px solid #fde047 !important;   /* 黄色边框 */
+}}
+.btn-behavior {{
+    background-color: #fee2e2 !important;  /* 浅红色背景 - Behavior类别 */
+    color: #991b1b !important;              /* 深红色文字 */
+    border: 1px solid #fecaca !important;   /* 红色边框 */
+}}
 /* Target coords_group by ID or by containing coords_box (but not exec_btn) - only when highlight class is present */
 #coords_group.coords-group-highlight,
 .gr-group.coords-group-highlight:has([id*="coords_box"]):not(:has([id*="exec_btn"])) {{
@@ -670,18 +701,95 @@ def create_ui_blocks():
             login_msg = gr.Markdown("")
 
         # --- Env ID Selection Section (for user_test only) ---
+        # 【环境ID选择界面 - 2x2分类网格布局】
+        # 此界面仅在测试模式（user_test）下显示，用于让用户选择要测试的环境ID
+        # 布局从原来的简单列表改为2x2分类网格，按任务类型分为四个类别：
+        # - Counting (计数): 需要计数操作的任务
+        # - Persistence (恒常): 需要持久性/记忆操作的任务
+        # - Reference (参考): 需要参考视频/演示的任务
+        # - Behavior (行为): 需要特定行为模式的任务
         with gr.Group(visible=False) as env_selection_group:
             gr.Markdown("### Select Environment")
             gr.Markdown("Please select an environment ID to start the task")
-            env_buttons = []
-            # 创建15个按钮，每行5个
-            for i in range(0, len(ENV_IDS), 5):
-                with gr.Row():
-                    for j in range(5):
-                        if i + j < len(ENV_IDS):
-                            env_id = ENV_IDS[i + j]
-                            btn = gr.Button(env_id, variant="secondary", size="lg")
-                            env_buttons.append(btn)
+            
+            # 【按钮列表】存储所有环境按钮及其对应的环境ID，用于后续统一绑定点击事件
+            # 格式: [(button对象, env_id字符串), ...]
+            env_buttons_with_ids = []
+            
+            # 【创建环境按钮函数】
+            # 功能：创建环境选择按钮并添加到列表中，同时应用对应的CSS样式类
+            # 参数：
+            #   - env_id: 环境ID字符串（如"BinFill"）
+            #   - css_class: CSS样式类名（如"btn-counting"），用于设置按钮颜色
+            # 返回：创建的按钮对象
+            def create_env_btn(env_id, css_class=""):
+                # 创建按钮，使用secondary变体，大尺寸，并应用CSS类
+                btn = gr.Button(env_id, variant="secondary", size="lg", elem_classes=css_class)
+                # 将按钮和环境ID的元组添加到列表中，供后续事件绑定使用
+                env_buttons_with_ids.append((btn, env_id))
+                return btn
+
+            # 【第一行：Counting 和 Persistence 类别】
+            with gr.Row():
+                # 【左上：Counting (计数) 类别】
+                # 包含4个环境：BinFill, PickXtimes, SwingXtimes, StopCube
+                # 这些任务主要涉及计数操作
+                with gr.Column():
+                    gr.Markdown("#### 🔢 Counting")
+                    # 第一行：BinFill 和 PickXtimes
+                    with gr.Row():
+                         create_env_btn("BinFill", "btn-counting")      # 浅蓝色按钮
+                         create_env_btn("PickXtimes", "btn-counting")   # 浅蓝色按钮
+                    # 第二行：SwingXtimes 和 StopCube
+                    with gr.Row():
+                         create_env_btn("SwingXtimes", "btn-counting")  # 浅蓝色按钮
+                         create_env_btn("StopCube", "btn-counting")     # 浅蓝色按钮
+                
+                # 【右上：Persistence (恒常) 类别】
+                # 包含4个环境：VideoUnmask, ButtonUnmask, VideoUnmaskSwap, ButtonUnmaskSwap
+                # 这些任务主要涉及持久性/记忆操作
+                with gr.Column():
+                    gr.Markdown("#### 👁️ Persistence")
+                    # 第一行：VideoUnmask 和 ButtonUnmask
+                    with gr.Row():
+                         create_env_btn("VideoUnmask", "btn-persistence")      # 浅绿色按钮
+                         create_env_btn("ButtonUnmask", "btn-persistence")    # 浅绿色按钮
+                    # 第二行：VideoUnmaskSwap 和 ButtonUnmaskSwap
+                    with gr.Row():
+                         create_env_btn("VideoUnmaskSwap", "btn-persistence")  # 浅绿色按钮
+                         create_env_btn("ButtonUnmaskSwap", "btn-persistence") # 浅绿色按钮
+
+            # 【第二行：Reference 和 Behavior 类别】
+            with gr.Row():
+                # 【左下：Reference (参考) 类别】
+                # 包含4个环境：PickHighlight, VideoRepick, VideoPlaceButton, VideoPlaceOrder
+                # 这些任务主要涉及参考视频/演示
+                with gr.Column():
+                    gr.Markdown("#### 🖼️ Reference")
+                    # 第一行：PickHighlight 和 VideoRepick
+                    with gr.Row():
+                         create_env_btn("PickHighlight", "btn-reference")      # 浅黄色按钮
+                         create_env_btn("VideoRepick", "btn-reference")      # 浅黄色按钮
+                    # 第二行：VideoPlaceButton 和 VideoPlaceOrder
+                    with gr.Row():
+                         create_env_btn("VideoPlaceButton", "btn-reference") # 浅黄色按钮
+                         create_env_btn("VideoPlaceOrder", "btn-reference")  # 浅黄色按钮
+
+                # 【右下：Behavior (行为) 类别】
+                # 包含4个环境：MoveCube, InsertPeg, PatternLock, RouteStick
+                # 这些任务主要涉及特定的行为模式
+                with gr.Column():
+                    gr.Markdown("#### 🖐️ Behavior")
+                    # 第一行：MoveCube 和 InsertPeg
+                    with gr.Row():
+                         create_env_btn("MoveCube", "btn-behavior")    # 浅红色按钮
+                         create_env_btn("InsertPeg", "btn-behavior")  # 浅红色按钮
+                    # 第二行：PatternLock 和 RouteStick
+                    with gr.Row():
+                         create_env_btn("PatternLock", "btn-behavior") # 浅红色按钮
+                         create_env_btn("RouteStick", "btn-behavior")  # 浅红色按钮
+
+            # 环境选择消息显示区域（用于显示选择结果或错误信息）
             env_selection_msg = gr.Markdown("")
 
         # --- Main Interface (Hidden initially) ---
@@ -716,12 +824,20 @@ def create_ui_blocks():
                          
                          # Content row - 单列布局，Hint 在视频上方
                          with gr.Column(scale=1):
-                             # Task Hint (Accordion) - 默认收起
-                             with gr.Accordion("Task Hint 💡 (Click to expand)", open=False):
-                                 note2_demo = gr.Markdown(
-                                     value=get_task_hint(""),
-                                     elem_id="note2_demo"
-                                 )
+                             # 【修改】任务提示延迟加载和切换显示功能（演示视频组）：
+                             # 移除 Accordion，直接显示 Task Hint 按钮
+                             # 点击按钮后切换显示/隐藏提示内容
+                             # Task Hint 按钮
+                             show_hint_btn_demo = gr.Button("Task Hint 💡⬇️", size="sm")
+                             # 任务提示Markdown组件：初始值为空，点击按钮后切换显示/隐藏
+                             note2_demo = gr.Markdown(
+                                 value="",  # 初始值为空，延迟加载
+                                 elem_id="note2_demo"
+                             )
+                             # 事件绑定：将"Task Hint"按钮的点击事件绑定到 show_task_hint 函数
+                             # 输入：uid_state（用户会话ID）和 note2_demo（当前提示内容，用于切换）
+                             # 输出：note2_demo（任务提示Markdown组件），显示或隐藏提示内容
+                             show_hint_btn_demo.click(fn=show_task_hint, inputs=[uid_state, note2_demo], outputs=[note2_demo])
                              
                              video_elem_id = "demo_video" if RESTRICT_VIDEO_PLAYBACK else None
                              video_autoplay = False  # 不自动播放，等待用户点击按钮
@@ -749,12 +865,20 @@ def create_ui_blocks():
                          
                          # Content row - 单列布局，Hint 在视频上方
                          with gr.Column(scale=1):
-                            # Task Hint (Accordion) - 默认收起
-                            with gr.Accordion("Task Hint 💡 (Click to expand)", open=False):
-                                note2 = gr.Markdown(
-                                    value=get_task_hint(""),
-                                    elem_id="note2"
-                                )
+                            # 【修改】任务提示延迟加载和切换显示功能（执行阶段组合视图组）：
+                            # 移除 Accordion，直接显示 Task Hint 按钮
+                            # 点击按钮后切换显示/隐藏提示内容
+                            # Task Hint 按钮
+                            show_hint_btn = gr.Button("Task Hint 💡⬇️", size="sm")
+                            # 任务提示Markdown组件：初始值为空，点击按钮后切换显示/隐藏
+                            note2 = gr.Markdown(
+                                value="",  # 初始值为空，延迟加载
+                                elem_id="note2"
+                            )
+                            # 事件绑定：将"Task Hint"按钮的点击事件绑定到 show_task_hint 函数
+                            # 输入：uid_state（用户会话ID）和 note2（当前提示内容，用于切换）
+                            # 输出：note2（任务提示Markdown组件），显示或隐藏提示内容
+                            show_hint_btn.click(fn=show_task_hint, inputs=[uid_state, note2], outputs=[note2])
                             
                             # Main: Desk + Robot View (Combined) - 使用 HTML 组件显示 MJPEG 流
                             combined_display = gr.HTML(
@@ -804,7 +928,7 @@ def create_ui_blocks():
         # --- Event Wiring ---
 
         # 1. Login
-        login_btn.click(
+        login_btn.click(fn=show_loading_info).then(
             fn=login_and_load_task,
             inputs=[username_input, uid_state],
             outputs=[
@@ -842,7 +966,7 @@ def create_ui_blocks():
         
         # 1.1 Landing Page - Record Mode
         # 1.1 落地页 - 录制模式
-        record_btn.click(
+        record_btn.click(fn=show_loading_info).then(
             fn=switch_to_record_mode,
             inputs=[username_state, uid_state],
             outputs=[
@@ -877,7 +1001,7 @@ def create_ui_blocks():
         
         # 1.2 Landing Page - Test Mode
         # 1.2 落地页 - 测试模式
-        test_btn.click(
+        test_btn.click(fn=show_loading_info).then(
             fn=switch_to_test_mode,
             inputs=[username_state, uid_state],
             outputs=[
@@ -913,9 +1037,16 @@ def create_ui_blocks():
         
         # 1.3 Env ID Selection (for user_test)
         # 1.3 环境 ID 选择（针对 user_test）
-        for i, btn in enumerate(env_buttons):
-            env_id = ENV_IDS[i]
-            btn.click(
+        # 【环境按钮事件绑定】
+        # 为所有环境选择按钮绑定点击事件
+        # 注意：由于布局从列表改为2x2网格，事件绑定逻辑已更新：
+        # - 原来：通过遍历ENV_IDS列表和env_buttons列表的索引来匹配
+        # - 现在：直接使用env_buttons_with_ids列表，其中每个元素包含(按钮对象, 环境ID)元组
+        # 这样避免了依赖ENV_IDS的顺序，使代码更加健壮和清晰
+        for btn, env_id in env_buttons_with_ids:
+            # 为每个按钮绑定select_env_id函数
+            # 使用lambda函数捕获当前循环的env_id，确保每个按钮调用时传入正确的环境ID
+            btn.click(fn=show_loading_info).then(
                 fn=lambda u, uid, eid=env_id: select_env_id(u, uid, eid),
                 inputs=[username_state, uid_state],
                 outputs=[
@@ -948,7 +1079,7 @@ def create_ui_blocks():
             )
         
         # 1.5 Next Task
-        next_task_btn.click(
+        next_task_btn.click(fn=show_loading_info).then(
             fn=load_next_task_wrapper,
             inputs=[username_state, uid_state],
             outputs=[

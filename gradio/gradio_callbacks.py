@@ -28,14 +28,72 @@ from state_manager import (
     set_task_start_time,
     update_session_activity,
     get_session_activity,
+    cleanup_session,
+    GLOBAL_SESSIONS,
+    SESSION_LAST_ACTIVITY,
+    _state_lock,
 )
 from streaming_service import FrameQueueManager, cleanup_frame_queue
 from image_utils import draw_marker, save_video, concatenate_frames_horizontally
 from user_manager import user_manager, LeaseLost
 from logger import log_user_action, create_new_attempt, has_existing_actions
 from config import USE_SEGMENTED_VIEW, REFERENCE_VIEW_HEIGHT, should_show_demo_video, SESSION_TIMEOUT
-from process_session import ScrewPlanFailureError
+from process_session import ScrewPlanFailureError, ProcessSessionProxy
 from note_content import get_task_hint
+
+
+def show_task_hint(uid, current_hint=""):
+    """
+    按需加载任务提示内容（仅在用户点击"Task Hint"按钮时调用）
+    On-demand loading of task hint based on current session's env_id.
+    支持切换显示/隐藏：如果当前提示为空则显示，如果不为空则隐藏。
+    
+    【修改说明】
+    此函数用于实现任务提示的延迟加载和切换显示功能。用户点击"Task Hint"按钮时：
+    - 如果当前提示内容为空，则从当前session中读取env_id并加载对应的提示内容
+    - 如果当前提示内容不为空，则清空提示内容（隐藏）
+    
+    Args:
+        uid: 用户会话的唯一标识符，用于获取当前session对象
+        current_hint: 当前提示内容的文本，用于判断是否显示/隐藏
+        
+    Returns:
+        str: 根据当前环境ID返回的任务提示内容（Markdown格式），
+             如果当前提示不为空则返回空字符串（隐藏），
+             如果session不存在或env_id未加载则返回空字符串或错误提示
+    """
+    # 如果当前提示内容不为空，则切换为隐藏（返回空字符串）
+    if current_hint and current_hint.strip():
+        return ""
+    
+    # 从全局状态管理器中获取当前用户的session对象
+    session = get_session(uid)
+    if not session:
+        # 如果session不存在，返回空字符串（前端不会显示任何内容）
+        return ""
+    
+    # 从session对象中获取当前加载的环境ID（env_id）
+    # 使用getattr安全获取属性，如果不存在则返回None
+    env_id = getattr(session, 'env_id', None)
+    if not env_id:
+        # 如果环境ID未加载，返回提示信息
+        return "No environment loaded."
+    
+    # 根据环境ID调用get_task_hint函数获取对应的任务提示内容
+    # 该函数会根据不同的env_id返回不同的提示文本（如PickXtimes、VideoPlaceOrder等）
+    return get_task_hint(env_id)
+
+
+def show_loading_info():
+    """
+    显示加载环境的提示信息
+    Show loading environment notification
+    
+    Returns:
+        None (Uses gr.Info to show toast notification)
+    """
+    gr.Info("正在加载环境，请稍候... / Loading environment, please wait...")
+    return
 
 
 def login_and_load_task(username, uid):
@@ -48,6 +106,10 @@ def login_and_load_task(username, uid):
     
     # Pass uid to login for force takeover mechanism
     success, msg, status = user_manager.login(username, uid)
+    
+    # 更新session活动时间（登录操作）
+    if uid:
+        update_session_activity(uid)
     
     if not success:
         # Login failed
@@ -72,8 +134,10 @@ def login_and_load_task(username, uid):
             gr.update(visible=False),  # confirm_demo_btn
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
-            gr.update(value=get_task_hint("")),  # note2
-            gr.update(value=get_task_hint(""))  # note2_demo
+            # 【修改】任务提示改为延迟加载：不再在登录失败时自动加载提示内容
+            # 初始值设为空字符串，用户需要点击"Show Hint"按钮才会显示提示
+            gr.update(value=""),  # note2 - 任务提示（延迟加载，初始为空）
+            gr.update(value="")  # note2_demo - 演示任务提示（延迟加载，初始为空）
         )
     
     # 特殊处理：如果是 user_test，显示 env_id 选择界面
@@ -99,8 +163,8 @@ def login_and_load_task(username, uid):
             gr.update(visible=False),  # confirm_demo_btn
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
-            gr.update(value=get_task_hint("")),  # note2
-            gr.update(value=get_task_hint(""))  # note2_demo
+            gr.update(value=""),  # note2
+            gr.update(value="")  # note2_demo
         )
     
     # Login success - Load current task
@@ -136,8 +200,8 @@ def login_and_load_task(username, uid):
             gr.update(visible=False),  # confirm_demo_btn
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
-            gr.update(value=get_task_hint("")),  # note2
-            gr.update(value=get_task_hint(""))  # note2_demo
+            gr.update(value=""),  # note2
+            gr.update(value="")  # note2_demo
         )
 
     current_task = status["current_task"]
@@ -146,6 +210,19 @@ def login_and_load_task(username, uid):
     
     # Load the environment
     session = get_session(uid)
+    # 【修复】如果session不存在（可能被free try mode销毁了），创建一个新的session
+    # 场景：用户在free try mode下点击"Back to Mode Selection"时，session会被销毁
+    # 当用户切换到Record Mode时，需要重新创建session才能正常加载环境
+    if session is None:
+        print(f"Session {uid} not found, creating new session for {username}")
+        # 创建新的ProcessSessionProxy实例（会启动独立的工作进程）
+        session = ProcessSessionProxy()
+        # 使用线程锁保护全局状态，将新session注册到全局会话存储中
+        with _state_lock:
+            GLOBAL_SESSIONS[uid] = session
+            SESSION_LAST_ACTIVITY[uid] = time.time()  # 更新最后活动时间
+        print(f"New session created for {uid} (User: {username})")
+    
     print(f"Loading {env_id} Ep {ep_num} for {uid} (User: {username})")
     
     # 清理帧队列（新episode开始）
@@ -197,8 +274,8 @@ def login_and_load_task(username, uid):
             gr.update(visible=False),  # confirm_demo_btn
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
-            gr.update(value=get_task_hint(env_id)),  # note2
-            gr.update(value=get_task_hint(env_id))  # note2_demo
+            gr.update(value=""),  # note2
+            gr.update(value="")  # note2_demo
         )
         
     # Success loading
@@ -275,8 +352,12 @@ def login_and_load_task(username, uid):
             gr.update(visible=True, interactive=False),  # confirm_demo_btn (第一阶段显示，初始禁用)
             gr.update(visible=True, interactive=True),  # play_video_btn (第一阶段显示)
             gr.update(visible=False),  # coords_group (初始化时隐藏)
-            gr.update(value=get_task_hint(env_id)),  # note2
-            gr.update(value=get_task_hint(env_id))  # note2_demo
+            # 【修改】任务提示延迟加载功能（有示范视频的情况）：
+            # 之前：任务加载时自动调用 get_task_hint(env_id) 显示提示内容
+            # 现在：初始值设为空字符串，用户需要点击"Show Hint"按钮才会通过 show_task_hint() 函数加载并显示提示
+            # 这样可以减少不必要的计算，提升页面加载速度，同时让用户按需查看提示
+            gr.update(value=""),  # note2 - 任务提示（延迟加载，初始为空，点击按钮后显示）
+            gr.update(value="")  # note2_demo - 演示任务提示（延迟加载，初始为空，点击按钮后显示）
         )
     else:
         # 没有示范视频：直接进入执行阶段
@@ -345,8 +426,12 @@ def login_and_load_task(username, uid):
             gr.update(visible=False), # confirm_demo_btn (无视频，隐藏)
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group (初始化时隐藏)
-            gr.update(value=get_task_hint(env_id)),  # note2
-            gr.update(value=get_task_hint(env_id))  # note2_demo
+            # 【修改】任务提示延迟加载功能（无示范视频的情况）：
+            # 之前：任务加载时自动调用 get_task_hint(env_id) 显示提示内容
+            # 现在：初始值设为空字符串，用户需要点击"Show Hint"按钮才会通过 show_task_hint() 函数加载并显示提示
+            # 这样可以减少不必要的计算，提升页面加载速度，同时让用户按需查看提示
+            gr.update(value=""),  # note2 - 任务提示（延迟加载，初始为空，点击按钮后显示）
+            gr.update(value="")  # note2_demo - 演示任务提示（延迟加载，初始为空，点击按钮后显示）
         )
 
 
@@ -368,6 +453,10 @@ def confirm_demo_watched(uid, username):
             user_manager.assert_lease(username, uid)
         except LeaseLost as e:
             raise gr.Error(f"You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.\n{str(e)}")
+    
+    # 更新session活动时间（确认观看演示操作）
+    if uid:
+        update_session_activity(uid)
     
     # 设置阶段为执行任务
     set_ui_phase(uid, "executing_task")
@@ -428,8 +517,12 @@ def confirm_demo_watched(uid, username):
         gr.update(visible=False, interactive=False),  # play_video_btn (确认后隐藏)
         gr.update(interactive=True),  # exec_btn - 启用执行按钮
         gr.update(visible=False),   # coords_group (确认demo后，还未选择选项，隐藏)
-        gr.update(value=get_task_hint(env_id)),  # note2
-        gr.update(value=get_task_hint(env_id))  # note2_demo
+        # 【修改】任务提示延迟加载功能（确认观看演示视频后）：
+        # 之前：确认观看演示视频后自动调用 get_task_hint(env_id) 显示提示内容
+        # 现在：初始值设为空字符串，用户需要点击"Show Hint"按钮才会通过 show_task_hint() 函数加载并显示提示
+        # 这样可以减少不必要的计算，提升页面加载速度，同时让用户按需查看提示
+        gr.update(value=""),  # note2 - 任务提示（延迟加载，初始为空，用户必须点击按钮才显示）
+        gr.update(value="")  # note2_demo - 演示任务提示（延迟加载，初始为空，用户必须点击按钮才显示）
     )
 
 
@@ -461,8 +554,8 @@ def select_env_id(username, uid, env_id):
             gr.update(visible=False),  # confirm_demo_btn
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
-            gr.update(value=get_task_hint("")),  # note2
-            gr.update(value=get_task_hint(""))  # note2_demo
+            gr.update(value=""),  # note2
+            gr.update(value="")  # note2_demo
         )
     
     if not uid:
@@ -473,6 +566,10 @@ def select_env_id(username, uid, env_id):
         user_manager.assert_lease(username, uid)
     except LeaseLost as e:
         raise gr.Error(f"You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.\n{str(e)}")
+    
+    # 更新session活动时间（选择环境ID操作）
+    if uid:
+        update_session_activity(uid)
     
     # 为 user_test 加载指定的 env_id，episode_idx 固定为 99
     # Load specific env_id for user_test, episode_idx fixed to 99
@@ -530,8 +627,11 @@ def select_env_id(username, uid, env_id):
             gr.update(visible=False),  # confirm_demo_btn
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
-            gr.update(value=get_task_hint(env_id)),  # note2
-            gr.update(value=get_task_hint(env_id))  # note2_demo
+            # 【修改】任务提示延迟加载功能（select_env_id函数 - 加载失败情况）：
+            # 之前：任务加载失败时也会调用 get_task_hint(env_id) 显示提示内容
+            # 现在：初始值设为空字符串，用户需要点击"Show Hint"按钮才会通过 show_task_hint() 函数加载并显示提示
+            gr.update(value=""),  # note2 - 任务提示（延迟加载，初始为空）
+            gr.update(value="")  # note2_demo - 演示任务提示（延迟加载，初始为空）
         )
     
     # Success loading
@@ -597,8 +697,11 @@ def select_env_id(username, uid, env_id):
             gr.update(visible=True, interactive=False),  # confirm_demo_btn (第一阶段显示，初始禁用 / shown, initially disabled)
             gr.update(visible=True, interactive=True),  # play_video_btn (第一阶段显示 / shown)
             gr.update(visible=False),  # coords_group (初始化时隐藏 / hidden initially)
-            gr.update(value=get_task_hint(env_id)),  # note2
-            gr.update(value=get_task_hint(env_id))  # note2_demo
+            # 【修改】任务提示延迟加载功能（select_env_id函数 - 有示范视频的情况）：
+            # 之前：任务加载时自动调用 get_task_hint(env_id) 显示提示内容
+            # 现在：初始值设为空字符串，用户需要点击"Show Hint"按钮才会通过 show_task_hint() 函数加载并显示提示
+            gr.update(value=""),  # note2 - 任务提示（延迟加载，初始为空）
+            gr.update(value="")  # note2_demo - 演示任务提示（延迟加载，初始为空）
         )
     else:
         # 没有示范视频：直接进入执行阶段
@@ -661,8 +764,11 @@ def select_env_id(username, uid, env_id):
             gr.update(visible=False), # confirm_demo_btn (无视频，隐藏 / no video, hidden)
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group (初始化时隐藏 / hidden initially)
-            gr.update(value=get_task_hint(env_id)),  # note2
-            gr.update(value=get_task_hint(env_id))  # note2_demo
+            # 【修改】任务提示延迟加载功能（select_env_id函数 - 无示范视频的情况）：
+            # 之前：任务加载时自动调用 get_task_hint(env_id) 显示提示内容
+            # 现在：初始值设为空字符串，用户需要点击"Show Hint"按钮才会通过 show_task_hint() 函数加载并显示提示
+            gr.update(value=""),  # note2 - 任务提示（延迟加载，初始为空）
+            gr.update(value="")  # note2_demo - 演示任务提示（延迟加载，初始为空）
         )
 
 
@@ -696,8 +802,8 @@ def load_next_task_wrapper(username, uid):
             gr.update(visible=False),  # confirm_demo_btn
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
-            gr.update(value=get_task_hint("")),  # note2
-            gr.update(value=get_task_hint(""))  # note2_demo
+            gr.update(value=""),  # note2
+            gr.update(value="")  # note2_demo
         )
     
     if username:
@@ -707,6 +813,10 @@ def load_next_task_wrapper(username, uid):
         except LeaseLost as e:
             # Raise error to be caught by Gradio and displayed
             raise gr.Error(f"You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.\n{str(e)}")
+        
+        # 更新session活动时间（加载下一个任务操作）
+        if uid:
+            update_session_activity(uid)
         
         success, msg, status = user_manager.login(username, uid)
         if success and not status["is_done_all"]:
@@ -731,6 +841,10 @@ def on_map_click(uid, username, option_value, evt: gr.SelectData):
             user_manager.assert_lease(username, uid)
         except LeaseLost as e:
             raise gr.Error(f"You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.\n{str(e)}")
+    
+    # 更新session活动时间（点击图片操作）
+    if uid:
+        update_session_activity(uid)
     
     session = get_session(uid)
     if not session:
@@ -806,6 +920,10 @@ def on_option_select(uid, username, option_value):
             user_manager.assert_lease(username, uid)
         except LeaseLost as e:
             raise gr.Error(f"You have been logged in elsewhere. This page is no longer valid. Please refresh the page to log in again.\n{str(e)}")
+    
+    # 更新session活动时间（选择选项操作）
+    if uid:
+        update_session_activity(uid)
     
     session = get_session(uid)
     if not session:
@@ -938,9 +1056,26 @@ def back_to_landing_page(username, uid):
             gr.update(visible=False),               # confirm_demo_btn: 确认演示按钮（隐藏）
             gr.update(visible=False, interactive=True),  # play_video_btn: 播放视频按钮（隐藏但可交互）
             gr.update(visible=False),               # coords_group: 坐标组（隐藏）
-            gr.update(value=get_task_hint("")),     # note2: 提示信息（清空）
-            gr.update(value=get_task_hint(""))      # note2_demo: 演示提示信息（清空）
+            gr.update(value=""),     # note2: 提示信息（清空）
+            gr.update(value="")      # note2_demo: 演示提示信息（清空）
         )
+    
+    # 【Free Try Mode 立即销毁】如果用户名以 _test 结尾，立即销毁环境释放资源
+    # 目的：在free try mode下，用户返回模式选择页面时立即释放环境资源（RAM/VRAM），而不是等待超时
+    # 这样可以避免资源浪费，让其他用户能够更快地使用系统资源
+    if username.endswith("_test") and uid:
+        print(f"Free Try Mode detected: {username}, destroying session {uid} immediately")
+        try:
+            # 调用cleanup_session销毁环境，包括：
+            # 1. 关闭ProcessSessionProxy（终止工作进程，释放RAM/VRAM）
+            # 2. 清理所有相关的状态数据（任务索引、坐标点击、选项选择、帧队列等）
+            # 3. 清理流生成ID（终止旧的MJPEG流）
+            cleanup_session(uid)
+            print(f"Session {uid} destroyed successfully for free try mode user {username}")
+        except Exception as e:
+            # 如果销毁过程中出现异常，记录错误但不影响UI返回
+            print(f"Error destroying session {uid} for free try mode: {e}")
+            traceback.print_exc()
     
     # 提取原始用户名（如果存在 _test 后缀则去掉）
     # 例如：user1_test -> user1, user1_VideoPlaceOrder -> user1
@@ -1006,8 +1141,8 @@ def back_to_landing_page(username, uid):
         gr.update(visible=False),               # confirm_demo_btn: 确认演示按钮（隐藏）
         gr.update(visible=False, interactive=True),  # play_video_btn: 播放视频按钮（隐藏但可交互）
         gr.update(visible=False),               # coords_group: 坐标组（隐藏）
-        gr.update(value=get_task_hint("")),      # note2: 提示信息（清空）
-        gr.update(value=get_task_hint(""))       # note2_demo: 演示提示信息（清空）
+        gr.update(value=""),      # note2: 提示信息（清空）
+        gr.update(value="")       # note2_demo: 演示提示信息（清空）
     )
 
 
@@ -1063,8 +1198,8 @@ def init_app(request: gr.Request):
         gr.update(visible=False), # confirm_demo_btn
         gr.update(visible=False, interactive=True),  # play_video_btn
         gr.update(visible=False),  # coords_group (初始化时隐藏)
-        gr.update(value=get_task_hint("")),  # note2
-        gr.update(value=get_task_hint(""))  # note2_demo
+        gr.update(value=""),  # note2
+        gr.update(value="")  # note2_demo
     )
     
     if username:
@@ -1098,8 +1233,8 @@ def init_app(request: gr.Request):
                 gr.update(visible=False),   # confirm_demo_btn
                 gr.update(visible=False, interactive=True), # play_video_btn
                 gr.update(visible=False),   # coords_group
-                gr.update(value=get_task_hint("")), # note2
-                gr.update(value=get_task_hint(""))  # note2_demo
+                gr.update(value=""), # note2
+                gr.update(value="")  # note2_demo
             )
         else:
             # 用户名不存在，显示错误消息但仍显示登录界面
@@ -1129,8 +1264,8 @@ def init_app(request: gr.Request):
                 gr.update(visible=False), # confirm_demo_btn
                 gr.update(visible=False, interactive=True),  # play_video_btn
                 gr.update(visible=False),  # coords_group
-                gr.update(value=get_task_hint("")),  # note2
-                gr.update(value=get_task_hint(""))  # note2_demo
+                gr.update(value=""),  # note2
+                gr.update(value="")  # note2_demo
             )
     
     return default_outputs

@@ -39,7 +39,7 @@ def main():
     """
 
     num_episodes = 1
-    env_id_list=["PickHighlight"]
+    env_id_list=["VideoRepick"]
     for env_id in env_id_list:
         dataset_path = Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
         for episode in range(num_episodes):

@@ -161,6 +161,8 @@ from ui_layout import create_ui_blocks, CSS, SYNC_JS
 from state_manager import create_session, start_timeout_monitor
 from user_manager import user_manager
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def find_free_port(start_port=7860):
     """查找可用端口"""

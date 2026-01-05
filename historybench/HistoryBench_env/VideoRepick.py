@@ -386,7 +386,7 @@ class VideoRepick(BaseEnv):
                         "failure_func": lambda: [
                             is_any_obj_pickup(self,[cube for cube in self.spawned_cubes if cube != self.target_cube_1]),
                             timewindow(self, lambda: is_button_pressed(self, obj=self.button_left),min_steps=50,max_steps=500,timewindow_timer=2,),],
-                        "solve": lambda env, planner: solve_pickup(env, planner, obj=self.target_cube_1),
+                        "solve": lambda env, planner: [solve_pickup(env, planner, obj=self.target_cube_1)],
                         'segment':self.target_cube_1,
                     },)
                 
@@ -434,8 +434,12 @@ class VideoRepick(BaseEnv):
 
 
     def evaluate(self,solve_complete_eval=False):
-        self.successflag=torch.tensor([False])
-        self.failureflag = torch.tensor([False])
+        previous_failure = getattr(self, "failureflag", None)
+        self.successflag = torch.tensor([False])
+        if previous_failure is not None and bool(previous_failure.item()):
+            self.failureflag = previous_failure
+        else:
+            self.failureflag = torch.tensor([False])
 
 
         # 使用封装的序列任务检查函数
