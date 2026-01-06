@@ -60,32 +60,29 @@ def save_video(frames, suffix=""):
         return None
 
 
-def concatenate_frames_horizontally(frames1, frames2, env_id=None):
+def concatenate_frames_horizontally(frames1, frames2=None, env_id=None):
     """
-    将两个帧序列左右拼接成一个帧序列
+    处理 base frames 序列，添加标注和坐标系（已移除 wrist camera）
     
     Args:
-        frames1: 左侧视频帧列表（base frames）
-        frames2: 右侧视频帧列表（wrist frames）
+        frames1: base frames 视频帧列表
+        frames2: 已弃用，保留以保持向后兼容，但不会被使用
         env_id: 环境ID，用于决定是否显示坐标系（可选）
     
     Returns:
-        拼接后的帧列表
+        处理后的帧列表
     """
     # 需要显示坐标系的任务列表
     COORDINATE_AXES_ENVS = ["PatternLock", "RouteStick", "InsertPeg", "SwingXtimes"]
     show_coordinate_axes = env_id in COORDINATE_AXES_ENVS if env_id else False
-    if not frames1 and not frames2:
+    if not frames1:
         return []
     
-    # 确定最大帧数
-    max_frames = max(len(frames1), len(frames2))
     concatenated_frames = []
     
-    for i in range(max_frames):
-        # 获取当前帧，如果某个序列较短，重复最后一帧
-        frame1 = frames1[min(i, len(frames1) - 1)] if frames1 else None
-        frame2 = frames2[min(i, len(frames2) - 1)] if frames2 else None
+    for i in range(len(frames1)):
+        # 获取当前帧
+        frame1 = frames1[i] if i < len(frames1) else frames1[-1]
         
         # 转换为numpy数组并确保格式正确
         if frame1 is not None:
@@ -99,66 +96,32 @@ def concatenate_frames_horizontally(frames1, frames2, env_id=None):
             if len(frame1.shape) == 2:
                 frame1 = np.stack([frame1] * 3, axis=-1)
         else:
-            # 如果frame1为空，创建一个黑色帧
-            if frame2 is not None:
-                h, w = frame2.shape[:2]
-                frame1 = np.zeros((h, w, 3), dtype=np.uint8)
-            else:
-                continue
+            continue
         
-        if frame2 is not None:
-            if not isinstance(frame2, np.ndarray):
-                frame2 = np.array(frame2)
-            if frame2.dtype != np.uint8:
-                if np.max(frame2) <= 1.0:
-                    frame2 = (frame2 * 255).astype(np.uint8)
-                else:
-                    frame2 = frame2.clip(0, 255).astype(np.uint8)
-            if len(frame2.shape) == 2:
-                frame2 = np.stack([frame2] * 3, axis=-1)
-        else:
-            # 如果frame2为空，创建一个黑色帧
-            h, w = frame1.shape[:2]
-            frame2 = np.zeros((h, w, 3), dtype=np.uint8)
-        
-        # 确保两个帧的高度相同，如果不同则调整
-        h1, w1 = frame1.shape[:2]
-        h2, w2 = frame2.shape[:2]
-        
-        if h1 != h2:
-            # 调整到相同高度（使用较小的那个）
-            target_h = min(h1, h2)
-            if h1 != target_h:
-                frame1 = cv2.resize(frame1, (w1, target_h), interpolation=cv2.INTER_LINEAR)
-            if h2 != target_h:
-                frame2 = cv2.resize(frame2, (w2, target_h), interpolation=cv2.INTER_LINEAR)
-        
-        # 获取调整后的实际宽度和高度
+        # 获取帧的宽度和高度
         actual_h, actual_w1 = frame1.shape[:2]
-        _, actual_w2 = frame2.shape[:2]
         
-        # 在中间添加垂直黑边分隔
-        border_width = 10  # 中间黑边宽度
-        middle_border = np.zeros((actual_h, border_width, 3), dtype=np.uint8)
-        
-        # 确定左右边框宽度（RouteStick 任务需要更宽的左侧边框以容纳旋转方向示意图）
+        # 确定左侧和右侧边框宽度
         left_border_width = 0
         right_border_width = 0
         if show_coordinate_axes:
             if env_id == "RouteStick":
-                left_border_width = 250  # RouteStick 任务的左侧边框宽度
-                right_border_width = 150 # 右侧边框宽度保持不变
+                left_border_width = 150  # RouteStick 任务的左侧边框宽度（用于坐标系）
+                right_border_width = 240  # RouteStick 任务的右侧边框宽度（用于旋转方向示意图）
             else:
-                left_border_width = 150  # 其他任务的左右边框宽度
-                right_border_width = 150
+                left_border_width = 150  # 其他任务的左侧边框宽度
         
         if show_coordinate_axes:
-            # 添加左右黑色边框用于绘制坐标系
+            # 添加左侧黑色边框用于绘制坐标系
             left_border = np.zeros((actual_h, left_border_width, 3), dtype=np.uint8)
-            right_border = np.zeros((actual_h, right_border_width, 3), dtype=np.uint8)
             
-            # 左右拼接（包含左右边框、中间黑边）
-            concatenated_frame = np.concatenate([left_border, frame1, middle_border, frame2, right_border], axis=1)
+            # 拼接（包含左侧边框）
+            concatenated_frame = np.concatenate([left_border, frame1], axis=1)
+            
+            # 如果是 RouteStick 任务，添加右侧黑色边框
+            if env_id == "RouteStick" and right_border_width > 0:
+                right_border = np.zeros((actual_h, right_border_width, 3), dtype=np.uint8)
+                concatenated_frame = np.concatenate([concatenated_frame, right_border], axis=1)
             
             # 转换为PIL图像以便在黑色边框区域绘制坐标系
             concatenated_pil = Image.fromarray(concatenated_frame)
@@ -167,66 +130,24 @@ def concatenate_frames_horizontally(frames1, frames2, env_id=None):
             left_border_pil = Image.new('RGB', (left_border_width, actual_h), (0, 0, 0))
             left_border_pil = draw_coordinate_axes(left_border_pil, position="left", rotate_180=True, env_id=env_id)
             
-            # 在右侧黑色边框绘制 wrist camera 坐标系（不旋转）
-            right_border_pil = Image.new('RGB', (right_border_width, actual_h), (0, 0, 0))
-            right_border_pil = draw_coordinate_axes(right_border_pil, position="right", rotate_180=False, env_id=env_id)
-            
             # 将坐标系绘制到拼接后的图像上
             concatenated_pil.paste(left_border_pil, (0, 0))
-            concatenated_pil.paste(right_border_pil, (left_border_width + actual_w1 + border_width + actual_w2, 0))
+            
+            # 如果是 RouteStick 任务，在右侧黑色边框绘制旋转方向示意图
+            if env_id == "RouteStick" and right_border_width > 0:
+                right_border_pil = Image.new('RGB', (right_border_width, actual_h), (0, 0, 0))
+                right_border_pil = draw_coordinate_axes(right_border_pil, position="right", rotate_180=False, env_id=env_id)
+                
+                # 计算右侧边框在拼接图像中的位置
+                right_border_x = left_border_width + actual_w1
+                concatenated_pil.paste(right_border_pil, (right_border_x, 0))
             
             # 转换回numpy数组
             concatenated_frame = np.array(concatenated_pil)
         else:
-            # 不显示坐标系，直接拼接（不添加左右边框）
-            concatenated_frame = np.concatenate([frame1, middle_border, frame2], axis=1)
+            # 不显示坐标系，直接使用原帧
+            concatenated_frame = frame1
         
-        # 添加底部黑边用于标注
-        h, w = concatenated_frame.shape[:2]
-        border_height = 40  # 黑边高度
-        # 创建带黑边的图像
-        frame_with_border = np.zeros((h + border_height, w, 3), dtype=np.uint8)
-        frame_with_border[:h, :] = concatenated_frame
-        
-        # 转换为PIL图像以便添加文字
-        pil_img = Image.fromarray(frame_with_border)
-        draw = ImageDraw.Draw(pil_img)
-        
-        # 尝试加载字体，如果失败则使用默认字体
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
-        except:
-            try:
-                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
-            except:
-                font = ImageFont.load_default()
-        
-        # 在左侧黑边区域添加 "base camera" 标注
-        left_text = "base camera"
-        left_text_bbox = draw.textbbox((0, 0), left_text, font=font)
-        left_text_width = left_text_bbox[2] - left_text_bbox[0]
-        left_text_height = left_text_bbox[3] - left_text_bbox[1]
-        if show_coordinate_axes:
-            left_x = left_border_width + actual_w1 // 2 - left_text_width // 2  # 左侧图像中心位置（考虑左侧边框）
-        else:
-            left_x = actual_w1 // 2 - left_text_width // 2  # 左侧图像中心位置（无左侧边框）
-        left_y = h + (border_height - left_text_height) // 2
-        draw.text((left_x, left_y), left_text, fill="white", font=font)
-        
-        # 在右侧黑边区域添加 "wrist camera" 标注
-        right_text = "wrist camera"
-        right_text_bbox = draw.textbbox((0, 0), right_text, font=font)
-        right_text_width = right_text_bbox[2] - right_text_bbox[0]
-        right_text_height = right_text_bbox[3] - right_text_bbox[1]
-        if show_coordinate_axes:
-            right_x = left_border_width + actual_w1 + border_width + actual_w2 // 2 - right_text_width // 2  # 右侧图像中心位置（考虑左侧边框、中间黑边）
-        else:
-            right_x = actual_w1 + border_width + actual_w2 // 2 - right_text_width // 2  # 右侧图像中心位置（无左侧边框）
-        right_y = h + (border_height - right_text_height) // 2
-        draw.text((right_x, right_y), right_text, fill="white", font=font)
-        
-        # 转换回numpy数组
-        concatenated_frame = np.array(pil_img)
         concatenated_frames.append(concatenated_frame)
     
     return concatenated_frames
@@ -254,12 +175,11 @@ def draw_coordinate_axes(img, position="right", rotate_180=False, env_id=None):
     # 获取图片尺寸
     width, height = img.size
     
-    # 如果是 RouteStick 任务且位置在左侧，在最左边绘制旋转方向示意图
-    if env_id == "RouteStick" and position == "left":
-        # 绘制 clockwise 和 counterclockwise 示意图
-        # 示意图位置：在图像最左边，垂直排列
-        illustration_width = 150  # 示意图区域宽度，增加宽度以容纳文字
-        illustration_spacing = 20  # 两个示意图之间的间距
+    # 如果是 RouteStick 任务且位置在右侧，绘制旋转方向示意图
+    if env_id == "RouteStick" and position == "right":
+        # 绘制四个半圆箭头示意图（2×2 网格）
+        # 示意图位置：在图像右侧，2×2 网格布局
+        illustration_width = 220  # 示意图区域宽度（已弃用，保留以保持兼容性）
         
         # 尝试加载字体
         try:
@@ -271,107 +191,203 @@ def draw_coordinate_axes(img, position="right", rotate_180=False, env_id=None):
                 small_font = ImageFont.load_default()
         
         line_color = (255, 255, 255)  # 白色
-        circle_radius = 25  # 圆形箭头半径
+        semicircle_radius = 18  # 半圆半径
+        arrow_size = 6  # 箭头大小
+        grid_spacing_x = 35  # 水平格子间距（增加以分开左右两列）
+        grid_spacing_y = 20  # 垂直格子间距（保持原值）
+        line_width = 2  # 线宽
         
-        # Clockwise 示意图（上方）
-        cw_center_x = illustration_width // 2
-        cw_center_y = height // 2 - circle_radius - illustration_spacing // 2
+        # 计算网格布局
+        # 网格总宽度：2个半圆 + 1个间距 = 2*18*2 + 35 = 107px
+        grid_width = semicircle_radius * 2 + grid_spacing_x
+        grid_height = semicircle_radius * 2 + grid_spacing_y
         
-        # 绘制顺时针圆形箭头（从下方开始，顺时针转到右侧）
-        # 范围：90度（下）-> 180度（左）-> 270度（上）-> 360度（右）
-        # 这样箭头在右侧，方向向下
-        arc_points = []
-        for angle_deg in range(90, 361, 5):  # 顺时针增加
+        # 网格中心位置（位于右侧黑色区域的中心）
+        # width 为右侧黑色区域的宽度（240），将网格中心放在区域中心
+        grid_center_x = width // 2
+        grid_center_y = height // 2
+        
+        # 计算四个格子的中心位置
+        # 左列中心 x
+        left_col_x = grid_center_x - grid_spacing_x // 2 - semicircle_radius
+        # 右列中心 x
+        right_col_x = grid_center_x + grid_spacing_x // 2 + semicircle_radius
+        # 上行（clockwise）中心 y
+        cw_row_y = grid_center_y - grid_spacing_y // 2 - semicircle_radius
+        # 下行（counterclockwise）中心 y
+        ccw_row_y = grid_center_y + grid_spacing_y // 2 + semicircle_radius
+        
+        # 1. 绘制 left clockwise（左上格）：左半圆，右→左（顺时针），箭头在左端朝上
+        lcw_center_x = left_col_x
+        lcw_center_y = cw_row_y
+        # 左半圆：从 0°（右）到 180°（左），向左凸出
+        # 圆心在格子中心右侧，使半圆向左凸出
+        lcw_circle_center_x = lcw_center_x + semicircle_radius
+        lcw_circle_center_y = lcw_center_y
+        arc_points_lcw = []
+        for angle_deg in range(0, 181, 5):  # 从 0° 到 180°（顺时针）
             angle_rad = math.radians(angle_deg)
-            x = cw_center_x + circle_radius * math.cos(angle_rad)
-            y = cw_center_y + circle_radius * math.sin(angle_rad)
-            arc_points.append((x, y))
+            x = lcw_circle_center_x + semicircle_radius * math.cos(angle_rad)
+            y = lcw_circle_center_y + semicircle_radius * math.sin(angle_rad)
+            arc_points_lcw.append((x, y))
         # 绘制圆弧线段
-        for i in range(len(arc_points) - 1):
-            draw.line([arc_points[i], arc_points[i+1]], fill=line_color, width=2)
-        
-        # 绘制箭头头部（在0度/360度位置，即右侧）
-        # 在右侧，顺时针切线方向是向下
-        arrow_size = 6
-        arrow_x = cw_center_x + circle_radius
-        arrow_y = cw_center_y
-        # 箭头指向下
+        for i in range(len(arc_points_lcw) - 1):
+            draw.line([arc_points_lcw[i], arc_points_lcw[i+1]], fill=line_color, width=line_width)
+        # 箭头在左端（180°位置），朝上
+        arrow_x_lcw = lcw_circle_center_x + semicircle_radius * math.cos(math.radians(180))
+        arrow_y_lcw = lcw_circle_center_y + semicircle_radius * math.sin(math.radians(180))
+        # 箭头朝上（在180°位置，切线方向向上）
         draw.polygon(
-            [(arrow_x, arrow_y + arrow_size), # 尖端向下
-             (arrow_x - arrow_size, arrow_y - arrow_size // 2),
-             (arrow_x + arrow_size, arrow_y - arrow_size // 2)],
+            [(arrow_x_lcw, arrow_y_lcw - arrow_size),  # 尖端向上
+             (arrow_x_lcw - arrow_size, arrow_y_lcw + arrow_size // 2),
+             (arrow_x_lcw + arrow_size, arrow_y_lcw + arrow_size // 2)],
             fill=line_color
         )
-        
-        # 添加 "clockwise" 文字标签
-        cw_text = "clockwise"
-        cw_bbox = draw.textbbox((0, 0), cw_text, font=small_font)
-        cw_text_width = cw_bbox[2] - cw_bbox[0]
-        cw_text_height = cw_bbox[3] - cw_bbox[1]
-        cw_text_x = cw_center_x - cw_text_width // 2
-        cw_text_y = cw_center_y + circle_radius + 5
+        # 添加标签 "L CW"
+        lcw_text = "L CW"
+        lcw_bbox = draw.textbbox((0, 0), lcw_text, font=small_font)
+        lcw_text_width = lcw_bbox[2] - lcw_bbox[0]
+        lcw_text_height = lcw_bbox[3] - lcw_bbox[1]
+        lcw_text_x = lcw_center_x - lcw_text_width // 2
+        lcw_text_y = lcw_center_y + semicircle_radius + 5
         draw.rectangle(
-            [(cw_text_x - 2, cw_text_y - 2),
-             (cw_text_x + cw_text_width + 2, cw_text_y + cw_text_height + 2)],
+            [(lcw_text_x - 2, lcw_text_y - 2),
+             (lcw_text_x + lcw_text_width + 2, lcw_text_y + lcw_text_height + 2)],
             fill=(0, 0, 0)
         )
-        draw.text((cw_text_x, cw_text_y), cw_text, fill=line_color, font=small_font)
+        draw.text((lcw_text_x, lcw_text_y), lcw_text, fill=line_color, font=small_font)
         
-        # Counterclockwise 示意图（下方）
-        ccw_center_x = illustration_width // 2
-        ccw_center_y = height // 2 + circle_radius + illustration_spacing // 2
-        
-        # 绘制逆时针圆形箭头（从下方开始，逆时针转到左侧）
-        # 范围：90度（下）-> 0度（右）-> -90度（上）-> -180度（左）
-        # 这样箭头在左侧，方向向下
-        arc_points_ccw = []
-        for angle_deg in range(90, -181, -5):  # 逆时针减小
+        # 2. 绘制 right clockwise（右上格）：右半圆，左→右（顺时针），箭头在右端朝上
+        rcw_center_x = right_col_x
+        rcw_center_y = cw_row_y
+        # 右半圆：从 180°（左）到 0°（右），向右凸出
+        # 圆心在格子中心左侧，使半圆向右凸出
+        rcw_circle_center_x = rcw_center_x - semicircle_radius
+        rcw_circle_center_y = rcw_center_y
+        arc_points_rcw = []
+        for angle_deg in range(180, -1, -5):  # 从 180° 到 0°（顺时针）
             angle_rad = math.radians(angle_deg)
-            x = ccw_center_x + circle_radius * math.cos(angle_rad)
-            y = ccw_center_y + circle_radius * math.sin(angle_rad)
-            arc_points_ccw.append((x, y))
+            x = rcw_circle_center_x + semicircle_radius * math.cos(angle_rad)
+            y = rcw_circle_center_y + semicircle_radius * math.sin(angle_rad)
+            arc_points_rcw.append((x, y))
         # 绘制圆弧线段
-        for i in range(len(arc_points_ccw) - 1):
-            draw.line([arc_points_ccw[i], arc_points_ccw[i+1]], fill=line_color, width=2)
-        
-        # 绘制箭头头部（在180度/-180度位置，即左侧）
-        # 在左侧，逆时针切线方向是向下
-        arrow_x_ccw = ccw_center_x - circle_radius
-        arrow_y_ccw = ccw_center_y
-        # 箭头指向下
+        for i in range(len(arc_points_rcw) - 1):
+            draw.line([arc_points_rcw[i], arc_points_rcw[i+1]], fill=line_color, width=line_width)
+        # 箭头在右端（0°位置），朝上
+        arrow_x_rcw = rcw_circle_center_x + semicircle_radius * math.cos(math.radians(0))
+        arrow_y_rcw = rcw_circle_center_y + semicircle_radius * math.sin(math.radians(0))
+        # 箭头朝上（在0°位置，切线方向向上）
         draw.polygon(
-            [(arrow_x_ccw, arrow_y_ccw + arrow_size), # 尖端向下
-             (arrow_x_ccw - arrow_size, arrow_y_ccw - arrow_size // 2),
-             (arrow_x_ccw + arrow_size, arrow_y_ccw - arrow_size // 2)],
+            [(arrow_x_rcw, arrow_y_rcw - arrow_size),  # 尖端向上
+             (arrow_x_rcw - arrow_size, arrow_y_rcw + arrow_size // 2),
+             (arrow_x_rcw + arrow_size, arrow_y_rcw + arrow_size // 2)],
             fill=line_color
         )
-        
-        # 添加 "counterclockwise" 文字标签
-        ccw_text = "counterclockwise"
-        ccw_bbox = draw.textbbox((0, 0), ccw_text, font=small_font)
-        ccw_text_width = ccw_bbox[2] - ccw_bbox[0]
-        ccw_text_height = ccw_bbox[3] - ccw_bbox[1]
-        ccw_text_x = ccw_center_x - ccw_text_width // 2
-        ccw_text_y = ccw_center_y + circle_radius + 5
+        # 添加标签 "R CW"
+        rcw_text = "R CW"
+        rcw_bbox = draw.textbbox((0, 0), rcw_text, font=small_font)
+        rcw_text_width = rcw_bbox[2] - rcw_bbox[0]
+        rcw_text_height = rcw_bbox[3] - rcw_bbox[1]
+        rcw_text_x = rcw_center_x - rcw_text_width // 2
+        rcw_text_y = rcw_center_y + semicircle_radius + 5
         draw.rectangle(
-            [(ccw_text_x - 2, ccw_text_y - 2),
-             (ccw_text_x + ccw_text_width + 2, ccw_text_y + ccw_text_height + 2)],
+            [(rcw_text_x - 2, rcw_text_y - 2),
+             (rcw_text_x + rcw_text_width + 2, rcw_text_y + rcw_text_height + 2)],
             fill=(0, 0, 0)
         )
-        draw.text((ccw_text_x, ccw_text_y), ccw_text, fill=line_color, font=small_font)
+        draw.text((rcw_text_x, rcw_text_y), rcw_text, fill=line_color, font=small_font)
+        
+        # 3. 绘制 left counterclockwise（左下格）：左半圆，左→右（逆时针），箭头在右端朝下
+        lccw_center_x = left_col_x
+        lccw_center_y = ccw_row_y
+        # 左半圆：从 180°（左）到 0°（右），向左凸出
+        # 圆心在格子中心右侧，使半圆向左凸出
+        lccw_circle_center_x = lccw_center_x + semicircle_radius
+        lccw_circle_center_y = lccw_center_y
+        arc_points_lccw = []
+        for angle_deg in range(180, -1, -5):  # 从 180° 到 0°（逆时针）
+            angle_rad = math.radians(angle_deg)
+            x = lccw_circle_center_x + semicircle_radius * math.cos(angle_rad)
+            y = lccw_circle_center_y + semicircle_radius * math.sin(angle_rad)
+            arc_points_lccw.append((x, y))
+        # 绘制圆弧线段
+        for i in range(len(arc_points_lccw) - 1):
+            draw.line([arc_points_lccw[i], arc_points_lccw[i+1]], fill=line_color, width=line_width)
+        # 箭头在右端（0°位置），朝下
+        arrow_x_lccw = lccw_circle_center_x + semicircle_radius * math.cos(math.radians(0))
+        arrow_y_lccw = lccw_circle_center_y + semicircle_radius * math.sin(math.radians(0))
+        # 箭头朝下（在0°位置，切线方向向下）
+        draw.polygon(
+            [(arrow_x_lccw, arrow_y_lccw + arrow_size),  # 尖端向下
+             (arrow_x_lccw - arrow_size, arrow_y_lccw - arrow_size // 2),
+             (arrow_x_lccw + arrow_size, arrow_y_lccw - arrow_size // 2)],
+            fill=line_color
+        )
+        # 添加标签 "L CCW"
+        lccw_text = "L CCW"
+        lccw_bbox = draw.textbbox((0, 0), lccw_text, font=small_font)
+        lccw_text_width = lccw_bbox[2] - lccw_bbox[0]
+        lccw_text_height = lccw_bbox[3] - lccw_bbox[1]
+        lccw_text_x = lccw_center_x - lccw_text_width // 2
+        lccw_text_y = lccw_center_y + semicircle_radius + 5
+        draw.rectangle(
+            [(lccw_text_x - 2, lccw_text_y - 2),
+             (lccw_text_x + lccw_text_width + 2, lccw_text_y + lccw_text_height + 2)],
+            fill=(0, 0, 0)
+        )
+        draw.text((lccw_text_x, lccw_text_y), lccw_text, fill=line_color, font=small_font)
+        
+        # 4. 绘制 right counterclockwise（右下格）：右半圆，右→左（逆时针），箭头在左端朝下
+        rccw_center_x = right_col_x
+        rccw_center_y = ccw_row_y
+        # 右半圆：从 0°（右）到 180°（左），向右凸出
+        # 圆心在格子中心左侧，使半圆向右凸出
+        rccw_circle_center_x = rccw_center_x - semicircle_radius
+        rccw_circle_center_y = rccw_center_y
+        arc_points_rccw = []
+        for angle_deg in range(0, 181, 5):  # 从 0° 到 180°（逆时针）
+            angle_rad = math.radians(angle_deg)
+            x = rccw_circle_center_x + semicircle_radius * math.cos(angle_rad)
+            y = rccw_circle_center_y + semicircle_radius * math.sin(angle_rad)
+            arc_points_rccw.append((x, y))
+        # 绘制圆弧线段
+        for i in range(len(arc_points_rccw) - 1):
+            draw.line([arc_points_rccw[i], arc_points_rccw[i+1]], fill=line_color, width=line_width)
+        # 箭头在左端（180°位置），朝下
+        arrow_x_rccw = rccw_circle_center_x + semicircle_radius * math.cos(math.radians(180))
+        arrow_y_rccw = rccw_circle_center_y + semicircle_radius * math.sin(math.radians(180))
+        # 箭头朝下（在180°位置，切线方向向下）
+        draw.polygon(
+            [(arrow_x_rccw, arrow_y_rccw + arrow_size),  # 尖端向下
+             (arrow_x_rccw - arrow_size, arrow_y_rccw - arrow_size // 2),
+             (arrow_x_rccw + arrow_size, arrow_y_rccw - arrow_size // 2)],
+            fill=line_color
+        )
+        # 添加标签 "R CCW"
+        rccw_text = "R CCW"
+        rccw_bbox = draw.textbbox((0, 0), rccw_text, font=small_font)
+        rccw_text_width = rccw_bbox[2] - rccw_bbox[0]
+        rccw_text_height = rccw_bbox[3] - rccw_bbox[1]
+        rccw_text_x = rccw_center_x - rccw_text_width // 2
+        rccw_text_y = rccw_center_y + semicircle_radius + 5
+        draw.rectangle(
+            [(rccw_text_x - 2, rccw_text_y - 2),
+             (rccw_text_x + rccw_text_width + 2, rccw_text_y + rccw_text_height + 2)],
+            fill=(0, 0, 0)
+        )
+        draw.text((rccw_text_x, rccw_text_y), rccw_text, fill=line_color, font=small_font)
+        
+        # 右侧区域只绘制旋转示意图，不绘制坐标系，直接返回
+        return img
     
     # 坐标系位置（在黑色边框内）
     axis_size = 60  # 坐标系大小
     
-    # 如果是 RouteStick 任务且位置在左侧，坐标系需要向右偏移以避开旋转方向示意图
-    # 保持左右两个坐标系中心距离图片的距离一致
-    # 右侧坐标系在宽为150的边框中心，即距离图片 150/2 = 75
-    # 左侧坐标系在宽为250的边框中，应距离右边（图片侧）75
-    # 即 x = width - 75 - axis_size/2
+    # 如果是 RouteStick 任务且位置在左侧，坐标系位于左侧区域
+    # 与右侧旋转示意图对称，距离左边缘75像素
     if env_id == "RouteStick" and position == "left":
-        # 保持与右侧对称，距离右边缘（靠近图片的一侧）75像素中心
-        # width 是总宽度 (250)，中心点应为 width - 75
-        center_x_pos = width - 75
+        # 坐标系中心位于左侧区域，距离左边缘75像素
+        center_x_pos = 75
         origin_x = center_x_pos - axis_size // 2
     else:
         # 坐标轴中心位于边框宽度的中心

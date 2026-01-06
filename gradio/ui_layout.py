@@ -77,7 +77,7 @@ UI布局模块
 """
 import gradio as gr
 from user_manager import user_manager
-from config import RESTRICT_VIDEO_PLAYBACK, REFERENCE_VIEW_HEIGHT, LIVE_OBSERVATION_SCALE, ACTION_SCALE, CONTROL_SCALE, ENV_IDS
+from config import RESTRICT_VIDEO_PLAYBACK, REFERENCE_VIEW_HEIGHT, LIVE_OBSERVATION_SCALE, ACTION_SCALE, CONTROL_SCALE, ENV_IDS, FONT_SIZE
 from note_content import get_task_hint
 from gradio_callbacks import (
     login_and_load_task,
@@ -552,9 +552,26 @@ SYNC_JS = """
 })();
 """
 
-CSS = f"""#live_obs {{ }}
+CSS = f"""/* 全局字体大小配置 - 统一应用到所有UI组件 */
+/* 使用多个选择器确保覆盖所有Gradio元素 */
+body, html {{
+    font-size: {FONT_SIZE} !important;
+}}
+.gradio-container, #gradio-app {{
+    font-size: {FONT_SIZE} !important;
+}}
+/* 直接对所有文本元素设置统一的字体大小 */
+.gradio-container *, #gradio-app *, button, input, textarea, select, label, p, span, div, h1, h2, h3, h4, h5, h6, .gr-button, .gr-textbox, .gr-dropdown, .gr-radio, .gr-checkbox, .gr-markdown {{
+    font-size: {FONT_SIZE} !important;
+}}
+/* 紧凑日志文本框也使用统一的字体大小 */
+.compact-log textarea {{
+    max-height: 120px !important;
+    font-family: monospace;
+    font-size: {FONT_SIZE} !important;
+}}
+#live_obs {{ }}
 #control_panel {{ border: 1px solid #e5e7eb; padding: 15px; border-radius: 8px; background-color: #f9fafb; }}
-.compact-log textarea {{ max-height: 120px !important; font-family: monospace; font-size: 0.85em; }}
 .ref-zone {{ border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px; }}
 #combined_view_html {{ border: none !important; }}
 #combined_view_html img {{ max-width: 100%; height: {REFERENCE_VIEW_HEIGHT}; width: auto; margin: 0 auto; display: block; border: none !important; border-radius: 8px; object-fit: contain; }}
@@ -696,6 +713,18 @@ CSS = f"""#live_obs {{ }}
 @keyframes spin {{
     from {{ transform: rotate(0deg); }}    /* 起始角度：0度 */
     to {{ transform: rotate(360deg); }}    /* 结束角度：360度（完整旋转一圈） */
+}}
+/* Operation Zone 提示文字样式 - 放在标题右侧 */
+#operation_hint {{
+    text-align: right !important;
+    font-size: {FONT_SIZE} !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-weight: 500 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex: 1 !important;
 }}"""
 if RESTRICT_VIDEO_PLAYBACK:
     CSS += """
@@ -714,7 +743,9 @@ def create_ui_blocks():
     """
     # 注意：在 Gradio 6.0+ 中，css 和 js 参数应该传递给 launch() 或 mount_gradio_app()，而不是 Blocks 构造函数
     with gr.Blocks(title="Oracle Planner Interface") as demo:
-        gr.Markdown("## HistoryBench Human Evaluation 🚀🚀🚀")
+        with gr.Row():
+            gr.Markdown("## HistoryBench Human Evaluation 🚀🚀🚀")
+            operation_hint = gr.Markdown("Read the task goal, and select correct action in the Keypoint Selection🎯 panel and execute it to finish the task", elem_id="operation_hint")
         
         # ============================================
         # Loading Overlay 全屏加载遮罩层组件
@@ -861,7 +892,6 @@ def create_ui_blocks():
 
         # --- Main Interface (Hidden initially) ---
         with gr.Group(visible=False) as main_interface:
-            
             # --- Top Container: Reference Zone (35-40% Height) ---
             with gr.Row(elem_classes="ref-zone"):
                 # Left: Text Info (30%)
@@ -982,13 +1012,10 @@ def create_ui_blocks():
                              gr.Markdown("**Coords** 📍")
                              coords_box = gr.Textbox(label="Coords", value="", interactive=False, show_label=False, elem_id="coords_box")
                          
-                         gr.Markdown("---")
                          exec_btn = gr.Button("EXECUTE 🤖", variant="stop", size="lg", elem_id="exec_btn")
                          
-                         gr.Markdown("---")
                          next_task_btn = gr.Button("Next Task 🔄", variant="primary", interactive=False, elem_id="next_task_btn")
                          
-                         gr.Markdown("---")
                          # 回退到模式选择页面按钮：允许用户从执行界面返回到模式选择页面，重新选择测试模式或录制模式
                          back_to_landing_btn = gr.Button("Back to Mode Selection 🔙", variant="secondary", interactive=True, elem_id="back_to_landing_btn")
 

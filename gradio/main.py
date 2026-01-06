@@ -99,12 +99,12 @@ streaming_service.py (流媒体服务层 - 主进程)
   │   └── 功能：获取 Session 和队列信息
   │       - 通过 get_session() 获取 ProcessSessionProxy（代理对象）
   │       - 通过 FRAME_QUEUES 访问帧队列
-  │       - 监控 ProcessSessionProxy.base_frames 和 ProcessSessionProxy.wrist_frames 的变化
+  │       - 监控 ProcessSessionProxy.base_frames 的变化
   │       - 这些帧数据由后台同步线程从工作进程实时更新到主进程缓存
   │
   └── image_utils.py
       └── 功能：使用 concatenate_frames_horizontally 函数
-            将 base_frames 和 wrist_frames 水平拼接成组合视图
+            处理 base_frames 并添加标注和坐标系
 
 image_utils.py (工具层)
   └── 功能：纯工具函数库，无业务逻辑依赖
@@ -138,7 +138,7 @@ config.py (配置层)
    - stream_queue: 工作进程推送新的视频帧到主进程
 
 4. 数据同步：
-   - ProcessSessionProxy 维护本地状态缓存（base_frames, wrist_frames 等）
+   - ProcessSessionProxy 维护本地状态缓存（base_frames 等）
    - 后台同步线程持续从 stream_queue 接收新帧并更新缓存
    - streaming_service 从代理的本地缓存读取帧数据，无需直接访问工作进程
 

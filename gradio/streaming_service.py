@@ -7,7 +7,7 @@
 2. 监控帧变化并将新帧加入队列
 3. 生成MJPEG流式视频供浏览器播放
 
-注意：session.base_frames 和 session.wrist_frames 来自 ProcessSessionProxy 的本地缓存，
+注意：session.base_frames 来自 ProcessSessionProxy 的本地缓存，
 这些数据由后台同步线程从工作进程实时更新。
 """
 import queue
@@ -36,14 +36,13 @@ class FrameQueueManager:
     """帧队列管理器"""
     
     @staticmethod
-    def init_queue(uid, pre_base_count, pre_wrist_count):
+    def init_queue(uid, pre_base_count):
         """
         初始化队列并启动监控线程
         
         Args:
             uid: session ID
             pre_base_count: 当前已有的 base_frames 数量（用于标记监控起始点）
-            pre_wrist_count: 当前已有的 wrist_frames 数量（用于标记监控起始点）
         
         逻辑说明：
         - 如果队列不存在，创建新队列
@@ -56,7 +55,6 @@ class FrameQueueManager:
             FRAME_QUEUES[uid] = {
                 "frame_queue": queue.Queue(),
                 "last_base_count": pre_base_count,
-                "last_wrist_count": pre_wrist_count,
                 "streaming_active": True,
                 "monitor_thread": None
             }
@@ -64,7 +62,6 @@ class FrameQueueManager:
             # 队列已存在，更新监控起始点
             FRAME_QUEUES[uid]["streaming_active"] = True
             FRAME_QUEUES[uid]["last_base_count"] = pre_base_count
-            FRAME_QUEUES[uid]["last_wrist_count"] = pre_wrist_count
         
         # 【重要修复】检查是否需要启动监控线程
         # 如果已有监控线程在运行，先停止旧线程再启动新线程
@@ -82,7 +79,7 @@ class FrameQueueManager:
         # 启动新的后台监控线程，使用正确的起始点参数
         monitor_thread = threading.Thread(
             target=continuous_frame_monitor,
-            args=(uid, pre_base_count, pre_wrist_count),
+            args=(uid, pre_base_count),
             daemon=True
         )
         monitor_thread.start()
@@ -120,7 +117,7 @@ class FrameQueueManager:
         return get_frame_queue_info(uid)
 
 
-def monitor_frames_and_enqueue(uid, pre_base_count, pre_wrist_count):
+def monitor_frames_and_enqueue(uid, pre_base_count):
     """
     监控session的帧变化，将新帧加入队列
     
@@ -129,47 +126,43 @@ def monitor_frames_and_enqueue(uid, pre_base_count, pre_wrist_count):
     
     工作原理：
     - 比较当前帧数量与上次检查时的数量
-    - 如果发现新帧（数量增加），提取新增的帧并拼接
-    - 将拼接后的帧加入队列供 MJPEG 流使用
+    - 如果发现新帧（数量增加），提取新增的帧并处理
+    - 将处理后的帧加入队列供 MJPEG 流使用
     
     Args:
         uid: session ID
         pre_base_count: 上次检查时的base_frames数量
-        pre_wrist_count: 上次检查时的wrist_frames数量
     
     Returns:
-        (current_base_count, current_wrist_count): 当前帧数
+        current_base_count: 当前帧数
     """
     session = get_session(uid)
     if not session or uid not in FRAME_QUEUES:
-        return pre_base_count, pre_wrist_count
+        return pre_base_count
     
     queue_info = FRAME_QUEUES[uid]
     if not queue_info["streaming_active"]:
-        return pre_base_count, pre_wrist_count
+        return pre_base_count
     
     # 检查是否为演示模式：如果是演示模式，不添加帧到队列
     is_demonstration = getattr(session, 'is_demonstration', False)
     if is_demonstration:
         # 演示模式下，仍然更新帧计数，但不添加帧到队列
         current_base_count = len(session.base_frames) if session.base_frames else 0
-        current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
-        return current_base_count, current_wrist_count
+        return current_base_count
     
     # 检查新帧（从 ProcessSessionProxy 的本地缓存读取）
     current_base_count = len(session.base_frames) if session.base_frames else 0
-    current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
     
     # 获取新增的帧
-    if current_base_count > pre_base_count or current_wrist_count > pre_wrist_count:
-        new_base = session.base_frames[pre_base_count:current_base_count] if current_base_count > pre_base_count else []
-        new_wrist = session.wrist_frames[pre_wrist_count:current_wrist_count] if current_wrist_count > pre_wrist_count else []
+    if current_base_count > pre_base_count:
+        new_base = session.base_frames[pre_base_count:current_base_count]
         
-        # 拼接并加入队列
-        if new_base or new_wrist:
+        # 处理并加入队列
+        if new_base:
             env_id = getattr(session, 'env_id', None)
-            concatenated = concatenate_frames_horizontally(new_base, new_wrist, env_id=env_id)
-            for frame in concatenated:
+            processed_frames = concatenate_frames_horizontally(new_base, env_id=env_id)
+            for frame in processed_frames:
                 try:
                     queue_info["frame_queue"].put(frame, block=False)
                 except queue.Full:
@@ -177,10 +170,10 @@ def monitor_frames_and_enqueue(uid, pre_base_count, pre_wrist_count):
                     print(f"Warning: Frame queue full for {uid}, dropping frame")
                     break
     
-    return current_base_count, current_wrist_count
+    return current_base_count
 
 
-def continuous_frame_monitor(uid, pre_base_count, pre_wrist_count):
+def continuous_frame_monitor(uid, pre_base_count):
     """
     持续监控帧变化并加入队列的后台线程函数
     
@@ -190,10 +183,8 @@ def continuous_frame_monitor(uid, pre_base_count, pre_wrist_count):
     Args:
         uid: session ID
         pre_base_count: 监控起始点的base_frames数量
-        pre_wrist_count: 监控起始点的wrist_frames数量
     """
     last_base_count = pre_base_count
-    last_wrist_count = pre_wrist_count
     
     while True:
         if uid not in FRAME_QUEUES:
@@ -204,8 +195,8 @@ def continuous_frame_monitor(uid, pre_base_count, pre_wrist_count):
             break
         
         # 监控帧变化
-        last_base_count, last_wrist_count = monitor_frames_and_enqueue(
-            uid, last_base_count, last_wrist_count
+        last_base_count = monitor_frames_and_enqueue(
+            uid, last_base_count
         )
         
         # 等待一段时间后再次检查
@@ -294,13 +285,11 @@ def generate_mjpeg_stream(uid: str):
                         session = get_session(uid)
                         if session:
                             last_base_frame = session.base_frames[-1] if session.base_frames else None
-                            last_wrist_frame = session.wrist_frames[-1] if session.wrist_frames else None
                             
-                            if last_base_frame is not None or last_wrist_frame is not None:
+                            if last_base_frame is not None:
                                 env_id = getattr(session, 'env_id', None)
                                 current_frames = concatenate_frames_horizontally(
-                                    [last_base_frame] if last_base_frame is not None else [],
-                                    [last_wrist_frame] if last_wrist_frame is not None else [],
+                                    [last_base_frame],
                                     env_id=env_id
                                 )
                                 if current_frames:

@@ -7,6 +7,9 @@ VIDEO_PLAYBACK_FPS = 30.0  # Frame rate for demonstration video playback
 USE_SEGMENTED_VIEW = False  # Set to True to use segmented view, False to use original image
 REFERENCE_VIEW_HEIGHT = "40vh"  # Height of the reference view image
 
+# 全局字体大小配置（绝对值）
+FONT_SIZE = "20px"  # 统一字体大小，可在config.py中调整（如"14px", "16px", "18px", "20px"等）
+
 # Operation Zone 三列宽度比例 (Live Observation : Action : Control)
 LIVE_OBSERVATION_SCALE = 3  # Live Observation 列的宽度比例
 ACTION_SCALE = 3  # Action 列的宽度比例
@@ -14,6 +17,9 @@ CONTROL_SCALE = 3  # Control 列的宽度比例
 
 # Session超时配置
 SESSION_TIMEOUT = 300  # Session超时时间（秒），如果30秒内没有execute_step操作，将自动回收session
+
+# 兜底执行次数配置
+EXECUTE_LIMIT_OFFSET = 4  # 兜底执行次数 = non_demonstration_task_length + EXECUTE_LIMIT_OFFSET
 
 
 # 【环境ID列表】

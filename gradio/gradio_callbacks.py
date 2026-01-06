@@ -37,7 +37,7 @@ from streaming_service import FrameQueueManager, cleanup_frame_queue
 from image_utils import draw_marker, save_video, concatenate_frames_horizontally
 from user_manager import user_manager, LeaseLost
 from logger import log_user_action, create_new_attempt, has_existing_actions
-from config import USE_SEGMENTED_VIEW, REFERENCE_VIEW_HEIGHT, should_show_demo_video, SESSION_TIMEOUT
+from config import USE_SEGMENTED_VIEW, REFERENCE_VIEW_HEIGHT, should_show_demo_video, SESSION_TIMEOUT, EXECUTE_LIMIT_OFFSET
 from process_session import ScrewPlanFailureError, ProcessSessionProxy
 from note_content import get_task_hint
 
@@ -404,27 +404,24 @@ def login_and_load_task(username, uid):
         # 初始化Reference Views队列（如果没有demo video，需要立即显示Reference Views）
         # 注意：即使手动添加了初始帧，generate_mjpeg_stream 也有 fallback 机制直接从 session 获取帧
         # 这确保了即使队列初始化时序有问题，用户也能看到当前状态
-        if session.base_frames or session.wrist_frames:
+        if session.base_frames:
             from state_manager import FRAME_QUEUES
             
             # 初始化队列：传入当前frames数量作为监控起始点
             # 监控线程会从这些帧之后开始检测新帧，不会重复添加已存在的帧
             current_base_count = len(session.base_frames) if session.base_frames else 0
-            current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
             
             if uid not in FRAME_QUEUES:
-                FrameQueueManager.init_queue(uid, current_base_count, current_wrist_count)
+                FrameQueueManager.init_queue(uid, current_base_count)
             
             # 手动添加最后一帧到队列（重复多次），确保初始显示
             # 这是可选的优化，因为 generate_mjpeg_stream 有 fallback 机制
             last_base_frame = session.base_frames[-1] if session.base_frames else None
-            last_wrist_frame = session.wrist_frames[-1] if session.wrist_frames else None
             
-            if last_base_frame is not None or last_wrist_frame is not None:
+            if last_base_frame is not None:
                 env_id = getattr(session, 'env_id', None)
                 last_frames = concatenate_frames_horizontally(
-                    [last_base_frame] if last_base_frame is not None else [],
-                    [last_wrist_frame] if last_wrist_frame is not None else [],
+                    [last_base_frame],
                     env_id=env_id
                 )
                 
@@ -501,31 +498,27 @@ def confirm_demo_watched(uid, username):
     
     # 初始化Reference Views队列（确认demo后，需要显示Reference Views）
     session = get_session(uid)
-    if session and (session.base_frames or session.wrist_frames):
+    if session and session.base_frames:
         from state_manager import FRAME_QUEUES
         
         # 初始化队列（如果还没有，或者队列存在但不活跃）
         # 传入当前frames数量，这样监控线程就知道这些frames已存在，不会将它们作为"新"frames加入队列
         current_base_count = len(session.base_frames) if session.base_frames else 0
-        current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
         
         # 检查队列是否存在且活跃，如果不存在或不活跃，则初始化
         queue_info = FRAME_QUEUES.get(uid)
         if not queue_info or not queue_info.get("streaming_active", False):
-            FrameQueueManager.init_queue(uid, current_base_count, current_wrist_count)
+            FrameQueueManager.init_queue(uid, current_base_count)
         
-        # 只获取最后一帧并拼接
+        # 只获取最后一帧并处理
         last_base_frame = session.base_frames[-1] if session.base_frames else None
-        last_wrist_frame = session.wrist_frames[-1] if session.wrist_frames else None
-        # 传入 env_id 确保首帧也能绘制坐标系
         # 传入 env_id 确保首帧也能绘制坐标系
         env_id_for_concat = getattr(session, 'env_id', None)
         
-        if last_base_frame is not None or last_wrist_frame is not None:
+        if last_base_frame is not None:
             # 使用concatenate_frames_horizontally处理单帧（传入只包含最后一帧的列表）
             last_frames = concatenate_frames_horizontally(
-                [last_base_frame] if last_base_frame is not None else [],
-                [last_wrist_frame] if last_wrist_frame is not None else [],
+                [last_base_frame],
                 env_id=env_id_for_concat
             )
             
@@ -751,23 +744,20 @@ def select_env_id(username, uid, env_id):
         
         # 初始化Reference Views队列
         # Initialize Reference Views queue
-        if session.base_frames or session.wrist_frames:
+        if session.base_frames:
             from state_manager import FRAME_QUEUES
             
             current_base_count = len(session.base_frames) if session.base_frames else 0
-            current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
             
             if uid not in FRAME_QUEUES:
-                FrameQueueManager.init_queue(uid, current_base_count, current_wrist_count)
+                FrameQueueManager.init_queue(uid, current_base_count)
             
             last_base_frame = session.base_frames[-1] if session.base_frames else None
-            last_wrist_frame = session.wrist_frames[-1] if session.wrist_frames else None
             
-            if last_base_frame is not None or last_wrist_frame is not None:
+            if last_base_frame is not None:
                 env_id_for_concat = getattr(session, 'env_id', None)
                 last_frames = concatenate_frames_horizontally(
-                    [last_base_frame] if last_base_frame is not None else [],
-                    [last_wrist_frame] if last_wrist_frame is not None else [],
+                    [last_base_frame],
                     env_id=env_id_for_concat
                 )
                 
@@ -1364,10 +1354,10 @@ def execute_step(uid, username, option_idx, coords_str):
     # 检查 execute 次数限制（在执行前检查，如果达到限制则模拟失败状态）
     execute_limit_reached = False
     if username and session.env_id is not None and session.episode_idx is not None:
-        # 从 session 读取 non_demonstration_task_length，如果存在则加1作为限制，否则不设置限制
+        # 从 session 读取 non_demonstration_task_length，如果存在则加上配置的偏移量作为限制，否则不设置限制
         max_execute = None
         if hasattr(session, 'non_demonstration_task_length') and session.non_demonstration_task_length is not None:
-            max_execute = session.non_demonstration_task_length + 1
+            max_execute = session.non_demonstration_task_length + EXECUTE_LIMIT_OFFSET
         
         if max_execute is not None:
             current_count = get_execute_count(username, session.env_id, session.episode_idx)
@@ -1376,7 +1366,7 @@ def execute_step(uid, username, option_idx, coords_str):
     
     # 检查并初始化Reference Views（如果frames为空或队列不存在）
     from state_manager import FRAME_QUEUES
-    frames_exist = session.base_frames or session.wrist_frames
+    frames_exist = session.base_frames
     queue_exists = uid in FRAME_QUEUES
     
     if not frames_exist:
@@ -1384,26 +1374,23 @@ def execute_step(uid, username, option_idx, coords_str):
         session.update_observation(use_segmentation=USE_SEGMENTED_VIEW)
         
         # 如果有frames了，将最后一帧加入队列
-        if session.base_frames or session.wrist_frames:
+        if session.base_frames:
             
             # 初始化队列（如果还没有）
             # 传入当前frames数量，这样监控线程就知道这些frames已存在，不会将它们作为"新"frames加入队列
             current_base_count = len(session.base_frames) if session.base_frames else 0
-            current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
             env_id_for_concat = getattr(session, 'env_id', None)
             
             if uid not in FRAME_QUEUES:
-                FrameQueueManager.init_queue(uid, current_base_count, current_wrist_count)
+                FrameQueueManager.init_queue(uid, current_base_count)
             
-            # 只获取最后一帧并拼接
+            # 只获取最后一帧并处理
             last_base_frame = session.base_frames[-1] if session.base_frames else None
-            last_wrist_frame = session.wrist_frames[-1] if session.wrist_frames else None
             
-            if last_base_frame is not None or last_wrist_frame is not None:
+            if last_base_frame is not None:
                 # 使用concatenate_frames_horizontally处理单帧（传入只包含最后一帧的列表）
                 last_frames = concatenate_frames_horizontally(
-                    [last_base_frame] if last_base_frame is not None else [],
-                    [last_wrist_frame] if last_wrist_frame is not None else [],
+                    [last_base_frame],
                     env_id=env_id_for_concat
                 )
                 
@@ -1425,20 +1412,17 @@ def execute_step(uid, username, option_idx, coords_str):
         # frames存在但队列不存在，初始化队列并加入最后一帧
         # 初始化队列（传入当前frames数量，这样监控线程就知道这些frames已存在）
         current_base_count = len(session.base_frames) if session.base_frames else 0
-        current_wrist_count = len(session.wrist_frames) if session.wrist_frames else 0
         
-        FrameQueueManager.init_queue(uid, current_base_count, current_wrist_count)
+        FrameQueueManager.init_queue(uid, current_base_count)
         
-        # 只获取最后一帧并拼接
+        # 只获取最后一帧并处理
         last_base_frame = session.base_frames[-1] if session.base_frames else None
-        last_wrist_frame = session.wrist_frames[-1] if session.wrist_frames else None
         env_id_for_concat = getattr(session, 'env_id', None)
         
-        if last_base_frame is not None or last_wrist_frame is not None:
+        if last_base_frame is not None:
             # 使用concatenate_frames_horizontally处理单帧（传入只包含最后一帧的列表）
             last_frames = concatenate_frames_horizontally(
-                [last_base_frame] if last_base_frame is not None else [],
-                [last_wrist_frame] if last_wrist_frame is not None else [],
+                [last_base_frame],
                 env_id=env_id_for_concat
             )
             
@@ -1500,7 +1484,6 @@ def execute_step(uid, username, option_idx, coords_str):
     # 在执行 action 之前记录当前帧数
     # 这些帧数将作为监控线程的起始点，确保只监控新产生的帧
     pre_base_frame_count = len(session.base_frames)
-    pre_wrist_frame_count = len(session.wrist_frames)
     
     # 【重要修复】清空队列中的旧帧，确保从当前execute的第一个frame开始播放
     # 修复问题：当第一个任务执行完毕但livestream还没播放完时，直接执行下一个任务
@@ -1516,7 +1499,7 @@ def execute_step(uid, username, option_idx, coords_str):
     
     # 初始化队列和启动监控线程（用于流式输出）
     # 使用当前帧数作为起始点，这样监控线程只会添加execute后新产生的帧
-    FrameQueueManager.init_queue(uid, pre_base_frame_count, pre_wrist_frame_count)
+    FrameQueueManager.init_queue(uid, pre_base_frame_count)
     
     # 在执行前获取当前图片（用于记录最后执行的坐标对应的图片）
     pre_execute_image = None
