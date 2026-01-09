@@ -504,12 +504,12 @@ def login_and_load_task(username, uid):
     
     # 检查是否为 episode 97 (trial mode)
     if int(ep_num) == 97:
-        gr.Info("This is trial mode.")
+        gr.Info("This is tutorial mode.")
         capitalized_goal = capitalize_first_letter(session.language_goal) if session.language_goal else ""
-        goal_text = f"[[trial mode]]\n{capitalized_goal}"
+        goal_text = f"[[tutorial mode]]\n{capitalized_goal}"
     
     options = session.available_options
-    # 生成选项列表，如果选项需要坐标选择，在标签后添加提示
+    # 生成选项列表，如果选项需要坐标选择，在标签后添加提示  
     radio_choices = []
     for opt_label, opt_idx in options:
         opt_label = _ui_option_label(session, opt_label, opt_idx)
@@ -1507,7 +1507,7 @@ def execute_step(uid, username, option_idx, coords_str):
             # episode97失败时不推进索引，成功时推进索引
             if ep_is_97 and (final_log_status == "failed"):
                 # 跳过 complete_current_task，不推进任务索引
-                gr.Info("Task Failed, Please try again!")
+                gr.Info("---please press Next Task to redo it again---")
                 task_update = "Task Failed. Press Next Task to retry same episode."
             else:
                 # 正常推进任务索引并生成下一任务提示（包括episode97成功的情况）

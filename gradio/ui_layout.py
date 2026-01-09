@@ -2308,7 +2308,7 @@ def create_ui_blocks():
                             # 事件：点击后调用 play_demo_video() 函数
                             # 样式：主要按钮样式（蓝色背景），大号按钮
                             play_video_btn = gr.Button(
-                                "Watch Video Input🎬", 
+                                "Watch Video Input🎬(only play once)", 
                                 variant="primary",      # 主要按钮样式
                                 size="lg",              # 大号按钮
                                 visible=True,           # 可见

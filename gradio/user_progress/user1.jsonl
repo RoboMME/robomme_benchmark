@@ -1,0 +1,1 @@
+{"username": "user1", "start_time": "2026-01-09T16:00:56.012299", "end_time": "2026-01-09T16:02:17.303364", "env_id": "BinFill", "episode_idx": 97, "status": "success", "difficulty": "easy", "language_goal": "put two blue cubes into the bin, then press the button to stop", "seed": 549700, "current_task_index": 1, "completed_tasks": [0]}
