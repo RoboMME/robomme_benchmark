@@ -286,13 +286,13 @@ def draw_coordinate_axes(img, position="right", rotate_180=False, env_id=None):
         
         # 计算垂直布局
         # 每个半圆需要的高度：半圆直径 + 标签高度 + 间距
-        item_height = semicircle_radius * 2 + 20  # 半圆直径 + 标签空间
+        item_height = semicircle_radius * 2 + 20 +10 # 半圆直径 + 标签空间
         total_height = 4 * item_height + 3 * vertical_spacing  # 4个半圆 + 3个间距
         
         # 布局中心位置
         # 左侧或右侧黑色区域的中心，将布局中心放在区域中心
         layout_center_x = width // 2
-        start_y = (height - total_height) // 2  # 从顶部开始的起始位置
+        start_y = (height - total_height) // 2 -20 # 从顶部开始的起始位置
         
         # 计算四个半圆的中心位置（从上到下）
         # 1. Left Clockwise (最上)
@@ -309,7 +309,7 @@ def draw_coordinate_axes(img, position="right", rotate_180=False, env_id=None):
         rccw_center_y = rcw_center_y + item_height + vertical_spacing
         
         # 1. 绘制 left clockwise（最上）：左半圆，右→左（顺时针），箭头在左端朝上
-        draw_semicircle(draw, (lcw_center_x , lcw_center_y), semicircle_radius, line_color, line_width, half="upper", start_pos="left", end_pos="right", arrow_position="end", arrow_size=arrow_size)
+        draw_semicircle(draw, (lcw_center_x , lcw_center_y+15), semicircle_radius, line_color, line_width, half="upper", start_pos="left", end_pos="right", arrow_position="end", arrow_size=arrow_size)
         
         # 添加标签 "L CW"
         lcw_text = "Left Clockwise"
@@ -360,7 +360,7 @@ def draw_coordinate_axes(img, position="right", rotate_180=False, env_id=None):
         draw.text((rcw_text_x, rcw_text_y), rcw_text, fill=line_color, font=small_font)
         
         # 4. 绘制 right counterclockwise（最下）：右半圆，右→左（逆时针），箭头在左端朝下
-        draw_semicircle(draw, (rccw_center_x , rccw_center_y), semicircle_radius, line_color, line_width, half="upper",start_pos="right", end_pos="left", arrow_position="end", arrow_size=arrow_size)
+        draw_semicircle(draw, (rccw_center_x , rccw_center_y+15), semicircle_radius, line_color, line_width, half="upper",start_pos="right", end_pos="left", arrow_position="end", arrow_size=arrow_size)
 
         # 添加标签 "R CCW"
         rccw_text = "Right Counterclockwise"

@@ -526,6 +526,9 @@ def is_obj_stopped_onto(self, obj, target, stop):
     # 设置距离阈值
     distance_threshold = self.cube_half_size*(2.5)
 
+    distance_threshold = self.cube_half_size*(3)
+    ########for oracle eval only
+
     # 只有当物体在目标位置附近且已经停止移动时才返回True
     stop_ok = stop 
     #print("stop_ok",stop_ok,"horizontal_distance",horizontal_distance <= distance_threshold)

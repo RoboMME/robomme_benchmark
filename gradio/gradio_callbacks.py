@@ -54,6 +54,28 @@ def capitalize_first_letter(text: str) -> str:
     return text[0].upper() + text[1:]
 
 
+def get_videoplacebutton_goal(original_goal: str) -> str:
+    """
+    为 VideoPlaceButton 任务构造新的任务目标
+    从原始任务目标中识别 before/after，构造新格式的任务目标
+    """
+    if not original_goal:
+        return ""
+    
+    original_lower = original_goal.lower()
+    
+    # 识别是 "right after" 还是 "right before"
+    if "right after" in original_lower:
+        new_goal = "Watch the video carefully, then place the blue cube on the target that it was placed on right after the button was pressed"
+    elif "right before" in original_lower:
+        new_goal = "Watch the video carefully, then place the blue cube on the target that it was placed on right before the button was pressed"
+    else:
+        # 如果无法识别，保持原始任务目标不变
+        return capitalize_first_letter(original_goal)
+    
+    return capitalize_first_letter(new_goal)
+
+
 def _ui_option_label(session, opt_label: str, opt_idx: int) -> str:
     """
     仅在 Gradio UI 层对选项显示文案做覆盖（不改底层 env/options 生成逻辑）。
@@ -538,12 +560,20 @@ def login_and_load_task(username, uid):
         )
         
     # Success loading
-    goal_text = capitalize_first_letter(session.language_goal) if session.language_goal else ""
+    # 如果是 VideoPlaceButton 任务，使用特殊的任务目标格式
+    if session.env_id == "VideoPlaceButton" and session.language_goal:
+        goal_text = get_videoplacebutton_goal(session.language_goal)
+    else:
+        goal_text = capitalize_first_letter(session.language_goal) if session.language_goal else ""
     
     # 检查是否为 episode 98 (trial mode)
     if int(ep_num) == 98:
         gr.Info("This is tutorial mode. You have to complete all the tutorials before you can start testing.")
-        capitalized_goal = capitalize_first_letter(session.language_goal) if session.language_goal else ""
+        # 如果是 VideoPlaceButton 任务，使用特殊的任务目标格式
+        if session.env_id == "VideoPlaceButton" and session.language_goal:
+            capitalized_goal = get_videoplacebutton_goal(session.language_goal)
+        else:
+            capitalized_goal = capitalize_first_letter(session.language_goal) if session.language_goal else ""
         goal_text = f"[[tutorial mode]]\n{capitalized_goal}"
     
     options = session.available_options
@@ -1507,7 +1537,11 @@ def execute_step(uid, username, option_idx, coords_str):
                 task_difficulty = session.difficulty
             task_language_goal = None
             if hasattr(session, 'language_goal') and session.language_goal is not None:
-                task_language_goal = session.language_goal
+                # 如果是 VideoPlaceButton 任务，使用特殊的任务目标格式
+                if session.env_id == "VideoPlaceButton":
+                    task_language_goal = get_videoplacebutton_goal(session.language_goal)
+                else:
+                    task_language_goal = session.language_goal
             task_seed = None
             if hasattr(session, 'seed') and session.seed is not None:
                 task_seed = session.seed

@@ -166,15 +166,104 @@ from state_manager import create_session, start_timeout_monitor
 from user_manager import user_manager
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+import multiprocessing
+import signal
+import sys
 
 def find_free_port(start_port=7860):
-    """查找可用端口"""
+    """查找单个可用端口"""
     for port in range(start_port, start_port + 20):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if s.connect_ex(('localhost', port)) != 0:
                 return port
     return 7860
+
+def find_free_ports(start_port=7860, count=1):
+    """查找多个连续可用端口"""
+    ports = []
+    current_port = start_port
+    max_attempts = 1000  # 最多尝试1000个端口
+    
+    while len(ports) < count and current_port < start_port + max_attempts:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                # 尝试绑定端口以检查是否可用
+                s.bind(('localhost', current_port))
+                ports.append(current_port)
+            except OSError:
+                # 端口已被占用，跳过
+                pass
+            current_port += 1
+    
+    if len(ports) < count:
+        raise RuntimeError(f"无法找到 {count} 个连续可用端口（从 {start_port} 开始）")
+    
+    return ports
+
+def get_available_gpu_count():
+    """检测可用的GPU数量"""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return torch.cuda.device_count()
+        else:
+            return 1
+    except ImportError:
+        # 如果torch不可用，尝试使用nvidia-smi
+        try:
+            import subprocess
+            result = subprocess.run(['nvidia-smi', '--list-gpus'], 
+                                  capture_output=True, text=True, timeout=2)
+            if result.returncode == 0:
+                gpu_count = len([line for line in result.stdout.split('\n') if 'GPU' in line])
+                return gpu_count if gpu_count > 0 else 1
+        except:
+            pass
+        return 1
+
+def get_gpu_for_user(username, available_users, num_gpus):
+    """为指定用户分配GPU（轮询方式）"""
+    user_index = sorted(available_users).index(username)
+    gpu_id = user_index % num_gpus
+    return gpu_id
+
+def start_user_server(username, port, gpu_id):
+    """为指定用户启动独立的服务器进程"""
+    # 必须在导入torch等库之前设置环境变量
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    
+    # 确保每个子进程都有 session 和 timeout monitor
+    # 注意：在多进程环境下，每个进程都有独立的内存空间
+    create_session()
+    start_timeout_monitor()
+    
+    # 创建独立的 FastAPI 应用实例
+    fastapi_app = FastAPI(title=f"HistoryBench Oracle Planner - {username}")
+    
+    # 注册视频流路由
+    create_video_feed_route(fastapi_app)
+    
+    # 创建 Gradio UI
+    demo = create_ui_blocks()
+    
+    # 使用 Gradio 的 mount_gradio_app 函数正确挂载 Gradio 应用到 FastAPI
+    fastapi_app = gr.mount_gradio_app(
+        fastapi_app,
+        demo,
+        path="/",
+        css=CSS,
+        js=SYNC_JS
+    )
+    
+    # 使用 uvicorn 运行 FastAPI 应用
+    uvicorn.run(
+        fastapi_app,
+        host="0.0.0.0",
+        port=port,
+        log_level="info",
+        access_log=True,
+        use_colors=False
+    )
 
 
 def get_all_network_ips():
@@ -258,76 +347,126 @@ if __name__ == "__main__":
     # 启动session超时监控线程
     start_timeout_monitor()
     
-    # 创建 FastAPI 应用
-    fastapi_app = FastAPI(title="HistoryBench Oracle Planner")
+    # 获取所有用户列表
+    available_users = list(user_manager.user_tasks.keys())
     
-    # 注册视频流路由
-    create_video_feed_route(fastapi_app)
-    
-    # 创建 Gradio UI
-    demo = create_ui_blocks()
-    
-    # 查找可用端口
-    port = find_free_port()
-    print(f"Starting server on port {port}")
-    
-    # 使用 Gradio 的 mount_gradio_app 函数正确挂载 Gradio 应用到 FastAPI
-    # 这会正确初始化所有必要的配置，包括 config 对象
-    fastapi_app = gr.mount_gradio_app(
-        fastapi_app,
-        demo,
-        path="/",
-        css=CSS,
-        js=SYNC_JS
-    )
+    if not available_users:
+        print("\n⚠️  警告: 未找到任何用户配置")
+        sys.exit(1)
     
     # 获取所有网络接口 IP
     network_ips = get_all_network_ips()
+    base_ip = network_ips[0][1] if network_ips else "localhost"
     
+    # 为每个用户分配端口
+    num_users = len(available_users)
+    try:
+        ports = find_free_ports(start_port=7860, count=num_users)
+    except RuntimeError as e:
+        print(f"\n❌ 错误: {e}")
+        sys.exit(1)
+    
+    # 创建用户名到端口的映射
+    user_port_map = {username: ports[i] for i, username in enumerate(sorted(available_users))}
+    
+    # 存储所有子进程
+    processes = []
+    
+    # 信号处理函数，用于优雅关闭
+    def signal_handler(sig, frame):
+        print("\n\n收到退出信号，正在关闭所有服务器...")
+        for process in processes:
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=5)
+                if process.is_alive():
+                    process.kill()
+        sys.exit(0)
+    
+    # 注册信号处理器
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # 检测可用GPU数量并分配GPU
+    num_gpus = get_available_gpu_count()
+    print(f"\n检测到 {num_gpus} 个可用GPU，使用轮询方式分配")
+    
+    # 为每个用户启动独立的服务器进程
     print("\n" + "="*60)
-    print("SERVER STARTING:")
-    print("="*60)
-    print(f"FastAPI + Gradio server running on http://0.0.0.0:{port}")
-    print(f"MJPEG stream endpoint: http://0.0.0.0:{port}/video_feed/{{uid}}")
+    print("正在启动多用户服务器...")
     print("="*60)
     
-    # 打印所有可用的公共 IP 地址
+    for username in sorted(available_users):
+        port = user_port_map[username]
+        gpu_id = get_gpu_for_user(username, available_users, num_gpus)
+        process = multiprocessing.Process(
+            target=start_user_server,
+            args=(username, port, gpu_id),
+            name=f"Server-{username}"
+        )
+        process.start()
+        processes.append(process)
+        print(f"✓ 用户 {username:20s} 的服务器已启动在端口 {port} (GPU {gpu_id})")
+    
+    # 等待一下确保所有服务器都已启动
+    import time
+    time.sleep(2)
+    
+    # 打印服务器信息
+    print("\n" + "="*60)
+    print("所有服务器已启动:")
+    print("="*60)
+    
+    # 打印端口分配映射表
+    print("\n端口分配映射:")
+    print("-" * 60)
+    for username in sorted(available_users):
+        port = user_port_map[username]
+        print(f"  用户: {username:20s} -> 端口: {port}")
+    print("-" * 60)
+    print(f"共 {len(available_users)} 个用户服务器")
+    
+    # 打印GPU分配映射表
+    print("\nGPU分配映射:")
+    print("-" * 60)
+    for username in sorted(available_users):
+        port = user_port_map[username]
+        gpu_id = get_gpu_for_user(username, available_users, num_gpus)
+        print(f"  用户: {username:20s} -> 端口: {port:5d} -> GPU: {gpu_id}")
+    print("-" * 60)
+    
+    # 打印每个用户的访问链接
     if network_ips:
-        print("\n所有可用的 Gradio 公共 IP 地址:")
+        print("\n所有可用的访问地址:")
         print("-" * 60)
         for interface, ip in network_ips:
-            print(f"  {interface:15s} -> http://{ip}:{port}")
+            print(f"  网络接口: {interface}")
         print("-" * 60)
-        print(f"共 {len(network_ips)} 个网络接口")
-    else:
-        print("\n⚠️  警告: 无法获取网络接口 IP 地址")
-        print("   请使用 http://0.0.0.0:{port} 或 http://localhost:{port} 访问")
     
-    # 打印每个用户的登录链接（使用第一个可用 IP）
-    available_users = list(user_manager.user_tasks.keys())
-    if available_users:
-        print("\n用户登录链接:")
-        print("-" * 60)
-        # 使用第一个可用 IP，如果没有则使用 localhost
-        base_ip = network_ips[0][1] if network_ips else "localhost"
-        for username in sorted(available_users):
-            login_link = f"http://{base_ip}:{port}/?user={username}&__theme=light"
-            print(f"  {username:20s} -> {login_link}")
-        print("-" * 60)
-        print(f"共 {len(available_users)} 个用户")
-    else:
-        print("\n⚠️  警告: 未找到任何用户配置")
+    print("\n用户访问链接:")
+    print("-" * 60)
+    for username in sorted(available_users):
+        port = user_port_map[username]
+        login_link = f"http://{base_ip}:{port}/?user={username}&__theme=light"
+        print(f"  {username:20s} -> {login_link}")
+    print("-" * 60)
     
+    print("\nMJPEG 流媒体端点:")
+    print("-" * 60)
+    for username in sorted(available_users):
+        port = user_port_map[username]
+        stream_endpoint = f"http://{base_ip}:{port}/video_feed/{{uid}}"
+        print(f"  {username:20s} -> {stream_endpoint}")
+    print("-" * 60)
+    
+    print("="*60)
+    print("所有服务器正在运行中...")
+    print("按 Ctrl+C 停止所有服务器")
     print("="*60 + "\n")
     
-    # 使用 uvicorn 运行 FastAPI 应用
-    # 确保所有日志（包括 uvicorn 的访问日志和错误日志）都输出到标准输出
-    # 这样后台运行时所有日志都会被捕获到日志文件中
-    uvicorn.run(
-        fastapi_app,
-        host="0.0.0.0",
-        port=port,
-        log_level="info",
-        access_log=True,  # 启用访问日志
-        use_colors=False  # 禁用颜色输出，确保日志文件可读
-    )
+    # 主进程等待所有子进程
+    try:
+        for process in processes:
+            process.join()
+    except KeyboardInterrupt:
+        signal_handler(None, None)

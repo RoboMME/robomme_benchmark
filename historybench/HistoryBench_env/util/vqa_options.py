@@ -755,9 +755,11 @@ def _options_stopcube(env, planner, require_target, base) -> List[dict]:
             if num_calls is None:
                 num_calls = np.random.randint(2, 5)  # 总共2-3次调用 (randint(2,4) 生成 2 或 3)
                 
-                # 生成固定的递增步长：final_target / num_calls
+                # 生成固定的递增步长：剩余步数 / num_calls
                 # 保持恒定，不管是否超过、等于或小于最终目标，都使用相同的递增步长
-                increment_step = int(final_target / num_calls)
+                remaining_steps = max(0, final_target - current_step)
+                increment_step = int(remaining_steps / num_calls)
+
                 # 确保步长至少为1
                 if increment_step < 1:
                     increment_step = 1
@@ -778,15 +780,24 @@ def _options_stopcube(env, planner, require_target, base) -> List[dict]:
                 last_target = current_step
             
             if call_count < num_calls - 1:
-                # 小于 num_calls 次数：按照递增步长递增（允许超过 final_target）
-                target = last_target + increment_step
+                # 小于 num_calls 次数：按照递增步长递增（但不允许超过 final_target）
+                target = min(last_target + increment_step, final_target)
             elif call_count == num_calls - 1:
                 # 等于 num_calls 次：必须精确达到 final_target
                 target = final_target
             else:
-                # 大于 num_calls 之后：继续按照之前定下来的间隔递增
+                # 大于 num_calls 之后：允许溢出，继续按步长递增
                 target = last_target + increment_step
-            
+               
+
+            if target == final_target:
+               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
+               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
+               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
+               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
+               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
+
+
             # 调用原有的 solve_hold_obj_absTimestep 函数
             solve_hold_obj_absTimestep(env, planner, absTimestep=target)
             
