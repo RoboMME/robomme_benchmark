@@ -92,6 +92,76 @@ class UserManager:
         
         return False
     
+    def check_all_ep98_completed_and_no_other_tasks(self, username):
+        """
+        检查所有ep98任务是否都已完成且没有任何其他任务完成。
+        
+        Args:
+            username: 用户名
+        
+        Returns:
+            bool: 如果所有ep98任务都已完成且没有其他任务完成，返回True；否则返回False
+        """
+        if not username:
+            return False
+        
+        # 检查用户是否存在
+        if username not in self.user_tasks:
+            return False
+        
+        # 获取用户的所有任务列表
+        tasks = self.user_tasks[username]
+        
+        # 筛选出所有ep98任务，获取它们的env_id集合（去重）
+        ep98_tasks = {}
+        for task in tasks:
+            if task.get("episode_idx") == 98:
+                env_id = task.get("env_id")
+                if env_id:
+                    # 使用env_id作为key，如果同一个env_id有多个ep98任务，只保留一个
+                    ep98_tasks[env_id] = True
+        
+        # 如果没有ep98任务，返回False
+        if not ep98_tasks:
+            return False
+        
+        # 检查所有ep98任务是否都有成功记录
+        for env_id in ep98_tasks.keys():
+            if not self.has_episode98_success(username, env_id):
+                return False
+        
+        # 检查用户进度文件中是否有任何非ep98任务的成功记录
+        user_progress_file = self._get_user_progress_file(username)
+        if not os.path.exists(user_progress_file):
+            # 如果没有进度文件，但所有ep98都检查完成（上面已经检查过），返回True
+            return True
+        
+        try:
+            with self.lock:
+                with open(user_progress_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if not line.strip():
+                            continue
+                        try:
+                            record = json.loads(line)
+                            record_episode_idx = record.get("episode_idx")
+                            record_status = record.get("status", "").lower()
+                            
+                            # 检查是否有非ep98任务的成功记录
+                            if (record_episode_idx is not None and 
+                                record_episode_idx != 98 and 
+                                record_status == "success"):
+                                return False
+                        except (json.JSONDecodeError, KeyError, ValueError):
+                            # 跳过格式错误的记录
+                            continue
+        except Exception as e:
+            print(f"Error checking non-ep98 tasks for {username}: {e}")
+            return False
+        
+        # 所有ep98完成且没有其他任务完成
+        return True
+    
     def load_progress(self):
         """Load user progress from individual JSONL files. 
         Reconstructs the latest state by reading all user files."""

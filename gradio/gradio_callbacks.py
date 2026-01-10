@@ -179,6 +179,30 @@ def show_task_hint(uid, current_hint=""):
     return get_task_hint(env_id)
 
 
+def get_tutorial_video_path(env_id):
+    """
+    根据环境ID获取对应的教程视频文件路径（仅在episode 98时使用）
+    
+    Args:
+        env_id: 环境ID（如 "VideoPlaceOrder", "InsertPeg" 等）
+    
+    Returns:
+        str: 视频文件的完整路径，如果文件不存在则返回 None
+    """
+    if not env_id:
+        return None
+    
+    # 直接使用 env_id 添加 .mp4 后缀（视频文件名是大写的，如 BinFill.mp4）
+    video_filename = env_id + ".mp4"
+    video_path = os.path.join("/home/hongzefu/historybench-v5.6.16-gradio-final-video/gradio/videos", video_filename)
+    
+    # 检查文件是否存在
+    if os.path.exists(video_path):
+        return video_path
+    else:
+        return None
+
+
 def show_loading_info():
     """
     显示加载环境的全屏遮罩层提示信息
@@ -270,6 +294,7 @@ def login_and_load_task(username, uid):
             gr.update(visible=False, interactive=True),  # play_video_btn
             gr.update(visible=False),  # coords_group
             gr.update(value=""),  # task_hint_display - 任务提示显示（清空）
+            gr.update(value=None, visible=False),  # tutorial_video_display - 登录失败时隐藏
             ""  # loading_overlay - 【关键】清空加载遮罩层：返回空字符串，清空 loading_overlay 组件内容，使全屏遮罩层自动隐藏
         )
     
@@ -315,6 +340,7 @@ def login_and_load_task(username, uid):
             gr.update(visible=True, interactive=False),  # play_video_btn (显示但禁用)
             gr.update(visible=False),  # coords_group
             gr.update(value=""),  # task_hint_display - 所有任务完成，无提示
+            gr.update(value=None, visible=False),  # tutorial_video_display - 所有任务完成时隐藏
             ""  # loading_overlay - 【关键】清空加载遮罩层：返回空字符串，清空 loading_overlay 组件内容，使全屏遮罩层自动隐藏
         )
         
@@ -395,6 +421,7 @@ def login_and_load_task(username, uid):
                                 gr.update(visible=True, interactive=False),
                                 gr.update(visible=False),
                                 gr.update(value=""),
+                                gr.update(value=None, visible=False),  # tutorial_video_display - episode98已跳过，隐藏
                                 ""
                             )
                         else:
@@ -475,6 +502,16 @@ def login_and_load_task(username, uid):
             video_display_update = gr.update(value=None, visible=False)  # 环境不在列表中，隐藏视频
             no_video_display_update = gr.update(visible=True, value=f"<div style='color: black; font-size: 20px; text-align: center; height: {DEMO_VIDEO_HEIGHT}; display: flex; align-items: center; justify-content: center;'>No video</div>")
         
+        # 仅在episode 98时显示教程视频
+        if int(ep_num) == 98:
+            tutorial_video_path = get_tutorial_video_path(actual_env_id)
+            if tutorial_video_path:
+                tutorial_video_update = gr.update(value=tutorial_video_path, visible=True)
+            else:
+                tutorial_video_update = gr.update(value=None, visible=False)
+        else:
+            tutorial_video_update = gr.update(value=None, visible=False)
+        
         return (
             uid,
             gr.update(visible=False), # login_group
@@ -496,6 +533,7 @@ def login_and_load_task(username, uid):
             gr.update(visible=True, interactive=False),  # play_video_btn (显示但禁用)
             gr.update(visible=False),  # coords_group
             gr.update(value=get_task_hint(env_id) if env_id else ""),  # task_hint_display - 任务提示（自动加载）
+            tutorial_video_update,  # tutorial_video_display - 仅在episode 98时显示
             ""  # loading_overlay - 【关键】清空加载遮罩层：返回空字符串，清空 loading_overlay 组件内容，使全屏遮罩层自动隐藏
         )
         
@@ -621,6 +659,15 @@ def login_and_load_task(username, uid):
         video_display_update = gr.update(value=demo_video_path, visible=True)
         no_video_display_update = gr.update(value="", visible=False)
         
+        # 仅在episode 98时显示教程视频
+        if int(ep_num) == 98:
+            tutorial_video_path = get_tutorial_video_path(actual_env_id)
+            if tutorial_video_path:
+                tutorial_video_update = gr.update(value=tutorial_video_path, visible=True)
+            else:
+                tutorial_video_update = gr.update(value=None, visible=False)
+        else:
+            tutorial_video_update = gr.update(value=None, visible=False)
         
         return (
             uid,
@@ -646,6 +693,7 @@ def login_and_load_task(username, uid):
             gr.update(visible=True, interactive=True),  # play_video_btn (始终显示)
             gr.update(visible=False),  # coords_group (初始化时隐藏)
             gr.update(value=get_task_hint(actual_env_id)),  # task_hint_display - 任务提示（自动加载，页面加载完就显示）
+            tutorial_video_update,  # tutorial_video_display - 仅在episode 98时显示
             ""  # loading_overlay - 【关键】清空加载遮罩层：返回空字符串，清空 loading_overlay 组件内容，使全屏遮罩层自动隐藏
         )
     else:
@@ -694,6 +742,15 @@ def login_and_load_task(username, uid):
         video_display_update = gr.update(value=None, visible=False)
         no_video_display_update = gr.update(visible=True, value=no_video_html)
         
+        # 仅在episode 98时显示教程视频
+        if int(ep_num) == 98:
+            tutorial_video_path = get_tutorial_video_path(actual_env_id)
+            if tutorial_video_path:
+                tutorial_video_update = gr.update(value=tutorial_video_path, visible=True)
+            else:
+                tutorial_video_update = gr.update(value=None, visible=False)
+        else:
+            tutorial_video_update = gr.update(value=None, visible=False)
         
         return (
             uid,
@@ -719,6 +776,7 @@ def login_and_load_task(username, uid):
             gr.update(visible=True, interactive=False),  # play_video_btn (无视频时禁用)
             gr.update(visible=False),  # coords_group (初始化时隐藏)
             gr.update(value=get_task_hint(actual_env_id)),  # task_hint_display - 任务提示（自动加载，页面加载完就显示）
+            tutorial_video_update,  # tutorial_video_display - 仅在episode 98时显示
             ""  # loading_overlay - 【关键】清空加载遮罩层：返回空字符串，清空 loading_overlay 组件内容，使全屏遮罩层自动隐藏
         )
 
@@ -833,6 +891,10 @@ def load_next_task_wrapper(username, uid):
         # 更新session活动时间（加载下一个任务操作）
         if uid:
             update_session_activity(uid)
+        
+        # 检查所有ep98是否都完成且没有其他任务完成
+        if user_manager.check_all_ep98_completed_and_no_other_tasks(username):
+            gr.Info("Tutorial Finished, start testing!")
         
         success, msg, status = user_manager.login(username, uid)
         if success and not status["is_done_all"]:
@@ -1040,7 +1102,8 @@ def init_app(request: gr.Request):
         gr.update(visible=False), # operation_zone_group
         gr.update(visible=False, interactive=True),  # play_video_btn
         gr.update(visible=False),  # coords_group (初始化时隐藏)
-        gr.update(value="")  # task_hint_display (初始化时清空)
+        gr.update(value=""),  # task_hint_display (初始化时清空)
+        gr.update(value=None, visible=False)  # tutorial_video_display (初始化时隐藏)
     )
     
     if username:
@@ -1062,14 +1125,14 @@ def init_app(request: gr.Request):
             #  options_radio, goal_box, coords_box, combined_display, video_display, no_video_display,
             #  task_info_box, progress_info_box, login_btn, next_task_btn, exec_btn,
             #  demo_video_group, combined_view_group, operation_zone_group, 
-            #  play_video_btn, coords_group, task_hint_display, loading_overlay)
+            #  play_video_btn, coords_group, task_hint_display, tutorial_video_display, loading_overlay)
             
             # init_app 需要的返回格式：
             # (uid, loading_group, login_group, main_interface, login_msg, img_display, 
             #  log_output, options_radio, goal_box, coords_box, combined_display, 
             #  video_display, no_video_display, task_info_box, progress_info_box, login_btn, next_task_btn, 
             #  exec_btn, username_state, demo_video_group, combined_view_group, 
-            #  operation_zone_group, play_video_btn, coords_group, task_hint_display)
+            #  operation_zone_group, play_video_btn, coords_group, task_hint_display, tutorial_video_display)
             
             # 转换返回值格式：添加 loading_group 和 username_state，移除 loading_overlay
             return (
@@ -1097,7 +1160,8 @@ def init_app(request: gr.Request):
                 login_results[19],                 # operation_zone_group
                 login_results[20],                 # play_video_btn
                 login_results[21],                 # coords_group
-                login_results[22]                  # task_hint_display
+                login_results[22],                 # task_hint_display
+                login_results[23]                  # tutorial_video_display
             )
         else:
             # 用户名不存在，显示错误消息但仍显示登录界面
@@ -1126,7 +1190,8 @@ def init_app(request: gr.Request):
                 gr.update(visible=False), # operation_zone_group
                 gr.update(visible=False, interactive=True),  # play_video_btn
                 gr.update(visible=False),  # coords_group
-                gr.update(value="")  # task_hint_display (清空)
+                gr.update(value=""),  # task_hint_display (清空)
+                gr.update(value=None, visible=False)  # tutorial_video_display (初始状态隐藏)
             )
     
     return default_outputs

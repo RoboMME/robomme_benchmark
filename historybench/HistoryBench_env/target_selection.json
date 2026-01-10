@@ -5981,5 +5981,41 @@
     ],
     "target_target": "target_2",
     "button_task_index": 4
+  },
+  {
+    "historybench_seed": 619800,
+    "which_in_subset": 1,
+    "num_targets_to_pick": 3,
+    "which_targets_to_pick": [
+      "target_0",
+      "target_2",
+      "target_1"
+    ],
+    "target_target": "target_0",
+    "button_task_index": 2
+  },
+  {
+    "historybench_seed": 619800,
+    "which_in_subset": 1,
+    "num_targets_to_pick": 3,
+    "which_targets_to_pick": [
+      "target_0",
+      "target_2",
+      "target_1"
+    ],
+    "target_target": "target_0",
+    "button_task_index": 2
+  },
+  {
+    "historybench_seed": 619800,
+    "which_in_subset": 1,
+    "num_targets_to_pick": 3,
+    "which_targets_to_pick": [
+      "target_0",
+      "target_2",
+      "target_1"
+    ],
+    "target_target": "target_0",
+    "button_task_index": 2
   }
 ]
