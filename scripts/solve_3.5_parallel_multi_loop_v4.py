@@ -354,7 +354,7 @@ def run_env_dataset(
             print(f"Episode {episode} assigned difficulty: {difficulty}")
 
         # 生成基础种子，保证不同环境和不同 episode 的种子不同
-        base_seed = env_code * 10000 + (episode % 100) * 100 +10000*50    # env (2 digits) | episode (2 digits) |最大160000
+        base_seed = env_code * 10000 + (episode % 100) * 100     #+10000*50    # env (2 digits) | episode (2 digits) |最大160000
         attempt = 0
         
         # 重试循环：如果当前种子失败，尝试下一个种子，直到成功
@@ -495,7 +495,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=10,
+        default=50,
         help="每个环境生成的 episode 数量 (默认: 100)",
     )
 
@@ -529,7 +529,7 @@ def parse_args() -> argparse.Namespace:
         "--max-workers",
         "-w",
         type=int,
-        default=32,
+        default=20,
         help="运行多个环境时的并行 worker 数量。",
     )
     return parser.parse_args()
@@ -553,7 +553,7 @@ def main() -> None:
     for env_id in env_ids:
         # 为所有 episode 创建共享的临时文件夹
         temp_folder =  Path(f"/home/hongzefu/dataset_generate/temp_{env_id}_episodes")
-        final_dataset_path =  Path(f"/home/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
+        final_dataset_path =  Path(f"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")
         print(f"Environment: {env_id}")
