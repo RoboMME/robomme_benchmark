@@ -32,17 +32,13 @@ if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
 import numpy as np
-import cv2
-import imageio
 import json
 import shutil
 import torch
 import gc
 
 
-from history_bench_sim.chat_api.api import *
-from history_bench_sim.chat_api.prompts import *
-from history_bench_sim.oracle_logic import step_before, step_after
+from history_bench_sim.oracle_logic_clean import step_before, step_after
 from scripts.evaluate_oracle_planner_gui import EpisodeConfigResolverForOraclePlanner
 
 
@@ -61,76 +57,7 @@ def _tensor_to_bool(value):
     return bool(value)
 
 
-def process_patternlock_images(frames, env_id):
-    """
-    如果env_id是PatternLock，将图片旋转180度并在右上角画上坐标轴
-    
-    Args:
-        frames: 图片列表（numpy数组列表）
-        env_id: 环境ID
-    
-    Returns:
-        处理后的图片列表
-    """
-    if env_id != "PatternLock":
-        return frames
-    
-    processed_frames = []
-    for frame in frames:
-        # 复制图片以避免修改原始数据
-        img = frame.copy()
-        
-        # 旋转180度
-        img = cv2.rotate(img, cv2.ROTATE_180)
-        
-        # 获取图片尺寸
-        h, w = img.shape[:2]
-        
-        # 在右上角画坐标轴
-        # 设置坐标轴区域（右上角，留出一些边距）
-        margin = 20
-        axis_size = 80
-        start_x = w - axis_size - margin
-        start_y = margin
-        
-        # 绘制中心点
-        center_x = start_x + axis_size // 2
-        center_y = start_y + axis_size // 2
-        cv2.circle(img, (center_x, center_y), 3, (0, 0, 0), -1)
-        
-        # 绘制箭头和标签
-        arrow_length = 15  # 缩小箭头长度
-        label_offset = 12  # 标签与箭头端点之间的距离
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.4  # 缩小字体
-        thickness = 1  # 加粗字体
-        arrow_thickness = 3  # 加粗箭头
-        
-        # Forward (向上，在旋转后的坐标系中)
-        cv2.arrowedLine(img, (center_x, center_y), (center_x, center_y - arrow_length), (0, 255, 0), arrow_thickness, tipLength=0.3)
-        cv2.putText(img, "forward", (center_x - 25, center_y - arrow_length - label_offset), font, font_scale, (0, 255, 0), thickness)
-        
-        # Backward (向下)
-        cv2.arrowedLine(img, (center_x, center_y), (center_x, center_y + arrow_length), (255, 0, 0), arrow_thickness, tipLength=0.3)
-        cv2.putText(img, "backward", (center_x - 30, center_y + arrow_length + label_offset + 8), font, font_scale, (255, 0, 0), thickness)
-        
-        # Left (向左)
-        cv2.arrowedLine(img, (center_x, center_y), (center_x - arrow_length, center_y), (0, 0, 255), arrow_thickness, tipLength=0.3)
-        cv2.putText(img, "left", (center_x - arrow_length - label_offset - 20, center_y + 5), font, font_scale, (0, 0, 255), thickness)
-        
-        # Right (向右)
-        cv2.arrowedLine(img, (center_x, center_y), (center_x + arrow_length, center_y), (255, 255, 0), arrow_thickness, tipLength=0.3)
-        cv2.putText(img, "right", (center_x + arrow_length + label_offset, center_y + 5), font, font_scale, (255, 255, 0), thickness)
-        
-        processed_frames.append(img)
-    
-    return processed_frames
 
-
-TASK_WITH_DEMO = [
-    "VideoUnmask", "VideoUnmaskSwap", "VideoPlaceButton", "VideoPlaceOrder",
-    "VideoRepick", "MoveCube", "InsertPeg", "PatternLock", "RouteStick"
-]
 
 def load_episode_status(json_path):
     """
@@ -205,6 +132,32 @@ def check_episode_status(json_path, model_name, env_id, episode):
     
     return False, None
 
+def mock_model(base_frames, text_query, step_idx, language_goal):
+    """
+    Mock model 返回固定的5个序列动作: pick, place, pick, place, press button
+    
+    Args:
+        base_frames: 所有 base frames 列表（不处理）
+        text_query: 文本查询（不使用）
+        step_idx: 步骤索引（用于确定返回哪个动作）
+        language_goal: 语言目标（不使用）
+    
+    Returns:
+        command_dict: 根据 step_idx 返回对应的命令字典
+    """
+    # 定义固定的5个动作序列
+    actions = [
+        {"action": "pick up the cube", "point": [256, 256]},
+        {"action": "put it into the bin", "point": [256, 256]},
+        {"action": "press the button", "point": None}  # press button 动作，point 为 None
+    ]
+    
+    # 根据 step_idx 返回对应的动作，如果超出范围则循环使用最后一个动作
+    if step_idx < len(actions):
+        return actions[step_idx]
+    else:
+        return actions[-1]  # 超出范围时返回最后一个动作
+
 def main():    
     # Initialization Wrapper
     oracle_resolver = EpisodeConfigResolverForOraclePlanner(
@@ -245,7 +198,7 @@ def main():
             # if episode !=1:
             #     continue
             
-            model_name = "gemini-2.5-pro"  # "gemini-2.5-pro" # "gpt-4o-mini", "gemini-er", "qwen-vl"， "local" 
+            model_name = "test"  # "gemini-2.5-pro" # "gpt-4o-mini", "gemini-er", "qwen-vl"， "local" 
             save_dir = os.path.join("/home/hongzefu", "oracle_planning_results", model_name, env_id, f"ep{episode}")
             
             # 检查episode状态（断点继续）- 只使用JSON状态判断
@@ -255,7 +208,7 @@ def main():
                 continue
             
             current_episode_try = 0
-            max_episode_retries = 3
+            max_episode_retries = 3  #一个episode最大重试次数
             
             # --- Episode 级重试循环 (处理仿真器崩溃/规划器错误) ---
             # 硬错误（Hard Failures）：如 step_before/after 报错、环境初始化失败。策略是 销毁环境，重新开始当前 Episode。
@@ -273,24 +226,11 @@ def main():
                     
                     
                     with open(os.path.join(save_dir, "language_goal.txt"), "w") as f:
-                        f.write(language_goal)
-                    
-                    if "gemini" in model_name:
-                        api = GeminiModel(save_dir=save_dir, task_id=env_id, model_name=model_name, task_goal=language_goal, subgoal_type="oracle_planner")
-                    elif "qwen" in model_name:
-                        api = QwenModel(save_dir=save_dir, task_id=env_id, model_name=model_name, task_goal=language_goal, subgoal_type="oracle_planner")
-                    elif "local" in model_name:
-                        api = LocalModel(save_dir=save_dir, task_id=env_id, model_name=model_name, task_goal=language_goal, subgoal_type="oracle_planner")
-                    else:
-                        api = OpenAIModel(save_dir=save_dir, task_id=env_id, model_name=model_name, task_goal=language_goal, subgoal_type="oracle_planner")
-
+                        f.write(str(language_goal) if language_goal is not None else "")
 
                     step_idx = 0
                     frame_idx = 0
-                    max_query_times = 10
-                    
-                    response = None
-                    text_query = ""
+                    max_query_times = 10  #对于binfill 10 不够
                     
                     # 阶段 B：执行步骤循环
                     while True:
@@ -315,61 +255,16 @@ def main():
                             print(f"Warning: No new frames available at step {step_idx}. Exiting loop.")
                             raise Exception("No new frames available, triggering episode retry")
                         
-                        # ------------------------ Call Gemini API ------------------------------------
-                    
-                        if step_idx == 0:
-                            if env_id in TASK_WITH_DEMO:
-                                if api.use_multi_images_as_video:
-                                    text_query = DEMO_TEXT_QUERY_multi_image.format(task_goal=language_goal)
-                                else:
-                                    text_query = DEMO_TEXT_QUERY.format(task_goal=language_goal)
-                            else:
-                                text_query = IMAGE_TEXT_QUERY.format(task_goal=language_goal)
-                        else:
-                            if api.use_multi_images_as_video:
-                                text_query = VIDEO_TEXT_QUERY_multi_image.format(task_goal=language_goal)
-                            else:
-                                text_query = VIDEO_TEXT_QUERY.format(task_goal=language_goal)
+                        # ------------------------ Call Mock Model ------------------------------------
+                        # 使用 mock model 生成 command_dict，输入所有 base_frames 不进行处理
+                        command_dict = mock_model(base_frames[frame_idx:], "", step_idx, language_goal)
                         
-                        # 数据准备
-                        # 如果env_id是PatternLock，先处理图片（旋转180度并添加坐标轴）
-                        # processed_frames = process_patternlock_images(base_frames[frame_idx:], env_id)
-                        # 如果它因为任何原因（如帧数据为空、IO错误）失败抛出异常，也会触发外层的 except 块，导致环境销毁和重建。
-                        input_data = api.prepare_input_data(base_frames[frame_idx:], text_query, step_idx)
-
-                    #使用gui画出图
-                        # cv2.imshow("base_frames[-1]", base_frames[-1])
-                        # cv2.waitKey(0)
-                        # cv2.destroyWindow("base_frames[-1]")
-
-
-                        # 步骤 2：API 调用（保持原有的原地重试逻辑）
-                        # 这里保留之前的“API 内部重试循环”，因为网络错误不需要重启环境。
-                        response, points = api.call(input_data)
-                        
-                        #points=[(255, 255)]#test
-
-                        if response is None:
-                            print("Response is None, skipping this step")
-                            break
-                        
-                        # Draw the points for debugging              
-                        if points and len(points) > 0:
-                            anno_image = base_frames[-1].copy()
-                            for point in points:
-                                cv2.circle(anno_image, (point[1], point[0]), 5, (255, 255, 0), -1)
-                            imageio.imwrite(os.path.join(save_dir, f"anno_step_{step_idx}_image.png"), anno_image)
-                            api.add_frame_hold(anno_image)
-                        
-                        command_dict = response['subgoal']
                         # TODO: will be fixed in the future
                         if command_dict['point'] is not None:
                             command_dict['point'] = command_dict['point'][::-1]  
                         
-                        print(f"\nResponse: {response}")              
                         print(f"\nCommand: {command_dict}")
                         
-                                        
                         frame_idx = len(base_frames)
                         step_idx += 1
                         
@@ -385,6 +280,10 @@ def main():
                             wrist_frames,
                             command_dict
                         )
+                        
+                        if evaluation is None:
+                            print("Evaluation is None, skipping this step")
+                            break
                         
                         fail_flag = evaluation.get("fail", False)
                         success_flag = evaluation.get("success", False)
@@ -402,19 +301,8 @@ def main():
                     
                     # 阶段 C：成功标记
                     # 如果代码能走到这里（没有报错），说明本 Episode 跑通了。
-                    if response is not None:
-                        # 如果env_id是PatternLock，先处理图片（旋转180度并添加坐标轴）
-                        # processed_frames = process_patternlock_images(base_frames[frame_idx:], env_id)
-                        api.prepare_input_data(base_frames[frame_idx:], text_query, step_idx)
-                    else:
-                        success = "api_error"
-                    
-                    api.save_conversation()
-                    api.save_final_video(os.path.join(os.path.dirname(save_dir), f"{success}_ep{episode}_{language_goal}.mp4"))
-                    api.clear_uploaded_files() #only for gemini
-                    del api
                     del env
-                    #import pdb; pdb.set_trace()
+
                     # 记录状态（success或fail，api_error不记录）
                     if success in ["success", "fail"]:
                         save_episode_status(status_json_path, model_name, env_id, episode, success)
@@ -427,18 +315,13 @@ def main():
                     traceback.print_exc()
                     
                     # 关键动作：清理战场。
-                    if 'env' in locals() and env is not None:
+                    env_local = locals().get('env')
+                    if env_local is not None:
                         try:
-                            env.close()
+                            env_local.close()
                         except:
                             pass
-                    
-                    if 'api' in locals() and api is not None:
-                         # api cleanup if needed
-                         pass
-                    
-                    if 'env' in locals(): del env
-                    if 'api' in locals(): del api
+                        del env_local
                     
                     # 强制进行 Python 垃圾回收 gc.collect()（对仿真器很重要）。
                     gc.collect()

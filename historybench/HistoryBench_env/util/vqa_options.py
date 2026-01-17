@@ -1,5 +1,17 @@
 from typing import Callable, Dict, List
 import numpy as np
+import sys
+import os
+import inspect
+
+# 如果是作为脚本直接运行，添加项目根目录到 sys.path
+if __name__ == "__main__":
+    # 获取当前文件的目录
+    current_file = os.path.abspath(__file__)
+    # 项目根目录应该是 historybench-v5.7.2-sam2act-update
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
 
 from historybench.HistoryBench_env.util.planner import (
     grasp_and_lift_peg_side,
@@ -791,11 +803,7 @@ def _options_stopcube(env, planner, require_target, base) -> List[dict]:
                
 
             if target == final_target:
-               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
-               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
-               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
-               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
-               print("!!!!!!!!!!!!!!timestep!!!!!!!!!!!!!!!")
+               pass
 
 
             # 调用原有的 solve_hold_obj_absTimestep 函数
@@ -895,3 +903,104 @@ def get_vqa_options(env, planner, selected_target, env_id: str) -> List[dict]:
     base = env.unwrapped
     builder = OPTION_BUILDERS.get(env_id, _options_default)
     return builder(env, planner, _require_target, base)
+
+
+if __name__ == "__main__":
+    """打印所有任务的 options label"""
+    class MockEnv:
+        def __init__(self):
+            self.spawned_cubes = ["cube1"]
+            self.all_cubes = ["cube1", "cube2"]
+            self.spawned_bins = ["bin1"]
+            self.targets = ["target1"]
+            self.target_right = "target_right"
+            self.target_left = "target_left"
+            # For InsertPeg
+            self.peg_heads = ["peg_head"]
+            self.peg_tails = ["peg_tail"]
+            self.obj_flag = "obj_flag"
+            self.insert_target = "insert_target"
+            # For PickXtimes
+            self.target = "target"
+            self.button = "button"
+    
+    class MockBase:
+        def __init__(self):
+            # Common objects
+            self.button = "button"
+            self.button_left = "button_left"
+            self.button_right = "button_right"
+            self.cube = "cube"
+            self.target = "target"
+            
+            # BinFill
+            self.board_with_hole = "board_with_hole"
+            
+            # MoveCube
+            self.goal_site = "goal_site"
+            self.grasp_target = "grasp_target"
+            self.obj_flag = "obj_flag"
+            self.direction1 = 1
+            self.direction2 = 1
+            
+            # PickHighlight
+            self.target_cubes = ["cube1"]
+            self.target_labels = ["cube1"]
+            self.target_cube_names = ["cube1"]
+            
+            # SwingXtimes / VideoPlaceOrder / VideoPlaceButton
+            self.target_cube = "target_cube"
+            
+            # StopCube
+            self.steps_press = 100
+            self.interval = 30
+            
+            # PatternLock / RouteStick (mocking basic lists to avoid attribute errors if accessed)
+            self.targets_grid = []
+            self.buttons_grid = []
+            self.selected_buttons = []
+            self.route_button_indices = []
+    
+    env = MockEnv()
+    planner = None
+    base = MockBase()
+    
+    def _require_target():
+        return None
+    
+    print("=" * 80)
+    print("所有任务的 Options Labels:")
+    print("=" * 80)
+    
+    for task_name, builder_func in OPTION_BUILDERS.items():
+        try:
+            options = builder_func(env, planner, _require_target, base)
+            print(f"\n任务: {task_name}")
+            valid_options = [opt for opt in options if isinstance(opt, dict)]
+            print(f"  Options Labels ({len(valid_options)} 个):")
+            
+            for i, opt in enumerate(valid_options, 1):
+                label = opt.get("label", "无label")
+                solve_func = opt.get("solve")
+                needs_target = False
+                if solve_func:
+                    try:
+                        sig = inspect.signature(solve_func)
+                        if "require_target" in sig.parameters:
+                            needs_target = True
+                    except ValueError:
+                        pass
+                
+                target_str = " [需点击目标]" if needs_target else ""
+                print(f"    {i}. {label}{target_str}")
+        except Exception as e:
+            print(f"\n任务: {task_name}")
+            print(f"  错误: 无法获取 options - {type(e).__name__}: {e}")
+    
+    print("\n" + "=" * 80)
+
+
+# 你需要将环境的库路径添加到 LD_LIBRARY_PATH 环境变量中，强制程序优先加载环境内的库。
+# 你可以通过以下命令运行你的脚本：
+# export LD_LIBRARY_PATH=/home/hongzefu/micromamba/envs/maniskillenv1228/lib:$LD_LIBRARY_PATH
+# /home/hongzefu/micromamba/envs/maniskillenv1228/bin/python /home/hongzefu/historybench-v5.7.2-sam2act-update/historybench/HistoryBench_env/util/vqa_options.py
