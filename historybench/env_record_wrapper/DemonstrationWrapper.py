@@ -257,9 +257,9 @@ class DemonstrationWrapper(gym.Wrapper):
             for task in getattr(self, "task_list", [])
         )
 
-        obs, _, _, _, _ = self.step(action)
+        obs, _, _, _, info = self.step(action)
 
-        return None
+        return obs, info
 
 
     def _add_red_border(self, frame, border_width=10):

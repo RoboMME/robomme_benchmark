@@ -529,7 +529,7 @@ def parse_args() -> argparse.Namespace:
         "--max-workers",
         "-w",
         type=int,
-        default=20,
+        default=25,
         help="运行多个环境时的并行 worker 数量。",
     )
     return parser.parse_args()
@@ -552,7 +552,7 @@ def main() -> None:
 
     for env_id in env_ids:
         # 为所有 episode 创建共享的临时文件夹
-        temp_folder =  Path(f"/home/hongzefu/dataset_generate/temp_{env_id}_episodes")
+        temp_folder =  Path(f"/data/hongzefu/dataset_generate/temp_{env_id}_episodes")
         final_dataset_path =  Path(f"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")
