@@ -217,6 +217,7 @@ class DemonstrationWrapper(gym.Wrapper):
         self.current_subgoal_segment_filled = None
         self.segmentation_points = []
         self.no_object_flag = False
+        self.episode_success = False  # 初始化 episode_success 属性
 
         # 与 RecordWrapper 保持一致的分割上色表
         def generate_color_map(n=100, s_min=0.70, s_max=0.95, v_min=0.78, v_max=0.95):
@@ -237,6 +238,8 @@ class DemonstrationWrapper(gym.Wrapper):
 
     def reset(self, **kwargs):
         obs = super().reset(**kwargs)
+        # 重置 episode_success 状态
+        self.episode_success = False
         # Reset 后自动调用 get_demonstration_trajectory 生成演示轨迹
         # 这确保了每次 episode 开始时都有对应的演示数据
         self.demonstration_data = self.get_demonstration_trajectory()

@@ -33,14 +33,14 @@ def main():
     """
 
     num_episodes = 1
-    gui_render=False
+    gui_render=True
     max_steps=3000
     
 
 
     env_id_list = [
         # "VideoRepick",
-        # "BinFill",
+        "BinFill",
         # "ButtonUnmask",
         # "ButtonUnmaskSwap",
 
@@ -55,7 +55,7 @@ def main():
 
         # "SwingXtimes",
        # "VideoPlaceButton",
-        "VideoPlaceOrder",
+        #"VideoPlaceOrder",
         # "VideoUnmask",
         # "VideoUnmaskSwap",
     ]
@@ -99,40 +99,42 @@ def main():
             language_goal = demonstration_data.get('language goal') if demonstration_data else None
 
 
-            # while True:
+            while True:
 
             
-            #     action = None
+                action = None
 
-            #     obs, reward, terminated, truncated, info = env.step(action)
+                action=np.array([0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,      -1.0])
+
+                obs, reward, terminated, truncated, info = env.step(action)
                 
 
-            #     image=env.frames[-1]
-            #     wrist_image=env.wrist_frames[-1]
-            #     last_action=env.actions[-1]
-            #     state=env.states[-1]
-            #     velocity=env.velocity[-1]
-            #     subgoal_grounded=env.subgoal_grounded[-1]
+                image=env.frames[-1]
+                wrist_image=env.wrist_frames[-1]
+                last_action=env.actions[-1]
+                state=env.states[-1]
+                velocity=env.velocity[-1]
+                subgoal_grounded=env.subgoal_grounded[-1]
 
 
-            #     if info["success"] == torch.tensor([True]):
-            #         print(info["success"])
+                if info["success"] == torch.tensor([True]):
+                    print(info["success"])
 
-            #     if gui_render:
-            #         test=env.render()
-            #         print(test)
-            #     if truncated:
-            #         print("time limit!")
-            #         break
-            #     if terminated:
-            #         obs, reward, terminated, truncated, info = env.step(action)
-            #         if info.get("success", False):
-            #             print("success")
-            #         if info.get("fail", False):
-            #             print("fail")
-            #         break
+                if gui_render:
+                    test=env.render()
+                    print(test)
+                if truncated:
+                    print("time limit!")
+                    break
+                if terminated:
+                    obs, reward, terminated, truncated, info = env.step(action)
+                    if info.get("success", False):
+                        print("success")
+                    if info.get("fail", False):
+                        print("fail")
+                    break
 
-            #     #print(f"Step: {env.elapsed_steps}")
+                #print(f"Step: {env.elapsed_steps}")
             env.close()
 
 if __name__ == "__main__":
