@@ -1,10 +1,5 @@
 import os
 
-# 设置 VNC 显示环境变量（必须在导入 sapien 之前设置）
-os.environ['DISPLAY'] = ':1'
-# 设置 OpenGL 相关环境变量以支持 VNC
-os.environ['LIBGL_ALWAYS_SOFTWARE'] = '1'  # 使用软件渲染（VNC 通常不支持硬件加速）
-os.environ['GALLIUM_DRIVER'] = 'llvmpipe'  # 使用 llvmpipe 驱动
 
 import sys
 import json
@@ -137,8 +132,29 @@ def main():
     Main function to run the simulation using keypoints from dataset.
     """
 
-    env_id_list = ["BinFill"]
-    dataset_root = Path("/home/hongzefu/dataset_generate")
+    env_id_list = [
+        # "PickXtimes",
+        # "StopCube",
+        # "SwingXtimes",
+        "BinFill",
+
+        #"VideoUnmaskSwap",
+    #"VideoUnmask",
+        # "ButtonUnmaskSwap",
+        # "ButtonUnmask",
+
+        # "VideoRepick",
+        # "VideoPlaceButton",
+    #"VideoPlaceOrder",
+        # "PickHighlight",
+
+        # "InsertPeg",
+        # 'MoveCube',
+        # "PatternLock",
+    #"RouteStick"
+        ]
+
+    dataset_root = Path("/nfs/turbo/coe-chaijy-unreplicated/hongzefu/dataset_generate")
     
     for env_id in env_id_list:
         dataset_path = dataset_root / f"record_dataset_{env_id}.h5"
@@ -170,6 +186,8 @@ def main():
         
         # 遍历所有 episode
         for episode_record in episode_records:
+            if episode_record['episode'] != 0:
+                continue
             episode = episode_record['episode']
             seed = episode_record.get('seed')
             difficulty = episode_record.get('difficulty')
@@ -222,20 +240,18 @@ def main():
                 print(f"  Executing keypoint {idx+1}/{len(episode_keypoints)}: timestep={timestep}, type={keypoint_type}")
                 
                 # 根据 keypoint_type 决定夹爪操作
-                if keypoint_type == 'reach_pose':
-                    planner.open_gripper()
-                elif keypoint_type == 'grasp_pose':
-                    # grasp_pose 通常在移动到位置后关闭夹爪
-                    pass
+              
                 
                 # 移动到 keypoint pose
                 try:
                     pose = sapien.Pose(p=keypoint_p, q=keypoint_q)
-                    planner.move_to_pose_with_screw(pose)
+                    planner.move_to_pose_with_RRTStar(pose)
                     
                     # 如果是 grasp_pose，移动到位置后关闭夹爪
-                    if keypoint_type == 'grasp_pose':
+                    if keypoint_type == 'close':
                         planner.close_gripper()
+                    elif keypoint_type == 'open':
+                        planner.open_gripper()
                         
                 except ScrewPlanFailure as exc:
                     print(f"    Screw plan failure for keypoint timestep {timestep}: {exc}")
@@ -248,6 +264,10 @@ def main():
             evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
             print(f"Final evaluation for episode {episode}: {evaluation}")
             
+
+
+
+
             env.close()
             print(f"--- Finished Running simulation for episode:{episode}, env: {env_id} ---")
 

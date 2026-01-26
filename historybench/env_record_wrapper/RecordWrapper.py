@@ -387,6 +387,32 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
             if hasattr(env_unwrapped, '_pending_keypoint') and env_unwrapped._pending_keypoint is not None:
                 # 获取待记录的keypoint并立即清除，确保每个keypoint只记录一次
                 current_keypoint = env_unwrapped._pending_keypoint
+                
+                # 获取当前机械臂末端姿态
+                tcp_pose = self.agent.tcp.pose
+                keypoint_p = tcp_pose.p
+                keypoint_q = tcp_pose.q
+                
+                # 转换为numpy数组
+                if isinstance(keypoint_p, torch.Tensor):
+                    keypoint_p_np = keypoint_p.detach().cpu().numpy()
+                    if keypoint_p_np.ndim > 1:
+                        keypoint_p_np = keypoint_p_np.flatten()
+                    keypoint_p_np = keypoint_p_np[:3]
+                else:
+                    keypoint_p_np = np.asarray(keypoint_p, dtype=np.float32).flatten()[:3]
+                    
+                if isinstance(keypoint_q, torch.Tensor):
+                    keypoint_q_np = keypoint_q.detach().cpu().numpy()
+                    if keypoint_q_np.ndim > 1:
+                        keypoint_q_np = keypoint_q_np.flatten()
+                    keypoint_q_np = keypoint_q_np[:4]
+                else:
+                    keypoint_q_np = np.asarray(keypoint_q, dtype=np.float32).flatten()[:4]
+                
+                current_keypoint['keypoint_p'] = keypoint_p_np.astype(np.float32)
+                current_keypoint['keypoint_q'] = keypoint_q_np.astype(np.float32)
+                
                 env_unwrapped._pending_keypoint = None
 
             record_data = {
@@ -545,9 +571,35 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                 if record_data['action'] is None:
                     ts_group.create_dataset("action", data="None", dtype=h5py.special_dtype(vlen=str))
                 else:
-                    ts_group.create_dataset("action", data=record_data['action'])
+                    action_data = record_data['action']
+                    if isinstance(action_data, torch.Tensor):
+                        action_data = action_data.cpu().numpy()
+                    if isinstance(action_data, list):
+                        action_data = np.array(action_data)
 
-                ts_group.create_dataset("state", data=record_data['state'])
+                    # action保证8维度 如果是7维度则填充一个-1
+                    # action保证8维度 如果是7维度则填充一个-1
+                    if isinstance(action_data, np.ndarray):
+                        if action_data.shape == (7,):
+                            action_data = np.concatenate([action_data, [-1]])
+                        elif action_data.shape == (1, 7):
+                            action_data = action_data.flatten()
+                            action_data = np.concatenate([action_data, [-1]])
+                            action_data = action_data.reshape(1, 8)
+                    
+                    ts_group.create_dataset("action", data=action_data)
+
+                state_data = record_data['state']
+                # state保证9维度 如果是7维度则填充两个0
+                if isinstance(state_data, np.ndarray):
+                    if state_data.shape == (7,):
+                        state_data = np.concatenate([state_data, [0, 0]])
+                    elif state_data.shape == (1, 7):
+                        state_data = state_data.flatten()
+                        state_data = np.concatenate([state_data, [0, 0]])
+                        state_data = state_data.reshape(1, 9)
+
+                ts_group.create_dataset("state", data=state_data)
                 ts_group.create_dataset("velocity", data=record_data['velocity'])
 
                 # 处理字符串任务名，确保编码正确
@@ -583,7 +635,9 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
 
                 # 写入keypoint信息（如果存在）
                 keypoint = record_data.get('keypoint', None)
-                if keypoint:
+                # 如果是demonstration就不记录这个keypoint
+                # if keypoint and not record_data['demonstration']:
+                if keypoint:  # 注释掉 demonstration 限制，现在 demonstration 阶段也会记录 keypoint
                     ts_group.create_dataset("keypoint_p", data=keypoint['keypoint_p'])
                     ts_group.create_dataset("keypoint_q", data=keypoint['keypoint_q'])
                     
@@ -632,49 +686,65 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                 setup_group.create_dataset("language goal", data=language_goal)
 
             # 保存成功视频（如果启用）。文件名包含语言目标/难度，方便查找
+            # 注意：视频保存失败不应该影响HDF5数据的保存
             if self.save_video and len(self.video_frames) > 0:
-                videos_dir = self.output_root / "videos"
-                videos_dir.mkdir(parents=True, exist_ok=True)
-                combined_video_path = videos_dir / f"{video_prefix}_{filename_suffix}.mp4"
+                try:
+                    videos_dir = self.output_root / "videos"
+                    videos_dir.mkdir(parents=True, exist_ok=True)
+                    combined_video_path = videos_dir / f"{video_prefix}_{filename_suffix}.mp4"
 
-                with imageio.get_writer(combined_video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
-                    for combined_frame in self.video_frames:
-                        writer.append_data(combined_frame)
-                print(f"Saved combined video to {combined_video_path}")
+                    with imageio.get_writer(combined_video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
+                        for combined_frame in self.video_frames:
+                            writer.append_data(combined_frame)
+                    print(f"Saved combined video to {combined_video_path}")
+                except Exception as e:
+                    print(f"Warning: Failed to save combined video for episode {self.HistoryBench_episode}: {e}")
+                    # 视频保存失败不影响HDF5数据保存
             if self.save_video and len(self.no_object_video_frames) > 0:
-                videos_dir = self.output_root / "videos"
-                videos_dir.mkdir(parents=True, exist_ok=True)
-                no_object_video_path = videos_dir / f"NO_OBJECT_{video_prefix}_{filename_suffix}.mp4"
+                try:
+                    videos_dir = self.output_root / "videos"
+                    videos_dir.mkdir(parents=True, exist_ok=True)
+                    no_object_video_path = videos_dir / f"NO_OBJECT_{video_prefix}_{filename_suffix}.mp4"
 
-                with imageio.get_writer(no_object_video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
-                    for combined_frame in self.no_object_video_frames:
-                        writer.append_data(combined_frame)
-                print(f"Saved no-object video to {no_object_video_path}")
+                    with imageio.get_writer(no_object_video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
+                        for combined_frame in self.no_object_video_frames:
+                            writer.append_data(combined_frame)
+                    print(f"Saved no-object video to {no_object_video_path}")
+                except Exception as e:
+                    print(f"Warning: Failed to save no-object video for episode {self.HistoryBench_episode}: {e}")
+                    # 视频保存失败不影响HDF5数据保存
 
             print(f"Successfully saved episode {self.HistoryBench_episode}")
         else:
             print(f"Episode {self.HistoryBench_episode} failed, discarding {len(self.buffer)} records")
 
             # 保存失败视频（如果启用），但不写入 HDF5
+            # 注意：视频保存失败不应该抛出异常
             if self.save_video and len(self.video_frames) > 0:
-                videos_dir = self.output_root / "videos"
-                videos_dir.mkdir(parents=True, exist_ok=True)
-                # Add FAILED_ prefix to the filename
-                combined_video_path = videos_dir / f"FAILED_{video_prefix}_{filename_suffix}.mp4"
+                try:
+                    videos_dir = self.output_root / "videos"
+                    videos_dir.mkdir(parents=True, exist_ok=True)
+                    # Add FAILED_ prefix to the filename
+                    combined_video_path = videos_dir / f"FAILED_{video_prefix}_{filename_suffix}.mp4"
 
-                with imageio.get_writer(combined_video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
-                    for combined_frame in self.video_frames:
-                        writer.append_data(combined_frame)
-                print(f"Saved failed episode video to {combined_video_path}")
+                    with imageio.get_writer(combined_video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
+                        for combined_frame in self.video_frames:
+                            writer.append_data(combined_frame)
+                    print(f"Saved failed episode video to {combined_video_path}")
+                except Exception as e:
+                    print(f"Warning: Failed to save failed episode video for episode {self.HistoryBench_episode}: {e}")
             if self.save_video and len(self.no_object_video_frames) > 0:
-                videos_dir = self.output_root / "videos"
-                videos_dir.mkdir(parents=True, exist_ok=True)
-                no_object_video_path = videos_dir / f"FAILED_NO_OBJECT_{video_prefix}_{filename_suffix}.mp4"
+                try:
+                    videos_dir = self.output_root / "videos"
+                    videos_dir.mkdir(parents=True, exist_ok=True)
+                    no_object_video_path = videos_dir / f"FAILED_NO_OBJECT_{video_prefix}_{filename_suffix}.mp4"
 
-                with imageio.get_writer(no_object_video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
-                    for combined_frame in self.no_object_video_frames:
-                        writer.append_data(combined_frame)
-                print(f"Saved failed no-object video to {no_object_video_path}")
+                    with imageio.get_writer(no_object_video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
+                        for combined_frame in self.no_object_video_frames:
+                            writer.append_data(combined_frame)
+                    print(f"Saved failed no-object video to {no_object_video_path}")
+                except Exception as e:
+                    print(f"Warning: Failed to save failed no-object video for episode {self.HistoryBench_episode}: {e}")
 
             # 如果 episode 失败，删除已经创建的 group（如果有的话）
             env_group_name = f"env_{self.HistoryBench_env}"

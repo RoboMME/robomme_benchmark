@@ -240,7 +240,7 @@ def main():
     # API服务器地址，默认本地8000端口
     parser.add_argument('--api_url', type=str, default='http://141.212.48.176:8002', help='API URL')
     # 每个episode的最大执行步数，默认25步
-    parser.add_argument('--max_steps', type=int, default=100, help='Max steps per episode')
+    parser.add_argument('--max_steps', type=int, default=25, help='Max steps per episode')
     args = parser.parse_args()
     
     # 提取参数值
@@ -249,6 +249,7 @@ def main():
     
     # ========== 配置参数 ==========
     # 要评估的环境任务列表（可以包含多个任务，如["BinFill", "PatternLock"]）
+    #env_id_list = ["BinFill", "VideoUnmask","VideoPlaceOrder","RouteStick"]
     env_id_list = ["BinFill"]
     # 数据集根目录路径，包含metadata文件和episode数据
     dataset_root = Path("/data/hongzefu/historybench-v5.7.4-sam2act-generate128/dataset_json")
@@ -276,6 +277,7 @@ def main():
             render_mode="rgb_array",  # 渲染模式："rgb_array"表示无头渲染（不创建窗口）
             gui_render=False,  # 是否启用GUI渲染（False表示不显示图形界面）
             max_steps_without_demonstration=200,  # 没有演示时的最大步数（用于安全限制）
+            save_video=True,  # 是否保存视频
         )
         
         # ========== 遍历所有episode ==========
@@ -284,6 +286,10 @@ def main():
             episode = episode_record['episode']  # episode编号
             seed = episode_record.get('seed')  # 随机种子（可选）
             difficulty = episode_record.get('difficulty')  # 难度等级（可选）
+
+            #only run episode 0-10
+            if episode > 50:
+                continue    
             
             print(f"--- Running simulation for episode:{episode}, env: {env_id}, seed: {seed}, difficulty: {difficulty} ---")
             
@@ -294,6 +300,9 @@ def main():
             # 重置环境，获取初始观测和信息
             obs, info = env.reset()
             
+            # if resolved_difficulty != "easy":
+            #     continue
+            
             # ========== 初始化运动规划器 ==========
             # 根据任务类型选择不同的运动规划器
             # PatternLock和RouteStick任务需要使用带棍子的规划器（因为涉及棍子操作）
@@ -302,7 +311,7 @@ def main():
                 planner = FailAwarePandaStickMotionPlanningSolver(
                     env,  # 环境对象
                     debug=False,  # 是否开启调试模式
-                    vis=True,  # 是否可视化规划过程
+                    vis=False,  # 是否可视化规划过程
                     base_pose=env.unwrapped.agent.robot.pose,  # 机器人基座位姿
                     visualize_target_grasp_pose=False,  # 是否可视化目标抓取位姿（棍子任务不需要）
                     print_env_info=False,  # 是否打印环境信息
@@ -313,7 +322,7 @@ def main():
                 planner = FailAwarePandaArmMotionPlanningSolver(
                     env,
                     debug=False,
-                    vis=True,
+                    vis=False,
                     base_pose=env.unwrapped.agent.robot.pose,
                     visualize_target_grasp_pose=True,  # 可视化目标抓取位姿（有助于调试）
                     print_env_info=False,
@@ -389,26 +398,22 @@ def main():
                     ]
                     
                     pose = sapien.Pose(p=pos, q=quat_wxyz)
-                    print(f"pose: {pos}, quat(wxyz): {quat_wxyz}")
+                    print(f"pose: {pos}, quat(wxyz): {quat_wxyz} gripper_action: {gripper_action}")
                     
-                    # ========== 处理夹爪动作 ==========
-                    # 如果夹爪动作值大于0.5，表示需要打开夹爪
-                    if gripper_action > 0.5:
-                        planner.open_gripper()  # 打开夹爪
-                    else:
-                        # 延迟闭合：先移动到目标位姿，然后再闭合夹爪
-                        # 这样可以避免在移动过程中夹爪闭合导致碰撞
-                        pass
+                 
+
                         
                     # ========== 执行运动规划并移动到目标位姿 ==========
                     try:
                         # 使用螺旋运动（screw motion）规划并执行移动到目标位姿
                         # 螺旋运动是一种平滑的轨迹规划方法，适合机械臂运动
-                        planner.move_to_pose_with_screw(pose)
+                        planner.move_to_pose_with_RRTStar(pose)
                         
                         # 如果动作指示需要闭合夹爪，在移动完成后闭合
                         if gripper_action <= 0.5:
                             planner.close_gripper()
+                        else:
+                            planner.open_gripper()
                             
                     except ScrewPlanFailure as exc:
                         # 捕获螺旋运动规划失败异常
@@ -432,6 +437,14 @@ def main():
                     # 从评估结果中提取成功标志
                     # 如果evaluation中没有"success"键，默认返回False
                     success = evaluation.get("success", torch.tensor([False])).item()
+                    # 从评估结果中提取失败标志
+                    # 如果evaluation中没有"fail"键，默认返回False
+                    fail = evaluation.get("fail", torch.tensor([False])).item()
+                    
+                    # 如果任务失败，提前结束episode
+                    if fail:
+                        print(f"Episode {episode} Failed!")
+                        break  # 任务失败，退出循环
                     
                     # 如果任务成功完成，提前结束episode
                     if success:

@@ -135,12 +135,12 @@ def main():
     # ========== 命令行参数解析 ==========
     parser = argparse.ArgumentParser(description='Run evaluation using pred_actions from JSON file')
     # 随机种子，默认42
-    parser.add_argument('--seed', type=int, default=10001, help='Random seed for environment')
+    parser.add_argument('--seed', type=int, default=40000, help='Random seed for environment')
     # 难度等级，默认easy
     parser.add_argument('--difficulty', type=str, default='easy', choices=['easy', 'medium', 'hard'], help='Difficulty level')
     # pred_actions.json文件路径
     parser.add_argument('--pred_actions_path', type=str, 
-                       default='/data/hongzefu/historybench-v5.7.5-sam2act5/scripts/pred_actions.json',
+                       default='/data/hongzefu/historybench-v5.7.5-sam2act7-full-dataset/scripts/pred_actions.json',
                        help='Path to pred_actions.json file')
     args = parser.parse_args()
     
@@ -169,7 +169,7 @@ def main():
         env_kwargs = dict(
             obs_mode="rgb+depth+segmentation",  # 观测模式：RGB + 深度 + 分割
             control_mode="pd_joint_pos",        # 控制模式：位置控制
-            render_mode="rgb_array",            # 渲染模式
+            render_mode="human",            # 渲染模式
             reward_mode="dense",                # 奖励模式
             HistoryBench_seed=seed,             # 随机种子
             max_episode_steps=200,              # 最大步数
@@ -226,7 +226,7 @@ def main():
         for step, action_data in enumerate(action_list):
             keypoint_pair_idx = action_data['keypoint_pair_idx']
             pred_action = action_data['gt_action']
-            pred_action = action_data['pred_action']#选择预测动作
+            #pred_action = action_data['pred_action']#选择预测动作
             
             print(f"Step {step}/{len(action_list)} (keypoint_pair_idx: {keypoint_pair_idx})")
             
@@ -264,8 +264,15 @@ def main():
                     
                     # 如果动作指示需要闭合夹爪，在移动完成后闭合
                     if gripper_action <= 0.5:
-                        planner.close_gripper()
+                        try:
+                            planner.close_gripper()
+                        except Exception as e:
+                            print(f"  Stick action ")
                     else:
+                        try:
+                            planner.open_gripper()
+                        except Exception as e:
+                            print(f"  Stick action ")
                         planner.open_gripper()
                         
                 except ScrewPlanFailure as exc:

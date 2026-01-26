@@ -249,7 +249,7 @@ def main():
     
     # ========== 配置参数 ==========
     # 要评估的环境任务列表（可以包含多个任务，如["BinFill", "PatternLock"]）
-    env_id_list = ["BinFill"]
+    env_id_list = ["VideoUnmask"]
     # 数据集根目录路径，包含metadata文件和episode数据
     dataset_root = Path("/data/hongzefu/historybench-v5.7.4-sam2act-generate128/dataset_json")
     
@@ -273,7 +273,7 @@ def main():
             env_id=env_id,  # 环境ID（任务类型）
             dataset=None,  # 数据集对象（None表示从metadata文件读取）
             metadata_path=metadata_path,  # metadata文件路径
-            render_mode="rgb_array",  # 渲染模式："rgb_array"表示无头渲染（不创建窗口）
+            render_mode="human",  # 渲染模式："rgb_array"表示无头渲染（不创建窗口）
             gui_render=False,  # 是否启用GUI渲染（False表示不显示图形界面）
             max_steps_without_demonstration=200,  # 没有演示时的最大步数（用于安全限制）
             save_video=True,  # 是否保存视频
@@ -306,7 +306,7 @@ def main():
                 planner = FailAwarePandaStickMotionPlanningSolver(
                     env,  # 环境对象
                     debug=False,  # 是否开启调试模式
-                    vis=False,  # 是否可视化规划过程
+                    vis=True,  # 是否可视化规划过程
                     base_pose=env.unwrapped.agent.robot.pose,  # 机器人基座位姿
                     visualize_target_grasp_pose=False,  # 是否可视化目标抓取位姿（棍子任务不需要）
                     print_env_info=False,  # 是否打印环境信息
@@ -317,7 +317,7 @@ def main():
                 planner = FailAwarePandaArmMotionPlanningSolver(
                     env,
                     debug=False,
-                    vis=False,
+                    vis=True,
                     base_pose=env.unwrapped.agent.robot.pose,
                     visualize_target_grasp_pose=True,  # 可视化目标抓取位姿（有助于调试）
                     print_env_info=False,

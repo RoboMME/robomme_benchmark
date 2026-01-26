@@ -590,10 +590,31 @@ class DemonstrationWrapper(gym.Wrapper):
                 video_path = videos_dir / f"DEMO_{self.unwrapped.spec.id}{seed_tag}_{sanitized_goal}.mp4"
             else:
                  video_path = videos_dir / f"DEMO_FAILED_{self.unwrapped.spec.id}{seed_tag}_{sanitized_goal}.mp4"
-            with imageio.get_writer(video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
-                for frame in self.video_frames:
-                    writer.append_data(frame)
-            print(f"Saved demonstration video to {video_path}")
+            try:
+                with imageio.get_writer(video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
+                    for frame in self.video_frames:
+                        writer.append_data(frame)
+                print(f"Saved demonstration video to {video_path}")
+            except (ValueError, Exception) as e:
+                # 如果保存视频时出错（如帧大小不一致），保存一个空白视频
+                print(f"Error saving video: {e}. Saving blank video instead.")
+                # 获取第一个帧的大小，如果不存在则使用默认大小
+                if len(self.video_frames) > 0:
+                    first_frame = self.video_frames[0]
+                    if isinstance(first_frame, np.ndarray):
+                        frame_shape = first_frame.shape
+                        blank_frame = np.zeros(frame_shape, dtype=first_frame.dtype)
+                    else:
+                        # 如果第一个帧不是numpy数组，使用默认大小
+                        blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                else:
+                    blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                
+                # 创建一个只包含空白帧的短视频（1秒，30帧）
+                with imageio.get_writer(video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
+                    for _ in range(30):
+                        writer.append_data(blank_frame)
+                print(f"Saved blank video to {video_path}")
         # if self.save_video and len(self.no_object_video_frames)>0:
         #     videos_dir = Path("/data/hongzefu/dataset_generate/replay_videos")
         #     videos_dir.mkdir(parents=True, exist_ok=True)

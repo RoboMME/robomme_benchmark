@@ -59,16 +59,22 @@ def grasp_and_lift_peg_side(env, planner,obj):
 
     lifted_pose_p = grasp_pose_p.copy()
     lifted_pose_p[2] = lift_height
+
+
     planner.move_to_pose_with_screw(sapien.Pose(p=lifted_pose_p, q=grasp_pose_q))
+    _record_keypoint(env, 'grasp_and_lift_peg_side', 'open')
 
     planner.move_to_pose_with_screw(sapien.Pose(p=grasp_pose_p, q=grasp_pose_q))
     planner.close_gripper()
+    _record_keypoint(env, 'grasp_and_lift_peg_side', 'close')
 
     lifted_pose_p = grasp_pose_p.copy()
     lifted_pose_p[2] = lift_height
     planner.move_to_pose_with_screw(sapien.Pose(p=lifted_pose_p, q=grasp_pose_q))
 
     planner.close_gripper()
+    _record_keypoint(env, 'grasp_and_lift_peg_side', 'close')
+
     current_grasp_pose=sapien.Pose(p=grasp_pose_p, q=grasp_pose_q)
     env.current_grasp_pose = current_grasp_pose
 
@@ -289,15 +295,33 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
 
 
         _move_with_offset([0.2 , 0, -0.15])
+        _record_keypoint(env, 'insert_peg', 'close')
+
         _move_with_offset([0.2 , 0, 0])
+        _record_keypoint(env, 'insert_peg', 'close')
+
         _move_with_offset([0.15 , 0, 0])
+        #_record_keypoint(env, 'insert_peg', 'close')
+
+
         # for i in range(5):
         #     _move_with_offset([0.05 , 0, 0])
         if cut_retreat!=True:
             _move_with_offset([-0.05 , 0, 0])
+            _record_keypoint(env, 'insert_peg', 'close')
+            for i in range(5):
+                planner.close_gripper()#make sure record keypoint is not the last
+
+
+
         else:
             print(f"cut_retreat mode (obj=-1): elapsed_steps={int(getattr(env, 'elapsed_steps', 0))}, end_steps={env.end_steps}")
             _move_with_offset_with_break([-0.05, 0, 0])
+            _record_keypoint(env, 'insert_peg', 'close')
+            for i in range(5):
+                planner.close_gripper()#make sure record keypoint is not the last
+
+
 
 
     else:#obj=1
@@ -305,15 +329,31 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
         _, insert_pose_p, insert_pose_q = _pose_components()
 
         _move_with_offset([-0.2 , 0, -0.15])
+        _record_keypoint(env, 'insert_peg', 'close')
+
         _move_with_offset([-0.2 , 0, 0])
+        _record_keypoint(env, 'insert_peg', 'close')
+
         _move_with_offset([-0.15 , 0, 0])
+        #_record_keypoint(env, 'insert_peg', 'close')
+
+
         # for i in range(5):
         #     _move_with_offset([-0.05 , 0, 0])
         if cut_retreat!=True:
             _move_with_offset([-0.05 , 0, 0])
+            _record_keypoint(env, 'insert_peg', 'close')
+            for i in range(5):
+                planner.close_gripper()#make sure record keypoint is not the last
+
+
         else:
             print(f"cut_retreat mode (obj=1): elapsed_steps={int(getattr(env, 'elapsed_steps', 0))}, end_steps={env.end_steps}")
             _move_with_offset_with_break([-0.05, 0, 0])
+            _record_keypoint(env, 'insert_peg', 'close')
+            for i in range(5):
+                planner.close_gripper()#make sure record keypoint is not the last
+
 
 
 def _zero_action_for_space(space):
@@ -511,7 +551,7 @@ def solve_push_to_target(env, planner, obj=None, target=None):
     
     # 闭合gripper准备推动
     planner.close_gripper()
-    
+    _record_keypoint(env, 'solve_push_to_target', 'close')
     # -------------------------------------------------------------------------- #
     # 推动到目标位置
     # -------------------------------------------------------------------------- #
@@ -521,7 +561,8 @@ def solve_push_to_target(env, planner, obj=None, target=None):
     
         
     planner.move_to_pose_with_screw(sapien.Pose(p=end_pos.tolist(), q=reach_pose_q))
-    
+    _record_keypoint(env, 'solve_push_to_target', 'close')
+
     # 推动完成后打开gripper
     planner.open_gripper()
 
@@ -711,11 +752,14 @@ def solve_push_to_target_with_peg(env, planner, obj=None, target=None, direction
     # 先到达上方预备位置，再下降到真正的起点
     planner.move_to_pose_with_screw(sapien.Pose(p=start_ready_pos.tolist(), q=reach_pose_q))
     planner.move_to_pose_with_screw(sapien.Pose(p=start_pos.tolist(), q=reach_pose_q))
+   
 
     # -------------------------------------------------------------------------- #
     # 8. 闭合 gripper 使 peg/手指贴紧物体，准备执行真正的 pushing
     # -------------------------------------------------------------------------- #
     planner.close_gripper()
+
+    _record_keypoint(env, 'solve_push_to_target_with_peg', 'close')
 
         # -------------------------------------------------------------------------- #
     # 推动到目标位置
@@ -725,6 +769,7 @@ def solve_push_to_target_with_peg(env, planner, obj=None, target=None, direction
     end_pos[2] = start_pos[2]  # 保持z轴高度不变
     end_pos = end_pos -  lateral_unit * lateral_distance
     planner.move_to_pose_with_screw(sapien.Pose(p=end_pos.tolist(), q=reach_pose_q))
+    _record_keypoint(env, 'solve_push_to_target_with_peg', 'close')
 
     # 推动完成后打开gripper
     planner.open_gripper()
@@ -807,45 +852,22 @@ def solve_pickup_fail(env, planner, obj=None,z_offset=None,xy_offset=None,obj_ty
     return None
 
 
-def _record_keypoint(env, keypoint_p, keypoint_q, solve_function, keypoint_type):
+def _record_keypoint(env, solve_function, keypoint_type):
     """
     记录keypoint信息到env属性中，用于后续写入hdf5文件。
     
     Args:
         env: 环境对象
-        keypoint_p: 位置坐标（3D数组），可以是list、numpy数组或torch tensor
-        keypoint_q: 四元数（4D数组），可以是list、numpy数组或torch tensor
         solve_function: solve函数名称字符串（如'solve_pickup'）
         keypoint_type: keypoint类型字符串（如'reach_pose', 'grasp_pose'）
     """
+    if keypoint_type not in ["open", "close"]:
+        raise ValueError(f"keypoint_type must be 'open' or 'close', but got '{keypoint_type}'")
+
     env = getattr(env, "unwrapped", env)
-    
-    # 转换keypoint_p为numpy数组
-    if isinstance(keypoint_p, torch.Tensor):
-        keypoint_p_np = keypoint_p.detach().cpu().numpy()
-        if keypoint_p_np.ndim > 1:
-            keypoint_p_np = keypoint_p_np.flatten()
-        keypoint_p_np = keypoint_p_np[:3]  # 确保是3D
-    elif isinstance(keypoint_p, (list, tuple)):
-        keypoint_p_np = np.array(keypoint_p, dtype=np.float32)[:3]
-    else:
-        keypoint_p_np = np.asarray(keypoint_p, dtype=np.float32).flatten()[:3]
-    
-    # 转换keypoint_q为numpy数组
-    if isinstance(keypoint_q, torch.Tensor):
-        keypoint_q_np = keypoint_q.detach().cpu().numpy()
-        if keypoint_q_np.ndim > 1:
-            keypoint_q_np = keypoint_q_np.flatten()
-        keypoint_q_np = keypoint_q_np[:4]  # 确保是4D
-    elif isinstance(keypoint_q, (list, tuple)):
-        keypoint_q_np = np.array(keypoint_q, dtype=np.float32)[:4]
-    else:
-        keypoint_q_np = np.asarray(keypoint_q, dtype=np.float32).flatten()[:4]
     
     # 记录keypoint信息到待记录变量（只保存一个，step中记录后会被清除）
     keypoint_info = {
-        'keypoint_p': keypoint_p_np.astype(np.float32),
-        'keypoint_q': keypoint_q_np.astype(np.float32),
         'solve_function': solve_function,
         'keypoint_type': keypoint_type
     }
@@ -886,16 +908,20 @@ def solve_pickup(env, planner, obj=None,fail_grasp=False,mode=None):
     reach_pose_q = grasp_pose.q.tolist() if hasattr(grasp_pose.q, 'tolist') else list(grasp_pose.q)
     reach_pose_p[2]=0.15
     planner.move_to_pose_with_screw(sapien.Pose(p=reach_pose_p,q=reach_pose_q))
-    _record_keypoint(env, reach_pose_p, reach_pose_q, 'solve_pickup', 'reach_pose')
+    
     planner.open_gripper()
+
+    _record_keypoint(env, 'solve_pickup', 'open')
     # -------------------------------------------------------------------------- #
     # Grasp
     # -------------------------------------------------------------------------- #
     planner.move_to_pose_with_screw(grasp_pose)
     grasp_pose_p = grasp_pose.p.tolist() if hasattr(grasp_pose.p, 'tolist') else list(grasp_pose.p)
     grasp_pose_q = grasp_pose.q.tolist() if hasattr(grasp_pose.q, 'tolist') else list(grasp_pose.q)
-    _record_keypoint(env, grasp_pose_p, grasp_pose_q, 'solve_pickup', 'grasp_pose')
+
     planner.close_gripper()
+
+    _record_keypoint(env, 'solve_pickup', 'close')
 
     # -------------------------------------------------------------------------- #
     # Move to goal pose
@@ -904,7 +930,8 @@ def solve_pickup(env, planner, obj=None,fail_grasp=False,mode=None):
     goal_pose_P[2]=0.15
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
     res = planner.move_to_pose_with_screw(goal_pose)
-    _record_keypoint(env, goal_pose_P, grasp_pose.q, 'solve_pickup', 'goal_pose')
+
+    _record_keypoint(env, 'solve_pickup', 'close')
 
     planner.close()
     return res
@@ -946,6 +973,8 @@ def solve_pickup_bin(env, planner, obj=None, fail_grasp=False, mode=None):
     planner.move_to_pose_with_screw(reach_pose_fix)
     planner.open_gripper()
 
+    _record_keypoint(env, 'solve_pickup_bin', 'open')
+
     # -------------------------------------------------------------------------- #
     # Grasp
     # -------------------------------------------------------------------------- #
@@ -955,6 +984,7 @@ def solve_pickup_bin(env, planner, obj=None, fail_grasp=False, mode=None):
     # grasp_pose_up=grasp_pose * sapien.Pose([0, 0.1,0])#test
     # planner.move_to_pose_with_screw(grasp_pose_up)#test
 
+    _record_keypoint(env, 'solve_pickup_bin', 'close')
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
@@ -962,6 +992,9 @@ def solve_pickup_bin(env, planner, obj=None, fail_grasp=False, mode=None):
     goal_pose_P[2]=0.2
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
     res = planner.move_to_pose_with_screw(goal_pose)
+
+    _record_keypoint(env, 'solve_pickup_bin', 'close')
+    planner.close_gripper()
 
     planner.close()
     return res
@@ -1046,17 +1079,21 @@ def solve_putonto_whenhold(env, planner,target=None):
     goal_pose_P_prepare[2]=0.15
     goal_pose = sapien.Pose(goal_pose_P_prepare, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
+    _record_keypoint(env, 'solve_putonto_whenhold', 'close')
 
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
 
     planner.open_gripper()
+    _record_keypoint(env, 'solve_putonto_whenhold', 'open')
 
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[2]=0.15
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
+    _record_keypoint(env, 'solve_putonto_whenhold', 'open')
+    planner.open_gripper()
     planner.close()
     return res
 def solve_swingonto_whenhold(env, planner,target=None,height=0.05):
@@ -1084,6 +1121,7 @@ def solve_swingonto_whenhold(env, planner,target=None,height=0.05):
     goal_pose_P[2]=height
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
+    _record_keypoint(env, 'solve_swingonto_whenhold', 'close')
     planner.close()
     return res
 def solve_swingonto_withDirection(env, planner, target=None, radius=0.1, direction="counterclockwise"):
@@ -1182,76 +1220,56 @@ def solve_swingonto_withDirection(env, planner, target=None, radius=0.1, directi
         print("No IK solutions found for waypoints, aborting follow_path.")
         return None
 
-    traj_res = {
+    full_positions = np.stack(positions, axis=0)
+    mid_idx = len(full_positions) // 2
+
+    # Part 1
+    traj_res_1 = {
         "status": "Success",
-        "position": np.stack(positions, axis=0),
+        "position": full_positions[:mid_idx],
     }
     if planner.control_mode == "pd_joint_pos_vel":
-        traj_res["velocity"] = np.zeros_like(traj_res["position"])
+        traj_res_1["velocity"] = np.zeros_like(traj_res_1["position"])
+    
+    planner.follow_path(traj_res_1)
+    
+    # mid_pose = waypoints[mid_idx-1]
+    # _record_keypoint(env, mid_pose.p, mid_pose.q, 'solve_swingonto_withDirection', 'close')
+    current_pose = env.agent.tcp.pose
+    _record_keypoint(env, 'solve_swingonto_withDirection', 'close')
 
-    last_res = planner.follow_path(traj_res)
+    # Part 2
+    traj_res_2 = {
+        "status": "Success",
+        "position": full_positions[mid_idx:],
+    }
+    if planner.control_mode == "pd_joint_pos_vel":
+        traj_res_2["velocity"] = np.zeros_like(traj_res_2["position"])
+
+    last_res = planner.follow_path(traj_res_2)
+    
+    # end_pose = waypoints[-1]
+    # _record_keypoint(env, end_pose.p, end_pose.q, 'solve_swingonto_withDirection', 'close')
+    current_pose = env.agent.tcp.pose
+    _record_keypoint(env, 'solve_swingonto_withDirection', 'close')
+
+    # 在最后一个点上停留一段时间
+    if len(traj_res_2["position"]) > 0:
+        last_position = traj_res_2["position"][-1]
+        # 创建停留轨迹：重复最后一个位置点 20 次以停留一段时间
+        stay_duration = 20
+        stay_positions = np.tile(last_position, (stay_duration, 1))
+        
+        stay_traj = {
+            "status": "Success",
+            "position": stay_positions,
+        }
+        if planner.control_mode == "pd_joint_pos_vel":
+            stay_traj["velocity"] = np.zeros_like(stay_traj["position"])
+        
+        last_res = planner.follow_path(stay_traj)
+    
     return last_res
-# def solve_swingonto_withDirection(env, planner, target=None, radius=0.1, direction="counterclockwise"):
-#     """Planar arc motion at z=0.07 from current TCP to target.
-
-#     direction: "counterclockwise" 表示沿 t_start->t_end 的左侧（正叉乘）；"clockwise" 表示右侧。"""
-#     if target is None:
-#         raise ValueError("target must be provided for swing onto motion.")
-
-#     start_pos = env.agent.tcp.pose.p.reshape(-1, 3)[0]
-#     end_pos = target.pose.p.reshape(-1, 3)[0]
-#     start_xy = np.asarray(start_pos[:2], dtype=np.float32)
-#     end_xy = np.asarray(end_pos[:2], dtype=np.float32)
-
-#     chord_vec = end_xy - start_xy
-#     chord_len = np.linalg.norm(chord_vec)
-#     current_qpos = env.agent.tcp.pose.q.reshape(-1, 4)[0].tolist()
-
-#     if chord_len < 1e-6:
-#         goal_p = end_pos.tolist()
-#         goal_p[2] = 0.07
-#         try:
-#             return planner.move_to_pose_with_screw(sapien.Pose(goal_p, current_qpos))
-#         except Exception as e:
-#             print(f"move_to_pose_with_screw failed: {e}")
-#             return None
-
-#     # Keep radius feasible for chord length
-#     radius = float(max(radius, chord_len / 2.0 + 1e-4))
-#     half_chord = chord_len / 2.0
-#     sagitta = math.sqrt(max(radius ** 2 - half_chord ** 2, 0.0))
-
-#     dir_unit = chord_vec / chord_len
-#     perp = np.array([-dir_unit[1], dir_unit[0]])
-#     direction_l = str(direction).lower()
-#     if direction_l == "counterclockwise":
-#         sign = 1.0
-#     elif direction_l == "clockwise":
-#         sign = -1.0
-#     else:
-#         # 兼容旧的 left/right 写法
-#         sign = 1.0 if direction_l == "left" else -1.0
-#     center_xy = (start_xy + end_xy) / 2.0 + sign * sagitta * perp
-
-#     start_angle = math.atan2(start_xy[1] - center_xy[1], start_xy[0] - center_xy[0])
-#     end_angle = math.atan2(end_xy[1] - center_xy[1], end_xy[0] - center_xy[0])
-#     angle_diff = end_angle - start_angle
-#     if sign > 0 and angle_diff <= 0:
-#         angle_diff += 2 * math.pi
-#     if sign < 0 and angle_diff >= 0:
-#         angle_diff -= 2 * math.pi
-
-#     num_steps = 10
-#     res = None
-#     for ang in np.linspace(start_angle, start_angle + angle_diff, num_steps):
-#         waypoint_xy = center_xy + radius * np.array([math.cos(ang), math.sin(ang)])
-#         goal_p = [float(waypoint_xy[0]), float(waypoint_xy[1]), 0.07]
-#         try:
-#             res = planner.move_to_pose_with_screw(sapien.Pose(goal_p, current_qpos))
-#         except Exception as e:
-#             print(f"move_to_pose_with_screw failed: {e}")
-#             res = None
-#     return res
 
 def solve_swingonto(env, planner,target=None,record_swing_qpos=False):
     env = env.unwrapped
@@ -1273,8 +1291,10 @@ def solve_swingonto(env, planner,target=None,record_swing_qpos=False):
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[2]=0.07
     goal_pose = sapien.Pose(goal_pose_P, current_qpos)
-    for i in range(2):
+    for i in range(3):
         res = planner.move_to_pose_with_screw(goal_pose)
+        if i == 1 :
+            _record_keypoint(env, 'solve_swingonto', 'close')
     try:
         planner.close_gripper()
     except:
@@ -1283,6 +1303,9 @@ def solve_swingonto(env, planner,target=None,record_swing_qpos=False):
 
     if record_swing_qpos==True:
         env.swing_qpos=env.agent.robot.qpos
+
+        
+    #_record_keypoint(env, 'solve_swingonto', 'close')
 
     return res
 
@@ -1332,12 +1355,17 @@ def solve_putdown_whenhold(env, planner,release_z=0.07):
     goal_pose = sapien.Pose(goal_pose_P,grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
     planner.open_gripper()
+    _record_keypoint(env, 'solve_putdown_whenhold', 'open')
 
     goal_pose_P=env.agent.tcp.pose.p.tolist()[0]
     goal_pose_P[2]=0.15
 
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
+
+
+    planner.open_gripper()
+
     planner.close()
     return res
 
@@ -1368,15 +1396,17 @@ def solve_putonto_whenhold_binspecial(env, planner,target=None):
     goal_pose_P[2]=0.2
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
-    _record_keypoint(env, goal_pose_P, grasp_pose_q, 'solve_putonto_whenhold_binspecial', 'goal_pose')
+   
+    _record_keypoint(env, 'solve_putonto_whenhold_binspecial', 'close')
     planner.open_gripper()
+    _record_keypoint(env, 'solve_putonto_whenhold_binspecial', 'open')
 
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[0]=goal_pose_P[0]-0.1
     goal_pose_P[2]=0.2
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
     res = planner.move_to_pose_with_screw(goal_pose)
-    
+    #_record_keypoint(env, 'solve_putonto_whenhold_binspecial', 'open')
     planner.close()
     return res
 
@@ -1403,6 +1433,7 @@ def solve_hold_obj(env, planner, static_steps,close=False):
 def solve_hold_obj_absTimestep(env,planner,absTimestep):
     while int(getattr(env, "elapsed_steps", 0)) < absTimestep:
         planner.close_gripper()
+    _record_keypoint(env, 'solve_hold_obj_absTimestep', 'close')
     return None
 
 def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=False):
@@ -1424,7 +1455,8 @@ def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=Fals
     )
     if without_hold==False:
         planner.move_to_pose_with_screw(sapien.Pose(p=ready_position,q=rotate))
-        _record_keypoint(env, ready_position, rotate, 'solve_button', 'move_to_ready_pose')
+        
+    _record_keypoint(env, 'solve_button', 'open')
     planner.close_gripper()
     steps=env.elapsed_steps.item()
     print("press button at step",steps)
@@ -1432,11 +1464,12 @@ def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=Fals
     # Convert rotate to list/numpy for recording
     rotate_list = rotate.tolist() if hasattr(rotate, 'tolist') else rotate
 
-    _record_keypoint(env, position, rotate_list, 'solve_button', 'button_pose')
+    _record_keypoint(env, 'solve_button', 'close')
 
     planner.move_to_pose_with_screw(sapien.Pose(p=ready_position, q=rotate))
 
-    _record_keypoint(env, ready_position, rotate, 'solve_button', 'ready_pose')
+    _record_keypoint(env, 'solve_button', 'close')
+    planner.open_gripper()
 
 def solve_button_ready(env, planner,obj):
     FINGER_LENGTH = 0.025
@@ -1452,3 +1485,4 @@ def solve_button_ready(env, planner,obj):
     
     planner.move_to_pose_with_screw(sapien.Pose(p=ready_position,q=rotate))
     planner.close_gripper()
+    _record_keypoint(env, 'solve_button_ready', 'close')

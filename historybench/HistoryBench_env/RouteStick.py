@@ -166,12 +166,17 @@ class RouteStick(BaseEnv):
         pose = sapien_utils.look_at(
             eye=camera_eye, target=camera_target
         )
-        return [CameraConfig("base_camera", pose, 256, 256, np.pi / 2, 0.01, 100)]
+        return [CameraConfig("base_camera", pose, 128, 128, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):
         pose = sapien_utils.look_at(
             eye=self.human_cam_eye_pos, target=self.human_cam_target_pos
+        )
+        camera_eye=[0.3,0,0.4]
+        camera_target =[0,0,-0.2]
+        pose = sapien_utils.look_at(
+            eye=camera_eye, target=camera_target
         )
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 

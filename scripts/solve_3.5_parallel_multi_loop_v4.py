@@ -6,11 +6,32 @@ import json
 import shutil
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+import time
+import json as json_lib
 
 import numpy as np
 import sapien
 from typing import Any, Dict, Iterable, List, Optional
 import h5py
+
+# #region agent log
+DEBUG_LOG_PATH = Path("/data/hongzefu/.cursor/debug.log")
+def _debug_log(session_id, run_id, hypothesis_id, location, message, data):
+    try:
+        log_entry = {
+            "sessionId": session_id,
+            "runId": run_id,
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000)
+        }
+        with open(DEBUG_LOG_PATH, "a") as f:
+            f.write(json_lib.dumps(log_entry) + "\n")
+    except:
+        pass
+# #endregion
 
 # 将父目录添加到 Python 路径，以便导入 historybench 模块
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -51,26 +72,26 @@ from planner_fail_safe import (
 
 # 所有支持的环境模块名称列表
 DEFAULT_ENVS =[
-# "PickXtimes",
-# "StopCube",
-# "SwingXtimes",
+#     "PickXtimes",
+#     "StopCube",
+#     "SwingXtimes",
 "BinFill",
 
-#"VideoUnmaskSwap",
+#     "VideoUnmaskSwap",
 # "VideoUnmask",
-# "ButtonUnmaskSwap",
-# "ButtonUnmask",
+#     "ButtonUnmaskSwap",
+#     "ButtonUnmask",
 
-# "VideoRepick",
-# "VideoPlaceButton",
-"VideoPlaceOrder",
-# "PickHighlight",
+#     "VideoRepick",
+#     "VideoPlaceButton",
+# "VideoPlaceOrder",
+#     "PickHighlight",
 
-# "InsertPeg",
-# 'MoveCube',
-# "PatternLock",
-"RouteStick"
-]
+#      "InsertPeg",
+#      'MoveCube',
+#     "PatternLock",
+#    "RouteStick"
+    ]
 
 # 将环境名称映射为唯一的整数代码，用于生成随机种子
 ENV_ID_TO_CODE = {name: idx + 1 for idx, name in enumerate(DEFAULT_ENVS)}
@@ -199,6 +220,13 @@ def _run_episode_attempt(
         env = gym.make(env_id, **env_kwargs)
         
         # 2. 包装环境以记录数据
+        # #region agent log
+        session_id = f"debug-session-{int(time.time())}"
+        run_id = "run1"
+        expected_h5_file = temp_dataset_path.parent / f"{temp_dataset_path.stem}_hdf5_files" / f"{env_id}_ep{episode}_seed{seed}.h5"
+        _debug_log(session_id, run_id, "A", f"{__file__}:{223}", "Creating RecordWrapper, file will be created", {"episode": episode, "seed": seed, "expected_h5_file": str(expected_h5_file)})
+        # #endregion
+        
         env = HistoryBenchRecordWrapper(
             env,
             HistoryBench_dataset=str(temp_dataset_path), # 数据保存路径
@@ -208,6 +236,14 @@ def _run_episode_attempt(
             save_video=save_video,
 
         )
+        
+        # #region agent log
+        actual_h5_file = getattr(env, "dataset_path", None)
+        if actual_h5_file:
+            file_exists = actual_h5_file.exists()
+            file_size = actual_h5_file.stat().st_size if file_exists else 0
+            _debug_log(session_id, run_id, "A", f"{__file__}:{232}", "RecordWrapper created, file status", {"episode": episode, "seed": seed, "actual_h5_file": str(actual_h5_file), "file_exists": file_exists, "file_size": file_size})
+        # #endregion
 
         episode_successful = False
 
@@ -296,14 +332,47 @@ def _run_episode_attempt(
         episode_successful = episode_successful or _tensor_to_bool(
             getattr(env, "episode_success", False)
         )
+        
+        # #region agent log
+        _debug_log(session_id, run_id, "A", f"{__file__}:{317}", "Episode execution completed, before close", {"episode": episode, "seed": seed, "episode_successful": episode_successful})
+        # #endregion
+        
     except SceneGenerationError as exc:# swingxtimes 等环境可能出现场景生成失败
         print(
             f"Scene generation failed for env {env_id}, episode {episode}, seed {seed}: {exc}"
         )
         episode_successful = False
+        # #region agent log
+        _debug_log(session_id, run_id, "B", f"{__file__}:{323}", "Scene generation error", {"episode": episode, "seed": seed, "error": str(exc)})
+        # #endregion
     finally:
         if env is not None:
-            env.close()
+            # #region agent log
+            h5_file_before_close = getattr(env, "dataset_path", None)
+            if h5_file_before_close:
+                file_exists_before = h5_file_before_close.exists()
+                file_size_before = h5_file_before_close.stat().st_size if file_exists_before else 0
+                _debug_log(session_id, run_id, "A", f"{__file__}:{330}", "Before env.close()", {"episode": episode, "seed": seed, "episode_successful": episode_successful, "h5_file": str(h5_file_before_close), "file_exists": file_exists_before, "file_size": file_size_before})
+            # #endregion
+            
+            try:
+                env.close()
+            except Exception as close_exc:
+                # 即使close()失败，如果episode已经成功，仍然返回成功
+                # 因为HDF5数据已经在close()之前写入（在write()方法中）
+                print(f"Warning: Exception during env.close() for episode {episode}, seed {seed}: {close_exc}")
+                # #region agent log
+                _debug_log(session_id, run_id, "B", f"{__file__}:{348}", "Exception during env.close()", {"episode": episode, "seed": seed, "episode_successful": episode_successful, "error": str(close_exc)})
+                # #endregion
+                # 如果episode已经成功，close()的异常不应该影响返回值
+                # episode_successful 已经在close()之前确定
+            
+            # #region agent log
+            if h5_file_before_close:
+                file_exists_after = h5_file_before_close.exists()
+                file_size_after = h5_file_before_close.stat().st_size if file_exists_after else 0
+                _debug_log(session_id, run_id, "A", f"{__file__}:{356}", "After env.close()", {"episode": episode, "seed": seed, "episode_successful": episode_successful, "h5_file": str(h5_file_before_close), "file_exists": file_exists_after, "file_size": file_size_after, "file_size_changed": file_size_after != file_size_before})
+            # #endregion
 
     status_text = "SUCCESS" if episode_successful else "FAILED"
     print(
@@ -347,7 +416,17 @@ def run_env_dataset(
     temp_dataset_path = temp_folder / f"temp_chunk.h5"
     episode_records: List[Dict[str, Any]] = []
 
+    # #region agent log
+    session_id = f"debug-session-{int(time.time())}"
+    run_id = "run1"
+    _debug_log(session_id, run_id, "E", f"{__file__}:{350}", "Starting episode processing", {"episode_count": len(episode_indices), "env_id": env_id})
+    # #endregion
+    
     for episode in episode_indices:
+        # #region agent log
+        _debug_log(session_id, run_id, "E", f"{__file__}:{350}", "Processing episode start", {"episode": episode, "env_id": env_id})
+        # #endregion
+        
         # 计算当前 episode 的难度
         difficulty = _get_difficulty_from_ratio(episode, difficulty_ratio)
         if difficulty:
@@ -357,34 +436,74 @@ def run_env_dataset(
         base_seed = env_code * 10000 + (episode % 100) * 100     #+10000*50    # env (2 digits) | episode (2 digits) |最大160000
         attempt = 0
         
+        # #region agent log
+        _debug_log(session_id, run_id, "A", f"{__file__}:{357}", "Episode retry loop start", {"episode": episode, "base_seed": base_seed, "attempt": attempt})
+        # #endregion
+        
         # 重试循环：如果当前种子失败，尝试下一个种子，直到成功
-        while True:
+        max_attempts = 100  # 添加最大重试次数限制，避免无限循环
+        episode_success = False
+        while attempt < max_attempts:
             seed = base_seed + attempt  # 每次尝试使用唯一的种子
-            success = _run_episode_attempt(
-                env_id=env_id,
-                episode=episode,
-                seed=seed,
-                temp_dataset_path=temp_dataset_path,
-                save_video=save_video,
-                difficulty=difficulty,
-            )
-            if success:
-                # 记录成功的 episode 信息
-                episode_records.append(
-                    {
-                        "task": env_id,
-                        "episode": episode,
-                        "seed": seed,
-                        "difficulty": difficulty,
-                    }
+            
+            # #region agent log
+            _debug_log(session_id, run_id, "A", f"{__file__}:{363}", "Attempting episode run", {"episode": episode, "seed": seed, "attempt": attempt + 1, "max_attempts": max_attempts})
+            # #endregion
+            
+            try:
+                success = _run_episode_attempt(
+                    env_id=env_id,
+                    episode=episode,
+                    seed=seed,
+                    temp_dataset_path=temp_dataset_path,
+                    save_video=save_video,
+                    difficulty=difficulty,
                 )
-                break # 成功则跳出重试循环，进行下一个 episode
+                
+                # #region agent log
+                _debug_log(session_id, run_id, "A", f"{__file__}:{371}", "Episode attempt result", {"episode": episode, "seed": seed, "success": success, "attempt": attempt + 1})
+                # #endregion
+                
+                if success:
+                    # 记录成功的 episode 信息
+                    episode_records.append(
+                        {
+                            "task": env_id,
+                            "episode": episode,
+                            "seed": seed,
+                            "difficulty": difficulty,
+                        }
+                    )
+                    episode_success = True
+                    
+                    # #region agent log
+                    _debug_log(session_id, run_id, "E", f"{__file__}:{381}", "Episode succeeded and recorded", {"episode": episode, "seed": seed, "total_attempts": attempt + 1})
+                    # #endregion
+                    
+                    break # 成功则跳出重试循环，进行下一个 episode
 
-            attempt += 1
-            next_seed = base_seed + attempt
-            print(
-                f"Episode {episode} failed; retrying with new seed {next_seed} (attempt {attempt + 1})"
-            )
+                attempt += 1
+                next_seed = base_seed + attempt
+                print(
+                    f"Episode {episode} failed; retrying with new seed {next_seed} (attempt {attempt + 1})"
+                )
+                
+                # #region agent log
+                _debug_log(session_id, run_id, "A", f"{__file__}:{386}", "Episode failed, will retry", {"episode": episode, "next_seed": next_seed, "attempt": attempt + 1})
+                # #endregion
+                
+            except Exception as e:
+                # #region agent log
+                _debug_log(session_id, run_id, "B", f"{__file__}:{390}", "Exception during episode attempt", {"episode": episode, "seed": seed, "attempt": attempt + 1, "error": str(e)})
+                # #endregion
+                attempt += 1
+                if attempt >= max_attempts:
+                    break
+        
+        # #region agent log
+        if not episode_success:
+            _debug_log(session_id, run_id, "A", f"{__file__}:{395}", "Episode failed after all attempts", {"episode": episode, "total_attempts": attempt, "max_attempts": max_attempts})
+        # #endregion
 
     return episode_records
 
@@ -418,6 +537,12 @@ def _merge_dataset_from_folder(
 
     print(f"Merging episodes from {temp_folder} into {final_dataset_path}")
 
+    # #region agent log
+    session_id = f"debug-session-{int(time.time())}"
+    run_id = "run1"
+    _debug_log(session_id, run_id, "C", f"{__file__}:{422}", "Starting merge process", {"hdf5_folders_count": len(hdf5_folders), "final_dataset_path": str(final_dataset_path)})
+    # #endregion
+    
     # 打开最终的 HDF5 文件进行追加模式写入
     with h5py.File(final_dataset_path, "a") as final_file:
         for hdf5_folder in sorted(hdf5_folders):
@@ -426,31 +551,88 @@ def _merge_dataset_from_folder(
 
             if not h5_files:
                 print(f"Warning: No h5 files found in {hdf5_folder}")
+                # #region agent log
+                _debug_log(session_id, run_id, "C", f"{__file__}:{428}", "No h5 files in folder", {"hdf5_folder": str(hdf5_folder)})
+                # #endregion
                 continue
 
             print(f"Found {len(h5_files)} episode files in {hdf5_folder.name}")
+            
+            # #region agent log
+            _debug_log(session_id, run_id, "C", f"{__file__}:{431}", "Found h5 files", {"hdf5_folder": str(hdf5_folder), "file_count": len(h5_files), "file_names": [f.name for f in h5_files[:10]]})
+            # #endregion
 
             # 合并每个 episode 文件
             for h5_file in h5_files:
                 print(f"  - Merging {h5_file.name}")
-                with h5py.File(h5_file, "r") as episode_file:
-                    for env_group_name, src_env_group in episode_file.items():
-                        # 如果环境组（例如 'PickXtimes'）不存在，直接复制
-                        if env_group_name not in final_file:
-                            final_file.copy(src_env_group, env_group_name)
+                
+                # #region agent log
+                _debug_log(session_id, run_id, "C", f"{__file__}:{435}", "Processing h5 file", {"h5_file": h5_file.name, "file_size": h5_file.stat().st_size if h5_file.exists() else 0})
+                # #endregion
+                
+                try:
+                    with h5py.File(h5_file, "r") as episode_file:
+                        # #region agent log
+                        file_keys = list(episode_file.keys())
+                        _debug_log(session_id, run_id, "C", f"{__file__}:{437}", "Opened h5 file, checking contents", {"h5_file": h5_file.name, "top_level_keys": file_keys, "key_count": len(file_keys)})
+                        # #endregion
+                        
+                        if len(file_keys) == 0:
+                            # #region agent log
+                            _debug_log(session_id, run_id, "C", f"{__file__}:{442}", "Empty h5 file detected", {"h5_file": h5_file.name})
+                            # #endregion
+                            print(f"    Warning: {h5_file.name} is empty, skipping...")
                             continue
+                        
+                        for env_group_name, src_env_group in episode_file.items():
+                            # #region agent log
+                            episode_keys = list(src_env_group.keys()) if isinstance(src_env_group, h5py.Group) else []
+                            _debug_log(session_id, run_id, "C", f"{__file__}:{448}", "Processing env group", {"h5_file": h5_file.name, "env_group_name": env_group_name, "episode_keys": episode_keys, "episode_count": len(episode_keys)})
+                            # #endregion
+                            
+                            if len(episode_keys) == 0:
+                                # #region agent log
+                                _debug_log(session_id, run_id, "A", f"{__file__}:{453}", "Empty env group detected (no episodes)", {"h5_file": h5_file.name, "env_group_name": env_group_name})
+                                # #endregion
+                                print(f"    Warning: {env_group_name} in {h5_file.name} has no episodes, skipping...")
+                                continue
+                            
+                            # 如果环境组（例如 'PickXtimes'）不存在，直接复制
+                            if env_group_name not in final_file:
+                                final_file.copy(src_env_group, env_group_name)
+                                # #region agent log
+                                _debug_log(session_id, run_id, "C", f"{__file__}:{440}", "Copied new env group", {"env_group_name": env_group_name, "episode_count": len(episode_keys)})
+                                # #endregion
+                                continue
 
-                        dest_env_group = final_file[env_group_name]
-                        if not isinstance(dest_env_group, h5py.Group):
-                            print(f"    Warning: {env_group_name} is not a group, skipping...")
-                            continue
+                            dest_env_group = final_file[env_group_name]
+                            if not isinstance(dest_env_group, h5py.Group):
+                                print(f"    Warning: {env_group_name} is not a group, skipping...")
+                                # #region agent log
+                                _debug_log(session_id, run_id, "C", f"{__file__}:{445}", "Env group is not a group type", {"env_group_name": env_group_name})
+                                # #endregion
+                                continue
 
-                        # 如果环境组已存在，逐个复制 episode
-                        for episode_name in src_env_group.keys():
-                            if episode_name in dest_env_group:
-                                print(f"    Warning: Episode {episode_name} already exists, overwriting...")
-                                del dest_env_group[episode_name]
-                            src_env_group.copy(episode_name, dest_env_group, name=episode_name)
+                            # 如果环境组已存在，逐个复制 episode
+                            for episode_name in src_env_group.keys():
+                                # #region agent log
+                                _debug_log(session_id, run_id, "C", f"{__file__}:{449}", "Merging episode", {"h5_file": h5_file.name, "env_group_name": env_group_name, "episode_name": episode_name})
+                                # #endregion
+                                
+                                if episode_name in dest_env_group:
+                                    print(f"    Warning: Episode {episode_name} already exists, overwriting...")
+                                    del dest_env_group[episode_name]
+                                src_env_group.copy(episode_name, dest_env_group, name=episode_name)
+                                
+                                # #region agent log
+                                _debug_log(session_id, run_id, "C", f"{__file__}:{453}", "Episode merged successfully", {"episode_name": episode_name})
+                                # #endregion
+                except Exception as e:
+                    # #region agent log
+                    _debug_log(session_id, run_id, "B", f"{__file__}:{456}", "Error merging h5 file", {"h5_file": h5_file.name, "error": str(e)})
+                    # #endregion
+                    print(f"    Error merging {h5_file.name}: {e}")
+                    continue
 
     # 合并成功后清理临时文件夹
     try:
@@ -495,7 +677,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=50,
+        default=1,
         help="每个环境生成的 episode 数量 (默认: 100)",
     )
 
@@ -529,7 +711,7 @@ def parse_args() -> argparse.Namespace:
         "--max-workers",
         "-w",
         type=int,
-        default=25,
+        default=34,
         help="运行多个环境时的并行 worker 数量。",
     )
     return parser.parse_args()
@@ -553,7 +735,8 @@ def main() -> None:
     for env_id in env_ids:
         # 为所有 episode 创建共享的临时文件夹
         temp_folder =  Path(f"/data/hongzefu/dataset_generate/temp_{env_id}_episodes")
-        final_dataset_path =  Path(f"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
+        final_dataset_path =  Path(f"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/record_dataset_{env_id}.h5")
+        #final_dataset_path =  Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")
         print(f"Environment: {env_id}")
@@ -565,13 +748,27 @@ def main() -> None:
 
         episode_records: List[Dict[str, Any]] = []
 
+        # #region agent log
+        session_id = f"debug-session-{int(time.time())}"
+        run_id = "run1"
+        _debug_log(session_id, run_id, "D", f"{__file__}:{703}", "Starting parallel execution setup", {"env_id": env_id, "num_workers": num_workers, "total_episodes": args.episodes})
+        # #endregion
+        
         if num_workers > 1:
             # 1. 拆分任务块
             episode_chunks = _split_episode_indices(args.episodes, num_workers)
+            
+            # #region agent log
+            chunk_info = [{"chunk_idx": i, "episodes": chunk, "episode_range": (chunk[0], chunk[-1]) if chunk else None} for i, chunk in enumerate(episode_chunks)]
+            _debug_log(session_id, run_id, "D", f"{__file__}:{706}", "Episode chunks created", {"chunk_count": len(episode_chunks), "chunks": chunk_info})
+            # #endregion
 
             if len(episode_chunks) <= 1:
                 # 单个 chunk，直接运行
                 chunk = episode_chunks[0] if episode_chunks else []
+                # #region agent log
+                _debug_log(session_id, run_id, "D", f"{__file__}:{710}", "Single chunk mode", {"chunk": chunk})
+                # #endregion
                 episode_records = run_env_dataset(
                     env_id,
                     chunk,
@@ -599,15 +796,28 @@ def main() -> None:
                         ): chunk
                         for chunk in episode_chunks
                     }
+                    
+                    # #region agent log
+                    _debug_log(session_id, run_id, "D", f"{__file__}:{730}", "Workers submitted", {"worker_count": worker_count, "futures_count": len(future_to_chunk)})
+                    # #endregion
 
                     for future in as_completed(future_to_chunk):
                         chunk = future_to_chunk[future]
                         chunk_label = (chunk[0], chunk[-1]) if chunk else ("?", "?")
+                        # #region agent log
+                        _debug_log(session_id, run_id, "D", f"{__file__}:{737}", "Worker completed", {"chunk_range": chunk_label, "episodes": chunk})
+                        # #endregion
                         try:
                             records = future.result()
+                            # #region agent log
+                            _debug_log(session_id, run_id, "D", f"{__file__}:{741}", "Worker records received", {"chunk_range": chunk_label, "record_count": len(records), "episodes_in_records": [r.get("episode") for r in records]})
+                            # #endregion
                             episode_records.extend(records)
                             print(f"✓ Completed episodes {chunk_label[0]}-{chunk_label[1]} for {env_id}")
                         except Exception as exc:
+                            # #region agent log
+                            _debug_log(session_id, run_id, "B", f"{__file__}:{747}", "Worker exception", {"chunk_range": chunk_label, "error": str(exc)})
+                            # #endregion
                             print(
                                 f"✗ Environment {env_id} failed on episodes "
                                 f"{chunk_label[0]}-{chunk_label[1]} with error: {exc}"
@@ -615,11 +825,17 @@ def main() -> None:
 
             # 3. 合并所有 episode 文件到最终数据集
             print(f"\nMerging all episodes into final dataset...")
+            # #region agent log
+            _debug_log(session_id, run_id, "C", f"{__file__}:{750}", "Before merge: episode records summary", {"total_records": len(episode_records), "episodes": sorted([r.get("episode") for r in episode_records])})
+            # #endregion
             _merge_dataset_from_folder(
                 env_id,
                 temp_folder,
                 final_dataset_path,
             )
+            # #region agent log
+            _debug_log(session_id, run_id, "C", f"{__file__}:{757}", "After merge completed", {"env_id": env_id})
+            # #endregion
         else:
             # 单 worker 模式
             episode_records = run_env_dataset(
@@ -642,6 +858,9 @@ def main() -> None:
         metadata_path = final_dataset_path.with_name(
             f"{final_dataset_path.stem}_metadata.json"
         )
+        # #region agent log
+        _debug_log(session_id, run_id, "E", f"{__file__}:{765}", "Final episode records before saving metadata", {"total_records": len(episode_records), "expected_episodes": args.episodes, "episodes": sorted([r.get("episode") for r in episode_records]), "missing_episodes": [i for i in range(args.episodes) if i not in [r.get("episode") for r in episode_records]]})
+        # #endregion
         _save_episode_metadata(episode_records, metadata_path, env_id)
 
         print(f"\n✓ Finished! Final dataset saved to: {final_dataset_path}\n")
