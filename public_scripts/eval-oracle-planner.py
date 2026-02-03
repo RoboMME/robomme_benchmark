@@ -18,8 +18,8 @@ import shutil
 import torch
 import gc
 
-from history_bench_sim.oracle_logic import step_before, step_after
-from scripts.evaluate_oracle_planner_gui import EpisodeConfigResolverForOraclePlanner
+from historybench.env_record_wrapper import EpisodeConfigResolver
+from pathlib import Path
 
 
 # =============================================================================
@@ -135,18 +135,28 @@ def mock_model(base_frames, text_query, step_idx, language_goal):
     return actions[-1]
 
 
+def get_num_episodes(dataset_root, env_id):
+    metadata_path = dataset_root / f"record_dataset_{env_id}_metadata.json"
+    if not metadata_path.exists():
+        print(f"[{env_id}] Metadata {metadata_path} not found.")
+        return 0
+    try:
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+            return payload.get("record_count", 0)
+    except Exception as e:
+        print(f"Error reading metadata: {e}")
+        return 0
+
 def main():    
-    # Initialization Wrapper
-    oracle_resolver = EpisodeConfigResolverForOraclePlanner(
-        gui_render=True,
-        max_steps_without_demonstration=1000
-    )
+    # Dataset Root
+    dataset_root = Path("/data/hongzefu/robomme-v0.1b7/dataset_json")
     
     env_id_list = [
         # "PickXtimes",
         # "StopCube",
         # "SwingXtimes",
-         "BinFill",
+        "BinFill",
 
     #     "VideoUnmaskSwap",
     #     "VideoUnmask",
@@ -168,7 +178,18 @@ def main():
     status_json_path = os.path.join("/home/hongzefu", "oracle_planning_results", "episode_status.json")
     
     for env_id in env_id_list:
-        num_episodes = oracle_resolver.get_num_episodes(env_id)
+        num_episodes = get_num_episodes(dataset_root, env_id)
+
+        # Initialize Resolver per Env
+        metadata_path = dataset_root / f"record_dataset_{env_id}_metadata.json"
+        resolver = EpisodeConfigResolver(
+            env_id=env_id,
+            metadata_path=metadata_path,
+            render_mode="human",
+            gui_render=True,
+            max_steps_without_demonstration=1000,
+            action_space="oracle_planner"
+        )
 
         #for episode in range(num_episodes):
         for episode in range(2):
@@ -176,11 +197,16 @@ def main():
             #     continue
             
             model_name = "env_only"
-            save_dir = os.path.join("/home/hongzefu", "oracle_planning_results", model_name, env_id, f"ep{episode}")
+            save_dir = os.path.join("/data/hongzefu", "oracle_planning_results", model_name, env_id, f"ep{episode}")
+            
+            # 使用 EpisodeConfigResolver
+            env, _, _ = resolver.make_env_for_episode(episode)
 
             try:
-                # 阶段 A：初始化
-                env, planner, color_map, language_goal = oracle_resolver.initialize_episode(env_id, episode)
+                # 阶段 A：初始化 (reset)
+                obs, info = env.reset()
+                language_goal = obs["language_goal"]
+                
                 success = "fail"
 
                 os.makedirs(save_dir, exist_ok=True)
@@ -198,15 +224,12 @@ def main():
                         print(f"Max query times ({max_query_times}) reached, stopping.")
                         break
 
-                    # 步骤 1：执行 step_before
-                    seg_vis, seg_raw, base_frames, wrist_frames, available_options = step_before(
-                        env,
-                        planner,
-                        env_id,
-                        color_map
-                    )
+                    # 从 obs 获取数据
+                    base_frames = obs["base_frames"]
+                    available_options = obs["available_options"]
+                    
                     print("num of base_frames", len(base_frames) - frame_idx)
-                    print("num of wrist_frames", len(wrist_frames) - frame_idx)
+                    print("num of wrist_frames", len(obs["wrist_frames"]) - frame_idx)
                     print(available_options)
 
                     if len(base_frames) <= frame_idx:
@@ -222,37 +245,24 @@ def main():
                     frame_idx = len(base_frames)
                     step_idx += 1
 
-                    # 步骤 2：执行 step_after
-                    evaluation = step_after(
-                        env,
-                        planner,
-                        env_id,
-                        seg_vis,
-                        seg_raw,
-                        base_frames,
-                        wrist_frames,
-                        command_dict
-                    )
+                    # 步骤 2：执行 step (相当于 step_after + step_before)
+                    obs, reward, terminated, truncated, info = env.step(command_dict)
 
-                    if evaluation is None:
-                        print("Evaluation is None, skipping this step")
-                        break
+                    if terminated:
+                        fail_flag = info.get("fail", False)
+                        success_flag = info.get("success", False)
 
-                    fail_flag = evaluation.get("fail", False)
-                    success_flag = evaluation.get("success", False)
-
-                    if _tensor_to_bool(fail_flag):
-                        success = "fail"
-                        print("Encountered failure condition; stopping task sequence.")
-                        break
-
-                    if _tensor_to_bool(success_flag):
-                        success = "success"
-                        print("Task completed successfully.")
+                        if _tensor_to_bool(fail_flag):
+                            success = "fail"
+                            print("Encountered failure condition; stopping task sequence.")
+                        
+                        if _tensor_to_bool(success_flag):
+                            success = "success"
+                            print("Task completed successfully.")
                         break
 
                 # 阶段 C：成功标记与保存
-                del env
+                env.close()
                 if success in ["success", "fail"]:
                     save_episode_status(status_json_path, model_name, env_id, episode, success)
 
@@ -261,18 +271,15 @@ def main():
                 import traceback
                 traceback.print_exc()
 
-                env_local = locals().get("env")
-                if env_local is not None:
-                    try:
-                        env_local.close()
-                    except Exception:
-                        pass
-                    del env_local
-
+                try:
+                    env.close()
+                except Exception:
+                    pass
+                
                 gc.collect()
                 save_episode_status(status_json_path, model_name, env_id, episode, "sim_error")
                       
-    oracle_resolver.close()
+    # oracle_resolver.close() # No longer needed as we create per loop
     
 if __name__ == "__main__":
     main()

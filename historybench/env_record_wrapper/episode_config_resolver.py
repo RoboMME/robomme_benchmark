@@ -105,7 +105,7 @@ class EpisodeConfigResolver:
         return seed, difficulty_hint
 
     def make_env_for_episode(self, episode: int):
-        """为特定 episode 创建并配置环境。action_space=ee_pose 时包 EndeffectorDemonstrationWrapper，keypoint 时包 MultiStepDemonstrationWrapper。"""
+        """为特定 episode 创建并配置环境。action_space=ee_pose 时包 EndeffectorDemonstrationWrapper，keypoint 时包 MultiStepDemonstrationWrapper，oracle_planner 时包 OraclePlannerDemonstrationWrapper。"""
         from .DemonstrationWrapper import DemonstrationWrapper
 
         seed, difficulty_hint = self.resolve_episode(episode)
@@ -138,4 +138,9 @@ class EpisodeConfigResolver:
             from .MultiStepDemonstrationWrapper import MultiStepDemonstrationWrapper
 
             env = MultiStepDemonstrationWrapper(env, gui_render=self.gui_render, vis=True)
+        
+        if self.action_space == "oracle_planner":
+            from .OraclePlannerDemonstrationWrapper import OraclePlannerDemonstrationWrapper
+            env = OraclePlannerDemonstrationWrapper(env, env_id=self.env_id, gui_render=self.gui_render)
+            
         return env, seed, difficulty_hint

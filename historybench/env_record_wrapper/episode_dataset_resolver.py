@@ -107,6 +107,51 @@ class EpisodeDatasetResolver:
         self._scan_cursor = 0
         self._non_demo_keypoint_record_steps: List[int] = []
         self._keypoint_scan_cursor = 0
+        self._distinct_subgoal_record_steps: List[int] = []
+        self._distinct_subgoal_built: bool = False
+
+    def _read_subgoal_at_record_step(self, record_step: int) -> str:
+        """
+        Read grounded_subgoal (or subgoal fallback) at the given record_timestep.
+        Returns normalized string; empty string if missing/None.
+        """
+        key = f"record_timestep_{record_step}"
+        if key not in self._episode_group:
+            return ""
+        timestep_group = self._episode_group[key]
+        val = None
+        if "grounded_subgoal" in timestep_group:
+            val = timestep_group["grounded_subgoal"][()]
+        elif "subgoal" in timestep_group:
+            val = timestep_group["subgoal"][()]
+        if val is None:
+            return ""
+        s = val.decode("utf-8") if hasattr(val, "decode") else str(val)
+        return s if s is not None else ""
+
+    def _ensure_distinct_subgoals(self) -> None:
+        """
+        Build _distinct_subgoal_record_steps: record_steps (non-demo only) where
+        grounded_subgoal text changes from the previous non-demo step. First non-demo step is always included.
+        """
+        if self._distinct_subgoal_built:
+            return
+        prev_subgoal: Optional[str] = None
+        for record_step in self._timestep_indexes:
+            key = f"record_timestep_{record_step}"
+            if key not in self._episode_group:
+                continue
+            timestep_group = self._episode_group[key]
+            is_demo = False
+            if "demonstration" in timestep_group:
+                is_demo = _as_bool(timestep_group["demonstration"][()])
+            if is_demo:
+                continue
+            current = self._read_subgoal_at_record_step(record_step)
+            if prev_subgoal is None or current != prev_subgoal:
+                self._distinct_subgoal_record_steps.append(record_step)
+            prev_subgoal = current
+        self._distinct_subgoal_built = True
 
     def get_keypoint(self, step: int) -> Optional[np.ndarray]:
         """
@@ -218,6 +263,19 @@ class EpisodeDatasetResolver:
             np.asarray(q, dtype=np.float64).flatten(),
             [gripper],
         ])
+
+    def get_grounded_subgoal(self, step_idx: int) -> Optional[str]:
+        """
+        Return the grounded subgoal text for the step_idx-th *distinct* subgoal.
+        Distinct = when the subgoal text changes from the previous (non-demo) timestep.
+        step_idx 0 = first subgoal, 1 = first change, etc. Returns None if step_idx out of range.
+        """
+        self._ensure_distinct_subgoals()
+        if step_idx < 0 or step_idx >= len(self._distinct_subgoal_record_steps):
+            return None
+        record_step = self._distinct_subgoal_record_steps[step_idx]
+        text = self._read_subgoal_at_record_step(record_step)
+        return text if text else None
 
     def get_ee_pose_from_absolute_timestep(self, step: int) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         key = f"record_timestep_{step}"

@@ -113,34 +113,50 @@ def main():
 
                 obs, reward, terminated, truncated, info = env.step(action)
 
-                frames = obs.get("frames", []) if obs else []
-                for frame in frames:
-                    writer.append_data(np.asarray(frame))
 
-                kp_video_path = video_dir / f"replay_kp_{env_id}_ep{episode}_kp{step}.mp4"
-                with imageio.get_writer(str(kp_video_path), fps=fps, codec="libx264", quality=8) as writer_kp:
-                    for frame in frames:
-                        writer_kp.append_data(np.asarray(frame))
-                print(f"Saved keypoint video: {kp_video_path}")
+                # 从 obs 读取
+                frames = obs.get('frames', []) if obs else []
+                wrist_frames = obs.get('wrist_frames', []) if obs else []
+                actions = obs.get('actions', []) if obs else []
+                states = obs.get('states', []) if obs else []
+                velocity = obs.get('velocity', []) if obs else []
+                language_goal = obs.get('language_goal') if obs else None
+                # 从 info 读取
+                subgoal = info.get('subgoal', []) if info else []
+                subgoal_grounded = info.get('subgoal_grounded', []) if info else []
 
-                subgoal_grounded = info.get("subgoal_grounded", []) if info else []
-                print(subgoal_grounded)
 
-                if gui_render:
-                    env.render()
-                step += 1
+                #frames = obs.get("frames", []) if obs else []
+                # for frame in frames:
+                #     writer.append_data(np.asarray(frame))
 
-                if truncated:
-                    print(f"[{env_id}] episode {episode} 步数超限。")
-                    break
-                if terminated.any():
-                    if info.get("success") == torch.tensor([True]) or (
-                        isinstance(info.get("success"), torch.Tensor) and info.get("success").item()
-                    ):
-                        print(f"[{env_id}] episode {episode} 成功。")
-                    elif info.get("fail", False):
-                        print(f"[{env_id}] episode {episode} 失败。")
-                    break
+                # kp_video_path = video_dir / f"replay_kp_{env_id}_ep{episode}_kp{step}.mp4"
+                # with imageio.get_writer(str(kp_video_path), fps=fps, codec="libx264", quality=8) as writer_kp:
+                #     for frame in frames:
+                #         writer_kp.append_data(np.asarray(frame))
+                # print(f"Saved keypoint video: {kp_video_path}")
+
+                # subgoal_grounded = info.get("subgoal_grounded", []) if info else []
+                # print(subgoal_grounded)
+
+                # if gui_render:
+                #     env.render()
+                # step += 1
+
+                # if truncated:
+                #     print(f"[{env_id}] episode {episode} 步数超限。")
+                #     break
+                # if terminated.any():
+                #     if info.get("success") == torch.tensor([True]) or (
+                #         isinstance(info.get("success"), torch.Tensor) and info.get("success").item()
+                #     ):
+                #         print(f"[{env_id}] episode {episode} 成功。")
+                #     elif info.get("fail", False):
+                #         print(f"[{env_id}] episode {episode} 失败。")
+                #     break
+
+
+
 
             writer.close()
             print(f"Saved video: {out_video_path}")

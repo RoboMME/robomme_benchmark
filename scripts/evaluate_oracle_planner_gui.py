@@ -585,14 +585,13 @@ class EpisodeConfigResolverForOraclePlanner:
 
         resolver = EpisodeConfigResolver(
             env_id=env_id,
-            dataset=None,
             metadata_path=metadata_path if metadata_path.exists() else None,
             render_mode=self.render_mode,
             gui_render=self.gui_render,
             max_steps_without_demonstration=self.max_steps,
         )
 
-        env, episode_dataset, seed, difficulty = resolver.make_env_for_episode(episode_idx)
+        env, seed, difficulty = resolver.make_env_for_episode(episode_idx)
         print(f"--- Running online evaluation for episode:{episode_idx} ---")
         env.reset()
 

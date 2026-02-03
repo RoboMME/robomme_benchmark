@@ -13,7 +13,9 @@ from typing import Any, Dict, Iterable, List, Optional
 import h5py
 
 # 将父目录添加到 Python 路径，以便导入 historybench 模块
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _root)
+sys.path.insert(0, os.path.join(_root, "scripts"))
 import gymnasium as gym
 from gymnasium.utils.save_video import save_video
 
@@ -53,7 +55,7 @@ from planner_fail_safe import (
 DEFAULT_ENVS =[
 #     "PickXtimes",
 #     "StopCube",
-#"SwingXtimes",
+"SwingXtimes",
 # "BinFill",
 
 #     "VideoUnmaskSwap",
@@ -63,7 +65,7 @@ DEFAULT_ENVS =[
 
 #     "VideoRepick",
 #     "VideoPlaceButton",
- "VideoPlaceOrder",
+# "VideoPlaceOrder",
 #     "PickHighlight",
 
 #      "InsertPeg",
@@ -531,7 +533,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=34,
+        default=10,
         help="每个环境生成的 episode 数量 (默认: 100)",
     )
 
