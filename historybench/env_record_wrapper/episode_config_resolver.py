@@ -77,12 +77,14 @@ class EpisodeConfigResolver:
         gui_render: bool,
         max_steps_without_demonstration: int,
         save_video: bool = False,
+        action_space: Optional[str] = None,
     ):
         self.env_id = env_id
         self.render_mode = render_mode
         self.gui_render = gui_render
         self.max_steps_without_demonstration = max_steps_without_demonstration
         self.save_video = save_video
+        self.action_space = action_space
         self.metadata_index = load_episode_metadata(metadata_path)
 
     def resolve_episode(self, episode: int):
@@ -127,6 +129,6 @@ class EpisodeConfigResolver:
             env,
             max_steps_without_demonstration=self.max_steps_without_demonstration,
             gui_render=self.gui_render,
-            save_video=self.save_video,
+            action_space=self.action_space,
         )
         return env, seed, difficulty_hint

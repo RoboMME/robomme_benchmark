@@ -123,6 +123,7 @@ def main():
                 state = obs.get('states', [])[-1] if obs.get('states') else None
                 velocity = obs.get('velocity', [])[-1] if obs.get('velocity') else None
                 language_goal = obs.get('language_goal') if obs else None
+
                 # 从 info 读取
                 subgoal = info.get('subgoal_history', []) if info else []
                 subgoal_grounded = info.get('subgoal_grounded_history', []) if info else []

@@ -1,3 +1,10 @@
+"""
+DemonstrationWrapper：在 HistoryBench 环境外再包一层，用于自动生成演示轨迹并记录帧/动作/状态/子目标等。
+
+- reset 后调用 get_demonstration_trajectory()，用 Motion Planner 执行带 demonstration 标记的任务并记录轨迹。
+- step 中根据 action_space 做 ee_pose→关节映射、分割与子目标占位符填充、轨迹记录、truncate 与成功判断。
+- 不包含视频保存功能；obs/info 通过 _augment_obs_and_info 注入演示数据。
+"""
 import copy
 import time
 import json
@@ -12,6 +19,7 @@ import sapien.physx as physx
 import torch
 import cv2
 import colorsys
+import imageio
 
 from mani_skill import get_commit_info
 from mani_skill.envs.sapien_env import BaseEnv
@@ -19,13 +27,7 @@ from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.io_utils import dump_json
 from mani_skill.utils.logging_utils import logger
 from mani_skill.utils.structs.types import Array
-from mani_skill.utils.visualization.misc import (
-    images_to_video,
-    put_info_on_image,
-    tile_images,
-)
 from mani_skill.utils.wrappers import CPUGymWrapper
-import imageio
 
 from mani_skill.examples.motionplanning.panda.motionplanner import \
     PandaArmMotionPlanningSolver
@@ -39,187 +41,60 @@ from ..HistoryBench_env.util import task_goal
 from ..HistoryBench_env.util import reset_panda
 
 
-def load_episode_metadata(metadata_path: Union[str, Path, None]) -> Dict[Tuple[str, int], Dict[str, object]]:
-    """
-    从 JSON 文件读取每集的元数据（metadata）；如果缺失或无效则返回空字典。
-    用于恢复特定 episode 的配置（如 seed、难度等）。
-    """
-
-    metadata_index: Dict[Tuple[str, int], Dict[str, object]] = {}
-    if not metadata_path:
-        return metadata_index
-
-    path = Path(metadata_path)
-    if not path.exists():
-        print(f"Metadata file not found, skipping: {path}")
-        return metadata_index
-
-    try:
-        with path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except Exception as exc:  # pragma: no cover - informational logging only
-        print(f"Failed to read metadata {path}: {exc}")
-        return metadata_index
-
-    default_task = str(payload.get("env_id") or "").strip()
-    for record in payload.get("records", []):
-        task_name = str(record.get("task") or default_task or "").strip()
-        episode = record.get("episode")
-        if not task_name or episode is None:
-            continue
-        try:
-            episode_idx = int(episode)
-        except (TypeError, ValueError):
-            continue
-        metadata_index[(task_name, episode_idx)] = record
-
-    if metadata_index:
-        print(f"Loaded {len(metadata_index)} metadata records from {path}")
-    else:
-        print(f"No valid metadata entries found in {path}")
-    return metadata_index
-
-
-def get_episode_metadata(
-    metadata_index: Dict[Tuple[str, int], Dict[str, object]],
-    task: str,
-    episode: int,
-) -> Optional[Dict[str, object]]:
-    """查找特定 (task, episode) 配对的元数据条目。"""
-
-    if not metadata_index:
-        return None
-    return metadata_index.get((task, episode))
-
-
-class EpisodeConfigResolver:
-    """
-    Episode 配置解析器。
-    
-    辅助类，用于解析每个 episode 的种子（seed）和难度（difficulty），并构建包装好的环境。
-    数据来源可以是已有的 HDF5 数据集，也可以是元数据文件。
-    """
-
-    def __init__(
-        self,
-        env_id: str,
-        dataset: Optional[h5py.File],
-        metadata_path: Union[str, Path, None],
-        render_mode: str,
-        gui_render: bool,
-        max_steps_without_demonstration: int,
-        save_video: bool = False,
-    ):
-        self.env_id = env_id
-        self.render_mode = render_mode
-        self.gui_render = gui_render
-        self.max_steps_without_demonstration = max_steps_without_demonstration
-        self.save_video = save_video
-        self.metadata_index = load_episode_metadata(metadata_path)
-
-        self.env_dataset = None
-        if dataset is not None:
-            env_group = f"env_{env_id}"
-            if env_group not in dataset:
-                raise KeyError(f"Dataset missing group '{env_group}'")
-            self.env_dataset = dataset[env_group]
-
-    def resolve_episode(self, episode: int):
-        """根据 dataset 或 metadata 解析 episode 的配置。"""
-        episode_dataset = None
-        seed = None
-        difficulty_hint = None
-
-        if self.env_dataset is not None:
-            episode_key = f"episode_{episode}"
-            if episode_key not in self.env_dataset:
-                raise KeyError(f"No data for episode {episode} in env_{self.env_id}")
-
-            episode_dataset = self.env_dataset[episode_key]
-            seed = int(episode_dataset["setup"]["seed"][()])
-
-        metadata = get_episode_metadata(self.metadata_index, self.env_id, episode)
-        if metadata:
-            metadata_seed = metadata.get("seed")
-            if metadata_seed is not None:
-                try:
-                    seed = int(metadata_seed)
-                except (TypeError, ValueError):
-                    print(f"[{self.env_id}] Invalid metadata seed for episode {episode}: {metadata_seed}")
-            difficulty_hint = metadata.get("difficulty")
-
-        return seed, difficulty_hint, episode_dataset
-
-    def make_env_for_episode(self, episode: int):
-        """为特定 episode 创建并配置环境。"""
-        seed, difficulty_hint, episode_dataset = self.resolve_episode(episode)
-        env_kwargs = dict(
-            obs_mode="rgb+depth+segmentation",
-            control_mode="pd_joint_pos",
-            render_mode=self.render_mode,
-            reward_mode="dense",
-            max_episode_steps=99999,
-        )
-        if seed is not None:
-            env_kwargs["HistoryBench_seed"] = seed
-        if difficulty_hint:
-            env_kwargs["HistoryBench_difficulty"] = difficulty_hint
-        seed_desc = seed if seed is not None else "default"
-        difficulty_str = f", difficulty={difficulty_hint}" if difficulty_hint else ""
-        print(f"[{self.env_id}] Episode {episode}: seed={seed_desc}{difficulty_str}")
-
-        env = gym.make(self.env_id, **env_kwargs)
-        env = DemonstrationWrapper(
-            env,
-            max_steps_without_demonstration=self.max_steps_without_demonstration,
-            gui_render=self.gui_render,
-            save_video=self.save_video,
-        )
-        return env, episode_dataset, seed, difficulty_hint
-
-
 class DemonstrationWrapper(gym.Wrapper):
     """
-    Demonstration 包装器。
-    
+    Demonstration 包装器（不包含视频保存功能）。
+
     主要功能：
     1. 在环境 reset 后自动生成演示轨迹（Trajectory），使用 Motion Planner。
-    2. 记录演示过程中的帧、动作、状态等数据。
-    3. 支持视频录制，可视化演示过程。
+    2. 记录演示过程中的帧、动作、状态、子目标等数据，供下游任务使用。
     """
-    def __init__(self, env,max_steps_without_demonstration,gui_render,save_video=False):
-        self.max_steps_without_demonstration=max_steps_without_demonstration
-        self.gui_render=gui_render
-        self.save_video=save_video
+    def __init__(self, env, max_steps_without_demonstration, gui_render, action_space=None, **kwargs):
+        # **kwargs 兼容旧调用（如 save_video=...），已不再使用
+        # 无演示步数上限：超过此步数未执行演示任务则 truncate episode
+        self.max_steps_without_demonstration = max_steps_without_demonstration
+        self.gui_render = gui_render
+        # 末端执行器位姿模式下的运动规划器（懒初始化）
+        self._ee_pose_planner = None
+        # 上一时刻的关节动作（ee_pose 模式下仅在 IK 成功时更新）
+        self._last_joint_action = None
 
-        # 先初始化父类，确保 self.env 存在
+        # 先初始化父类，确保 self.env 存在（父类会设置 self._action_space = None，故用独立属性存 ee_pose 模式）
         super().__init__(env)
-        self.unwrapped.use_demonstrationwrapper=True
+        self._action_space_mode = action_space
+        self.unwrapped.use_demonstrationwrapper = True
+
+        # 演示轨迹缓冲区：每步记录的观测与动作
+        self.frames = []              # 基座相机 RGB 帧列表
+        self.wrist_frames = []        # 腕部相机 RGB 帧列表
+        self.actions = []             # 动作序列
+        self.states = []              # 机器人状态（如 qpos）序列
+        self.subgoal = []             # 子目标文本序列（原始，含占位符）
+        self.subgoal_grounded = []    # 子目标文本序列（占位符已替换为坐标）
+        self.demonstration_record_traj = False  # 当前是否处于“演示记录”阶段
+        self.velocity = []            # 末端执行器速度序列
 
 
-        # self.video_path = video_path
-        self.frames = []
-        self.wrist_frames = []
-        self.actions = []
-        self.states = []
-        self.subgoal=[]
-        self.subgoal_grounded=[]
-        self.video_frames=[]
-        self.no_object_video_frames=[]
-        self.demonstration_record_traj = False
-        self.velocity=[]
-
-
-        self.steps_without_demonstration=0
-        self._doing_extra_step = False  # avoid re-entrance when adding highlight step
+        # 连续未执行“演示任务”的步数，用于 truncate 判断
+        self.steps_without_demonstration = 0
+        # 防止在“终止时追加一步”逻辑中重复进入 step
+        self._doing_extra_step = False
+        # 本次 episode 的演示轨迹数据（由 get_demonstration_trajectory 填充）
         self.demonstration_data = None
-        self.previous_subgoal_segment = None
+        # 当前子目标文本中占位符替换为坐标后的结果
         self.current_subgoal_segment_filled = None
+        # 当前帧中目标物体在图像上的中心点列表（用于 grounded 子目标）
         self.segmentation_points = []
+        # 当前帧是否未检测到目标物体（用于占位符填充失败标记）
         self.no_object_flag = False
-        self.episode_success = False  # 初始化 episode_success 属性
+        # 本 episode 是否被判定为成功（用于下游是否保存数据等）
+        self.episode_success = False
 
-        # 与 RecordWrapper 保持一致的分割上色表
+        # 未能匹配时保存当前帧为照片的目录；为 None 则不保存
+        self.save_failed_match_dir = kwargs.get("save_failed_match_dir", None)
+        self._failed_match_save_count = 0
+
+        # 与 RecordWrapper 一致：按物体 ID 生成区分度高的颜色表，用于分割可视化
         def generate_color_map(n=100, s_min=0.70, s_max=0.95, v_min=0.78, v_max=0.95):
             phi = 0.6180339887498948
             color_map = {}
@@ -237,35 +112,56 @@ class DemonstrationWrapper(gym.Wrapper):
 
 
     def reset(self, **kwargs):
+        """重置环境并生成演示轨迹，再执行一步初始动作后返回增强后的 obs 与 info。"""
+        if getattr(self, "_action_space_mode", None) == "ee_pose":
+            self._last_joint_action = None
+        
+        # Reset latching state
+        self.last_subgoal_segment = None
+        self.latched_replacements = None
+        self._failed_match_save_count = 0
+
         obs = super().reset(**kwargs)
-        # 重置 episode_success 状态
         self.episode_success = False
-        # Reset 后自动调用 get_demonstration_trajectory 生成演示轨迹
-        # 这确保了每次 episode 开始时都有对应的演示数据
+        # 生成演示轨迹：内部会执行所有带 demonstration 标记的任务并记录帧/动作/状态
         self.demonstration_data = self.get_demonstration_trajectory()
 
-        if self.unwrapped.spec.id=="PatternLock" or self.unwrapped.spec.id == "RouteStick":
-             gripper="stick"
+        # 根据环境选择夹爪与初始动作：PatternLock/RouteStick 使用 stick 且需在线生成的 action
+        if self.unwrapped.spec.id == "PatternLock" or self.unwrapped.spec.id == "RouteStick":
+            gripper = "stick"
         else:
-             gripper=None
-        if self.unwrapped.spec.id=="PatternLock" or self.unwrapped.spec.id == "RouteStick": 
-            action=self.unwrapped.swing_qpos#对于这两个环境 需要得到在线生成的action！
+            gripper = None
+        if self.unwrapped.spec.id == "PatternLock" or self.unwrapped.spec.id == "RouteStick":
+            action = self.unwrapped.swing_qpos  # 这两类环境需使用在线生成的初始 action
         else:
-            action=reset_panda.get_reset_panda_param("action",gripper=gripper)
-        
+            action = reset_panda.get_reset_panda_param("action", gripper=gripper)
 
-        # Only add the extra step when a video demonstration task exists (no length check)
-        has_video_demo = any(
-            task.get("demonstration", False)
-            for task in getattr(self, "task_list", [])
-        )
-
-        obs, _, _, _, info = self.step(action)
-
+        # 执行一步初始动作，使观测与记录与演示阶段对齐
+        obs, _, _, _, info = self.step(action, override_jointAngle=True)
+        obs, info = self._augment_obs_and_info(obs, info)
         return obs, info
 
+    def _augment_obs_and_info(self, obs, info):
+        """将演示轨迹数据（帧、动作、状态、速度、子目标历史等）合并进 obs 和 info 后返回。"""
+        language_goal = task_goal.get_language_goal(self.env, self.unwrapped.spec.id)
+        new_obs = {
+            **obs,
+            'frames': list(self.frames),
+            'wrist_frames': list(self.wrist_frames),
+            'actions': list(self.actions),
+            'states': list(self.states),
+            'velocity': list(self.velocity),
+            'language_goal': language_goal,
+        }
+        new_info = {
+            **info,
+            'subgoal_history': list(self.subgoal),
+            'subgoal_grounded_history': list(self.subgoal_grounded),
+        }
+        return new_obs, new_info
 
     def _add_red_border(self, frame, border_width=5):
+        """在图像四边绘制红色边框，用于高亮演示帧（当前未用于保存视频）。"""
         frame_with_border = frame.copy()
         frame_with_border[:border_width, :] = [255, 0, 0]
         frame_with_border[-border_width:, :] = [255, 0, 0]
@@ -273,22 +169,32 @@ class DemonstrationWrapper(gym.Wrapper):
         frame_with_border[:, -border_width:] = [255, 0, 0]
         return frame_with_border
 
+    TEXT_AREA_HEIGHT = 80  # 固定字体黑边高度
+
     def _add_text_to_frame(self, frame, text, position='top_right'):
-        if not text:
-            return frame
+        """在帧上方追加黑色文本区域并拼接，支持多行与自动换行。黑边高度固定为 TEXT_AREA_HEIGHT。"""
+        if text is None:
+            text = ""
+        text_area_height = self.TEXT_AREA_HEIGHT
+        if not text and not (isinstance(text, (list, tuple)) and any(text)):
+            text_area = np.zeros((text_area_height, frame.shape[1], 3), dtype=np.uint8)
+            return np.vstack((text_area, frame))
 
         if isinstance(text, str):
             text_list = [text]
         else:
-            text_list = text
+            text_list = list(text) if text else []
 
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.5
+        font_scale = 0.3
         thickness = 1
         max_width = max(1, frame.shape[1] - 20)
 
         lines = []
         for text_item in text_list:
+            if text_item is None:
+                continue
+            text_item = str(text_item).strip()
             if not text_item:
                 continue
             words = text_item.replace(',', ' ').split()
@@ -306,24 +212,106 @@ class DemonstrationWrapper(gym.Wrapper):
             lines.append(current_line)
 
         if not lines:
-            return frame
+            text_area = np.zeros((text_area_height, frame.shape[1], 3), dtype=np.uint8)
+            return np.vstack((text_area, frame))
 
         line_height = 20
-        text_area_height = max(50, len(lines) * line_height + 10)
         text_area = np.zeros((text_area_height, frame.shape[1], 3), dtype=np.uint8)
-
-        for i, line in enumerate(lines):
+        text_area[:] = (0, 0, 0)
+        max_visible_lines = (text_area_height - 15) // line_height
+        for i, line in enumerate(lines[:max_visible_lines]):
             y_position = 15 + i * line_height
             cv2.putText(text_area, line, (10, y_position), font, font_scale, (255, 255, 255), thickness)
 
         return np.vstack((text_area, frame))
 
+    def save_video(self, output_path: Union[str, Path], fps: int = 20):
+        """
+        将 self.frames 与 self.subgoal_grounded 一一对应保存为视频；
+        每帧上方为黑色区域，写入当前 subgoal_grounded 文本（自动换行）。
+        """
+        n = min(len(self.frames), len(self.subgoal_grounded))
+        if n == 0:
+            return
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    def step(self, action):
+        target_h, target_w = None, None
+        scale = 2  # 分辨率放大两倍，长宽比固定
+        with imageio.get_writer(str(output_path), fps=fps, codec="libx264", quality=8) as writer:
+            for i in range(n):
+                frame = np.asarray(self.frames[i]).copy()
+                text = self.subgoal_grounded[i] if i < len(self.subgoal_grounded) else ""
+                combined = self._add_text_to_frame(frame, text)
+                if combined.ndim == 2:
+                    combined = cv2.cvtColor(combined, cv2.COLOR_GRAY2RGB)
+                if target_h is None:
+                    target_h, target_w = combined.shape[:2]
+                if combined.shape[0] != target_h or combined.shape[1] != target_w:
+                    combined = cv2.resize(combined, (int(target_w), int(target_h)), interpolation=cv2.INTER_LINEAR)
+                out_w, out_h = int(target_w) * scale, int(target_h) * scale
+                combined = cv2.resize(combined, (out_w, out_h), interpolation=cv2.INTER_LINEAR)
+                writer.append_data(combined)
 
+    def save_frame_as_image(self, output_path: Union[str, Path], frame: np.ndarray, text=None):
+        """
+        将单帧与文本叠加（与 save_video 中单帧逻辑一致）并保存为图片。
+        """
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        combined = self._add_text_to_frame(np.asarray(frame).copy(), text)
+        if combined.ndim == 2:
+            combined = cv2.cvtColor(combined, cv2.COLOR_GRAY2RGB)
+        scale = 2
+        out_h, out_w = combined.shape[0] * scale, combined.shape[1] * scale
+        combined = cv2.resize(combined, (out_w, out_h), interpolation=cv2.INTER_LINEAR)
+        imageio.imwrite(str(output_path), combined)
+
+    def step(self, action, override_jointAngle=False):
+        """执行一步：可选 ee_pose→关节映射、分割与子目标占位符填充、轨迹记录、truncate 与成功判断。"""
         self.no_object_flag = False
-        obs, reward, terminated, truncated, info = super().step(action)
+        use_joint_direct = override_jointAngle or getattr(self, '_override_joint_angle', False)
 
+        # ---------- 动作空间：ee_pose 时将末端位姿+夹爪转为关节动作并执行 ----------
+        # get_demonstration_trajectory 期间 motion planner 直接调用 step 时传入的是关节空间动作，不做 ee_pose→关节 转换
+        if getattr(self, "_action_space_mode", None) == "ee_pose" and not use_joint_direct:
+            action = np.asarray(action, dtype=np.float64).flatten()
+            if action.size >= 8:
+                ee_p = action[:3]
+                ee_q = action[3:7]
+                gripper = float(action[7])
+                if self._ee_pose_planner is None:
+                    self._ee_pose_planner = PandaArmMotionPlanningSolver(
+                        self.env,
+                        debug=False,
+                        vis=False,
+                        base_pose=self.env.unwrapped.agent.robot.pose,
+                        visualize_target_grasp_pose=False,
+                        print_env_info=False,
+                    )
+                planner = self._ee_pose_planner
+                goal_world = np.concatenate([ee_p, ee_q])
+                goal_base = planner.planner.transform_goal_to_wrt_base(goal_world)
+                current_qpos = planner.robot.get_qpos().cpu().numpy()[0]
+                ik_status, ik_solutions = planner.planner.IK(goal_base, current_qpos)
+                if ik_status != "Success" or len(ik_solutions) == 0:
+                    raise RuntimeError(
+                        f"ee_pose step: IK failed (status={ik_status}, num_solutions={len(ik_solutions)}), "
+                        f"goal_base={goal_base.tolist()}, current_qpos={current_qpos.tolist()}"
+                    )
+                qpos = np.asarray(ik_solutions[0][:7], dtype=np.float64)
+                if getattr(planner, "control_mode", "pd_joint_pos") == "pd_joint_pos_vel":
+                    qvel = np.zeros_like(qpos)
+                    joint_action = np.hstack([qpos, qvel, gripper])
+                else:
+                    joint_action = np.hstack([qpos, gripper])
+                self._last_joint_action = joint_action
+                obs, reward, terminated, truncated, info = super().step(joint_action)
+
+        else:
+            obs, reward, terminated, truncated, info = super().step(action)
+
+        # ---------- 从观测中取出基座/腕部相机 RGB 与分割 ----------
         base_camera_frame = obs['sensor_data']['base_camera']['rgb'][0].cpu().numpy()
         wrist_camera_frame = obs['sensor_data']['hand_camera']['rgb'][0].cpu().numpy()
 
@@ -345,6 +333,7 @@ class DemonstrationWrapper(gym.Wrapper):
                 segmentation = segmentation[0]
             segmentation_2d = segmentation.squeeze()
 
+            # 当前任务关心的分割物体（current_segment）与 ID 映射，用于后续中心点计算
             current_segment = getattr(self, "current_segment", None)
             if isinstance(current_segment, (list, tuple)):
                 active_segments = list(current_segment)
@@ -373,43 +362,65 @@ class DemonstrationWrapper(gym.Wrapper):
                 segmentation_result = segmentation_2d
             segmentation_result_2d = segmentation_result.squeeze()
 
-        # 处理子目标分割和占位符填充逻辑
+        # ---------- 子目标分割与占位符填充：每步实时计算中心点并替换 <...> 为 <y, x> ----------
         current_subgoal_segment = getattr(self.unwrapped, 'current_subgoal_segment', None)
-        if current_subgoal_segment != self.previous_subgoal_segment:
-            def compute_center_from_ids(wrapper_self, segmentation_mask, ids):
-                """计算指定 ID 集合的分割掩码中心点。"""
-                if not ids:
-                    return None
-                mask = np.isin(segmentation_mask, ids)
-                if not np.any(mask):
-                    wrapper_self.no_object_flag = True
-                    return None
-                coords = np.argwhere(mask)
-                if coords.size == 0:
-                    return None
-                center_y = int(coords[:, 0].mean())
-                center_x = int(coords[:, 1].mean())
-                return [center_y, center_x]
+        failed_match = False
 
-            segment_centers = []
-            if segmentation_result_2d is not None and segmentation_2d is not None:
-                if segmentation_result_2d is not None and segmentation_result_2d.size > 0:
-                    if 'active_segments' in locals() and active_segments:
-                        for idx in range(len(active_segments)):
-                            segment_centers.append(
-                                compute_center_from_ids(self, segmentation_2d, segment_ids_by_index.get(idx, []))
-                            )
-                    else:
-                        target_ids = vis_obj_id_list if 'vis_obj_id_list' in locals() else []
+        # Check for subgoal change
+        if current_subgoal_segment != self.last_subgoal_segment:
+            self.last_subgoal_segment = current_subgoal_segment
+            self.latched_replacements = None
+
+        def compute_center_from_ids(wrapper_self, segmentation_mask, ids):
+            """根据分割掩码与物体 ID 列表计算像素中心；无匹配时设 no_object_flag。"""
+            if not ids:
+                return None
+            mask = np.isin(segmentation_mask, ids)
+            if not np.any(mask):
+                wrapper_self.no_object_flag = True
+                return None
+            coords = np.argwhere(mask)
+            if coords.size == 0:
+                return None
+            center_y = int(coords[:, 0].mean())
+            center_x = int(coords[:, 1].mean())
+            return [center_y, center_x]
+
+        segment_centers = []
+        if segmentation_result_2d is not None and segmentation_2d is not None:
+            if segmentation_result_2d is not None and segmentation_result_2d.size > 0:
+                if 'active_segments' in locals() and active_segments:
+                    for idx in range(len(active_segments)):
                         segment_centers.append(
-                            compute_center_from_ids(self, segmentation_2d, target_ids)
+                            compute_center_from_ids(self, segmentation_2d, segment_ids_by_index.get(idx, []))
                         )
-                self.segmentation_points = [center for center in segment_centers if center is not None]
+                else:
+                    target_ids = vis_obj_id_list if 'vis_obj_id_list' in locals() else []
+                    segment_centers.append(
+                        compute_center_from_ids(self, segmentation_2d, target_ids)
+                    )
+            self.segmentation_points = [center for center in segment_centers if center is not None]
 
-                # 如果存在子目标文本，尝试替换其中的占位符（如 <target>）为具体坐标
-                if current_subgoal_segment:
-                    import re
-                    subgoal_text = getattr(self, 'current_task_name', 'Unknown')
+            # 如果存在子目标文本，尝试替换其中的占位符（如 <target>）为具体坐标
+            if current_subgoal_segment:
+                import re
+                subgoal_text = getattr(self, 'current_task_name', 'Unknown')
+                
+                placeholder_pattern = re.compile(r'<[^>]*>')
+                placeholders = list(placeholder_pattern.finditer(current_subgoal_segment))
+                placeholder_count = len(placeholders)
+
+                # Determine replacements
+                final_replacements = None
+                missing_placeholder = False
+                
+                # 1. Try to use latched replacements
+                if self.latched_replacements is not None:
+                    final_replacements = self.latched_replacements
+                
+                # 2. If no latch, try to compute from current frame
+                else:
+                    # Calculate normalized centers from current frame
                     seg_shape = segmentation_result_2d.shape if segmentation_result_2d.ndim >= 2 else (256, 256)
                     normalized_centers = []
                     for center in segment_centers:
@@ -420,47 +431,65 @@ class DemonstrationWrapper(gym.Wrapper):
                         # 直接写入像素坐标，不再归一化到 [0, 1]
                         normalized_centers.append(f'<{center_y}, {center_x}>')
 
-                    placeholder_pattern = re.compile(r'<[^>]*>')
-                    placeholders = list(placeholder_pattern.finditer(current_subgoal_segment))
-                    placeholder_count = len(placeholders)
                     if placeholder_count > 0 and normalized_centers:
                         replacements = normalized_centers.copy()
                         if len(replacements) == 1 and placeholder_count > 1:
                             replacements = replacements * placeholder_count
                         elif len(replacements) < placeholder_count:
                             replacements.extend([None] * (placeholder_count - len(replacements)))
-
-                        missing_placeholder = False
-                        new_text_parts = []
-                        last_idx = 0
-                        for idx, match in enumerate(placeholders):
-                            new_text_parts.append(current_subgoal_segment[last_idx:match.start()])
-                            replacement_text = replacements[idx]
-                            if replacement_text is None:
-                                # new_text_parts.append(match.group(0))  # 原逻辑：保留占位符
-                                missing_placeholder = True
-                            else:
-                                new_text_parts.append(replacement_text)
-                            last_idx = match.end()
-                        new_text_parts.append(current_subgoal_segment[last_idx:])
-                        # 缺失时用子目标文本替换整个文本
-                        self.current_subgoal_segment_filled = subgoal_text if missing_placeholder else ''.join(new_text_parts)
+                        
+                        # Check if this is a "valid" match for latching
+                        # We latch if we have enough info to fill placeholders without Nones (or at least validly found objects)
+                        # The original logic marked missing_placeholder = True if replacement is None.
+                        # We will use that to decide whether to latch.
+                        temp_missing_placeholder = any(r is None for r in replacements)
+                        
+                        if not temp_missing_placeholder:
+                            self.latched_replacements = replacements
+                        
+                        final_replacements = replacements
                     else:
-                        self.current_subgoal_segment_filled = current_subgoal_segment
+                        final_replacements = None
+
+                # 3. Apply replacements
+                if final_replacements and placeholder_count > 0:
+                    new_text_parts = []
+                    last_idx = 0
+                    for idx, match in enumerate(placeholders):
+                        new_text_parts.append(current_subgoal_segment[last_idx:match.start()])
+                        # Safety check in case final_replacements is shorter (shouldn't happen with above logic but good to be safe)
+                        if idx < len(final_replacements):
+                            replacement_text = final_replacements[idx]
+                        else:
+                            replacement_text = None
+
+                        if replacement_text is None:
+                            missing_placeholder = True
+                        else:
+                            new_text_parts.append(replacement_text)
+                        last_idx = match.end()
+                    new_text_parts.append(current_subgoal_segment[last_idx:])
+                    
+                    self.current_subgoal_segment_filled = subgoal_text if missing_placeholder else ''.join(new_text_parts)
+                    if self.latched_replacements is None and (final_replacements is None or missing_placeholder):
+                        failed_match = True
                 else:
-                    self.current_subgoal_segment_filled = current_subgoal_segment
+                     self.current_subgoal_segment_filled = current_subgoal_segment
+                     if placeholder_count > 0 and self.latched_replacements is None:
+                         failed_match = True
             else:
-                self.segmentation_points = []
                 self.current_subgoal_segment_filled = current_subgoal_segment
+        else:
+            self.segmentation_points = []
+            self.current_subgoal_segment_filled = current_subgoal_segment
 
-            self.previous_subgoal_segment = current_subgoal_segment
-
-        # # Collect frames for video
-        current_task=self.current_task_name if hasattr(self, 'current_task_name') else "Unknown"
-        if current_task!='NO RECORD':
+        # ---------- 轨迹记录：非 “NO RECORD” 任务时追加当前帧、动作、状态、子目标等 ----------
+        current_task = self.current_task_name if hasattr(self, 'current_task_name') else "Unknown"
+        if current_task != 'NO RECORD':
             image = base_camera_frame
             wrist_image = wrist_camera_frame
-            state=self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos
+            # 当前步的机器人关节位置与末端线速度+角速度（用于轨迹数据）
+            state = self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos
             end_effector_velocity = self.agent.robot.links[9].get_linear_velocity().tolist()[0] + self.agent.robot.links[9].get_angular_velocity().tolist()[0]
 
             subgoal_text = getattr(self, 'current_task_name', 'Unknown')
@@ -474,38 +503,25 @@ class DemonstrationWrapper(gym.Wrapper):
             self.subgoal.append(subgoal_text)
             self.subgoal_grounded.append(grounded_subgoal)
 
-            # 视频帧：直接使用 base | wrist 左右拼接；demonstration 时加红框 thickness=10
-            if self.save_video:
-                is_demonstration = getattr(self, 'current_task_demonstration', False)
-                base_frame_video = copy.deepcopy(image)
-                wrist_frame_video = copy.deepcopy(wrist_image)
+            if failed_match and getattr(self, "save_failed_match_dir", None):
+                save_dir = Path(self.save_failed_match_dir)
+                self._failed_match_save_count += 1
+                env_id = getattr(self, "save_failed_match_env_id", None)
+                episode = getattr(self, "save_failed_match_episode", None)
+                if env_id is not None and episode is not None:
+                    basename = f"failed_match_{env_id}_ep{episode}_{self._failed_match_save_count:04d}.png"
+                else:
+                    basename = f"failed_match_{self._failed_match_save_count:04d}.png"
+                out_path = save_dir / basename
+                self.save_frame_as_image(out_path, image, grounded_subgoal)
 
-                if base_frame_video.shape[:2] != wrist_frame_video.shape[:2]:
-                    wrist_frame_video = cv2.resize(
-                        wrist_frame_video,
-                        (base_frame_video.shape[1], base_frame_video.shape[0]),
-                        interpolation=cv2.INTER_LINEAR,
-                    )
+        # ---------- 非演示步计数：超过上限则 truncate ----------
+        if self.current_task_demonstration == False:
+            self.steps_without_demonstration += 1
+            if self.steps_without_demonstration >= self.max_steps_without_demonstration:
+                truncated = torch.tensor([True])
 
-                combined = np.hstack([base_frame_video, wrist_frame_video])
-                if is_demonstration:
-                    combined = self._add_red_border(combined, border_width=5)
-                self.video_frames.append(combined)
-                # if self.no_object_flag:
-                #     self.no_object_video_frames.append(combined)
-
-
-
-
-                #start counting from 
-        if self.current_task_demonstration==False:
-            self.steps_without_demonstration+=1
-            if self.steps_without_demonstration>=self.max_steps_without_demonstration:
-                truncated=torch.tensor([True])
-            #print(self.steps_without_demonstration)
-
-
-        # 检查 episode 是否成功
+        # ---------- 根据 terminated 与 info["success"] 更新 episode_success ----------
         if terminated.any():
             if info.get("success") == torch.tensor([True]) or (isinstance(info.get("success"), torch.Tensor) and info.get("success").item()):
                 self.episode_success = True
@@ -514,75 +530,20 @@ class DemonstrationWrapper(gym.Wrapper):
                 self.episode_success = False
                 print("Episode failed, data will be discarded")
 
-        # 在终止时追加一次“多余动作”，动作直接复用上一次 action
-        if terminated.any() and not self._doing_extra_step:
+        # ---------- 终止时多执行一步，使最后一帧也被记录（动作与上一步相同） ----------
+        # 演示记录期间由 motion planner 控制步进，不在此处多执行一步
+        if terminated.any() and not self._doing_extra_step and not use_joint_direct:
             self._doing_extra_step = True
             try:
-                # 复用完整 DemonstrationWrapper.step 流程（包含记录/可视化等）
-
                 self.step(action)
             finally:
                 self._doing_extra_step = False
 
+        obs, info = self._augment_obs_and_info(obs, info)
         return obs, reward, terminated, truncated, info
 
     def close(self):
-        # 保存演示视频到 replay_videos 目录
-        if self.save_video and len(self.video_frames)>0:
-            videos_dir = Path("/data/hongzefu/dataset_generate/replay_videos")
-            videos_dir.mkdir(parents=True, exist_ok=True)
-
-            language_goal = task_goal.get_language_goal(self.env,self.unwrapped.spec.id)
-            sanitized_goal = language_goal.replace(" ", "_").replace("/", "_") if language_goal else "no_goal"
-            seed = getattr(self.env.unwrapped, "HistoryBench_seed", None)
-            seed_tag = f"_seed{seed}" if seed is not None else ""
-
-            if self.episode_success == True:
-                video_path = videos_dir / f"DEMO_{self.unwrapped.spec.id}{seed_tag}_{sanitized_goal}.mp4"
-            else:
-                 video_path = videos_dir / f"DEMO_FAILED_{self.unwrapped.spec.id}{seed_tag}_{sanitized_goal}.mp4"
-            try:
-                with imageio.get_writer(video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
-                    for frame in self.video_frames:
-                        writer.append_data(frame)
-                print(f"Saved demonstration video to {video_path}")
-            except (ValueError, Exception) as e:
-                # 如果保存视频时出错（如帧大小不一致），保存一个空白视频
-                print(f"Error saving video: {e}. Saving blank video instead.")
-                # 获取第一个帧的大小，如果不存在则使用默认大小
-                if len(self.video_frames) > 0:
-                    first_frame = self.video_frames[0]
-                    if isinstance(first_frame, np.ndarray):
-                        frame_shape = first_frame.shape
-                        blank_frame = np.zeros(frame_shape, dtype=first_frame.dtype)
-                    else:
-                        # 如果第一个帧不是numpy数组，使用默认大小
-                        blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                else:
-                    blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                
-                # 创建一个只包含空白帧的短视频（1秒，30帧）
-                with imageio.get_writer(video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
-                    for _ in range(30):
-                        writer.append_data(blank_frame)
-                print(f"Saved blank video to {video_path}")
-        # if self.save_video and len(self.no_object_video_frames)>0:
-        #     videos_dir = Path("/data/hongzefu/dataset_generate/replay_videos")
-        #     videos_dir.mkdir(parents=True, exist_ok=True)
-        #
-        #     language_goal = task_goal.get_language_goal(self.env,self.unwrapped.spec.id)
-        #     sanitized_goal = language_goal.replace(" ", "_").replace("/", "_") if language_goal else "no_goal"
-        #     seed = getattr(self.env.unwrapped, "HistoryBench_seed", None)
-        #     seed_tag = f"_seed{seed}" if seed is not None else ""
-        #
-        #     video_path = videos_dir / f"DEMO_NO_OBJECT_{self.unwrapped.spec.id}{seed_tag}_{sanitized_goal}.mp4"
-        #     with imageio.get_writer(video_path.as_posix(), fps=30, codec="libx264", quality=8) as writer:
-        #         for frame in self.no_object_video_frames:
-        #             writer.append_data(frame)
-        #     print(f"Saved demonstration no-object video to {video_path}")
-
-        self.video_frames.clear()
-        self.no_object_video_frames.clear()
+        """关闭环境，释放资源（本包装器不再保存视频）。"""
         super().close()
         return None
 
@@ -597,62 +558,59 @@ class DemonstrationWrapper(gym.Wrapper):
         4. 记录执行过程中的帧、动作、状态等。
         5. 返回收集到的轨迹数据。
         """
-        #######for video demonstration
-        if self.unwrapped.spec.id=="PatternLock" or self.unwrapped.spec.id == "RouteStick":
-                    planner = PandaStickMotionPlanningSolver(
-                            self,
-                            debug=False,
-                            vis=False,
-                            base_pose= self.unwrapped.agent.robot.pose,
-                            visualize_target_grasp_pose=False,
-                            print_env_info=False,
-                            joint_vel_limits=0.3,
-                        )
+        # 按环境选择运动规划器：PatternLock/RouteStick 用 stick 规划器，其余用机械臂规划器
+        if self.unwrapped.spec.id == "PatternLock" or self.unwrapped.spec.id == "RouteStick":
+            planner = PandaStickMotionPlanningSolver(
+                self,
+                debug=False,
+                vis=False,
+                base_pose=self.unwrapped.agent.robot.pose,
+                visualize_target_grasp_pose=False,
+                print_env_info=False,
+                joint_vel_limits=0.3,
+            )
         else:
-                    planner = PandaArmMotionPlanningSolver(
-                            self,
-                            debug=False,
-                            vis=False,
-                            base_pose=self.unwrapped.agent.robot.pose,
-                            visualize_target_grasp_pose=False,
-                            print_env_info=False,
-                        )
+            planner = PandaArmMotionPlanningSolver(
+                self,
+                debug=False,
+                vis=False,
+                base_pose=self.unwrapped.agent.robot.pose,
+                visualize_target_grasp_pose=False,
+                print_env_info=False,
+            )
         tasks = getattr(self, 'task_list', [])
-
-        self.task_list_length = len(tasks)#记录任务列表长度
+        self.task_list_length = len(tasks)
         print(f"Task list length: {self.task_list_length}")
 
         demonstration_tasks = [task for task in tasks if task.get("demonstration", False)]
-        self.non_demonstration_task_length = len(tasks) - len(demonstration_tasks)  # 记录非demonstration任务长度
+        self.non_demonstration_task_length = len(tasks) - len(demonstration_tasks)
         print(f"Non-demonstration task length: {self.non_demonstration_task_length}")
 
+        self._override_joint_angle = True
+        # 依次执行每个演示任务：设 demonstration_record_traj=True，调用任务的 solve(planner)
         for idx, task_entry in enumerate(demonstration_tasks):
-            self.unwrapped.demonstration_record_traj=True
+            self.unwrapped.demonstration_record_traj = True
             task_name = task_entry.get("name", f"Task {idx}")
             print(f"Executing task {idx+1}/{len(demonstration_tasks)}: {task_name}")
 
             solve_callable = task_entry.get("solve")
             if not callable(solve_callable):
                 raise ValueError(f"Task '{task_name}' must supply a callable 'solve'.")
-            
-            #solve_callable(self, planner)
 
-            evaluation = self.evaluate(solve_complete_eval=True)
+            self.evaluate(solve_complete_eval=True)
             solve_callable(self, planner)
-            evaluation = self.evaluate(solve_complete_eval=True)
-        #######for video demonstration
+            self.evaluate(solve_complete_eval=True)
 
-        
-
-        language_goal=task_goal.get_language_goal(self.env,self.env.unwrapped.spec.id)
-        self.unwrapped.demonstration_record_traj=False #标记video结束 正常开始判断subgoal
+        language_goal = task_goal.get_language_goal(self.env, self.env.unwrapped.spec.id)
+        self.unwrapped.demonstration_record_traj = False  # 演示结束，后续 step 正常做 subgoal 判断
+        self._override_joint_angle = False
         return {
             'frames': self.frames,
             'wrist_frames': self.wrist_frames,
             'actions': self.actions,
             'states': self.states,
-            'velocity':self.velocity,
-            'subgoal':self.subgoal,
-            'subgoal_grounded': self.subgoal_grounded,  # 所有步骤《》占位符填充为坐标后的文本序列
-            'language goal':language_goal,
+            'velocity': self.velocity,
+            'subgoal_history': self.subgoal,
+            'subgoal_grounded_history': self.subgoal_grounded,
+            'language goal': language_goal,
         }
