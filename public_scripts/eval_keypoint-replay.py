@@ -8,8 +8,10 @@ import numpy as np
 import sapien
 from pathlib import Path
 
-# Add parent directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory and scripts to Python path
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _root)
+sys.path.insert(0, os.path.join(_root, "scripts"))
 import gymnasium as gym
 from gymnasium.utils.save_video import save_video
 
@@ -182,7 +184,6 @@ def main():
         # 初始化 EpisodeConfigResolver
         resolver = EpisodeConfigResolver(
             env_id=env_id,
-            dataset=None,
             metadata_path=metadata_path,
             render_mode="human",
             gui_render=True,
@@ -192,8 +193,6 @@ def main():
         # 遍历所有 episode
         for episode_record in episode_records:
 
-            # if episode_record['episode'] != 0:
-            #     continue
 
             episode = episode_record['episode']
             seed = episode_record.get('seed')
@@ -202,7 +201,7 @@ def main():
             print(f"--- Running simulation for episode:{episode}, env: {env_id}, seed: {seed}, difficulty: {difficulty} ---")
             
             # 使用 EpisodeConfigResolver 创建环境
-            env, episode_dataset, resolved_seed, resolved_difficulty = resolver.make_env_for_episode(episode)
+            env, resolved_seed, resolved_difficulty = resolver.make_env_for_episode(episode)
             env.reset()
         
             
@@ -315,10 +314,6 @@ def main():
             evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
             print(f"Final evaluation for episode {episode}: {evaluation}")
             
-
-
-
-
 
             env.close()
             print(f"--- Finished Running simulation for episode:{episode}, env: {env_id} ---")

@@ -98,21 +98,9 @@ def main():
             # ---------- 按 step 回放：action = [eep, eeq, gripper]，wrapper 内做 IK ----------
             step = 0
             while True:
-                # 从数据集中取当前步的原始动作（取 gripper 最后一维）
-                action_original = dataset_resolver.get_action(step)
-                # 从数据集中取当前步记录的末端执行器位姿：位置 p、四元数 q（世界系）
-                ee_p, ee_q = dataset_resolver.get_ee_pose(step)
-
-                # 若该步没有末端位姿（例如已到 episode 末尾），结束回放
-                if ee_p is None or ee_q is None:
+                action = dataset_resolver.get_ee_pose_gripper(step)
+                if action is None:
                     break
-
-                gripper = float(action_original[-1]) if action_original is not None else -1.0
-                action = np.concatenate([
-                    np.asarray(ee_p).flatten(),
-                    np.asarray(ee_q).flatten(),
-                    [gripper],
-                ])
                 obs, reward, terminated, truncated, info = env.step(action)
 
                 # ---------- step 之后从 obs/info 更新（供后续逻辑或调试使用）----------

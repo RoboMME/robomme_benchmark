@@ -145,6 +145,41 @@ class EpisodeDatasetResolver:
             return self.get_ee_pose_from_absolute_timestep(record_step)
         return None, None
 
+    def get_ee_pose_gripper(self, step: int) -> Optional[np.ndarray]:
+        """
+        Return full ee action [ee_p, ee_q, gripper] for the step-th non-demo timestep.
+        Same step resolution as get_ee_pose. Returns None if pose is missing.
+        """
+        while step >= len(self._non_demo_record_steps) and self._scan_cursor < len(self._timestep_indexes):
+            record_step = self._timestep_indexes[self._scan_cursor]
+            key = f"record_timestep_{record_step}"
+            timestep_group = self._episode_group[key]
+            is_demo = False
+            if "demonstration" in timestep_group:
+                is_demo = _as_bool(timestep_group["demonstration"][()])
+            self._scan_cursor += 1
+            if not is_demo:
+                self._non_demo_record_steps.append(record_step)
+        if step >= len(self._non_demo_record_steps):
+            return None
+        record_step = self._non_demo_record_steps[step]
+        key = f"record_timestep_{record_step}"
+        if key not in self._episode_group:
+            return None
+        timestep_group = self._episode_group[key]
+        p = timestep_group["robot_endeffector_p"][()] if "robot_endeffector_p" in timestep_group else None
+        q = timestep_group["robot_endeffector_q"][()] if "robot_endeffector_q" in timestep_group else None
+        if p is None or q is None:
+            return None
+        raw_action = timestep_group["action"][()] if "action" in timestep_group else None
+        action_8d = _action_to_8d(raw_action)
+        gripper = float(action_8d[-1]) if action_8d is not None and len(action_8d) > 0 else -1.0
+        return np.concatenate([
+            np.asarray(p, dtype=np.float64).flatten(),
+            np.asarray(q, dtype=np.float64).flatten(),
+            [gripper],
+        ])
+
     def get_ee_pose_from_absolute_timestep(self, step: int) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         key = f"record_timestep_{step}"
         if key not in self._episode_group:

@@ -8,12 +8,18 @@ import numpy as np
 import sapien
 from pathlib import Path
 
-# Add parent directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory and scripts to Python path
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _root)
+sys.path.insert(0, os.path.join(_root, "scripts"))
 import gymnasium as gym
 from gymnasium.utils.save_video import save_video
 
-from historybench.env_record_wrapper import HistoryBenchRecordWrapper, EpisodeConfigResolver
+from historybench.env_record_wrapper import (
+    HistoryBenchRecordWrapper,
+    EpisodeConfigResolver,
+    RRTPlanFailure,
+)
 from historybench.HistoryBench_env import *
 
 
@@ -24,12 +30,6 @@ from mani_skill.examples.motionplanning.base_motionplanner.utils import (
 
 # from util import *
 import torch
-
-from planner_fail_safe import (
-    FailAwarePandaArmMotionPlanningSolver,
-    FailAwarePandaStickMotionPlanningSolver,
-    ScrewPlanFailure,
-)
 
 OUTPUT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -148,9 +148,9 @@ def main():
 # "ButtonUnmaskSwap",
 # "ButtonUnmask",
 
-"VideoRepick",
+#"VideoRepick",
 #  "VideoPlaceButton",
-# "VideoPlaceOrder",
+ "VideoPlaceOrder",
 # "PickHighlight",
 
 # "InsertPeg",
@@ -179,21 +179,19 @@ def main():
         
         print(f"Found {len(episode_records)} episodes and {len(all_keypoints)} keypoints for {env_id}")
         
-        # 初始化 EpisodeConfigResolver
+        # 初始化 EpisodeConfigResolver（action_space=keypoint 时内部会包好 MultiStepDemonstrationWrapper）
         resolver = EpisodeConfigResolver(
             env_id=env_id,
-            dataset=None,
             metadata_path=metadata_path,
             render_mode="human",
             gui_render=True,
             max_steps_without_demonstration=200,
+            action_space="keypoint",
         )
         
         # 遍历所有 episode
         for episode_record in episode_records:
 
-            # if episode_record['episode'] != 0:
-            #     continue
 
             episode = episode_record['episode']
             seed = episode_record.get('seed')
@@ -201,32 +199,10 @@ def main():
             
             print(f"--- Running simulation for episode:{episode}, env: {env_id}, seed: {seed}, difficulty: {difficulty} ---")
             
-            # 使用 EpisodeConfigResolver 创建环境
-            env, episode_dataset, resolved_seed, resolved_difficulty = resolver.make_env_for_episode(episode)
+            # 使用 EpisodeConfigResolver 创建环境（已含 MultiStepDemonstrationWrapper）
+            env, resolved_seed, resolved_difficulty = resolver.make_env_for_episode(episode)
             env.reset()
-        
-            
-            # 初始化 planner
-            if env_id in ("PatternLock", "RouteStick"):
-                planner = FailAwarePandaStickMotionPlanningSolver(
-                    env,
-                    debug=False,
-                    vis=True,
-                    base_pose=env.unwrapped.agent.robot.pose,
-                    visualize_target_grasp_pose=False,
-                    print_env_info=False,
-                    joint_vel_limits=0.3,
-                )
-            else:
-                planner = FailAwarePandaArmMotionPlanningSolver(
-                    env,
-                    debug=False,
-                    vis=True,
-                    base_pose=env.unwrapped.agent.robot.pose,
-                    visualize_target_grasp_pose=True,
-                    print_env_info=False,
-                )
-            
+
             # 获取当前 episode 的所有 keypoint（按 timestep 排序）
             episode_keypoints = [kp for kp in all_keypoints if kp['episode'] == episode]
             episode_keypoints.sort(key=lambda x: x['timestep'])
@@ -236,6 +212,7 @@ def main():
                 env.close()
                 continue
             
+            gui_render = True
             print(f"Executing {len(episode_keypoints)} keypoints for episode {episode}")
             
             
@@ -253,72 +230,73 @@ def main():
                 keypoint_q = np.array(kp['quaternion_q'], dtype=np.float32)
                 keypoint_type = kp['keypoint_type']
                 timestep = kp['timestep']
-                
+
                 print(f"  Executing keypoint {idx+1}/{len(episode_keypoints)}: timestep={timestep}, type={keypoint_type}")
-                
-                # 根据 keypoint_type 决定夹爪操作
+                print(f"keypoint_p: {keypoint_p}")
+
                 gripper_action = kp['action'][-1]
-                
-                # 移动到 keypoint pose
+                action = np.concatenate([
+                    keypoint_p,
+                    keypoint_q,
+                    [float(gripper_action)],
+                ]).astype(np.float32)
+
                 try:
-                    pose = sapien.Pose(p=keypoint_p, q=keypoint_q)
-                    print (f"keypoint_p: {keypoint_p}")
+                    obs, reward, terminated, truncated, info = env.step(action)
+                    # 从 obs 读取
+                    image = obs.get('frames', [])[-1] if obs.get('frames') else None
+                    wrist_image = obs.get('wrist_frames', [])[-1] if obs.get('wrist_frames') else None
+                    last_action = obs.get('actions', [])[-1] if obs.get('actions') else None
+                    state = obs.get('states', [])[-1] if obs.get('states') else None
+                    velocity = obs.get('velocity', [])[-1] if obs.get('velocity') else None
+                    language_goal = obs.get('language_goal') if obs else None
+                    # 从 info 读取
+                    subgoal = info.get('subgoal_history', []) if info else []
+                    subgoal_grounded = info.get('subgoal_grounded_history', []) if info else []
 
-                    # 获取当前末端位置
-                    current_pose = env.unwrapped.agent.tcp.pose
-                    current_p = current_pose.p
-                    if hasattr(current_p, 'cpu'):
-                        current_p = current_p.cpu().numpy()
-                    if current_p.ndim > 1:
-                        current_p = current_p.flatten()
-                    
-                    # 计算距离偏差
-                    dist = np.linalg.norm(current_p - keypoint_p)
-                    
-                    # 如果距离极小，直接获取当前观测并跳过移动
-                    if dist < 0.001:  # 阈值可调整，例如 5mm
-                        print(f"Target too close (dist={dist:.6f}), skipping planner motion.")
-                    else:
-                        planner.move_to_pose_with_RRTStar(pose)
-                    #import pdb; pdb.set_trace()
-                    # try:
-                    #     planner.move_to_pose_with_screw(pose)
-                    # except Exception as exc:
-                        
-                    #     break
+                    # 从 obs 读取
+                    frames = obs.get('frames', []) if obs else []
+                    wrist_frames = obs.get('wrist_frames', []) if obs else []
+                    actions = obs.get('actions', []) if obs else []
+                    states = obs.get('states', []) if obs else []
+                    velocity = obs.get('velocity', []) if obs else []
+                    language_goal = obs.get('language_goal') if obs else None
+                    # 从 info 读取
+                    subgoal = info.get('subgoal_history', []) if info else []
+                    subgoal_grounded = info.get('subgoal_grounded_history', []) if info else []
 
-
-                    # 如果是 grasp_pose，移动到位置后关闭夹爪
-                    if gripper_action == -1:
-                        try:
-                            planner.close_gripper()
-                        except Exception as exc:
-                            print("no gripper")
-                        
-                    elif gripper_action == 1:
-                        try:
-                            planner.open_gripper()
-                        except Exception as exc:
-                            print("no gripper")
-                    
-                    # 更新观测数据
-                    env.render()
-                        
-                except ScrewPlanFailure as exc:
-                    print(f"    Screw plan failure for keypoint timestep {timestep}: {exc}")
+                    if gui_render:
+                        env.render()
+                    if truncated:
+                        print(f"[{env_id}] episode {episode} 步数超限。")
+                        break
+                    if terminated.any():
+                        if info.get("success") == torch.tensor([True]) or (
+                            isinstance(info.get("success"), torch.Tensor) and info.get("success").item()
+                        ):
+                            print(f"[{env_id}] episode {episode} 成功。")
+                        elif info.get("fail", False):
+                            print(f"[{env_id}] episode {episode} 失败。")
+                        break
+          
+                except RRTPlanFailure as exc:
+                    print(f"    RRT plan failure for keypoint timestep {timestep}: {exc}")
                     break
-                except Exception as exc:
-                    print(f"    Error executing keypoint timestep {timestep}: {exc}")
-                    break
+
             
+
+
+            # 保存回放视频（frames + subgoal_grounded）
+            video_dir = dataset_root / "videos"
+            video_dir.mkdir(parents=True, exist_ok=True)
+            out_video_path = video_dir / f"replay_kp_{env_id}_ep{episode}.mp4"
+            env.save_video(str(out_video_path))
+            print(f"Saved video: {out_video_path}")
+
             # 执行完成后进行评估
             evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
             print(f"Final evaluation for episode {episode}: {evaluation}")
             
-
-
-
-
 
             env.close()
             print(f"--- Finished Running simulation for episode:{episode}, env: {env_id} ---")

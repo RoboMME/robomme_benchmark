@@ -1,6 +1,7 @@
 # HistoryBench
 from .RecordWrapper import *
 from .DemonstrationWrapper import *
+from .MultiStepDemonstrationWrapper import MultiStepDemonstrationWrapper, RRTPlanFailure
 from .episode_config_resolver import (
     EpisodeConfigResolver,
     load_episode_metadata,
