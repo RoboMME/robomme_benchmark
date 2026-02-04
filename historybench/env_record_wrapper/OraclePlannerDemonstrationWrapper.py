@@ -107,7 +107,10 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
         self.seg_vis, self.seg_raw, self.base_frames, self.wrist_frames, self.available_options = \
             step_before(self.env, self.planner, self.env_id, self.color_map)
             
-        return self._get_obs(), info
+        info["available_options"] = self.available_options
+        info["seg_vis"] = self.seg_vis
+        info["seg_raw"] = self.seg_raw
+        return self._get_obs(obs), info
 
     def step(self, action):
         """
@@ -115,7 +118,19 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
             action: command_dict containing "action" and "point"
         """
         command_dict = action
-        
+
+        # Determine where to get the data from
+        env_with_data = self.env
+        if not hasattr(env_with_data, "frames"):
+             env_with_data = self.env.unwrapped
+
+        # Record start index before execution
+        start_idx = len(getattr(env_with_data, "frames", []))
+
+        # Get current state and options (step_before) before executing action
+        self.seg_vis, self.seg_raw, self.base_frames, self.wrist_frames, self.available_options = \
+            step_before(self.env, self.planner, self.env_id, self.color_map)
+
         # Execute action (step_after)
         evaluation = step_after(
             self.env, 
@@ -142,20 +157,46 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
         info = {}
         if evaluation:
             info.update(evaluation)
-        
-        # If not terminated, prepare next step (step_before)
-        if not terminated:
-            self.seg_vis, self.seg_raw, self.base_frames, self.wrist_frames, self.available_options = \
-                step_before(self.env, self.planner, self.env_id, self.color_map)
-        
-        return self._get_obs(), reward, terminated, truncated, info
 
-    def _get_obs(self):
-        return {
-            "seg_vis": self.seg_vis,
-            "seg_raw": self.seg_raw,
-            "base_frames": self.base_frames,
-            "wrist_frames": self.wrist_frames,
-            "available_options": self.available_options,
-            "language_goal": self.language_goal
-        }
+        info["available_options"] = self.available_options
+        info["seg_vis"] = self.seg_vis
+        info["seg_raw"] = self.seg_raw
+
+        # Retrieve sliced lists (data generated during this step)
+        step_frames = getattr(env_with_data, "frames", [])[start_idx:]
+        step_wrist_frames = getattr(env_with_data, "wrist_frames", [])[start_idx:]
+        step_actions = getattr(env_with_data, "actions", [])[start_idx:]
+        step_states = getattr(env_with_data, "states", [])[start_idx:]
+        step_velocity = getattr(env_with_data, "velocity", [])[start_idx:]
+        step_subgoal = getattr(env_with_data, "subgoal", [])[start_idx:]
+        step_subgoal_grounded = getattr(env_with_data, "subgoal_grounded", [])[start_idx:]
+
+        # Update info with step-specific subgoals
+        info["subgoal"] = step_subgoal
+        info["subgoal_grounded"] = step_subgoal_grounded
+
+        try:
+            base_obs = self.env.unwrapped.get_obs(unflattened=True)
+        except Exception:
+            base_obs = {}
+        if not isinstance(base_obs, dict):
+            base_obs = {}
+        
+        obs = self._get_obs(base_obs)
+        
+        # Override obs with step-specific data
+        obs["frames"] = step_frames
+        obs["wrist_frames"] = step_wrist_frames
+        obs["actions"] = step_actions
+        obs["states"] = step_states
+        obs["velocity"] = step_velocity
+
+        return obs, reward, terminated, truncated, info
+
+    def _get_obs(self, base_obs=None):
+        if base_obs is None or not isinstance(base_obs, dict):
+            base_obs = {}
+        base_obs["language_goal"] = self.language_goal
+        base_obs["frames"] = self.base_frames
+        base_obs["wrist_frames"] = self.wrist_frames
+        return base_obs
