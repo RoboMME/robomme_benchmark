@@ -2,12 +2,15 @@
 MultiStepDemonstrationWrapper: wraps DemonstrationWrapper and exposes a keypoint-step API.
 
 Each step(action) accepts action = keypoint_p (3) + keypoint_q (4) + gripper_action (1) = 8 dims.
-Internally runs move_to_pose_with_RRTStar, then close_gripper/open_gripper as specified.
+Uses planner_denseStep to run move_to_pose_with_RRTStar and close_gripper/open_gripper,
+returning 5 lists (obs_list, reward_list, terminated_list, truncated_list, info_list).
 Callers must have scripts/ on sys.path for planner_fail_safe import.
 """
 import numpy as np
 import sapien
 import gymnasium as gym
+
+from . import planner_denseStep
 
 
 class RRTPlanFailure(RuntimeError):
@@ -17,7 +20,7 @@ class RRTPlanFailure(RuntimeError):
 class MultiStepDemonstrationWrapper(gym.Wrapper):
     """
     Wraps DemonstrationWrapper; step(action) interprets action as (keypoint_p, keypoint_q, gripper_action)
-    and runs the planner (RRT* move + close/open gripper), returning the last env step result.
+    and runs the planner via planner_denseStep, returning 5 lists (obs, reward, terminated, truncated, info).
     """
 
     def __init__(self, env, gui_render=True, vis=True, **kwargs):
@@ -78,16 +81,13 @@ class MultiStepDemonstrationWrapper(gym.Wrapper):
         return self.env.step(action)
 
     def step(self, action):
-        """一次 keypoint 步：内部会执行多步 env.step（RRT* 移动 + 可选夹爪），返回本步内「所有帧」的 obs/info。"""
+        """Keypoint step: runs RRT* move + optional gripper via planner_denseStep, returns 5 lists."""
         action = np.asarray(action, dtype=np.float64).flatten()
         if action.size < 8:
             raise ValueError(f"action must have at least 8 elements, got {action.size}")
         keypoint_p = action[:3]
         keypoint_q = action[3:7]
         gripper_action = float(action[7])
-
-        # 记录本 keypoint 步开始前的帧数，用于之后截取「本步内新增」的帧/动作/状态等
-        start_idx = len(self.env.frames)
 
         pose = sapien.Pose(p=keypoint_p, q=keypoint_q)
         planner = self._get_planner()
@@ -97,40 +97,37 @@ class MultiStepDemonstrationWrapper(gym.Wrapper):
 
         if dist < 0.001:
             obs, reward, terminated, truncated, info = self._no_op_step()
+            obs_list = [obs]
+            reward_list = [reward]
+            terminated_list = [terminated]
+            truncated_list = [truncated]
+            info_list = [info]
         else:
-            result = planner.move_to_pose_with_RRTStar(pose)
+            result = planner_denseStep.move_to_pose_with_RRTStar(planner, pose)
             if result == -1:
                 raise RRTPlanFailure("move_to_pose_with_RRTStar failed (returned -1)")
-            obs, reward, terminated, truncated, info = result
+            obs_list, reward_list, terminated_list, truncated_list, info_list = result
 
         if gripper_action == -1:
-            obs, reward, terminated, truncated, info = planner.close_gripper()
+            result = planner_denseStep.close_gripper(planner)
+            if result != -1:
+                go_obs, go_r, go_t, go_tr, go_i = result
+                obs_list.extend(go_obs)
+                reward_list.extend(go_r)
+                terminated_list.extend(go_t)
+                truncated_list.extend(go_tr)
+                info_list.extend(go_i)
         elif gripper_action == 1:
-            obs, reward, terminated, truncated, info = planner.open_gripper()
+            result = planner_denseStep.open_gripper(planner)
+            if result != -1:
+                go_obs, go_r, go_t, go_tr, go_i = result
+                obs_list.extend(go_obs)
+                reward_list.extend(go_r)
+                terminated_list.extend(go_t)
+                truncated_list.extend(go_tr)
+                info_list.extend(go_i)
 
-        # 本 keypoint 步内（move + gripper）产生的所有帧及对齐的 actions/states/subgoal 等
-        step_frames = self.env.frames[start_idx:]
-        step_wrist_frames = self.env.wrist_frames[start_idx:]
-        step_actions = self.env.actions[start_idx:]
-        step_states = self.env.states[start_idx:]
-        step_velocity = self.env.velocity[start_idx:]
-        step_subgoal = self.env.subgoal[start_idx:]
-        step_subgoal_grounded = self.env.subgoal_grounded[start_idx:]
-
-        # 覆盖（override）内层 DemonstrationWrapper._augment_obs_and_info 的返回值：
-        # 内层只暴露「最后一帧」[self.frames[-1]] 等单元素列表；本层改为暴露本步内「所有帧」的列表，
-        # 使调用方拿到的是整段 keypoint 步的轨迹而非仅最后一帧。
-        obs = dict(obs)
-        obs["frames"] = step_frames
-        obs["wrist_frames"] = step_wrist_frames
-        obs["actions"] = step_actions
-        obs["states"] = step_states
-        obs["velocity"] = step_velocity
-        info = dict(info)
-        info["subgoal"] = step_subgoal
-        info["subgoal_grounded"] = step_subgoal_grounded
-
-        return obs, reward, terminated, truncated, info
+        return obs_list, reward_list, terminated_list, truncated_list, info_list
 
     def reset(self, **kwargs):
         self._planner = None

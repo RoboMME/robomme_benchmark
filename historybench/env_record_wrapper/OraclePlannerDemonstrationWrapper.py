@@ -3,8 +3,9 @@ import numpy as np
 import torch
 import cv2
 import colorsys
-from history_bench_sim.oracle_logic import step_before, step_after
+from rapidfuzz import process, fuzz
 
+from historybench.HistoryBench_env.util.vqa_options import get_vqa_options
 from mani_skill.examples.motionplanning.panda.motionplanner import (
     PandaArmMotionPlanningSolver,
 )
@@ -30,6 +31,208 @@ def _sync_table_color(env, color_map):
     for obj_id, obj in seg_id_map.items():
         if getattr(obj, "name", None) == "table-workspace":
             color_map[obj_id] = [0, 0, 0]
+
+
+# -----------------------------------------------------------------------------
+# Oracle logic (inlined from history_bench_sim.oracle_logic)
+# -----------------------------------------------------------------------------
+
+def _prepare_frame(frame):
+    """Preprocess frame to uint8."""
+    frame = np.asarray(frame)
+    if frame.dtype != np.uint8:
+        max_val = float(np.max(frame)) if frame.size else 0.0
+        if max_val <= 1.0:
+            frame = (frame * 255.0).clip(0, 255).astype(np.uint8)
+        else:
+            frame = frame.clip(0, 255).astype(np.uint8)
+    if frame.ndim == 2:
+        frame = np.stack([frame] * 3, axis=-1)
+    return frame
+
+
+def _prepare_segmentation_visual(segmentation, color_map, target_hw):
+    """Convert segmentation to visual image."""
+    if segmentation is None:
+        return None, None
+    seg = segmentation
+    if hasattr(seg, "cpu"):
+        seg = seg.cpu().numpy()
+    seg = np.asarray(seg)
+    if seg.ndim > 2:
+        seg = seg[0]
+    seg_2d = seg.squeeze().astype(np.int64)
+    h, w = seg_2d.shape[:2]
+    seg_rgb = np.zeros((h, w, 3), dtype=np.uint8)
+    unique_ids = np.unique(seg_2d)
+    for seg_id in unique_ids:
+        if seg_id <= 0:
+            continue
+        color = color_map.get(int(seg_id))
+        if color is None:
+            continue
+        seg_rgb[seg_2d == seg_id] = color
+    seg_bgr = cv2.cvtColor(seg_rgb, cv2.COLOR_RGB2BGR)
+    target_h, target_w = target_hw
+    if seg_bgr.shape[:2] != (target_h, target_w):
+        seg_bgr = cv2.resize(seg_bgr, (target_w, target_h), interpolation=cv2.INTER_NEAREST)
+    return seg_bgr, seg_2d
+
+
+def _fetch_segmentation(env):
+    """Get segmentation from env."""
+    obs = env.unwrapped.get_obs(unflattened=True)
+    return obs["sensor_data"]["base_camera"]["segmentation"]
+
+
+def _build_solve_options(env, planner, selected_target, env_id):
+    """Build available action options."""
+    return get_vqa_options(env, planner, selected_target, env_id)
+
+
+def _find_best_semantic_match(user_query, options):
+    """Find best option by character edit distance (rapidfuzz)."""
+    if not options:
+        return -1, 0.0
+    labels = [opt.get("label", "") for opt in options]
+    query_text = str(user_query or "").strip()
+    try:
+        result = process.extractOne(query_text, labels, scorer=fuzz.ratio)
+        if result:
+            match_text, score, best_idx = result
+            best_score = score / 100.0
+        else:
+            return -1, 0.0
+    except Exception as exc:
+        print(f"  [NLP] Edit Distance match failed ({exc}); defaulting to option 1.")
+        return 0, 0.0
+    print(f"  [NLP] Closest Match (Edit Distance): '{query_text}' -> '{labels[best_idx]}' (Score: {best_score:.4f})")
+    return best_idx, best_score
+
+
+def step_before(env, planner, env_id, color_map, use_segmentation=False):
+    """Called before executing action; returns current state and available options."""
+    base_frames = getattr(env, "frames", [])
+    if not base_frames:
+        base_frames = getattr(env.unwrapped, "frames", []) or []
+    wrist_frames = getattr(env, "wrist_frames", [])
+    if not wrist_frames:
+        wrist_frames = getattr(env.unwrapped, "wrist_frames", []) or []
+    seg_data = _fetch_segmentation(env)
+    seg_hw = (255, 255)
+    if base_frames and len(base_frames) > 0:
+        seg_hw = base_frames[-1].shape[:2]
+    elif seg_data is not None:
+        try:
+            temp = seg_data
+            if hasattr(temp, "cpu"):
+                temp = temp.cpu().numpy()
+            temp = np.asarray(temp)
+            if temp.ndim > 2:
+                temp = temp[0]
+            seg_hw = temp.shape[:2]
+        except Exception:
+            pass
+    seg_vis = None
+    seg_raw = None
+    if use_segmentation:
+        seg_vis, seg_raw = _prepare_segmentation_visual(seg_data, color_map, seg_hw)
+    else:
+        _, seg_raw = (_prepare_segmentation_visual(seg_data, color_map, seg_hw)
+                      if seg_data is not None else (None, None))
+        if base_frames:
+            vis_frame = _prepare_frame(base_frames[-1])
+            vis_frame = cv2.cvtColor(vis_frame, cv2.COLOR_RGB2BGR)
+            if vis_frame.shape[:2] != seg_hw:
+                vis_frame = cv2.resize(vis_frame, (seg_hw[1], seg_hw[0]), interpolation=cv2.INTER_LINEAR)
+            seg_vis = vis_frame
+    if seg_vis is None:
+        seg_vis = np.zeros((seg_hw[0], seg_hw[1], 3), dtype=np.uint8)
+    dummy_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
+    raw_options = _build_solve_options(env, planner, dummy_target, env_id)
+    available_options = [
+        {"action": opt.get("label", "Unknown"), "need_parameter": bool(opt.get("available"))}
+        for opt in raw_options
+    ]
+    return seg_vis, seg_raw, base_frames, wrist_frames, available_options
+
+
+def step_after(env, planner, env_id, seg_vis, seg_raw, base_frames, wrist_frames, command_dict):
+    """Execute action from command_dict and return evaluation."""
+    selected_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
+    solve_options = _build_solve_options(env, planner, selected_target, env_id)
+    target_action = command_dict.get("action")
+    target_param = command_dict.get("point")
+    if "action" not in command_dict:
+        return None
+    if target_action is None:
+        return None
+    found_idx = -1
+    for i, opt in enumerate(solve_options):
+        if opt.get("label") == target_action or str(i + 1) == str(target_action):
+            found_idx = i
+            break
+    if found_idx == -1 and isinstance(target_action, str) and not target_action.isdigit():
+        print(f"Attempting semantic match for: '{target_action}'")
+        found_idx, score = _find_best_semantic_match(target_action, solve_options)
+    if found_idx == -1:
+        print(f"Error: Action '{target_action}' not found in current options.")
+        return None
+    if target_param is not None and seg_raw is not None:
+        cx, cy = target_param
+        h, w = seg_raw.shape[:2]
+        cx = max(0, min(cx, w - 1))
+        cy = max(0, min(cy, h - 1))
+        seg_id_map = getattr(env.unwrapped, "segmentation_id_map", {}) or {}
+        candidates = []
+
+        def _collect(item):
+            if isinstance(item, (list, tuple)):
+                for x in item:
+                    _collect(x)
+            elif isinstance(item, dict):
+                for x in item.values():
+                    _collect(x)
+            else:
+                if item:
+                    candidates.append(item)
+
+        avail = solve_options[found_idx].get("available")
+        if avail:
+            _collect(avail)
+            best_cand = None
+            min_dist = float("inf")
+            for actor in candidates:
+                target_ids = [sid for sid, obj in seg_id_map.items() if obj is actor]
+                for tid in target_ids:
+                    tid = int(tid)
+                    mask = seg_raw == tid
+                    if np.any(mask):
+                        ys, xs = np.nonzero(mask)
+                        center_x, center_y = xs.mean(), ys.mean()
+                        dist = (center_x - cx) ** 2 + (center_y - cy) ** 2
+                        if dist < min_dist:
+                            min_dist = dist
+                            best_cand = {
+                                "obj": actor,
+                                "name": getattr(actor, "name", f"id_{tid}"),
+                                "seg_id": tid,
+                                "click_point": (int(cx), int(cy)),
+                                "centroid_point": (int(center_x), int(center_y)),
+                            }
+            if best_cand:
+                selected_target.update(best_cand)
+            else:
+                selected_target["click_point"] = (int(cx), int(cy))
+        else:
+            selected_target["click_point"] = (int(cx), int(cy))
+    print(f"Executing Option: {found_idx + 1} - {solve_options[found_idx].get('label')}")
+    solve_options[found_idx].get("solve")()
+    env.unwrapped.evaluate()
+    evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
+    print(f"Evaluation: {evaluation}")
+    return evaluation
+
 
 def _tensor_to_bool(value):
     """Convert tensor or other types to boolean."""

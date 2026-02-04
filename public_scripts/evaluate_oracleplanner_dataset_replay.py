@@ -143,100 +143,94 @@ def main():
             h5_path = dataset_root / f"record_dataset_{env_id}.h5"
             dataset_resolver = EpisodeDatasetResolver(env_id, episode, h5_path)
 
-            try:
-                # 阶段 A：初始化 (reset)
-                obs, info = env.reset()
-                language_goal = obs["language_goal"]
+            # 阶段 A：初始化 (reset)
+            obs, info = env.reset()
+            language_goal = obs["language_goal"]
+            
+            success = "fail"
+
+            os.makedirs(save_dir, exist_ok=True)
+
+            step_idx = 0
+            max_query_times = 10
+
+            # 阶段 B：执行步骤循环
+            while True:
+                if step_idx >= max_query_times:
+                    print(f"Max query times ({max_query_times}) reached, stopping.")
+                    break
+
+                # 从 obs 读取
+                frames = obs.get('frames', []) if obs else []
+                wrist_frames = obs.get('wrist_frames', []) if obs else []
+                actions = obs.get('actions', []) if obs else []
+                states = obs.get('states', []) if obs else []
+                velocity = obs.get('velocity', []) if obs else []
+                language_goal = obs.get('language_goal') if obs else None
+                # 从 info 读取
+                subgoal = info.get('subgoal', []) if info else []
+                subgoal_grounded = info.get('subgoal_grounded', []) if info else []
+                available_options = info.get('available_options', []) if info else []
+
+
+                # 每次获得的 frames 单独保存为视频
+                if frames:
+                    video_path = os.path.join(save_dir, f"frames_step_{step_idx}.mp4")
+                    save_frames_to_video(frames, video_path)
+                if wrist_frames:
+                    wrist_path = os.path.join(save_dir, f"wrist_frames_step_{step_idx}.mp4")
+                    save_frames_to_video(wrist_frames, wrist_path)
+
+
+                subgoal_text = dataset_resolver.get_grounded_subgoal(step_idx)
+                if subgoal_text is None:
+                    print(f"No more subgoals at step {step_idx}. Exiting loop.")
+                    break
                 
-                success = "fail"
+                point = None
+                match = re.search(r'<(\d+),\s*(\d+)>', subgoal_text)
+                if match:
+                    point = [int(match.group(1)), int(match.group(2))]
 
-                os.makedirs(save_dir, exist_ok=True)
+                command_dict = {"action": subgoal_text, "point": point}
 
-                step_idx = 0
-                max_query_times = 10
+                if command_dict["point"] is not None:
+                    command_dict["point"] = command_dict["point"][::-1]
 
-                # 阶段 B：执行步骤循环
-                while True:
-                    if step_idx >= max_query_times:
-                        print(f"Max query times ({max_query_times}) reached, stopping.")
-                        break
+                print(f"\nCommand: {command_dict}")
 
-                    # 从 obs 读取
-                    frames = obs.get('frames', []) if obs else []
-                    wrist_frames = obs.get('wrist_frames', []) if obs else []
-                    actions = obs.get('actions', []) if obs else []
-                    states = obs.get('states', []) if obs else []
-                    velocity = obs.get('velocity', []) if obs else []
-                    language_goal = obs.get('language_goal') if obs else None
-                    # 从 info 读取
-                    subgoal = info.get('subgoal', []) if info else []
-                    subgoal_grounded = info.get('subgoal_grounded', []) if info else []
-                    available_options = info.get('available_options', []) if info else []
+                step_idx += 1
 
+                # 步骤 2：执行 step (相当于 step_after + step_before)
+                obs, reward, terminated, truncated, info = env.step(command_dict)
 
-                    # 每次获得的 frames 单独保存为视频
-                    if frames:
-                        video_path = os.path.join(save_dir, f"frames_step_{step_idx}.mp4")
-                        save_frames_to_video(frames, video_path)
-                    if wrist_frames:
-                        wrist_path = os.path.join(save_dir, f"wrist_frames_step_{step_idx}.mp4")
-                        save_frames_to_video(wrist_frames, wrist_path)
+                # 步数达到上限
+                if truncated:
+                    print(f"[{env_id}] episode {episode} 步数超限，步 {step}。")
+                    break
+                # 任务结束（成功或失败）
+                if terminated.any():
+                    if info.get("success") == torch.tensor([True]) or (
+                        isinstance(info.get("success"), torch.Tensor) and info.get("success").item()
+                    ):
+                        print(f"[{env_id}] episode {episode} 成功。")
+                    elif info.get("fail", False):
+                        print(f"[{env_id}] episode {episode} 失败。")
+                    break
 
 
-                    subgoal_text = dataset_resolver.get_grounded_subgoal(step_idx)
-                    if subgoal_text is None:
-                        print(f"No more subgoals at step {step_idx}. Exiting loop.")
-                        break
-                    
-                    point = None
-                    match = re.search(r'<(\d+),\s*(\d+)>', subgoal_text)
-                    if match:
-                        point = [int(match.group(1)), int(match.group(2))]
+            
 
-                    command_dict = {"action": subgoal_text, "point": point}
+            # 保存回放视频（frames + subgoal_grounded）
+            out_video_path = os.path.join(dataset_root, "videos", f"replay_ee_{env_id}_ep{episode}.mp4")
+            env.save_video(out_video_path)
+            print(f"Saved video: {out_video_path}")
 
-                    if command_dict["point"] is not None:
-                        command_dict["point"] = command_dict["point"][::-1]
 
-                    print(f"\nCommand: {command_dict}")
 
-                    step_idx += 1
-
-                    # 步骤 2：执行 step (相当于 step_after + step_before)
-                    obs, reward, terminated, truncated, info = env.step(command_dict)
-
-                    if terminated:
-                        fail_flag = info.get("fail", False)
-                        success_flag = info.get("success", False)
-
-                        if _tensor_to_bool(fail_flag):
-                            success = "fail"
-                            print("Encountered failure condition; stopping task sequence.")
-                        
-                        if _tensor_to_bool(success_flag):
-                            success = "success"
-                            print("Task completed successfully.")
-                        break
-
-                # 阶段 C：成功标记与保存
-                env.close()
-                dataset_resolver.close()
-
-            except Exception as e:
-                print(f"Episode {episode} crashed. Error: {e}")
-                import traceback
-                traceback.print_exc()
-
-                try:
-                    env.close()
-                except Exception:
-                    pass
-                try:
-                    dataset_resolver.close()
-                except Exception:
-                    pass
-                
-                gc.collect()
+            # 阶段 C：成功标记与保存
+            env.close()
+            dataset_resolver.close()
                       
     # oracle_resolver.close() # No longer needed as we create per loop
     

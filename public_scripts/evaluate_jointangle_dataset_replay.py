@@ -15,8 +15,6 @@ for _path in (_PARENT, _ROOT):
 import numpy as np
 import gymnasium as gym
 import torch
-from PIL import Image
-import matplotlib.pyplot as plt
 
 from historybench.HistoryBench_env import *
 from historybench.HistoryBench_env.util import *
@@ -26,11 +24,10 @@ from historybench.env_record_wrapper import (
     DemonstrationWrapper,
 )
 
+from save_reset_video import save_listStep_video
+
 # 数据集根目录（包含 record_dataset_*_metadata.json 与 record_dataset_*.h5）
 DATASET_ROOT = "/data/hongzefu/dataset_generate"
-
-
-
 
 
 def main():
@@ -38,14 +35,14 @@ def main():
     从 DATASET_ROOT 读取数据集，回放所有 episode；
     每个 episode 仅回放非 demonstration 的动作（跳过 demonstration 步）。
     """
+    # ---------- 全局配置 ----------
     gui_render = True
     max_steps = 3000
-
     render_mode = "human" if gui_render else "rgb_array"
-
-    env_id_list =["VideoPlaceOrder"]
+    env_id_list = ["SwingXtimes"]
 
     for env_id in env_id_list:
+        # ---------- 按 env_id 创建配置解析器与数据集路径 ----------
         metadata_path = f"{DATASET_ROOT}/record_dataset_{env_id}_metadata.json"
         config_resolver = EpisodeConfigResolver(
             env_id=env_id,
@@ -54,12 +51,11 @@ def main():
             gui_render=gui_render,
             max_steps_without_demonstration=max_steps,
         )
-
-      
-
         h5_path = f"{DATASET_ROOT}/record_dataset_{env_id}.h5"
         out_video_dir = os.path.join(DATASET_ROOT, "videos")
+
         for episode in range(10):
+            # ---------- 为当前 episode 创建环境与数据集解析器 ----------
             env, seed, difficulty = config_resolver.make_env_for_episode(episode)
             env.save_failed_match_env_id = env_id
             env.save_failed_match_episode = episode
@@ -68,48 +64,54 @@ def main():
                 episode=episode,
                 dataset_path=h5_path,
             )
-            obs, info = env.reset()
 
-            # 从 obs 读取
-            frames = obs.get('frames', []) if obs else []
-            wrist_frames = obs.get('wrist_frames', []) if obs else []
-            actions = obs.get('actions', []) if obs else []
-            states = obs.get('states', []) if obs else []
-            velocity = obs.get('velocity', []) if obs else []
-            language_goal = obs.get('language_goal') if obs else None
+            # ---------- 重置环境（含 demonstration 阶段），并保存 reset 带字幕视频 ----------
+            obs_list, reward_list, terminated_list, truncated_list, info_list = env.reset()
 
-            # 从 info 读取
-            subgoal = info.get('subgoal', []) if info else []
-            subgoal_grounded = info.get('subgoal_grounded', []) if info else []
+            # 从 obs_list / info_list 抽取并合并成新列表
+            frames = []
+            wrist_frames = []
+            actions = []
+            states = []
+            velocity = []
+            for o in obs_list:
+                if o:
+                    frames.extend(o.get("frames", []))
+                    wrist_frames.extend(o.get("wrist_frames", []))
+                    actions.extend(o.get("actions", []))
+                    states.extend(o.get("states", []))
+                    velocity.extend(o.get("velocity", []))
+            language_goal = obs_list[0].get("language_goal") if obs_list and obs_list[0] else None
+            subgoal = []
+            subgoal_grounded = []
+            for i in info_list:
+                if i:
+                    subgoal.extend(i.get("subgoal", []))
+                    subgoal_grounded.extend(i.get("subgoal_grounded", []))
 
+            # 用 reset 后的 frames 和 subgoal_grounded 直接保存为带字幕视频
+            reset_captioned_path = os.path.join(out_video_dir, f"replay_{env_id}_ep{episode}_reset_captioned.mp4")
+            if save_listStep_video(
+                obs_list, reward_list, terminated_list, truncated_list, info_list, reset_captioned_path
+            ):
+                print(f"Saved reset captioned video: {reset_captioned_path}")
 
+            # ---------- 按 step 回放：从数据集取关节角动作执行 ----------
             step = 0
-            # fig = plt.figure()
-            # plt.ion()
             while True:
                 action = dataset_resolver.get_action(step)
                 obs, reward, terminated, truncated, info = env.step(action)
 
-                # 从 obs 读取
+                # 从 obs / info 读取（供调试或后续逻辑）
                 image = obs.get('frames', []) if obs.get('frames') else None
                 wrist_image = obs.get('wrist_frames', []) if obs.get('wrist_frames') else None
                 last_action = obs.get('actions', []) if obs.get('actions') else None
                 state = obs.get('states', []) if obs.get('states') else None
                 velocity = obs.get('velocity', []) if obs.get('velocity') else None
                 language_goal = obs.get('language_goal') if obs else None
-                # 从 info 读取
                 subgoal = info.get('subgoal', []) if info else []
                 print(subgoal)
                 subgoal_grounded = info.get('subgoal_grounded', []) if info else []
-
-                # # plot image: one figure, update in place, show 0.1s (avoids X11 BadWindow)
-                # plt.figure(fig.number)
-                # plt.clf()
-                # plt.imshow(image[0])
-                # plt.pause(0.1)
-  
-
-
 
                 step += 1
                 if gui_render:
@@ -126,8 +128,9 @@ def main():
                         print(f"[{env_id}] episode {episode} 失败。")
                     break
 
-
-            out_video_path = os.path.join(DATASET_ROOT, "videos", f"replay_{env_id}_ep{episode}.mp4")
+            # ---------- 保存本 episode 回放视频并关闭资源 ----------
+            os.makedirs(out_video_dir, exist_ok=True)
+            out_video_path = os.path.join(out_video_dir, f"replay_{env_id}_ep{episode}.mp4")
             env.save_video(out_video_path)
             print(f"Saved video: {out_video_path}")
             dataset_resolver.close()
