@@ -87,13 +87,15 @@ def main():
             states = []
             velocity = []
             for o in obs_list:
-                if o:
-                    frames.extend(o.get("frames", []))
-                    wrist_frames.extend(o.get("wrist_frames", []))
-                    actions.extend(o.get("actions", []))
-                    states.extend(o.get("states", []))
-                    velocity.extend(o.get("velocity", []))
-            language_goal = obs_list[0].get("language_goal") if obs_list and obs_list[0] else None
+                obs_root = o or {}
+                _ms_obs = obs_root.get("maniskill_obs", {})
+                frames.extend(obs_root.get("frames", []))
+                wrist_frames.extend(obs_root.get("wrist_frames", []))
+                actions.extend(obs_root.get("actions", []))
+                states.extend(obs_root.get("states", []))
+                velocity.extend(obs_root.get("velocity", []))
+            first_obs = obs_list[0] if obs_list else {}
+            language_goal = (first_obs or {}).get("language_goal")
 
             # ---------- 从每个 info 读取子目标等 ----------
             subgoal = []
@@ -111,10 +113,7 @@ def main():
             out_video_path = video_dir / f"replay_op_{env_id}_ep{episode}.mp4"
 
             reset_captioned_path = video_dir / f"replay_op_{env_id}_ep{episode}_reset_captioned.mp4"
-            if save_listStep_video(
-                obs_list, reward_list, terminated_list, truncated_list, info_list, str(reset_captioned_path)
-            ):
-                print(f"Saved reset captioned video: {reset_captioned_path}")
+            save_listStep_video(obs_list, reward_list, terminated_list, truncated_list, info_list, str(reset_captioned_path))
             os.makedirs(save_dir, exist_ok=True)
 
             step_idx = 0
@@ -130,10 +129,7 @@ def main():
 
                 # 每次获得的 obs_list 保存为带字幕视频 (save_listStep_video, 与 keypoint 一致)
                 step_pre_captioned_path = video_dir / f"replay_op_{env_id}_ep{episode}_step{step_idx}_pre_captioned.mp4"
-                if save_listStep_video(
-                    obs_list, reward_list, terminated_list, truncated_list, info_list, str(step_pre_captioned_path),
-                ):
-                    print(f"Saved step captioned video: {step_pre_captioned_path}")
+                save_listStep_video(obs_list, reward_list, terminated_list, truncated_list, info_list, str(step_pre_captioned_path))
 
                 subgoal_text = dataset_resolver.get_grounded_subgoal(step_idx)
                 if subgoal_text is None:
@@ -164,13 +160,15 @@ def main():
                 states = []
                 velocity = []
                 for o in obs_list:
-                    if o:
-                        frames.extend(o.get('frames', []))
-                        wrist_frames.extend(o.get('wrist_frames', []))
-                        actions.extend(o.get('actions', []))
-                        states.extend(o.get('states', []))
-                        velocity.extend(o.get('velocity', []))
-                language_goal = obs_list[0].get('language_goal') if obs_list and obs_list[0] else None
+                    obs_root = o or {}
+                    _ms_obs = obs_root.get("maniskill_obs", {})
+                    frames.extend(obs_root.get('frames', []))
+                    wrist_frames.extend(obs_root.get('wrist_frames', []))
+                    actions.extend(obs_root.get('actions', []))
+                    states.extend(obs_root.get('states', []))
+                    velocity.extend(obs_root.get('velocity', []))
+                first_obs = obs_list[0] if obs_list else {}
+                language_goal = (first_obs or {}).get('language_goal')
 
                 # 从每个 info 读取
                 subgoal = []
@@ -182,10 +180,7 @@ def main():
 
                 # Save captioned video for this step (same as keypoint replay)
                 step_captioned_path = video_dir / f"replay_op_{env_id}_ep{episode}_step{step_idx}_captioned.mp4"
-                if save_listStep_video(
-                    obs_list, reward_list, terminated_list, truncated_list, info_list, str(step_captioned_path),
-                ):
-                    print(f"Saved step captioned video: {step_captioned_path}")
+                save_listStep_video(obs_list, reward_list, terminated_list, truncated_list, info_list, str(step_captioned_path))
 
                 # 用最后一步的 terminated/truncated/info 做循环判断
                 terminated = terminated_list[-1] if terminated_list else False

@@ -84,10 +84,30 @@ def save_listStep_video(
     Returns:
         True if a video was written (at least one frame), False otherwise.
     """
+    def _extract_frames(obs_root: dict) -> list:
+        frames_local = obs_root.get("frames", [])
+        if frames_local:
+            return list(frames_local)
+        ms_obs = obs_root.get("maniskill_obs", {})
+        sensor_data = ms_obs.get("sensor_data", {}) if isinstance(ms_obs, dict) else {}
+        base_cam = sensor_data.get("base_camera", {}) if isinstance(sensor_data, dict) else {}
+        rgb = base_cam.get("rgb") if isinstance(base_cam, dict) else None
+        if rgb is None:
+            return []
+        try:
+            if hasattr(rgb, "cpu"):
+                rgb = rgb.cpu().numpy()
+            rgb = np.asarray(rgb)
+            if rgb.ndim >= 4:
+                return [rgb[0]]
+        except Exception:
+            return []
+        return []
+
     frames = []
     for o in obs_list:
-        if o:
-            frames.extend(o.get("frames", []))
+        obs_root = o or {}
+        frames.extend(_extract_frames(obs_root))
     subgoal_grounded = []
     for i in info_list:
         if i:
@@ -106,4 +126,5 @@ def save_listStep_video(
             caption = subgoal_grounded[i] if i < len(subgoal_grounded) else ""
             combined = add_text_to_frame(frame, caption)
             writer.append_data(combined)
+    print(f"Saved: {save_path}")
     return True

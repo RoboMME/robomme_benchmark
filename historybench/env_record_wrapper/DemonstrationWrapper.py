@@ -44,49 +44,6 @@ from ..HistoryBench_env.util import reset_panda
 from . import planner_denseStep
 
 
-class _DensePlannerAdapter:
-    """Wraps a planner so move_to_pose_with_RRTStar, move_to_pose_with_screw, close_gripper, open_gripper use planner_denseStep; accumulates obs_list, reward_list, terminated_list, truncated_list, info_list."""
-    def __init__(self, planner):
-        self._planner = planner
-        self._obs_list = []
-        self._reward_list = []
-        self._terminated_list = []
-        self._truncated_list = []
-        self._info_list = []
-
-    def _extend(self, result):
-        if result != -1:
-            o, r, t, tr, i = result
-            self._obs_list.extend(o)
-            self._reward_list.extend(r)
-            self._terminated_list.extend(t)
-            self._truncated_list.extend(tr)
-            self._info_list.extend(i)
-
-    def move_to_pose_with_RRTStar(self, pose):
-        result = planner_denseStep.move_to_pose_with_RRTStar(self._planner, pose)
-        self._extend(result)
-        return result
-
-    def move_to_pose_with_screw(self, pose):
-        result = planner_denseStep.move_to_pose_with_screw(self._planner, pose)
-        self._extend(result)
-        return result
-
-    def close_gripper(self):
-        result = planner_denseStep.close_gripper(self._planner)
-        self._extend(result)
-        return result
-
-    def open_gripper(self):
-        result = planner_denseStep.open_gripper(self._planner)
-        self._extend(result)
-        return result
-
-    def __getattr__(self, name):
-        return getattr(self._planner, name)
-
-
 class DemonstrationWrapper(gym.Wrapper):
     """
     Demonstration 包装器（不包含视频保存功能）。
@@ -181,8 +138,9 @@ class DemonstrationWrapper(gym.Wrapper):
     def _augment_obs_and_info(self, obs, info):
         """将演示轨迹数据（帧、动作、状态、速度、子目标历史等）合并进 obs 和 info 后返回。只取各 list 的最后一个，仍以 list 形式给出。"""
         language_goal = task_goal.get_language_goal(self.env, self.unwrapped.spec.id)
+        base_obs = obs if isinstance(obs, dict) else {}
         new_obs = {
-            **obs,
+            'maniskill_obs': base_obs,
             'frames': [self.frames[-1]] if self.frames else [],
             'wrist_frames': [self.wrist_frames[-1]] if self.wrist_frames else [],
             'actions': [self.actions[-1]] if self.actions else [],
@@ -547,11 +505,12 @@ class DemonstrationWrapper(gym.Wrapper):
         生成演示轨迹（Demonstration Trajectory）。
         
         流程：
-        1. 根据环境 ID 选择合适的 Motion Planner（PandaArm 或 PandaStick），用 _DensePlannerAdapter 包装。
+        1. 根据环境 ID 选择合适的 Motion Planner（PandaArm 或 PandaStick）。
         2. 遍历任务列表（task_list），找到标记为 demonstration 的任务。
-        3. 对每个演示任务，调用其 solve 回调函数，让 Motion Planner 执行规划。
-        4. 收集所有 planner_denseStep 返回的步，累积到 adapter 的 5 个 list。
-        5. 返回 (obs_list, reward_list, terminated_list, truncated_list, info_list)。
+        3. 对每个演示任务，用 _run_with_dense_collection 包裹整个 solve 调用，
+           monkey-patch planner.env.step 以收集所有 env.step 调用
+           （包括 move_to_pose_with_screw、follow_path、直接 env.step 等所有路径）。
+        4. 返回 (obs_list, reward_list, terminated_list, truncated_list, info_list)。
         """
         # 按环境选择运动规划器：PatternLock/RouteStick 用 stick 规划器，其余用机械臂规划器
         if self.unwrapped.spec.id == "PatternLock" or self.unwrapped.spec.id == "RouteStick":
@@ -573,7 +532,6 @@ class DemonstrationWrapper(gym.Wrapper):
                 visualize_target_grasp_pose=False,
                 print_env_info=False,
             )
-        planner = _DensePlannerAdapter(planner)
         tasks = getattr(self, 'task_list', [])
         self.task_list_length = len(tasks)
         print(f"Task list length: {self.task_list_length}")
@@ -582,7 +540,11 @@ class DemonstrationWrapper(gym.Wrapper):
         self.non_demonstration_task_length = len(tasks) - len(demonstration_tasks)
         print(f"Non-demonstration task length: {self.non_demonstration_task_length}")
 
+        all_obs, all_reward, all_terminated, all_truncated, all_info = [], [], [], [], []
+
         # 依次执行每个演示任务：设 demonstration_record_traj=True，调用任务的 solve(planner)
+        # 用 _run_with_dense_collection 包裹整个 solve，monkey-patch planner.env.step
+        # 以收集所有 env.step 调用（包括 follow_path、直接 env.step 等底层路径）
         for idx, task_entry in enumerate(demonstration_tasks):
             self.unwrapped.demonstration_record_traj = True
             task_name = task_entry.get("name", f"Task {idx}")
@@ -593,14 +555,18 @@ class DemonstrationWrapper(gym.Wrapper):
                 raise ValueError(f"Task '{task_name}' must supply a callable 'solve'.")
 
             self.evaluate(solve_complete_eval=True)
-            solve_callable(self, planner)
+            result = planner_denseStep._run_with_dense_collection(
+                planner,
+                lambda: solve_callable(self, planner)
+            )
+            if result != -1:
+                o, r, t, tr, i = result
+                all_obs.extend(o)
+                all_reward.extend(r)
+                all_terminated.extend(t)
+                all_truncated.extend(tr)
+                all_info.extend(i)
             self.evaluate(solve_complete_eval=True)
 
         self.unwrapped.demonstration_record_traj = False  # 演示结束，后续 step 正常做 subgoal 判断
-        return (
-            planner._obs_list,
-            planner._reward_list,
-            planner._terminated_list,
-            planner._truncated_list,
-            planner._info_list,
-        )
+        return (all_obs, all_reward, all_terminated, all_truncated, all_info)

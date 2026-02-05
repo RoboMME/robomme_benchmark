@@ -49,7 +49,7 @@ def main():
     """
 
     env_id_list = [
-        "SwingXtimes",
+        "RouteStick",
     ]
 
     gui_render = True
@@ -98,13 +98,15 @@ def main():
             states = []
             velocity = []
             for o in obs_list:
-                if o:
-                    frames.extend(o.get("frames", []))
-                    wrist_frames.extend(o.get("wrist_frames", []))
-                    actions.extend(o.get("actions", []))
-                    states.extend(o.get("states", []))
-                    velocity.extend(o.get("velocity", []))
-            language_goal = obs_list[0].get("language_goal") if obs_list and obs_list[0] else None
+                obs_root = o or {}
+                _ms_obs = obs_root.get("maniskill_obs", {})
+                frames.extend(obs_root.get("frames", []))
+                wrist_frames.extend(obs_root.get("wrist_frames", []))
+                actions.extend(obs_root.get("actions", []))
+                states.extend(obs_root.get("states", []))
+                velocity.extend(obs_root.get("velocity", []))
+            first_obs = obs_list[0] if obs_list else {}
+            language_goal = (first_obs or {}).get("language_goal")
 
             # ---------- 从每个 info 读取子目标等 ----------
             subgoal = []
@@ -118,10 +120,7 @@ def main():
             out_video_dir = DATASET_ROOT / "videos"
             os.makedirs(out_video_dir, exist_ok=True)
             reset_captioned_path = os.path.join(out_video_dir, f"replay_ee_{env_id}_ep{episode}_reset_captioned.mp4")
-            if save_listStep_video(
-                obs_list, reward_list, terminated_list, truncated_list, info_list, reset_captioned_path
-            ):
-                print(f"Saved reset captioned video: {reset_captioned_path}")
+            save_listStep_video(obs_list, reward_list, terminated_list, truncated_list, info_list, reset_captioned_path)
 
 
 
@@ -150,13 +149,15 @@ def main():
                 states = []
                 velocity = []
                 for o in obs_list:
-                    if o:
-                        frames.extend(o.get('frames', []))
-                        wrist_frames.extend(o.get('wrist_frames', []))
-                        actions.extend(o.get('actions', []))
-                        states.extend(o.get('states', []))
-                        velocity.extend(o.get('velocity', []))
-                language_goal = obs_list[0].get('language_goal') if obs_list and obs_list[0] else None
+                    obs_root = o or {}
+                    _ms_obs = obs_root.get("maniskill_obs", {})
+                    frames.extend(obs_root.get('frames', []))
+                    wrist_frames.extend(obs_root.get('wrist_frames', []))
+                    actions.extend(obs_root.get('actions', []))
+                    states.extend(obs_root.get('states', []))
+                    velocity.extend(obs_root.get('velocity', []))
+                first_obs = obs_list[0] if obs_list else {}
+                language_goal = (first_obs or {}).get('language_goal')
 
                 # 从每个 info 读取
                 subgoal = []
@@ -173,10 +174,7 @@ def main():
 
                 # Save captioned video for this step (每个 step 保存一个带字幕的视频)
                 kp_captioned_path = video_dir / f"replay_kp_{env_id}_ep{episode}_kp{step}_captioned.mp4"
-                if save_listStep_video(
-                    obs_list, reward_list, terminated_list, truncated_list, info_list, str(kp_captioned_path), fps=fps
-                ):
-                    print(f"Saved keypoint step video: {kp_captioned_path}")
+                save_listStep_video(obs_list, reward_list, terminated_list, truncated_list, info_list, str(kp_captioned_path), fps=fps)
 
 
 
@@ -198,9 +196,6 @@ def main():
 
             env.save_video(str(out_video_path))
             print(f"Saved video: {out_video_path}")
-
-            evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
-            print(f"Final evaluation for episode {episode}: {evaluation}")
 
             dataset_resolver.close()
             env.close()

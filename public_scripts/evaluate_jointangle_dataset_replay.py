@@ -75,13 +75,15 @@ def main():
             states = []
             velocity = []
             for o in obs_list:
-                if o:
-                    frames.extend(o.get("frames", []))
-                    wrist_frames.extend(o.get("wrist_frames", []))
-                    actions.extend(o.get("actions", []))
-                    states.extend(o.get("states", []))
-                    velocity.extend(o.get("velocity", []))
-            language_goal = obs_list[0].get("language_goal") if obs_list and obs_list[0] else None
+                obs_root = o or {}
+                _ms_obs = obs_root.get("maniskill_obs", {})
+                frames.extend(obs_root.get("frames", []))
+                wrist_frames.extend(obs_root.get("wrist_frames", []))
+                actions.extend(obs_root.get("actions", []))
+                states.extend(obs_root.get("states", []))
+                velocity.extend(obs_root.get("velocity", []))
+            first_obs = obs_list[0] if obs_list else {}
+            language_goal = (first_obs or {}).get("language_goal")
             subgoal = []
             subgoal_grounded = []
             for i in info_list:
@@ -91,10 +93,7 @@ def main():
 
             # 用 reset 后的 frames 和 subgoal_grounded 直接保存为带字幕视频
             reset_captioned_path = os.path.join(out_video_dir, f"replay_{env_id}_ep{episode}_reset_captioned.mp4")
-            if save_listStep_video(
-                obs_list, reward_list, terminated_list, truncated_list, info_list, reset_captioned_path
-            ):
-                print(f"Saved reset captioned video: {reset_captioned_path}")
+            save_listStep_video(obs_list, reward_list, terminated_list, truncated_list, info_list, reset_captioned_path)
 
             # ---------- 按 step 回放：从数据集取关节角动作执行 ----------
             step = 0
@@ -103,14 +102,15 @@ def main():
                 obs, reward, terminated, truncated, info = env.step(action)
 
                 # 从 obs / info 读取（供调试或后续逻辑）
-                image = obs.get('frames', []) if obs.get('frames') else None
-                wrist_image = obs.get('wrist_frames', []) if obs.get('wrist_frames') else None
-                last_action = obs.get('actions', []) if obs.get('actions') else None
-                state = obs.get('states', []) if obs.get('states') else None
-                velocity = obs.get('velocity', []) if obs.get('velocity') else None
-                language_goal = obs.get('language_goal') if obs else None
+                obs_root = obs or {}
+                _ms_obs = obs_root.get("maniskill_obs", {})
+                image = obs_root.get('frames', []) if obs_root.get('frames') else None
+                wrist_image = obs_root.get('wrist_frames', []) if obs_root.get('wrist_frames') else None
+                last_action = obs_root.get('actions', []) if obs_root.get('actions') else None
+                state = obs_root.get('states', []) if obs_root.get('states') else None
+                velocity = obs_root.get('velocity', []) if obs_root.get('velocity') else None
+                language_goal = obs_root.get('language_goal')
                 subgoal = info.get('subgoal', []) if info else []
-                print(subgoal)
                 subgoal_grounded = info.get('subgoal_grounded', []) if info else []
 
                 step += 1

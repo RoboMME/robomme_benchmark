@@ -108,24 +108,29 @@ class MultiStepDemonstrationWrapper(gym.Wrapper):
                 raise RRTPlanFailure("move_to_pose_with_RRTStar failed (returned -1)")
             obs_list, reward_list, terminated_list, truncated_list, info_list = result
 
+        # Gripper actions only when planner supports them (e.g. FailAwarePandaStickMotionPlanningSolver has no close_gripper/open_gripper).
         if gripper_action == -1:
-            result = planner_denseStep.close_gripper(planner)
-            if result != -1:
-                go_obs, go_r, go_t, go_tr, go_i = result
-                obs_list.extend(go_obs)
-                reward_list.extend(go_r)
-                terminated_list.extend(go_t)
-                truncated_list.extend(go_tr)
-                info_list.extend(go_i)
+            if hasattr(planner, "close_gripper"):
+                result = planner_denseStep.close_gripper(planner)
+                if result != -1:
+                    go_obs, go_r, go_t, go_tr, go_i = result
+                    obs_list.extend(go_obs)
+                    reward_list.extend(go_r)
+                    terminated_list.extend(go_t)
+                    truncated_list.extend(go_tr)
+                    info_list.extend(go_i)
+            # else: planner has no close_gripper (e.g. stick solver), skip gripper step
         elif gripper_action == 1:
-            result = planner_denseStep.open_gripper(planner)
-            if result != -1:
-                go_obs, go_r, go_t, go_tr, go_i = result
-                obs_list.extend(go_obs)
-                reward_list.extend(go_r)
-                terminated_list.extend(go_t)
-                truncated_list.extend(go_tr)
-                info_list.extend(go_i)
+            if hasattr(planner, "open_gripper"):
+                result = planner_denseStep.open_gripper(planner)
+                if result != -1:
+                    go_obs, go_r, go_t, go_tr, go_i = result
+                    obs_list.extend(go_obs)
+                    reward_list.extend(go_r)
+                    terminated_list.extend(go_t)
+                    truncated_list.extend(go_tr)
+                    info_list.extend(go_i)
+            # else: planner has no open_gripper (e.g. stick solver), skip gripper step
 
         return obs_list, reward_list, terminated_list, truncated_list, info_list
 

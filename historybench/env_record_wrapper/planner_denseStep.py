@@ -74,3 +74,29 @@ def open_gripper(planner):
     per internal env.step. Return -1 on failure.
     """
     return _run_with_dense_collection(planner, lambda: planner.open_gripper())
+
+
+# ---- 调用关系 ----
+#
+# _run_with_dense_collection:
+#   - DemonstrationWrapper.get_demonstration_trajectory()
+#     包裹整个 solve_callable，monkey-patch planner.env.step 收集所有底层 step
+#     (DemonstrationWrapper.py line 557)
+#   - OraclePlannerDemonstrationWrapper
+#     包裹 solve_options 的 solve()，同样收集所有底层 step
+#     (OraclePlannerDemonstrationWrapper.py line 136)
+#
+# move_to_pose_with_RRTStar:
+#   - MultiStepDemonstrationWrapper 中单步执行移动
+#     (MultiStepDemonstrationWrapper.py line 106)
+#
+# move_to_pose_with_screw:
+#   - 目前无外部调用，作为与 move_to_pose_with_RRTStar 对称的 API 保留
+#
+# close_gripper:
+#   - MultiStepDemonstrationWrapper 中执行夹爪关闭
+#     (MultiStepDemonstrationWrapper.py line 112)
+#
+# open_gripper:
+#   - MultiStepDemonstrationWrapper 中执行夹爪打开
+#     (MultiStepDemonstrationWrapper.py line 121)

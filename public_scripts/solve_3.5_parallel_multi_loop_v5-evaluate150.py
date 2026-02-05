@@ -55,7 +55,7 @@ from planner_fail_safe import (
 DEFAULT_ENVS =[
 #     "PickXtimes",
 #     "StopCube",
-"SwingXtimes",
+# "SwingXtimes",
 # "BinFill",
 
 #     "VideoUnmaskSwap",
@@ -68,10 +68,10 @@ DEFAULT_ENVS =[
 # "VideoPlaceOrder",
 #     "PickHighlight",
 
-#      "InsertPeg",
+     "InsertPeg",
 #      'MoveCube',
 #     "PatternLock",
-#    "RouteStick"
+   "RouteStick"
     ]
 
 # 将环境名称映射为唯一的整数代码，用于生成随机种子
