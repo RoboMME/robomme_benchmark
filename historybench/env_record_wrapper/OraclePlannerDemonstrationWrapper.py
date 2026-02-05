@@ -12,6 +12,7 @@ from mani_skill.examples.motionplanning.panda.motionplanner import (
 from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
     PandaStickMotionPlanningSolver,
 )
+from . import planner_denseStep
 
 def _generate_color_map(n=10000, s_min=0.70, s_max=0.95, v_min=0.78, v_max=0.95):
     phi = 0.6180339887498948
@@ -158,15 +159,15 @@ def step_before(env, planner, env_id, color_map, use_segmentation=False):
 
 
 def step_after(env, planner, env_id, seg_vis, seg_raw, base_frames, wrist_frames, command_dict):
-    """Execute action from command_dict and return evaluation."""
+    """Execute action from command_dict and return evaluation + 5 lists (obs, reward, terminated, truncated, info)."""
     selected_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
     solve_options = _build_solve_options(env, planner, selected_target, env_id)
     target_action = command_dict.get("action")
     target_param = command_dict.get("point")
     if "action" not in command_dict:
-        return None
+        return None, [], [], [], [], []
     if target_action is None:
-        return None
+        return None, [], [], [], [], []
     found_idx = -1
     for i, opt in enumerate(solve_options):
         if opt.get("label") == target_action or str(i + 1) == str(target_action):
@@ -177,7 +178,7 @@ def step_after(env, planner, env_id, seg_vis, seg_raw, base_frames, wrist_frames
         found_idx, score = _find_best_semantic_match(target_action, solve_options)
     if found_idx == -1:
         print(f"Error: Action '{target_action}' not found in current options.")
-        return None
+        return None, [], [], [], [], []
     if target_param is not None and seg_raw is not None:
         cx, cy = target_param
         h, w = seg_raw.shape[:2]
@@ -227,11 +228,23 @@ def step_after(env, planner, env_id, seg_vis, seg_raw, base_frames, wrist_frames
         else:
             selected_target["click_point"] = (int(cx), int(cy))
     print(f"Executing Option: {found_idx + 1} - {solve_options[found_idx].get('label')}")
-    solve_options[found_idx].get("solve")()
+    
+    # Wrap solve() with dense collection to capture all intermediate env.step() results
+    result = planner_denseStep._run_with_dense_collection(
+        planner,
+        lambda: solve_options[found_idx].get("solve")()
+    )
+    
+    if result == -1:
+        print("Warning: solve() execution failed (returned -1)")
+        return None, [], [], [], [], []
+    
+    obs_list, reward_list, terminated_list, truncated_list, info_list = result
+    
     env.unwrapped.evaluate()
     evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
     print(f"Evaluation: {evaluation}")
-    return evaluation
+    return evaluation, obs_list, reward_list, terminated_list, truncated_list, info_list
 
 
 def _tensor_to_bool(value):
@@ -269,23 +282,54 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
         self.action_space = gym.spaces.Dict({}) 
         self.observation_space = gym.spaces.Dict({})
 
-    def reset(self, seed=None, options=None):
-        obs, info = super().reset(seed=seed, options=options)
+    # def reset(self, seed=None, options=None):
+    #     obs, info = super().reset(seed=seed, options=options)
         
-        # Initialization logic
-        try:
-            self.language_goal = self.env.unwrapped.demonstration_data.get('language goal')
-        except AttributeError:
-             # Fallback if demonstration_data is missing, possibly read from metadata if available
-             # or simply default to None/Empty
-            self.language_goal = None
-            print(f"Warning: {self.env_id} object has no attribute 'demonstration_data'. 'language_goal' set to None.")
+    #     # Initialization logic
+    #     try:
+    #         self.language_goal = self.env.unwrapped.demonstration_data.get('language goal')
+    #     except AttributeError:
+    #          # Fallback if demonstration_data is missing, possibly read from metadata if available
+    #          # or simply default to None/Empty
+    #         self.language_goal = None
+    #         print(f"Warning: {self.env_id} object has no attribute 'demonstration_data'. 'language_goal' set to None.")
 
-        # Generate semantic segmentation color map
-        self.color_map = _generate_color_map()
-        _sync_table_color(self.env, self.color_map)
+    #     # Generate semantic segmentation color map
+    #     self.color_map = _generate_color_map()
+    #     _sync_table_color(self.env, self.color_map)
 
-        # Initialize Planner
+    #     # Initialize Planner
+    #     if self.env_id in ("PatternLock", "RouteStick"):
+    #         self.planner = PandaStickMotionPlanningSolver(
+    #             self.env,
+    #             debug=False,
+    #             vis=self.gui_render,
+    #             base_pose=self.env.unwrapped.agent.robot.pose,
+    #             visualize_target_grasp_pose=False,
+    #             print_env_info=False,
+    #             joint_vel_limits=0.3,
+    #         )
+    #     else:
+    #         self.planner = PandaArmMotionPlanningSolver(
+    #             self.env,
+    #             debug=False,
+    #             vis=self.gui_render,
+    #             base_pose=self.env.unwrapped.agent.robot.pose,
+    #             visualize_target_grasp_pose=False,
+    #             print_env_info=False,
+    #         )
+
+    #     # Initial step_before
+    #     self.seg_vis, self.seg_raw, self.base_frames, self.wrist_frames, self.available_options = \
+    #         step_before(self.env, self.planner, self.env_id, self.color_map)
+            
+    #     info["available_options"] = self.available_options
+    #     info["seg_vis"] = self.seg_vis
+    #     info["seg_raw"] = self.seg_raw
+    #     return self._get_obs(obs), info
+
+    def reset(self, **kwargs):
+                # Initialize Planner
         if self.env_id in ("PatternLock", "RouteStick"):
             self.planner = PandaStickMotionPlanningSolver(
                 self.env,
@@ -305,37 +349,27 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
                 visualize_target_grasp_pose=False,
                 print_env_info=False,
             )
-
-        # Initial step_before
-        self.seg_vis, self.seg_raw, self.base_frames, self.wrist_frames, self.available_options = \
-            step_before(self.env, self.planner, self.env_id, self.color_map)
-            
-        info["available_options"] = self.available_options
-        info["seg_vis"] = self.seg_vis
-        info["seg_raw"] = self.seg_raw
-        return self._get_obs(obs), info
+        self.color_map = _generate_color_map()
+        _sync_table_color(self.env, self.color_map)
+        return self.env.reset(**kwargs)
 
     def step(self, action):
         """
         Args:
             action: command_dict containing "action" and "point"
+        
+        Returns:
+            obs_list, reward_list, terminated_list, truncated_list, info_list
+            (5 lists, one entry per internal env.step during planner execution)
         """
         command_dict = action
-
-        # Determine where to get the data from
-        env_with_data = self.env
-        if not hasattr(env_with_data, "frames"):
-             env_with_data = self.env.unwrapped
-
-        # Record start index before execution
-        start_idx = len(getattr(env_with_data, "frames", []))
 
         # Get current state and options (step_before) before executing action
         self.seg_vis, self.seg_raw, self.base_frames, self.wrist_frames, self.available_options = \
             step_before(self.env, self.planner, self.env_id, self.color_map)
 
-        # Execute action (step_after)
-        evaluation = step_after(
+        # Execute action (step_after) - returns evaluation + 5 lists
+        evaluation, obs_list, reward_list, terminated_list, truncated_list, info_list = step_after(
             self.env, 
             self.planner, 
             self.env_id, 
@@ -346,55 +380,15 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
             command_dict
         )
         
-        success = False
-        fail = False
-        
-        if evaluation:
-            fail = _tensor_to_bool(evaluation.get("fail", False))
-            success = _tensor_to_bool(evaluation.get("success", False))
-            
-        terminated = success or fail
-        truncated = False 
-        reward = 1.0 if success else 0.0
-        
-        info = {}
-        if evaluation:
-            info.update(evaluation)
+        # Enrich the last info with available_options, seg_vis, seg_raw, and evaluation
+        if info_list:
+            info_list[-1]["available_options"] = self.available_options
+            info_list[-1]["seg_vis"] = self.seg_vis
+            info_list[-1]["seg_raw"] = self.seg_raw
+            if evaluation:
+                info_list[-1].update(evaluation)
 
-        info["available_options"] = self.available_options
-        info["seg_vis"] = self.seg_vis
-        info["seg_raw"] = self.seg_raw
-
-        # Retrieve sliced lists (data generated during this step)
-        step_frames = getattr(env_with_data, "frames", [])[start_idx:]
-        step_wrist_frames = getattr(env_with_data, "wrist_frames", [])[start_idx:]
-        step_actions = getattr(env_with_data, "actions", [])[start_idx:]
-        step_states = getattr(env_with_data, "states", [])[start_idx:]
-        step_velocity = getattr(env_with_data, "velocity", [])[start_idx:]
-        step_subgoal = getattr(env_with_data, "subgoal", [])[start_idx:]
-        step_subgoal_grounded = getattr(env_with_data, "subgoal_grounded", [])[start_idx:]
-
-        # Update info with step-specific subgoals
-        info["subgoal"] = step_subgoal
-        info["subgoal_grounded"] = step_subgoal_grounded
-
-        try:
-            base_obs = self.env.unwrapped.get_obs(unflattened=True)
-        except Exception:
-            base_obs = {}
-        if not isinstance(base_obs, dict):
-            base_obs = {}
-        
-        obs = self._get_obs(base_obs)
-        
-        # Override obs with step-specific data
-        obs["frames"] = step_frames
-        obs["wrist_frames"] = step_wrist_frames
-        obs["actions"] = step_actions
-        obs["states"] = step_states
-        obs["velocity"] = step_velocity
-
-        return obs, reward, terminated, truncated, info
+        return obs_list, reward_list, terminated_list, truncated_list, info_list
 
     def _get_obs(self, base_obs=None):
         if base_obs is None or not isinstance(base_obs, dict):

@@ -143,9 +143,31 @@ def main():
             h5_path = dataset_root / f"record_dataset_{env_id}.h5"
             dataset_resolver = EpisodeDatasetResolver(env_id, episode, h5_path)
 
-            # 阶段 A：初始化 (reset)
-            obs, info = env.reset()
-            language_goal = obs["language_goal"]
+            obs_list, reward_list, terminated_list, truncated_list, info_list = env.reset()
+
+              # ---------- 从每个 obs 读取 frame 等，构建列表 ----------
+            frames = []
+            wrist_frames = []
+            actions = []
+            states = []
+            velocity = []
+            for o in obs_list:
+                if o:
+                    frames.extend(o.get("frames", []))
+                    wrist_frames.extend(o.get("wrist_frames", []))
+                    actions.extend(o.get("actions", []))
+                    states.extend(o.get("states", []))
+                    velocity.extend(o.get("velocity", []))
+            language_goal = obs_list[0].get("language_goal") if obs_list and obs_list[0] else None
+
+            # ---------- 从每个 info 读取子目标等 ----------
+            subgoal = []
+            subgoal_grounded = []
+            for i in info_list:
+                if i:
+                    subgoal.extend(i.get("subgoal", []))
+                    subgoal_grounded.extend(i.get("subgoal_grounded", []))
+
             
             success = "fail"
 
@@ -160,17 +182,6 @@ def main():
                     print(f"Max query times ({max_query_times}) reached, stopping.")
                     break
 
-                # 从 obs 读取
-                frames = obs.get('frames', []) if obs else []
-                wrist_frames = obs.get('wrist_frames', []) if obs else []
-                actions = obs.get('actions', []) if obs else []
-                states = obs.get('states', []) if obs else []
-                velocity = obs.get('velocity', []) if obs else []
-                language_goal = obs.get('language_goal') if obs else None
-                # 从 info 读取
-                subgoal = info.get('subgoal', []) if info else []
-                subgoal_grounded = info.get('subgoal_grounded', []) if info else []
-                available_options = info.get('available_options', []) if info else []
 
 
                 # 每次获得的 frames 单独保存为视频
@@ -202,7 +213,40 @@ def main():
                 step_idx += 1
 
                 # 步骤 2：执行 step (相当于 step_after + step_before)
-                obs, reward, terminated, truncated, info = env.step(command_dict)
+                obs_list, reward_list, terminated_list, truncated_list, info_list = env.step(command_dict)
+
+                # 从每个 obs 读取 frame 等，构建列表
+                frames = []
+                wrist_frames = []
+                actions = []
+                states = []
+                velocity = []
+                for o in obs_list:
+                    if o:
+                        frames.extend(o.get('frames', []))
+                        wrist_frames.extend(o.get('wrist_frames', []))
+                        actions.extend(o.get('actions', []))
+                        states.extend(o.get('states', []))
+                        velocity.extend(o.get('velocity', []))
+                language_goal = obs_list[0].get('language_goal') if obs_list and obs_list[0] else None
+
+                # 从每个 info 读取
+                subgoal = []
+                subgoal_grounded = []
+                for i in info_list:
+                    if i:
+                        subgoal.extend(i.get('subgoal', []))
+                        subgoal_grounded.extend(i.get('subgoal_grounded', []))
+
+
+                
+
+
+                # 用最后一步的 terminated/truncated/info 做循环判断
+                terminated = terminated_list[-1] if terminated_list else False
+                truncated = truncated_list[-1] if truncated_list else False
+                info = info_list[-1] if info_list else {}
+
 
                 # 步数达到上限
                 if truncated:
