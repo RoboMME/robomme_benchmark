@@ -69,30 +69,30 @@ def main():
     """
 
     env_id_list = [
-"PickXtimes",
-"StopCube",
-"SwingXtimes",
-"BinFill",
+# "PickXtimes",
+# "StopCube",
+# "SwingXtimes",
+# "BinFill",
 
-"VideoUnmaskSwap",
-"VideoUnmask",
-"ButtonUnmaskSwap",
-"ButtonUnmask",
+# "VideoUnmaskSwap",
+# "VideoUnmask",
+# "ButtonUnmaskSwap",
+# "ButtonUnmask",
 
-"VideoRepick",
-"VideoPlaceButton",
-"VideoPlaceOrder",
+# "VideoRepick",
+# "VideoPlaceButton",
+# "VideoPlaceOrder",
 "PickHighlight",
 
-"InsertPeg",
-'MoveCube',
-"PatternLock",
-"RouteStick"
+# "InsertPeg",
+# 'MoveCube',
+# "PatternLock",
+# "RouteStick"
     ]
 
     gui_render = True
     render_mode = "human" if gui_render else "rgb_array"
-    max_steps_without_demonstration = 20000
+    max_steps_without_demonstration = 2000
 
     for env_id in env_id_list:
         metadata_path = DATASET_ROOT / f"record_dataset_{env_id}_metadata.json"
@@ -114,7 +114,7 @@ def main():
 
         for episode_record in episode_records:
             episode = episode_record["episode"]
-            if episode <= 5:
+            if episode > 5:
                 continue
             seed = episode_record.get("seed")
             difficulty = episode_record.get("difficulty")

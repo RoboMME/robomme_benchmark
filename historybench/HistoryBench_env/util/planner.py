@@ -933,6 +933,8 @@ def solve_pickup(env, planner, obj=None,fail_grasp=False,mode=None):
 
     _record_keypoint(env, 'solve_pickup', 'close')
 
+    planner.close_gripper()
+
     planner.close()
     return res
 

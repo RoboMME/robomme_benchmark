@@ -22,11 +22,6 @@ from . import planner_denseStep
 # -----------------------------------------------------------------------------
 
 
-def _build_solve_options(env, planner, selected_target, env_id):
-    """根据当前环境、规划器、已选目标和 env_id 构建可用的解题选项列表（来自 VQA 选项）。"""
-    return get_vqa_options(env, planner, selected_target, env_id)
-
-
 def _find_best_semantic_match(user_query, options):
     """
     用 rapidfuzz 的字符编辑距离在 options 的 label 中找与 user_query 最匹配的一项；
@@ -57,7 +52,7 @@ def step_after(env, planner, env_id, seg_raw, command_dict):
     返回统一 dense batch（obs/info 字典值为 list，reward/terminated/truncated 为 1D tensor）。
     """
     selected_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
-    solve_options = _build_solve_options(env, planner, selected_target, env_id)
+    solve_options = get_vqa_options(env, planner, selected_target, env_id)
     target_action = command_dict.get("action")
     target_param = command_dict.get("point")
     # 无 action 则直接返回空批次
@@ -211,7 +206,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
         self.seg_raw = (seg[0] if seg.ndim > 2 else seg).squeeze().astype(np.int64)
 
         dummy_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
-        raw_options = _build_solve_options(self.env, self.planner, dummy_target, self.env_id)
+        raw_options = get_vqa_options(self.env, self.planner, dummy_target, self.env_id)
         self.available_options = [
             {"action": opt.get("label", "未知"), "need_parameter": bool(opt.get("available"))}
             for opt in raw_options

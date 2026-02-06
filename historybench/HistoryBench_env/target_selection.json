@@ -474,5 +474,66 @@
     ],
     "target_target": "target_3",
     "button_task_index": 2
+  },
+  {
+    "historybench_seed": 10110001,
+    "which_in_subset": 3,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_0",
+      "target_2",
+      "target_3",
+      "target_1"
+    ],
+    "target_target": "target_3",
+    "button_task_index": 2
+  },
+  {
+    "historybench_seed": 10110600,
+    "which_in_subset": 3,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_0",
+      "target_1",
+      "target_3",
+      "target_2"
+    ],
+    "target_target": "target_3",
+    "button_task_index": 6
+  },
+  {
+    "historybench_seed": 10110701,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_2",
+      "target_1",
+      "target_3",
+      "target_0"
+    ],
+    "target_target": "target_1",
+    "button_task_index": 2
+  },
+  {
+    "historybench_seed": 10110801,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 2,
+    "which_targets_to_pick": [
+      "target_2",
+      "target_0"
+    ],
+    "target_target": "target_0",
+    "button_task_index": 4
+  },
+  {
+    "historybench_seed": 10110901,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 2,
+    "which_targets_to_pick": [
+      "target_1",
+      "target_3"
+    ],
+    "target_target": "target_3",
+    "button_task_index": 2
   }
 ]

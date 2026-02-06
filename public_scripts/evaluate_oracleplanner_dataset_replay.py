@@ -20,8 +20,12 @@ import gc
 import re
 
 from historybench.env_record_wrapper import EpisodeConfigResolver, EpisodeDatasetResolver
+from historybench.HistoryBench_env.util.vqa_options import get_vqa_options
 from pathlib import Path
 from save_reset_video import save_listStep_video
+
+# 全局控制：是否显示 GUI 窗口。False 时使用 rgb_array 无头渲染，不弹窗
+GUI_RENDER = True
 
 
 def _flatten_column(batch_dict, key):
@@ -48,17 +52,17 @@ def main():
     dataset_root = Path("/data/hongzefu/dataset_generate")
     
     env_id_list = [
-        # "PickXtimes",
-        # "StopCube",
-    #"SwingXtimes",
-      #  "BinFill",
+        "PickXtimes",
+    #     "StopCube",
+    # "SwingXtimes",
+    #    "BinFill",
 
     #     "VideoUnmaskSwap",
     #     "VideoUnmask",
     #     "ButtonUnmaskSwap",
     #     "ButtonUnmask",
 
-         "VideoRepick",
+    #      "VideoRepick",
     #     "VideoPlaceButton",
     #      "VideoPlaceOrder",
     #     "PickHighlight",
@@ -76,8 +80,8 @@ def main():
         resolver = EpisodeConfigResolver(
             env_id=env_id,
             metadata_path=metadata_path,
-            render_mode="human",
-            gui_render=True,
+            render_mode="human" if GUI_RENDER else "rgb_array",
+            gui_render=GUI_RENDER,
             max_steps_without_demonstration=1000,
             action_space="oracle_planner"
         )
@@ -101,8 +105,8 @@ def main():
 
               # ---------- 从每个 obs 读取 frame 等，构建列表 ----------
             maniskill_obs = (obs_batch or {}).get("maniskill_obs", [])
-            image = []
-            wrist_image = []
+            base_camera = []
+            wrist_camera = []
             base_camera_depth = []
             base_camera_segmentation = []
             wrist_camera_depth = []
@@ -117,8 +121,8 @@ def main():
             actions = []
             states = []
             velocity = []
-            image.extend(_flatten_column(obs_batch, "image"))
-            wrist_image.extend(_flatten_column(obs_batch, "wrist_image"))
+            base_camera.extend(_flatten_column(obs_batch, "base_camera"))
+            wrist_camera.extend(_flatten_column(obs_batch, "wrist_camera"))
             base_camera_depth.extend(_flatten_column(obs_batch, "base_camera_depth"))
             base_camera_segmentation.extend(_flatten_column(obs_batch, "base_camera_segmentation"))
             wrist_camera_depth.extend(_flatten_column(obs_batch, "wrist_camera_depth"))
@@ -151,16 +155,31 @@ def main():
 
             video_dir = dataset_root / "videos"
             video_dir.mkdir(parents=True, exist_ok=True)
-            out_video_path = video_dir / f"replay_op_{env_id}_ep{episode}.mp4"
 
-            reset_captioned_path = video_dir / f"replay_op_{env_id}_ep{episode}_reset_captioned.mp4"
-            save_listStep_video(obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch, str(reset_captioned_path))
+            reset_captioned_path = video_dir / f"replay_oracle_{env_id}_ep{episode}_reset_captioned.mp4"
+            reset_obs_for_video = {"image": base_camera} if base_camera else {}
+            # save_listStep_video(
+            #     reset_obs_for_video,
+            #     reward_batch,
+            #     terminated_batch,
+            #     truncated_batch,
+            #     info_batch,
+            #     str(reset_captioned_path),
+            # )
             os.makedirs(save_dir, exist_ok=True)
 
             step_idx = 0
             max_query_times = 10
             replay_frames = []
             replay_subgoal_grounded = []
+
+            # 构造 available_options（与 OraclePlannerDemonstrationWrapper.step 中一致）
+            dummy_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
+            raw_options = get_vqa_options(env.env, env.planner, dummy_target, env.env_id)
+            available_options = [
+                {"action": opt.get("label", "未知"), "need_parameter": bool(opt.get("available"))}
+                for opt in raw_options
+            ]
 
             # 阶段 B：执行步骤循环
             while True:
@@ -169,10 +188,6 @@ def main():
                     break
 
 
-
-                # 每次获得的 obs_batch 都保存为带字幕视频（save_listStep_video，与关键点回放一致）
-                step_pre_captioned_path = video_dir / f"replay_op_{env_id}_ep{episode}_step{step_idx}_pre_captioned.mp4"
-                save_listStep_video(obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch, str(step_pre_captioned_path))
 
                 subgoal_text = dataset_resolver.get_grounded_subgoal(step_idx)
                 if subgoal_text is None:
@@ -198,8 +213,8 @@ def main():
 
                 # 从每个 obs 读取 frame 等，构建列表
                 maniskill_obs = (obs_batch or {}).get("maniskill_obs", [])
-                image = []
-                wrist_image = []
+                base_camera = []
+                wrist_camera = []
                 base_camera_depth = []
                 base_camera_segmentation = []
                 wrist_camera_depth = []
@@ -214,8 +229,8 @@ def main():
                 actions = []
                 states = []
                 velocity = []
-                image.extend(_flatten_column(obs_batch, "image"))
-                wrist_image.extend(_flatten_column(obs_batch, "wrist_image"))
+                base_camera.extend(_flatten_column(obs_batch, "base_camera"))
+                wrist_camera.extend(_flatten_column(obs_batch, "wrist_camera"))
                 base_camera_depth.extend(_flatten_column(obs_batch, "base_camera_depth"))
                 base_camera_segmentation.extend(_flatten_column(obs_batch, "base_camera_segmentation"))
                 wrist_camera_depth.extend(_flatten_column(obs_batch, "wrist_camera_depth"))
@@ -238,14 +253,26 @@ def main():
                 subgoal_grounded = []
                 subgoal.extend(_flatten_column(info_batch, "subgoal"))
                 subgoal_grounded.extend(_flatten_column(info_batch, "subgoal_grounded"))
-                if image:
-                    replay_frames.append(np.asarray(image[-1]).copy())
+                if base_camera:
+                    for frame in base_camera:
+                        f = frame
+                        if hasattr(f, "cpu"):
+                            f = f.cpu()
+                        replay_frames.append(np.asarray(f).copy())
                 if subgoal_grounded:
-                    replay_subgoal_grounded.append(subgoal_grounded[-1])
+                    replay_subgoal_grounded.extend(subgoal_grounded)
 
                 # 保存当前 step 的带字幕视频（与关键点回放一致）
-                step_captioned_path = video_dir / f"replay_op_{env_id}_ep{episode}_step{step_idx}_captioned.mp4"
-                save_listStep_video(obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch, str(step_captioned_path))
+                step_captioned_path = video_dir / f"replay_oracle_{env_id}_ep{episode}_step{step_idx}_captioned.mp4"
+                step_obs_for_video = {"image": base_camera} if base_camera else {}
+                # save_listStep_video(
+                #     step_obs_for_video,
+                #     reward_batch,
+                #     terminated_batch,
+                #     truncated_batch,
+                #     info_batch,
+                #     str(step_captioned_path),
+                # )
 
                 # 用最后一步的 terminated/truncated/info 做循环判断
                 n = int(reward_batch.numel()) if hasattr(reward_batch, "numel") else 0
@@ -269,12 +296,15 @@ def main():
                         print(f"[{env_id}] episode {episode} 失败。")
                     break
 
+            out_video_path = video_dir / f"{success}_replay_oracle_{env_id}_ep{episode}.mp4"
 
             if replay_frames and replay_subgoal_grounded:
                 obs_video = {"image": replay_frames}
                 info_video = {"subgoal_grounded": replay_subgoal_grounded}
                 save_listStep_video(obs_video, reward_batch, terminated_batch, truncated_batch, info_video, str(out_video_path))
-            print(f"Saved video: {out_video_path}")
+                print(f"Saved video: {out_video_path}")
+            else:
+                print(f"Skipped video (no frames or no subtitles): {out_video_path}")
 
 
 
