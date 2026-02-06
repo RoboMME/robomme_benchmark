@@ -357,5 +357,57 @@
     ],
     "target_target": "target_2",
     "button_task_index": 4
+  },
+  {
+    "historybench_seed": 10110001,
+    "which_in_subset": 3,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_0",
+      "target_2",
+      "target_3",
+      "target_1"
+    ],
+    "target_target": "target_3",
+    "button_task_index": 2
+  },
+  {
+    "historybench_seed": 10110100,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_1",
+      "target_2",
+      "target_3",
+      "target_0"
+    ],
+    "target_target": "target_2",
+    "button_task_index": 4
+  },
+  {
+    "historybench_seed": 10110001,
+    "which_in_subset": 3,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_0",
+      "target_2",
+      "target_3",
+      "target_1"
+    ],
+    "target_target": "target_3",
+    "button_task_index": 2
+  },
+  {
+    "historybench_seed": 10110100,
+    "which_in_subset": 2,
+    "num_targets_to_pick": 4,
+    "which_targets_to_pick": [
+      "target_1",
+      "target_2",
+      "target_3",
+      "target_0"
+    ],
+    "target_target": "target_2",
+    "button_task_index": 4
   }
 ]

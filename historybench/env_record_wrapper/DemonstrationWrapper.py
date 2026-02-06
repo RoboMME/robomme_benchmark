@@ -61,16 +61,7 @@ class DemonstrationWrapper(gym.Wrapper):
         super().__init__(env)
         self.unwrapped.use_demonstrationwrapper = True
 
-        # 演示轨迹缓冲区：每步记录的观测与动作
-        self.frames = []              # 基座相机 RGB 帧列表
-        self.wrist_frames = []        # 腕部相机 RGB 帧列表
-        self.actions = []             # 动作序列
-        self.states = []              # 机器人状态（如 qpos）序列
-        self.subgoal = []             # 子目标文本序列（原始，含占位符）
-        self.subgoal_grounded = []    # 子目标文本序列（占位符已替换为坐标）
         self.demonstration_record_traj = False  # 当前是否处于“演示记录”阶段
-        self.velocity = []            # 末端执行器速度序列
-
 
         # 连续未执行“演示任务”的步数，用于 truncate 判断
         self.steps_without_demonstration = 0
@@ -130,35 +121,55 @@ class DemonstrationWrapper(gym.Wrapper):
         self.demonstration_data = merged_batch
         return merged_batch
 
-    def _augment_obs_and_info(self, obs, info):
-        """将演示轨迹数据（帧、动作、状态、速度、子目标历史等）合并进 obs 和 info 后返回。只取各 list 的最后一个，仍以 list 形式给出。"""
+    def _augment_obs_and_info(self, obs, info, action):
+        """直接从 obs 提取当前步数据并合并进 obs 和 info 后返回，不经过 list 缓冲区中转。"""
         language_goal = task_goal.get_language_goal(self.env, self.unwrapped.spec.id)
         base_obs = obs if isinstance(obs, dict) else {}
+
+        # 直接从 obs 提取帧、状态、速度等（不再从 self.frames 等 list 读取）
+        image = obs['sensor_data']['base_camera']['rgb'][0]
+        wrist_image = obs['sensor_data']['hand_camera']['rgb'][0]
+        state = self.agent.robot.qpos
+        end_effector_velocity = self.agent.robot.links[9].get_linear_velocity()[0], self.agent.robot.links[9].get_angular_velocity()[0]
+        subgoal_text = getattr(self, 'current_task_name', 'Unknown')
+        grounded_subgoal = self.current_subgoal_segment_filled
+
+        base_camera_depth = obs["sensor_data"]["base_camera"]["depth"][0]
+        base_camera_segmentation = obs["sensor_data"]["base_camera"]["segmentation"][0]
+        wrist_camera_depth = obs["sensor_data"]["hand_camera"]["depth"][0]
+        base_camera_extrinsic_opencv = obs["sensor_param"]["base_camera"]["extrinsic_cv"]
+        base_camera_intrinsic_opencv = obs["sensor_param"]["base_camera"]["intrinsic_cv"]
+        base_camera_cam2world_opengl = obs["sensor_param"]["base_camera"]["cam2world_gl"]
+        wrist_camera_extrinsic_opencv = obs["sensor_param"]["hand_camera"]["extrinsic_cv"]
+        wrist_camera_intrinsic_opencv = obs["sensor_param"]["hand_camera"]["intrinsic_cv"]
+        wrist_camera_cam2world_opengl = obs["sensor_param"]["hand_camera"]["cam2world_gl"]
+        robot_endeffector_p = self.agent.tcp.pose.p
+        robot_endeffector_q = self.agent.tcp.pose.q
+
         new_obs = {
             'maniskill_obs': base_obs,
-            'frames': [self.frames[-1]] if self.frames else [],
-            'wrist_frames': [self.wrist_frames[-1]] if self.wrist_frames else [],
-            'actions': [self.actions[-1]] if self.actions else [],
-            'states': [self.states[-1]] if self.states else [],
-            'velocity': [self.velocity[-1]] if self.velocity else [],
+            'base_camera': image,
+            'wrist_camera': wrist_image,
+            'actions': action,
+            'states': state,
+            'velocity': end_effector_velocity,
             'language_goal': language_goal,
-            # 占位为空，供 evaluate 等脚本统一 _flatten_column 读取
-            'base_camera_depth': [],#obs['sensor_data']['base_camera']['depth']
-            'base_camera_segmentation': [],#obs['sensor_data']['base_camera']['segmentation']
-          wrist_camera_depth = obs['sensor_data']['hand_camera']['depth']
-        base_camera_extrinsic_opencv=obs['sensor_param']['base_camera']['extrinsic_cv']
-        base_camera_intrinsic_opencv=obs['sensor_param']['base_camera']['intrinsic_cv']
-        base_camera_cam2world_opengl=obs['sensor_param']['base_camera']['cam2world_gl']
-        wrist_camera_extrinsic_opencv=obs['sensor_param']['hand_camera']['extrinsic_cv']
-        wrist_camera_intrinsic_opencv=obs['sensor_param']['hand_camera']['intrinsic_cv']
-        wrist_camera_cam2world_opengl=obs['sensor_param']['hand_camera']['cam2world_gl']
-            'robot_endeffector_p': self.agent.tcp.pose.p
-            'robot_endeffector_q': self.agent.tcp.pose.q
+            'base_camera_depth': base_camera_depth,
+            'base_camera_segmentation': base_camera_segmentation,
+            'wrist_camera_depth': wrist_camera_depth,
+            'base_camera_extrinsic_opencv': base_camera_extrinsic_opencv,
+            'base_camera_intrinsic_opencv': base_camera_intrinsic_opencv,
+            'base_camera_cam2world_opengl': base_camera_cam2world_opengl,
+            'wrist_camera_extrinsic_opencv': wrist_camera_extrinsic_opencv,
+            'wrist_camera_intrinsic_opencv': wrist_camera_intrinsic_opencv,
+            'wrist_camera_cam2world_opengl': wrist_camera_cam2world_opengl,
+            'robot_endeffector_p': robot_endeffector_p,
+            'robot_endeffector_q': robot_endeffector_q,
         }
         new_info = {
             **info,
-            'subgoal': [self.subgoal[-1]] if self.subgoal else [],
-            'subgoal_grounded': [self.subgoal_grounded[-1]] if self.subgoal_grounded else [],
+            'subgoal': subgoal_text,
+            'subgoal_grounded': grounded_subgoal,
         }
         return new_obs, new_info
 
@@ -413,41 +424,6 @@ class DemonstrationWrapper(gym.Wrapper):
         current_subgoal_segment = getattr(self.unwrapped, 'current_subgoal_segment', None)
         self.current_subgoal_segment_filled = filled_text if filled_text is not None else current_subgoal_segment
 
-        # ---------- 轨迹记录：非 “NO RECORD” 任务时追加当前帧、动作、状态、子目标等 ----------
-        current_task = self.current_task_name if hasattr(self, 'current_task_name') else "Unknown"
-        if current_task != 'NO RECORD':
-            base_camera_frame = obs['sensor_data']['base_camera']['rgb'][0].cpu().numpy()
-            wrist_camera_frame = obs['sensor_data']['hand_camera']['rgb'][0].cpu().numpy()
-            image = base_camera_frame
-            wrist_image = wrist_camera_frame
-            # 当前步的机器人关节位置与末端线速度+角速度（用于轨迹数据）
-            state = self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos
-            end_effector_velocity = self.agent.robot.links[9].get_linear_velocity().tolist()[0] + self.agent.robot.links[9].get_angular_velocity().tolist()[0]
-
-            subgoal_text = getattr(self, 'current_task_name', 'Unknown')
-            grounded_subgoal = self.current_subgoal_segment_filled
-            language_goal = task_goal.get_language_goal(self.env, self.unwrapped.spec.id)
-            self.frames.append(image)
-            self.wrist_frames.append(wrist_image)
-            self.actions.append(action)
-            self.states.append(state)
-            self.velocity.append(end_effector_velocity)
-            self.subgoal.append(subgoal_text)
-            self.subgoal_grounded.append(grounded_subgoal)
-
-            # # 子目标占位符未匹配上时，将当前帧与填充后子目标文本保存为图片，便于调试（目录写死为 failed_match）
-            # if failed_match:
-            #     save_dir = Path("/data/hongzefu/dataset_generate/failed_match")
-            #     self._failed_match_save_count += 1  # 本 episode 内失败保存计数，用于文件名去重
-            #     env_id = getattr(self, "save_failed_match_env_id", None)
-            #     episode = getattr(self, "save_failed_match_episode", None)
-            #     if env_id is not None and episode is not None:
-            #         basename = f"failed_match_{env_id}_ep{episode}_{self._failed_match_save_count:04d}.png"
-            #     else:
-            #         basename = f"failed_match_{self._failed_match_save_count:04d}.png"
-            #     out_path = save_dir / basename
-            #     self.save_frame_as_image(out_path, image, grounded_subgoal)  # 图上叠加当前 grounded 子目标文本
-
         # ---------- 非演示步计数：超过上限则 truncate ----------
         if self.current_task_demonstration == False:
             self.steps_without_demonstration += 1
@@ -471,7 +447,7 @@ class DemonstrationWrapper(gym.Wrapper):
             finally:
                 self._doing_extra_step = False
 
-        obs, info = self._augment_obs_and_info(obs, info)
+        obs, info = self._augment_obs_and_info(obs, info, action)
         return planner_denseStep.to_step_batch([(obs, reward, terminated, truncated, info)])
 
     def close(self):
