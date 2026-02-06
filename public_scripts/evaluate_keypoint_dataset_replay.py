@@ -70,28 +70,28 @@ def main():
     """
 
     env_id_list = [
-# "PickXtimes",
-# "StopCube",
-# "SwingXtimes",
-# "BinFill",
+"PickXtimes",
+"StopCube",
+"SwingXtimes",
+"BinFill",
 
-# "VideoUnmaskSwap",
-# "VideoUnmask",
-# "ButtonUnmaskSwap",
-# "ButtonUnmask",
+"VideoUnmaskSwap",
+"VideoUnmask",
+"ButtonUnmaskSwap",
+"ButtonUnmask",
 
-# "VideoRepick",
-# "VideoPlaceButton",
-# "VideoPlaceOrder",
-#"PickHighlight",
+"VideoRepick",
+"VideoPlaceButton",
+"VideoPlaceOrder",
+"PickHighlight",
 
-# "InsertPeg",
-# 'MoveCube',
+"InsertPeg",
+'MoveCube',
  "PatternLock",
-# "RouteStick"
+"RouteStick"
     ]
 
-    gui_render = True
+    gui_render = False
     render_mode = "human" if gui_render else "rgb_array"
     max_steps_without_demonstration = 2000
 
@@ -115,8 +115,7 @@ def main():
 
         for episode_record in episode_records:
             episode = episode_record["episode"]
-            if episode > 5:
-                continue
+
             seed = episode_record.get("seed")
             difficulty = episode_record.get("difficulty")
 

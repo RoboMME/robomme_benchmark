@@ -20,7 +20,6 @@ import gc
 import re
 
 from historybench.env_record_wrapper import EpisodeConfigResolver, EpisodeDatasetResolver
-from historybench.HistoryBench_env.util.vqa_options import get_vqa_options
 from pathlib import Path
 from save_reset_video import save_listStep_video
 
@@ -145,6 +144,7 @@ def main():
             subgoal_grounded = []
             subgoal.extend(_flatten_column(info_batch, "subgoal"))
             subgoal_grounded.extend(_flatten_column(info_batch, "subgoal_grounded"))
+            available_options = _flatten_column(info_batch, "available_options")
             n = int(reward_batch.numel()) if hasattr(reward_batch, "numel") else 0
             info = _last_info(info_batch, n)
             terminated = bool(terminated_batch[-1].item()) if n > 0 else False
@@ -172,14 +172,6 @@ def main():
             max_query_times = 10
             replay_frames = []
             replay_subgoal_grounded = []
-
-            # 构造 available_options（与 OraclePlannerDemonstrationWrapper.step 中一致）
-            dummy_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
-            raw_options = get_vqa_options(env.env, env.planner, dummy_target, env.env_id)
-            available_options = [
-                {"action": opt.get("label", "未知"), "need_parameter": bool(opt.get("available"))}
-                for opt in raw_options
-            ]
 
             # 阶段 B：执行步骤循环
             while True:
@@ -253,6 +245,7 @@ def main():
                 subgoal_grounded = []
                 subgoal.extend(_flatten_column(info_batch, "subgoal"))
                 subgoal_grounded.extend(_flatten_column(info_batch, "subgoal_grounded"))
+                available_options = _flatten_column(info_batch, "available_options")
                 if base_camera:
                     for frame in base_camera:
                         f = frame

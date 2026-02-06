@@ -59,23 +59,23 @@ def main():
     max_steps = 3000
     render_mode = "human" if gui_render else "rgb_array"
     env_id_list = [
-# "PickXtimes",
-# "StopCube",
-# "SwingXtimes",
-# "BinFill",
+"PickXtimes",
+"StopCube",
+"SwingXtimes",
+"BinFill",
 
-# "VideoUnmaskSwap",
-# "VideoUnmask",
-# "ButtonUnmaskSwap",
-# "ButtonUnmask",
+"VideoUnmaskSwap",
+"VideoUnmask",
+"ButtonUnmaskSwap",
+"ButtonUnmask",
 
-# "VideoRepick",
-# "VideoPlaceButton",
-# "VideoPlaceOrder",
-# "PickHighlight",
+"VideoRepick",
+"VideoPlaceButton",
+"VideoPlaceOrder",
+"PickHighlight",
 
-# "InsertPeg",
-# 'MoveCube',
+"InsertPeg",
+'MoveCube',
 "PatternLock",
 "RouteStick"
     ]
@@ -93,7 +93,7 @@ def main():
         h5_path = f"{DATASET_ROOT}/record_dataset_{env_id}.h5"
         out_video_dir = os.path.join(DATASET_ROOT, "videos")
 
-        for episode in range(2):
+        for episode in range(50):
             # ---------- 为当前 episode 创建环境与数据集解析器 ----------
             env, seed, difficulty = config_resolver.make_env_for_episode(episode)
             env.save_failed_match_env_id = env_id

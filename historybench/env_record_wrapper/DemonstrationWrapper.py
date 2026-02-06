@@ -38,6 +38,7 @@ from mani_skill.examples.motionplanning.base_motionplanner.utils import (
     get_actor_obb,
 )
 from ..HistoryBench_env.util import task_goal
+from ..HistoryBench_env.util.vqa_options import get_vqa_options
 
 from ..HistoryBench_env.util import reset_panda
 
@@ -125,6 +126,13 @@ class DemonstrationWrapper(gym.Wrapper):
         """直接从 obs 提取当前步数据并合并进 obs 和 info 后返回，不经过 list 缓冲区中转。"""
         language_goal = task_goal.get_language_goal(self.env, self.unwrapped.spec.id)
         base_obs = obs if isinstance(obs, dict) else {}
+        env_id = self.unwrapped.spec.id
+        dummy_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
+        raw_options = get_vqa_options(self, None, dummy_target, env_id)
+        available_options = [
+            {"action": opt.get("label", "未知"), "need_parameter": bool(opt.get("available"))}
+            for opt in raw_options
+        ]
 
         # 直接从 obs 提取帧、状态、速度等（不再从 self.frames 等 list 读取）
         image = obs['sensor_data']['base_camera']['rgb'][0]
@@ -170,6 +178,7 @@ class DemonstrationWrapper(gym.Wrapper):
             **info,
             'subgoal': subgoal_text,
             'subgoal_grounded': grounded_subgoal,
+            'available_options': available_options,
         }
         return new_obs, new_info
 
