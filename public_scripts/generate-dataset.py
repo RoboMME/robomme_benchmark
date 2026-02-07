@@ -76,8 +76,8 @@ DEFAULT_ENVS =[
 
 # 将环境名称映射为唯一的整数代码，用于生成随机种子
 ENV_ID_TO_CODE = {name: idx + 1 for idx, name in enumerate(DEFAULT_ENVS)}
-# 种子偏移：使本脚本生成的 seed 与 dataset_json（约 510000–661000）完全不重叠
-SEED_OFFSET = 10_000_000
+# 种子偏移：在原始 1万–17万 基础上整体 +50万
+SEED_OFFSET = 500_000
 # 默认输出根目录
 DEFAULT_OUTPUT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -365,8 +365,8 @@ def run_env_dataset(
         if difficulty:
             print(f"Episode {episode} assigned difficulty: {difficulty}")
 
-        # 生成基础种子：SEED_OFFSET 与 dataset_json 区隔，env/episode 保证本批内不重复
-        base_seed = SEED_OFFSET + env_code * 10000 + episode * 100  # 落在 10_010_000–10_174_999，与 dataset_json 的 51万–66万 无交
+        # 生成基础种子：在原始公式基础上加偏移，env/episode 保证本批内不重复
+        base_seed = SEED_OFFSET + env_code * 10000 + episode * 100
         attempt = 0
 
         # 重试循环：如果当前种子失败，尝试下一个种子，直到成功

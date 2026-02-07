@@ -1,5 +1,0 @@
-mode=keypoint
-script=/data/hongzefu/robomme-v0.1b17-fixPickHighlight-fix2/public_scripts/evaluate_keypoint_dataset_replay.py
-python_bin=/data/hongzefu/maniskillenv1120/bin/python
-started_at=2026-02-07T00:51:10-05:00
-run_name=keypoint_20260207_005110

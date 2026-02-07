@@ -181,10 +181,10 @@ def main():
             reset_captioned_path = os.path.join(out_video_dir, f"replay_ee_{env_id}_ep{episode}_reset_captioned.mp4")
             # save_listStep_video 需要 obs["image"] 和 info["subgoal_grounded"]；环境返回的是 base_camera，需转成 image
             reset_obs_for_video = {"image": base_camera} if base_camera else {}
-            if save_listStep_video(reset_obs_for_video, reward_batch, terminated_batch, truncated_batch, info_batch, reset_captioned_path):
-                print(f"Saved reset captioned video: {reset_captioned_path}")
-            else:
-                print(f"WARNING: Reset video not saved (no frames or no subgoal_grounded): {reset_captioned_path}")
+            # if save_listStep_video(reset_obs_for_video, reward_batch, terminated_batch, truncated_batch, info_batch, reset_captioned_path):
+            #     print(f"Saved reset captioned video: {reset_captioned_path}")
+            # else:
+            #     print(f"WARNING: Reset video not saved (no frames or no subgoal_grounded): {reset_captioned_path}")
 
 
             # ---------- 按 step 回放：action 统一为 [eep, eeq, gripper] 8 维，wrapper 内做 IK 与 stick 维度兼容 ----------
