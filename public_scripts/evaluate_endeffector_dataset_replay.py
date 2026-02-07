@@ -34,21 +34,21 @@ from historybench.env_record_wrapper import (
 DATASET_ROOT = "/data/hongzefu/dataset_generate"
 DEFAULT_ENV_IDS = [
     "PickXtimes",
-    "StopCube",
-    "SwingXtimes",
-    "BinFill",
-    "VideoUnmaskSwap",
-    "VideoUnmask",
-    "ButtonUnmaskSwap",
-    "ButtonUnmask",
-    "VideoRepick",
-    "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "PickHighlight",
-    "InsertPeg",
-    "MoveCube",
-    "PatternLock",
-    "RouteStick",
+    # "StopCube",
+    # "SwingXtimes",
+    # "BinFill",
+    # "VideoUnmaskSwap",
+    # "VideoUnmask",
+    # "ButtonUnmaskSwap",
+    # "ButtonUnmask",
+    # "VideoRepick",
+    #"VideoPlaceButton",
+    #"VideoPlaceOrder",
+    # "PickHighlight",
+    # "InsertPeg",
+    # "MoveCube",
+    # "PatternLock",
+    # "RouteStick",
 ]
 
 
@@ -115,7 +115,7 @@ def main():
     - 使用数据集中记录的末端执行器位姿 (ee pose)，经 IK 得到关节角后再执行，以验证末端轨迹回放效果。
     """
     # ---------- 全局配置 ----------
-    gui_render = False
+    gui_render = True
     max_steps = 3000
     render_mode = "human" if gui_render else "rgb_array"
     args = _parse_args()
@@ -138,6 +138,9 @@ def main():
         os.makedirs(out_video_dir, exist_ok=True)
 
         for episode in range(50):
+            if episode !=12:
+                continue
+            
             # ---------- 为当前 episode 创建环境与数据集解析器 ----------
             env, seed, difficulty = config_resolver.make_env_for_episode(episode)
             env.save_failed_match_env_id = env_id
