@@ -27,8 +27,49 @@ from planner_fail_safe import (
     FailAwarePandaStickMotionPlanningSolver,
     ScrewPlanFailure,
 )
+import historybench.HistoryBench_env.util.planner as historybench_planner
 
 OUTPUT_ROOT = Path(__file__).resolve().parents[1]
+TARGET_SEED = 10010300
+TARGET_DIFFICULTY = "hard"
+
+
+def _install_keypoint_debug_print():
+    """Print tcp p/q whenever a keypoint is marked for recording."""
+    if getattr(historybench_planner, "_kprecord_debug_print_installed", False):
+        return
+
+    original_record_keypoint = historybench_planner._record_keypoint
+
+    def _debug_record_keypoint(env, solve_function, keypoint_type, *, keypoint_p, keypoint_q):
+        try:
+            if isinstance(keypoint_p, torch.Tensor):
+                keypoint_p_np = keypoint_p.detach().cpu().numpy().reshape(-1)[:3]
+            else:
+                keypoint_p_np = np.asarray(keypoint_p, dtype=np.float32).reshape(-1)[:3]
+
+            if isinstance(keypoint_q, torch.Tensor):
+                keypoint_q_np = keypoint_q.detach().cpu().numpy().reshape(-1)[:4]
+            else:
+                keypoint_q_np = np.asarray(keypoint_q, dtype=np.float32).reshape(-1)[:4]
+
+            print(
+                f"[KeypointRecord] solve={solve_function}, type={keypoint_type}, "
+                f"p={keypoint_p_np.tolist()}, q={keypoint_q_np.tolist()}"
+            )
+        except Exception as exc:
+            print(f"[KeypointRecord] print p/q failed: {exc}")
+
+        return original_record_keypoint(
+            env,
+            solve_function,
+            keypoint_type,
+            keypoint_p=keypoint_p,
+            keypoint_q=keypoint_q,
+        )
+
+    historybench_planner._record_keypoint = _debug_record_keypoint
+    historybench_planner._kprecord_debug_print_installed = True
 
 
 
@@ -36,14 +77,21 @@ def main():
     """
     Main function to run the simulation and record data for multiple seeds.
     """
+    _install_keypoint_debug_print()
 
     num_episodes = 1
     env_id_list=["ButtonUnmask"]
     for env_id in env_id_list:
-        dataset_path = Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
+        seed = TARGET_SEED
+        difficulty = TARGET_DIFFICULTY
+        dataset_path = Path(
+            f"/data/hongzefu/dataset_generate/record_dataset_{env_id}_seed{seed}_{difficulty}.h5"
+        )
         for episode in range(num_episodes):
-            seed=episode
-            print(f"--- Running simulation for episode:{episode},env: {env_id} ---")
+            print(
+                f"--- Running simulation for episode:{episode}, env: {env_id}, "
+                f"seed: {seed}, difficulty: {difficulty} ---"
+            )
 
             # Initialize the environment with the specified seed for recording
             env_kwargs = dict(
@@ -51,9 +99,9 @@ def main():
                 control_mode="pd_joint_pos",
                 render_mode="rgb_array",  
                 reward_mode="dense",
-                HistoryBench_seed=10010400,
+                HistoryBench_seed=seed,
                 max_episode_steps=200,
-                HistoryBench_difficulty="easy",
+                HistoryBench_difficulty=difficulty,
             )
 
             env_kwargs["historybench_failure_recovery"] = False
@@ -65,7 +113,7 @@ def main():
             
             env = HistoryBenchRecordWrapper(env,HistoryBench_dataset=str(dataset_path),HistoryBench_env=env_id,HistoryBench_episode=episode,HistoryBench_seed=seed,
                                             save_video=True)
-            env.reset()
+            env.reset(seed=seed)
 
             if env_id=="PatternLock" or env_id == "RouteStick":
                 planner = FailAwarePandaStickMotionPlanningSolver(
@@ -148,7 +196,10 @@ def main():
     
             env.close()
 
-            print(f"--- Finished Running simulation for episode:{episode},env: {env_id} ---")
+            print(
+                f"--- Finished Running simulation for episode:{episode}, env: {env_id}, "
+                f"seed: {seed}, difficulty: {difficulty} ---"
+            )
 
 
 if __name__ == "__main__":

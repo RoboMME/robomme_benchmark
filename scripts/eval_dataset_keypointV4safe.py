@@ -191,9 +191,9 @@ def main():
         # 遍历所有 episode
         for episode_record in episode_records:
 
-            if episode_record['episode'] != 4:
+            if episode_record['episode'] != 3:
                 continue
-
+            
             episode = episode_record['episode']
             seed = episode_record.get('seed')
             difficulty = episode_record.get('difficulty')

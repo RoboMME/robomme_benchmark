@@ -155,8 +155,7 @@ def main():
 
         for episode_record in episode_records:
             episode = episode_record["episode"]
-            if episode != 4:
-                continue
+
 
             seed = episode_record.get("seed")
             difficulty = episode_record.get("difficulty")

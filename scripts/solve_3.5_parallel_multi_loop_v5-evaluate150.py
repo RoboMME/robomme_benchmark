@@ -59,11 +59,11 @@ DEFAULT_ENVS =[
 #     "VideoUnmaskSwap",
 # "VideoUnmask",
 #     "ButtonUnmaskSwap",
-#     "ButtonUnmask",
+     "ButtonUnmask",
 
   #   "VideoRepick",
 #     "VideoPlaceButton",
-"VideoPlaceOrder",
+#"VideoPlaceOrder",
 #     "PickHighlight",
 
 #      "InsertPeg",
@@ -531,7 +531,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=34,
+        default=20,
         help="每个环境生成的 episode 数量 (默认: 100)",
     )
 

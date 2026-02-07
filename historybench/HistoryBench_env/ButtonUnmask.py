@@ -337,7 +337,7 @@ class ButtonUnmask(BaseEnv):
                 allow_subgoal_change_this_timestep=False
         all_tasks_completed, current_task_name, task_failed ,self.current_task_specialflag= sequential_task_check(self, self.task_list,allow_subgoal_change_this_timestep=allow_subgoal_change_this_timestep)
 
-        print(f"Current Task: {current_task_name}")
+        #print(f"Current Task: {current_task_name}")
         
         # 如果任务失败，立即标记失败
         if task_failed:

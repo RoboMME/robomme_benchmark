@@ -387,31 +387,21 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
             if hasattr(env_unwrapped, '_pending_keypoint') and env_unwrapped._pending_keypoint is not None:
                 # 获取待记录的keypoint并立即清除，确保每个keypoint只记录一次
                 current_keypoint = env_unwrapped._pending_keypoint
-                
-                # 获取当前机械臂末端姿态
-                tcp_pose = self.agent.tcp.pose
-                keypoint_p = tcp_pose.p
-                keypoint_q = tcp_pose.q
-                
-                # 转换为numpy数组
-                if isinstance(keypoint_p, torch.Tensor):
-                    keypoint_p_np = keypoint_p.detach().cpu().numpy()
-                    if keypoint_p_np.ndim > 1:
-                        keypoint_p_np = keypoint_p_np.flatten()
-                    keypoint_p_np = keypoint_p_np[:3]
-                else:
-                    keypoint_p_np = np.asarray(keypoint_p, dtype=np.float32).flatten()[:3]
-                    
-                if isinstance(keypoint_q, torch.Tensor):
-                    keypoint_q_np = keypoint_q.detach().cpu().numpy()
-                    if keypoint_q_np.ndim > 1:
-                        keypoint_q_np = keypoint_q_np.flatten()
-                    keypoint_q_np = keypoint_q_np[:4]
-                else:
-                    keypoint_q_np = np.asarray(keypoint_q, dtype=np.float32).flatten()[:4]
-                
-                current_keypoint['keypoint_p'] = keypoint_p_np.astype(np.float32)
-                current_keypoint['keypoint_q'] = keypoint_q_np.astype(np.float32)
+
+                if 'keypoint_p' not in current_keypoint or 'keypoint_q' not in current_keypoint:
+                    raise ValueError(
+                        f"_pending_keypoint missing keypoint_p/keypoint_q: {current_keypoint}"
+                    )
+
+                keypoint_p_np = np.asarray(current_keypoint['keypoint_p'], dtype=np.float32).reshape(-1)
+                keypoint_q_np = np.asarray(current_keypoint['keypoint_q'], dtype=np.float32).reshape(-1)
+                if keypoint_p_np.size != 3 or keypoint_q_np.size != 4:
+                    raise ValueError(
+                        f"_pending_keypoint keypoint shape invalid: p={keypoint_p_np.shape}, q={keypoint_q_np.shape}"
+                    )
+
+                current_keypoint['keypoint_p'] = keypoint_p_np
+                current_keypoint['keypoint_q'] = keypoint_q_np
                 
                 env_unwrapped._pending_keypoint = None
 
