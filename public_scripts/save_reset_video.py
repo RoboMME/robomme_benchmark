@@ -2,7 +2,7 @@
 # 用于保存 reset 阶段（演示阶段）带字幕视频的公共工具。
 
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 
 import numpy as np
 import cv2
@@ -100,6 +100,29 @@ def add_text_to_frame(
     return np.vstack((text_area, frame))
 
 
+def add_border_to_frame(
+    frame: np.ndarray,
+    color: Tuple[int, int, int] = (255, 0, 0),
+    thickness: int = 4,
+) -> np.ndarray:
+    """在帧四周叠加边框（RGB 颜色）。"""
+    frame = _frame_to_numpy(frame).copy()
+    if frame.ndim == 2:
+        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+    if frame.ndim != 3 or frame.shape[2] != 3:
+        return frame
+
+    h, w = frame.shape[:2]
+    t = max(1, int(thickness))
+    t = min(t, h // 2 if h > 1 else 1, w // 2 if w > 1 else 1)
+
+    frame[:t, :, :] = color
+    frame[-t:, :, :] = color
+    frame[:, :t, :] = color
+    frame[:, -t:, :] = color
+    return frame
+
+
 def save_listStep_video(
     obs_batch: Dict[str, List[Any]],
     reward_batch: Any,
@@ -108,6 +131,9 @@ def save_listStep_video(
     info_batch: Dict[str, List[Any]],
     save_path: str,
     fps: int = 20,
+    highlight_prefix_count: int = 0,
+    highlight_color: Tuple[int, int, int] = (255, 0, 0),
+    highlight_thickness: int = 4,
 ) -> bool:
     """
     保存 reset 阶段（演示阶段）视频，并使用 subgoal_grounded 作为字幕。
@@ -124,6 +150,9 @@ def save_listStep_video(
         info_batch: 列式 info 字典（dict-of-list）。
         save_path: 输出视频路径（如 .mp4）。
         fps: 输出视频帧率。
+        highlight_prefix_count: 对前 N 帧加红框（常用于标记 reset 段）。
+        highlight_color: 边框颜色（RGB）。
+        highlight_thickness: 边框厚度（像素）。
 
     Returns:
         至少写入一帧时返回 True，否则返回 False。
@@ -142,18 +171,24 @@ def save_listStep_video(
 
     subgoal_grounded = _flatten_column(info_batch, "subgoal_grounded")
 
-    n_reset = min(len(image), len(subgoal_grounded))
-    if n_reset == 0:
+    n_frames = len(image)
+    if n_frames == 0:
         return False
 
     out_dir = os.path.dirname(os.path.abspath(save_path))
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
     with imageio.get_writer(save_path, fps=fps, codec="libx264", quality=8) as writer:
-        for i in range(n_reset):
+        for i in range(n_frames):
             frame = _frame_to_numpy(image[i])
             caption = subgoal_grounded[i] if i < len(subgoal_grounded) else ""
             combined = add_text_to_frame(frame, caption)
+            if i < max(0, int(highlight_prefix_count)):
+                combined = add_border_to_frame(
+                    combined,
+                    color=highlight_color,
+                    thickness=highlight_thickness,
+                )
             writer.append_data(combined)
     print(f"Saved: {save_path}")
     return True
