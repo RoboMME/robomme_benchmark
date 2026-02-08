@@ -24,6 +24,37 @@ def _frame_to_numpy(frame: Any) -> np.ndarray:
     return frame
 
 
+def _flatten_column(batch_dict: Dict[str, List[Any]], key: str) -> List[Any]:
+    out = []
+    for item in (batch_dict or {}).get(key, []) or []:
+        if item is None:
+            continue
+        if isinstance(item, (list, tuple)):
+            out.extend([x for x in item if x is not None])
+        else:
+            out.append(item)
+    return out
+
+
+def _ensure_rgb(frame: np.ndarray) -> np.ndarray:
+    if frame.ndim == 2:
+        return cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+    if frame.ndim == 3 and frame.shape[2] == 1:
+        return cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+    return frame
+
+
+def _concat_left_right(left_frame: Any, right_frame: Any) -> np.ndarray:
+    left = _ensure_rgb(_frame_to_numpy(left_frame))
+    right = _ensure_rgb(_frame_to_numpy(right_frame))
+    if left.shape[0] != right.shape[0]:
+        target_h = left.shape[0]
+        scale = target_h / max(1, right.shape[0])
+        target_w = max(1, int(round(right.shape[1] * scale)))
+        right = cv2.resize(right, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+    return np.hstack((left, right))
+
+
 def add_text_to_frame(
     frame: np.ndarray,
     text: Any,
@@ -97,23 +128,19 @@ def save_listStep_video(
     Returns:
         至少写入一帧时返回 True，否则返回 False。
     """
-    image = []
-    for item in (obs_batch or {}).get("image", []) or []:
-        if item is None:
-            continue
-        if isinstance(item, (list, tuple)):
-            image.extend([x for x in item if x is not None])
-        else:
-            image.append(item)
+    image = _flatten_column(obs_batch, "image")
+    base_camera = _flatten_column(obs_batch, "base_camera")
+    wrist_camera = _flatten_column(obs_batch, "wrist_camera")
 
-    subgoal_grounded = []
-    for item in (info_batch or {}).get("subgoal_grounded", []) or []:
-        if item is None:
-            continue
-        if isinstance(item, (list, tuple)):
-            subgoal_grounded.extend([x for x in item if x is not None])
-        else:
-            subgoal_grounded.append(item)
+    if base_camera and wrist_camera:
+        n_pair = min(len(base_camera), len(wrist_camera))
+        image = [_concat_left_right(base_camera[i], wrist_camera[i]) for i in range(n_pair)]
+    elif base_camera:
+        image = [_frame_to_numpy(f) for f in base_camera]
+    elif wrist_camera:
+        image = [_frame_to_numpy(f) for f in wrist_camera]
+
+    subgoal_grounded = _flatten_column(info_batch, "subgoal_grounded")
 
     n_reset = min(len(image), len(subgoal_grounded))
     if n_reset == 0:
