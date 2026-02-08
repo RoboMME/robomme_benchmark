@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_ROOT="${SCRIPT_DIR}/replay_runs"
 DEFAULT_PYTHON_BIN="/data/hongzefu/maniskillenv1114/bin/python"
 PYTHON_BIN="${PYTHON_BIN:-$DEFAULT_PYTHON_BIN}"
-TARGET_SCRIPT="${SCRIPT_DIR}/evaluate_endeffector_FK.py"
+TARGET_SCRIPT="${SCRIPT_DIR}/evaluate_jointangle_dataset_replay.py"
 
 ENV_IDS=(
   PickXtimes
@@ -80,7 +80,7 @@ cmd_start() {
   fi
 
   if [[ -z "${run_name}" ]]; then
-    run_name="endeffector_fk_$(date +%Y%m%d_%H%M%S)"
+    run_name="jointangle_replay_$(date +%Y%m%d_%H%M%S)"
   fi
 
   local run_dir="${RUN_ROOT}/${run_name}"
@@ -89,7 +89,7 @@ cmd_start() {
 
   mkdir -p "${log_dir}" "${pid_dir}"
 
-  echo "mode=endeffector_fk" > "${run_dir}/meta.txt"
+  echo "mode=jointangle_replay" > "${run_dir}/meta.txt"
   echo "script=${TARGET_SCRIPT}" >> "${run_dir}/meta.txt"
   echo "python_bin=${PYTHON_BIN}" >> "${run_dir}/meta.txt"
   echo "started_at=$(date -Iseconds)" >> "${run_dir}/meta.txt"

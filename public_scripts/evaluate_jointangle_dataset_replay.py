@@ -28,7 +28,7 @@ from historybench.env_record_wrapper import (
 from save_reset_video import save_listStep_video
 
 # 数据集根目录（包含 record_dataset_*_metadata.json 与 record_dataset_*.h5）
-DATASET_ROOT = "/data/hongzefu/data_1206"
+DATASET_ROOT = "/data/hongzefu/dataset_generate"
 DEFAULT_ENV_IDS = [
     "PickXtimes",
     "StopCube",
@@ -111,7 +111,7 @@ def main():
     每个 episode 仅回放非 demonstration 的动作（跳过 demonstration 步）。
     """
     # ---------- 全局配置 ----------
-    gui_render = True
+    gui_render = False
     max_steps = 3000
     render_mode = "human" if gui_render else "rgb_array"
     args = _parse_args()
@@ -134,15 +134,14 @@ def main():
 
         for episode in range(50):
             # 只跑以下 (env_id, episode)，其余跳过
-            RUN_EPISODES = {
-                ("VideoPlaceOrder", 45),
-                ("VideoPlaceButton", 9),
-                ("VideoPlaceButton", 3),
-                ("PatternLock", 19),
-                ("PatternLock", 3),
-            }
-            if (env_id, episode) not in RUN_EPISODES:
-                continue
+            # RUN_EPISODES = {
+
+            #     ("VideoPlaceButton", 9),
+            #     ("VideoPlaceButton", 3),
+
+            # }
+            # if (env_id, episode) not in RUN_EPISODES:
+            #     continue
 
 
             # ---------- 为当前 episode 创建环境与数据集解析器 ----------
