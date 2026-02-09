@@ -120,6 +120,16 @@ class BenchmarkEnvBuilder:
 
         return seed, difficulty_hint
 
+    def get_episode_num(self) -> int:
+        """
+        返回当前 env_id 在 metadata 中的 episode 数量。
+        注意：按当前约定，该方法名返回数量（int）而非列表。
+        """
+        if not self.metadata_index:
+            return 0
+        episode_set = {episode for (task, episode) in self.metadata_index if task == self.env_id}
+        return len(episode_set)
+
     def make_env_for_episode(self, episode: int):
         """为特定 episode 创建并配置环境。action_space=ee_pose 时包 EndeffectorDemonstrationWrapper，keypoint 时包 MultiStepDemonstrationWrapper，oracle_planner 时包 OraclePlannerDemonstrationWrapper。"""
         from .DemonstrationWrapper import DemonstrationWrapper

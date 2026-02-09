@@ -23,14 +23,13 @@ from historybench.env_record_wrapper import (
 )
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
-ACTION_SPACE = "joint_angle"
-# ACTION_SPACE = "ee_pose"
-# ACTION_SPACE = "keypoint"
-# ACTION_SPACE = "oracle_planner"
+#ACTION_SPACE = "joint_angle"
+#ACTION_SPACE = "ee_pose"
+#ACTION_SPACE = "keypoint"
+#ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = True
 MAX_STEPS = 3000
-EPISODE_COUNT = 50
 
 DEFAULT_ENV_IDS = [
     "PickXtimes",
@@ -78,42 +77,13 @@ INFO_SUPER_KEYS = [
     "available_options",
 ]
 
-def _flatten_column(batch_dict, key):
-    out = []
-    for item in (batch_dict or {}).get(key, []) or []:
-        if item is None:
-            continue
-        if isinstance(item, (list, tuple)):
-            out.extend([x for x in item if x is not None])
-        else:
-            out.append(item)
-    return out
 
 
-def _extract_obs_union(obs_batch):
-    return {key: _flatten_column(obs_batch, key) for key in OBS_SUPER_KEYS}
 
 
-def _extract_info_union(info_batch):
-    return {key: _flatten_column(info_batch, key) for key in INFO_SUPER_KEYS}
 
-
-def _last_info(info_batch, n):
-    if n <= 0:
-        return {}
-    idx = n - 1
-    return {
-        k: v[idx]
-        for k, v in (info_batch or {}).items()
-        if len(v) > idx and v[idx] is not None
-    }
-
-
-def _get_dummy_action(action_space, obs_union, info_union):
-    # 当前需求为固定写死 dummy action；保留 obs/info 参数用于统一接口。
-    _ = obs_union
-    _ = info_union
-
+def _get_dummy_action(action_space):
+    
     if action_space == "joint_angle":
         return np.array(
             [0.0, 0.0, 0.0, -1.5707964, 0.0, 1.5707964, 0.7853982, 1.0],
@@ -152,90 +122,84 @@ def main():
     print(f"Using action_space: {ACTION_SPACE}")
 
     for env_id in env_id_list:
-        config_resolver = BenchmarkEnvBuilder(
+        env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
             dataset="train",
             action_space=ACTION_SPACE,
             gui_render=GUI_RENDER,
         )
+        episode_count = env_builder.get_episode_num()
+        print(f"[{env_id}] episode_count from metadata: {episode_count}")
 
-        for episode in range(EPISODE_COUNT):
-            env, seed, difficulty = config_resolver.make_env_for_episode(episode)
+        for episode in range(episode_count):
+            env, seed, difficulty = env_builder.make_env_for_episode(episode)
             obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.reset()
 
-            # reset 后统一做 obs/info 固定超集抽取
-            obs_union = _extract_obs_union(obs_batch)
-            info_union = _extract_info_union(info_batch)
-
             # 保持四个原评测脚本中的调试变量语义
-            maniskill_obs = obs_union["maniskill_obs"]
-            base_camera = obs_union["base_camera"]
-            wrist_camera = obs_union["wrist_camera"]
-            base_camera_depth = obs_union["base_camera_depth"]
-            base_camera_segmentation = obs_union["base_camera_segmentation"]
-            wrist_camera_depth = obs_union["wrist_camera_depth"]
-            base_camera_extrinsic_opencv = obs_union["base_camera_extrinsic_opencv"]
-            base_camera_intrinsic_opencv = obs_union["base_camera_intrinsic_opencv"]
-            base_camera_cam2world_opengl = obs_union["base_camera_cam2world_opengl"]
-            wrist_camera_extrinsic_opencv = obs_union["wrist_camera_extrinsic_opencv"]
-            wrist_camera_intrinsic_opencv = obs_union["wrist_camera_intrinsic_opencv"]
-            wrist_camera_cam2world_opengl = obs_union["wrist_camera_cam2world_opengl"]
-            robot_endeffector_p = obs_union["robot_endeffector_p"]
-            robot_endeffector_q = obs_union["robot_endeffector_q"]
-            actions = obs_union["actions"]
-            states = obs_union["states"]
-            velocity = obs_union["velocity"]
-            language_goal_list = obs_union["language_goal"]
+            maniskill_obs = obs_batch["maniskill_obs"]
+            base_camera = obs_batch["base_camera"]
+            wrist_camera = obs_batch["wrist_camera"]
+            base_camera_depth = obs_batch["base_camera_depth"]
+            base_camera_segmentation = obs_batch["base_camera_segmentation"]
+            wrist_camera_depth = obs_batch["wrist_camera_depth"]
+            base_camera_extrinsic_opencv = obs_batch["base_camera_extrinsic_opencv"]
+            base_camera_intrinsic_opencv = obs_batch["base_camera_intrinsic_opencv"]
+            base_camera_cam2world_opengl = obs_batch["base_camera_cam2world_opengl"]
+            wrist_camera_extrinsic_opencv = obs_batch["wrist_camera_extrinsic_opencv"]
+            wrist_camera_intrinsic_opencv = obs_batch["wrist_camera_intrinsic_opencv"]
+            wrist_camera_cam2world_opengl = obs_batch["wrist_camera_cam2world_opengl"]
+            robot_endeffector_p = obs_batch["robot_endeffector_p"]
+            robot_endeffector_q = obs_batch["robot_endeffector_q"]
+            actions = obs_batch["actions"]
+            states = obs_batch["states"]
+            velocity = obs_batch["velocity"]
+            language_goal_list = obs_batch["language_goal"]
             language_goal = language_goal_list[0] if language_goal_list else None
 
-            subgoal = info_union["subgoal"]
-            subgoal_grounded = info_union["subgoal_grounded"]
-            available_options = info_union["available_options"]
+            subgoal = info_batch["subgoal"]
+            subgoal_grounded = info_batch["subgoal_grounded"]
+            available_options = info_batch["available_options"]
 
-            n = int(reward_batch.numel()) if hasattr(reward_batch, "numel") else 0
-            info = _last_info(info_batch, n)
-            terminated = bool(terminated_batch[-1].item()) if n > 0 else False
-            truncated = bool(truncated_batch[-1].item()) if n > 0 else False
+         
+            info ={k: v[-1] for k, v in info_batch.items()}
+            terminated = bool(terminated_batch[-1].item())
+            truncated = bool(truncated_batch[-1].item())
 
             episode_success = False
             step = 0
             while step < MAX_STEPS:
-                dummy_action = _get_dummy_action(ACTION_SPACE, obs_union, info_union)
+                dummy_action = _get_dummy_action(ACTION_SPACE)
                 obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.step(dummy_action)
                 print("dummy_action: ", dummy_action)
 
-                # step 后统一做 obs/info 固定超集抽取
-                obs_union = _extract_obs_union(obs_batch)
-                info_union = _extract_info_union(info_batch)
-
                 # 保持四个原评测脚本中的调试变量语义
-                maniskill_obs = obs_union["maniskill_obs"]
-                base_camera = obs_union["base_camera"]
-                wrist_camera = obs_union["wrist_camera"]
-                base_camera_depth = obs_union["base_camera_depth"]
-                base_camera_segmentation = obs_union["base_camera_segmentation"]
-                wrist_camera_depth = obs_union["wrist_camera_depth"]
-                base_camera_extrinsic_opencv = obs_union["base_camera_extrinsic_opencv"]
-                base_camera_intrinsic_opencv = obs_union["base_camera_intrinsic_opencv"]
-                base_camera_cam2world_opengl = obs_union["base_camera_cam2world_opengl"]
-                wrist_camera_extrinsic_opencv = obs_union["wrist_camera_extrinsic_opencv"]
-                wrist_camera_intrinsic_opencv = obs_union["wrist_camera_intrinsic_opencv"]
-                wrist_camera_cam2world_opengl = obs_union["wrist_camera_cam2world_opengl"]
-                robot_endeffector_p = obs_union["robot_endeffector_p"]
-                robot_endeffector_q = obs_union["robot_endeffector_q"]
-                actions = obs_union["actions"]
-                states = obs_union["states"]
-                velocity = obs_union["velocity"]
-                language_goal_list = obs_union["language_goal"]
+                maniskill_obs = obs_batch["maniskill_obs"]
+                base_camera = obs_batch["base_camera"]
+                wrist_camera = obs_batch["wrist_camera"]
+                base_camera_depth = obs_batch["base_camera_depth"]
+                base_camera_segmentation = obs_batch["base_camera_segmentation"]
+                wrist_camera_depth = obs_batch["wrist_camera_depth"]
+                base_camera_extrinsic_opencv = obs_batch["base_camera_extrinsic_opencv"]
+                base_camera_intrinsic_opencv = obs_batch["base_camera_intrinsic_opencv"]
+                base_camera_cam2world_opengl = obs_batch["base_camera_cam2world_opengl"]
+                wrist_camera_extrinsic_opencv = obs_batch["wrist_camera_extrinsic_opencv"]
+                wrist_camera_intrinsic_opencv = obs_batch["wrist_camera_intrinsic_opencv"]
+                wrist_camera_cam2world_opengl = obs_batch["wrist_camera_cam2world_opengl"]
+                robot_endeffector_p = obs_batch["robot_endeffector_p"]
+                robot_endeffector_q = obs_batch["robot_endeffector_q"]
+                actions = obs_batch["actions"]
+                states = obs_batch["states"]
+                velocity = obs_batch["velocity"]
+                language_goal_list = obs_batch["language_goal"]
 
-                subgoal = info_union["subgoal"]
-                subgoal_grounded = info_union["subgoal_grounded"]
-                available_options = info_union["available_options"]
+                subgoal = info_batch["subgoal"]
+                subgoal_grounded = info_batch["subgoal_grounded"]
+                available_options = info_batch["available_options"]
 
-                n = int(reward_batch.numel()) if hasattr(reward_batch, "numel") else 0
-                info = _last_info(info_batch, n)
-                terminated = bool(terminated_batch[-1].item()) if n > 0 else False
-                truncated = bool(truncated_batch[-1].item()) if n > 0 else False
+         
+                info ={k: v[-1] for k, v in info_batch.items()}
+                terminated = bool(terminated_batch[-1].item()) 
+                truncated = bool(truncated_batch[-1].item()) 
 
                 step += 1
                 if GUI_RENDER:
@@ -254,34 +218,7 @@ def main():
                         print(f"[{env_id}] episode {episode} 失败。")
                     break
 
-            _ = (
-                maniskill_obs,
-                base_camera,
-                wrist_camera,
-                base_camera_depth,
-                base_camera_segmentation,
-                wrist_camera_depth,
-                base_camera_extrinsic_opencv,
-                base_camera_intrinsic_opencv,
-                base_camera_cam2world_opengl,
-                wrist_camera_extrinsic_opencv,
-                wrist_camera_intrinsic_opencv,
-                wrist_camera_cam2world_opengl,
-                robot_endeffector_p,
-                robot_endeffector_q,
-                actions,
-                states,
-                velocity,
-                language_goal,
-                subgoal,
-                subgoal_grounded,
-                available_options,
-                episode_success,
-                seed,
-                difficulty,
-                terminated,
-                truncated,
-            )
+
             env.close()
 
 
