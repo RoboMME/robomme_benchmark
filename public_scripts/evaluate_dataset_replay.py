@@ -30,7 +30,7 @@ from save_reset_video import save_listStep_video
 #ACTION_SPACE = "joint_angle"
 ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "keypoint"
-# ACTION_SPACE = "oracle_planner"
+#ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = True
 MAX_STEPS = 3000
@@ -69,8 +69,10 @@ ACTION_SPACE_TO_VIDEO_PREFIX = {
     "oracle_planner": "oracle",
 }
 
+# ######## 视频保存变量（输出目录）开始 ########
 # 视频输出目录：独立固定写死，不与 h5 路径或 env_id 对齐
 OUT_VIDEO_DIR = "/data/hongzefu/dataset_generate/videos/replay"
+# ######## 视频保存变量（输出目录）结束 ########
 
 def _parse_oracle_command(subgoal_text: Optional[str]) -> Optional[dict[str, Any]]:
     if not subgoal_text:
@@ -163,31 +165,20 @@ def main():
                 terminated = bool(terminated_batch[-1].item())
                 truncated = bool(truncated_batch[-1].item())
 
-                reset_base_frames = []
-                for frame in base_camera:
-                    f = frame
-                    if hasattr(f, "detach"):
-                        f = f.detach()
-                    if hasattr(f, "cpu"):
-                        f = f.cpu()
-                    reset_base_frames.append(np.asarray(f).copy())
-
-                reset_wrist_frames = []
-                for frame in wrist_camera:
-                    f = frame
-                    if hasattr(f, "detach"):
-                        f = f.detach()
-                    if hasattr(f, "cpu"):
-                        f = f.cpu()
-                    reset_wrist_frames.append(np.asarray(f).copy())
+                # ######## 视频保存变量准备（reset 阶段）开始 ########
+                reset_base_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in base_camera]
+                reset_wrist_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_camera]
 
                 reset_subgoal_grounded = list(subgoal_grounded) if subgoal_grounded else []
+                # ######## 视频保存变量准备（reset 阶段）结束 ########
 
+                # ######## 视频保存变量初始化开始 ########
                 step = 0
                 episode_success = False
                 replay_base_frames: list[np.ndarray] = []
                 replay_wrist_frames: list[np.ndarray] = []
                 replay_subgoal_grounded: list[Any] = []
+                # ######## 视频保存变量初始化结束 ########
 
                 while step < MAX_STEPS:
                     action = _get_replay_action(ACTION_SPACE, dataset_resolver, step)
@@ -220,25 +211,14 @@ def main():
                     subgoal_grounded = info_batch["subgoal_grounded"]
                     available_options = info_batch["available_options"]
 
-                    for frame in base_camera:
-                        f = frame
-                        if hasattr(f, "detach"):
-                            f = f.detach()
-                        if hasattr(f, "cpu"):
-                            f = f.cpu()
-                        replay_base_frames.append(np.asarray(f).copy())
-
-                    for frame in wrist_camera:
-                        f = frame
-                        if hasattr(f, "detach"):
-                            f = f.detach()
-                        if hasattr(f, "cpu"):
-                            f = f.cpu()
-                        replay_wrist_frames.append(np.asarray(f).copy())
+                    # ######## 视频保存变量准备（replay 阶段）开始 ########
+                    replay_base_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in base_camera)
+                    replay_wrist_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_camera)
 
                     for text in subgoal_grounded:
                         if text is not None:
                             replay_subgoal_grounded.append(text)
+                    # ######## 视频保存变量准备（replay 阶段）结束 ########
 
                     info = {k: v[-1] for k, v in info_batch.items()}
                     terminated = bool(terminated_batch[-1].item())
@@ -261,6 +241,7 @@ def main():
                             print(f"[{env_id}] episode {episode} 失败。")
                         break
 
+                # ######## 视频保存部分开始 ########
                 success_prefix = "success" if episode_success else "fail"
                 mode_prefix = ACTION_SPACE_TO_VIDEO_PREFIX[ACTION_SPACE]
                 out_video_path = os.path.join(
@@ -298,6 +279,7 @@ def main():
                     print(f"Saved video: {out_video_path}")
                 else:
                     print(f"Skipped video (no frames): {out_video_path}")
+                # ######## 视频保存部分结束 ########
 
             except (FileNotFoundError, KeyError) as exc:
                 print(f"[{env_id}] episode {episode} 数据缺失，跳过。{exc}")
