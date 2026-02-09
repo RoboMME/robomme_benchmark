@@ -93,7 +93,12 @@ def _get_replay_action(
     if action_space == "oracle_planner":
         subgoal_text = dataset_resolver.get_grounded_subgoal(step)
         return _parse_oracle_command(subgoal_text)
-    return dataset_resolver.get_action(step)
+    elif action_space == "ee_pose":
+        return dataset_resolver.get_ee_pose_gripper(step)
+    elif action_space == "keypoint":
+        return dataset_resolver.get_keypoint(step)
+    else:  # joint_angle (default)
+        return dataset_resolver.get_action(step)
 
 
 def main():
