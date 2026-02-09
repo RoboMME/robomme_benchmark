@@ -24,20 +24,20 @@ from historybench.env_record_wrapper import (
     BenchmarkEnvBuilder,
     EpisodeDatasetResolver,
 )
-from save_reset_video import save_listStep_video
+from save_reset_video import save_robomme_video
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
 #ACTION_SPACE = "joint_angle"
-ACTION_SPACE = "ee_pose"
+#ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "keypoint"
-#ACTION_SPACE = "oracle_planner"
+ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = True
 MAX_STEPS = 3000
 DATASET_ROOT = "/data/hongzefu/dataset_generate"
 
 DEFAULT_ENV_IDS = [
-    "PickXtimes",
+    #"PickXtimes",
     # "StopCube",
     # "SwingXtimes",
     # "BinFill",
@@ -45,7 +45,7 @@ DEFAULT_ENV_IDS = [
     # "VideoUnmask",
     # "ButtonUnmaskSwap",
     # "ButtonUnmask",
-    # "VideoRepick",
+     "VideoRepick",
     # "VideoPlaceButton",
     # "VideoPlaceOrder",
     # "PickHighlight",
@@ -55,23 +55,9 @@ DEFAULT_ENV_IDS = [
     # "RouteStick",
 ]
 
-ACTION_SPACE_TO_VIDEO_DIR = {
-    "joint_angle": "jointangle",
-    "ee_pose": "endeffector",
-    "keypoint": "keypoint",
-    "oracle_planner": "oracleplanner",
-}
-
-ACTION_SPACE_TO_VIDEO_PREFIX = {
-    "joint_angle": "jointangle",
-    "ee_pose": "ee",
-    "keypoint": "keypoint",
-    "oracle_planner": "oracle",
-}
-
 # ######## 视频保存变量（输出目录）开始 ########
 # 视频输出目录：独立固定写死，不与 h5 路径或 env_id 对齐
-OUT_VIDEO_DIR = "/data/hongzefu/dataset_generate/videos/replay"
+OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay"
 # ######## 视频保存变量（输出目录）结束 ########
 
 def _parse_oracle_command(subgoal_text: Optional[str]) -> Optional[dict[str, Any]]:
@@ -93,23 +79,21 @@ def _get_replay_action(
     step: int,
 ) -> Optional[Any]:
     if action_space == "oracle_planner":
-        subgoal_text = dataset_resolver.get_grounded_subgoal(step)
+        subgoal_text = dataset_resolver.get_step("grounded_subgoal", step)
         return _parse_oracle_command(subgoal_text)
-    elif action_space == "ee_pose":
-        return dataset_resolver.get_ee_pose_gripper(step)
-    elif action_space == "keypoint":
-        return dataset_resolver.get_keypoint(step)
-    else:  # joint_angle (default)
-        return dataset_resolver.get_action(step)
+    if action_space == "ee_pose":
+        return dataset_resolver.get_step("ee_pose", step)
+    if action_space == "keypoint":
+        return dataset_resolver.get_step("keypoint", step)
+    return dataset_resolver.get_step("joint_angle", step)
 
 
 def main():
- 
-    env_id_list = list(DEFAULT_ENV_IDS)
+    env_id_list = BenchmarkEnvBuilder.get_task_list()
     print(f"Running envs: {env_id_list}")
     print(f"Using action_space: {ACTION_SPACE}")
 
-    os.makedirs(OUT_VIDEO_DIR, exist_ok=True)
+    
 
     for env_id in env_id_list:
         env_builder = BenchmarkEnvBuilder(
@@ -121,8 +105,6 @@ def main():
         episode_count = env_builder.get_episode_num()
         print(f"[{env_id}] episode_count from metadata: {episode_count}")
 
-        h5_path = f"{DATASET_ROOT}/record_dataset_{env_id}.h5"
-
         for episode in range(episode_count):
             env = None
             dataset_resolver = None
@@ -131,7 +113,7 @@ def main():
                 dataset_resolver = EpisodeDatasetResolver(
                     env_id=env_id,
                     episode=episode,
-                    dataset_path=h5_path,
+                    dataset_directory=DATASET_ROOT,
                 )
 
                 obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.reset()
@@ -168,16 +150,15 @@ def main():
                 # ######## 视频保存变量准备（reset 阶段）开始 ########
                 reset_base_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in base_camera]
                 reset_wrist_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_camera]
-
-                reset_subgoal_grounded = list(subgoal_grounded) if subgoal_grounded else []
+                reset_subgoal_grounded = subgoal_grounded
                 # ######## 视频保存变量准备（reset 阶段）结束 ########
 
                 # ######## 视频保存变量初始化开始 ########
                 step = 0
                 episode_success = False
-                replay_base_frames: list[np.ndarray] = []
-                replay_wrist_frames: list[np.ndarray] = []
-                replay_subgoal_grounded: list[Any] = []
+                rollout_base_frames: list[np.ndarray] = []
+                rollout_wrist_frames: list[np.ndarray] = []
+                rollout_subgoal_grounded: list[Any] = []
                 # ######## 视频保存变量初始化结束 ########
 
                 while step < MAX_STEPS:
@@ -212,12 +193,9 @@ def main():
                     available_options = info_batch["available_options"]
 
                     # ######## 视频保存变量准备（replay 阶段）开始 ########
-                    replay_base_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in base_camera)
-                    replay_wrist_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_camera)
-
-                    for text in subgoal_grounded:
-                        if text is not None:
-                            replay_subgoal_grounded.append(text)
+                    rollout_base_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in base_camera)
+                    rollout_wrist_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_camera)
+                    rollout_subgoal_grounded.extend(subgoal_grounded)
                     # ######## 视频保存变量准备（replay 阶段）结束 ########
 
                     info = {k: v[-1] for k, v in info_batch.items()}
@@ -242,43 +220,19 @@ def main():
                         break
 
                 # ######## 视频保存部分开始 ########
-                success_prefix = "success" if episode_success else "fail"
-                mode_prefix = ACTION_SPACE_TO_VIDEO_PREFIX[ACTION_SPACE]
-                out_video_path = os.path.join(
-                    OUT_VIDEO_DIR,
-                    f"{success_prefix}_replay_{mode_prefix}_{env_id}_ep{episode}.mp4",
+                save_robomme_video(
+                    reset_base_frames=reset_base_frames,
+                    reset_wrist_frames=reset_wrist_frames,
+                    rollout_base_frames=rollout_base_frames,
+                    rollout_wrist_frames=rollout_wrist_frames,
+                    reset_subgoal_grounded=reset_subgoal_grounded,
+                    rollout_subgoal_grounded=rollout_subgoal_grounded,
+                    out_video_dir=OUT_VIDEO_DIR,
+                    action_space=ACTION_SPACE,
+                    env_id=env_id,
+                    episode=episode,
+                    episode_success=episode_success,
                 )
-
-                merged_base_frames = reset_base_frames + replay_base_frames
-                merged_wrist_frames = reset_wrist_frames + replay_wrist_frames
-                merged_subgoal_grounded = reset_subgoal_grounded + replay_subgoal_grounded
-
-                if merged_base_frames or merged_wrist_frames:
-                    obs_video = {
-                        "base_camera": merged_base_frames,
-                        "wrist_camera": merged_wrist_frames,
-                    }
-                    info_video = {"subgoal_grounded": merged_subgoal_grounded}
-
-                    if reset_base_frames and reset_wrist_frames:
-                        reset_highlight_count = min(len(reset_base_frames), len(reset_wrist_frames))
-                    elif reset_base_frames:
-                        reset_highlight_count = len(reset_base_frames)
-                    else:
-                        reset_highlight_count = len(reset_wrist_frames)
-
-                    save_listStep_video(
-                        obs_video,
-                        reward_batch,
-                        terminated_batch,
-                        truncated_batch,
-                        info_video,
-                        out_video_path,
-                        highlight_prefix_count=reset_highlight_count,
-                    )
-                    print(f"Saved video: {out_video_path}")
-                else:
-                    print(f"Skipped video (no frames): {out_video_path}")
                 # ######## 视频保存部分结束 ########
 
             except (FileNotFoundError, KeyError) as exc:

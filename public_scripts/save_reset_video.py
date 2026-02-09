@@ -123,62 +123,93 @@ def add_border_to_frame(
     return frame
 
 
-def save_listStep_video(
-    obs_batch: Dict[str, List[Any]],
-    reward_batch: Any,
-    terminated_batch: Any,
-    truncated_batch: Any,
-    info_batch: Dict[str, List[Any]],
-    save_path: str,
+def save_robomme_video(
+    reset_base_frames: List[Any],
+    reset_wrist_frames: List[Any],
+    rollout_base_frames: List[Any],
+    rollout_wrist_frames: List[Any],
+    reset_subgoal_grounded: List[Any],
+    rollout_subgoal_grounded: List[Any],
+    out_video_dir: str,
+    action_space: str,
+    env_id: str,
+    episode: int,
+    episode_success: bool,
     fps: int = 20,
-    highlight_prefix_count: int = 0,
     highlight_color: Tuple[int, int, int] = (255, 0, 0),
     highlight_thickness: int = 4,
 ) -> bool:
     """
-    保存 reset 阶段（演示阶段）视频，并使用 subgoal_grounded 作为字幕。
-
-    从 obs_batch["image"] 提取图像帧，
-    从 info_batch["subgoal_grounded"] 提取字幕，
-    并写入 save_path 指定的视频文件。
+    统一保存 replay 视频（含 reset 前缀高亮、命名与输出路径拼接）。
 
     Args:
-        obs_batch: 列式观测字典（dict-of-list）。
-        reward_batch: 一维 reward 张量（未使用，仅保持函数签名一致）。
-        terminated_batch: 一维 terminated 张量（未使用）。
-        truncated_batch: 一维 truncated 张量（未使用）。
-        info_batch: 列式 info 字典（dict-of-list）。
-        save_path: 输出视频路径（如 .mp4）。
-        fps: 输出视频帧率。
-        highlight_prefix_count: 对前 N 帧加红框（常用于标记 reset 段）。
+        reset_base_frames/reset_wrist_frames: reset 阶段双相机帧列表。
+        rollout_base_frames/rollout_wrist_frames: rollout 阶段双相机帧列表。
+        reset_subgoal_grounded/rollout_subgoal_grounded: 对应阶段字幕列表。
+        out_video_dir: 输出目录。
+        action_space: 当前动作空间，用于生成文件名前缀。
+        env_id: 环境 ID。
+        episode: 当前 episode 序号。
+        episode_success: 当前 episode 是否成功。
+        fps: 输出帧率。
         highlight_color: 边框颜色（RGB）。
         highlight_thickness: 边框厚度（像素）。
 
     Returns:
         至少写入一帧时返回 True，否则返回 False。
     """
-    image = _flatten_column(obs_batch, "image")
-    base_camera = _flatten_column(obs_batch, "base_camera")
-    wrist_camera = _flatten_column(obs_batch, "wrist_camera")
+    success_prefix = "success" if episode_success else "fail"
+    mode_prefix = action_space
+    out_video_path = os.path.join(
+        out_video_dir,
+        f"{success_prefix}_replay_{mode_prefix}_{env_id}_ep{episode}.mp4",
+    )
+
+    reset_base_frames = list(reset_base_frames or [])
+    reset_wrist_frames = list(reset_wrist_frames or [])
+    rollout_base_frames = list(rollout_base_frames or [])
+    rollout_wrist_frames = list(rollout_wrist_frames or [])
+    reset_subgoal_grounded = list(reset_subgoal_grounded or [])
+    rollout_subgoal_grounded = list(rollout_subgoal_grounded or [])
+
+    merged_base_frames = reset_base_frames + rollout_base_frames
+    merged_wrist_frames = reset_wrist_frames + rollout_wrist_frames
+    merged_subgoal_grounded = reset_subgoal_grounded + rollout_subgoal_grounded
+
+    if not (merged_base_frames or merged_wrist_frames):
+        print(f"Skipped video (no frames): {out_video_path}")
+        return False
+
+    if reset_base_frames and reset_wrist_frames:
+        highlight_prefix_count = min(len(reset_base_frames), len(reset_wrist_frames))
+    elif reset_base_frames:
+        highlight_prefix_count = len(reset_base_frames)
+    else:
+        highlight_prefix_count = len(reset_wrist_frames)
+
+    base_camera = [_frame_to_numpy(f) for f in merged_base_frames if f is not None]
+    wrist_camera = [_frame_to_numpy(f) for f in merged_wrist_frames if f is not None]
 
     if base_camera and wrist_camera:
         n_pair = min(len(base_camera), len(wrist_camera))
         image = [_concat_left_right(base_camera[i], wrist_camera[i]) for i in range(n_pair)]
     elif base_camera:
-        image = [_frame_to_numpy(f) for f in base_camera]
-    elif wrist_camera:
-        image = [_frame_to_numpy(f) for f in wrist_camera]
+        image = base_camera
+    else:
+        image = wrist_camera
 
-    subgoal_grounded = _flatten_column(info_batch, "subgoal_grounded")
+    subgoal_grounded = [text for text in merged_subgoal_grounded if text is not None]
 
     n_frames = len(image)
     if n_frames == 0:
+        print(f"Skipped video (no frames): {out_video_path}")
         return False
 
-    out_dir = os.path.dirname(os.path.abspath(save_path))
+    out_dir = os.path.dirname(os.path.abspath(out_video_path))
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    with imageio.get_writer(save_path, fps=fps, codec="libx264", quality=8) as writer:
+
+    with imageio.get_writer(out_video_path, fps=fps, codec="libx264", quality=8) as writer:
         for i in range(n_frames):
             frame = _frame_to_numpy(image[i])
             caption = subgoal_grounded[i] if i < len(subgoal_grounded) else ""
@@ -190,5 +221,6 @@ def save_listStep_video(
                     thickness=highlight_thickness,
                 )
             writer.append_data(combined)
-    print(f"Saved: {save_path}")
+
+    print(f"Saved video: {out_video_path}")
     return True

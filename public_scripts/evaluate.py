@@ -23,7 +23,7 @@ from historybench.env_record_wrapper import (
 )
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
-#ACTION_SPACE = "joint_angle"
+ACTION_SPACE = "joint_angle"
 #ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
@@ -117,7 +117,7 @@ def _get_dummy_action(action_space):
 
 
 def main():
-    env_id_list = list(DEFAULT_ENV_IDS)
+    env_id_list = BenchmarkEnvBuilder.get_task_list()
     print(f"Running envs: {env_id_list}")
     print(f"Using action_space: {ACTION_SPACE}")
 

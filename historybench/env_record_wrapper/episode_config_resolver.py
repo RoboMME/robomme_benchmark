@@ -4,13 +4,31 @@ Episode 配置解析：从元数据解析 episode 的 seed、difficulty，并构
 import json
 import os
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 
 DATASET_ROOT = Path(__file__).resolve().parents[2] / "dataset_json"
 _ALLOWED_DATASETS = {"train"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "keypoint", "oracle_planner"}
+_DEFAULT_TASK_LIST = [
+    "PickXtimes",
+    "StopCube",
+    "SwingXtimes",
+    "BinFill",
+    "VideoUnmaskSwap",
+    "VideoUnmask",
+    "ButtonUnmaskSwap",
+    "ButtonUnmask",
+    "VideoRepick",
+    "VideoPlaceButton",
+    "VideoPlaceOrder",
+    "PickHighlight",
+    "InsertPeg",
+    "MoveCube",
+    "PatternLock",
+    "RouteStick",
+]
 
 
 def load_episode_metadata(metadata_path: Union[str, Path, None]) -> Dict[Tuple[str, int], Dict[str, object]]:
@@ -97,6 +115,15 @@ class BenchmarkEnvBuilder:
 
         metadata_path = self._resolve_metadata_path()
         self.metadata_index = load_episode_metadata(metadata_path)
+
+    @classmethod
+    def get_task_list(cls) -> List[str]:
+        """
+        返回可评测任务列表。
+        任务列表固定为内置默认顺序，不从 metadata 自动发现。
+        """
+
+        return list(_DEFAULT_TASK_LIST)
 
     def _resolve_metadata_path(self) -> str:
         if self.dataset == "train":
