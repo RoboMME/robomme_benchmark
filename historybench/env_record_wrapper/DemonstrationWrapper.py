@@ -44,12 +44,7 @@ from ..HistoryBench_env.util import reset_panda
 
 from . import planner_denseStep
 # 姿态连续化与 RPY 统计逻辑统一复用到共享 util，避免多处实现分叉。
-from .rpy_util import (
-    align_quat_sign_with_prev_torch,
-    normalize_quat_wxyz_torch,
-    quat_wxyz_to_rpy_xyz_torch,
-    unwrap_rpy_with_prev_torch,
-)
+from .rpy_util import build_endeffector_pose_dict
 
 
 class DemonstrationWrapper(gym.Wrapper):
@@ -145,79 +140,6 @@ class DemonstrationWrapper(gym.Wrapper):
         self.demonstration_data = merged_batch
         return merged_batch
 
-    def _normalize_quat_wxyz(self, quat: torch.Tensor) -> torch.Tensor:
-        """
-        归一化四元数（wxyz）。
-
-        规则：
-        1. 仅当“元素有限 + 范数有限 + 范数>阈值”时按常规归一化；
-        2. 对零范数或 NaN/Inf，回退为单位四元数 [1, 0, 0, 0]；
-        3. 输出与输入形状保持一致，便于批处理。
-        """
-        return normalize_quat_wxyz_torch(quat, eps=1e-12)
-
-    def _align_quat_sign_with_prev(self, quat: torch.Tensor) -> torch.Tensor:
-        """
-        四元数符号对齐（q 与 -q 等价）：
-        通过与上一帧点积判断是否翻转，减少表示层面的突变。
-
-        注意：
-        - 若无上一帧缓存，或形状不一致，直接返回当前 quat；
-        - shape 不一致通常意味着 batch 结构变化，此时不强行对齐。
-        """
-        return align_quat_sign_with_prev_torch(quat, self._prev_ee_quat_wxyz)
-
-    def _quat_wxyz_to_rpy_xyz(self, quat: torch.Tensor) -> torch.Tensor:
-        """
-        将 wxyz 四元数转换为 XYZ 顺序的 RPY（弧度）。
-
-        说明：
-        - 输出是欧拉主值（未 unwrap）；
-        - pitch 在 asin 前做 clamp，防止浮点误差越界。
-        """
-        return quat_wxyz_to_rpy_xyz_torch(quat)
-
-    def _unwrap_rpy_with_prev(self, rpy: torch.Tensor) -> torch.Tensor:
-        """
-        RPY 展开（unwrap）：基于上一帧，把相邻差分折叠到 (-pi, pi] 后再累加。
-
-        结果特性：
-        - 优先保证跨帧无跳变；
-        - 输出是“连续角”，可超出 [-pi, pi]（不是主值范围）。
-        """
-        return unwrap_rpy_with_prev_torch(rpy, self._prev_ee_rpy_xyz)
-
-    def _build_robot_endeffector_pose_dict(self) -> dict:
-        """
-        构建末端位姿字典，包含 pose / quat / rpy 三个键。
-
-        流水线：
-        1) 读取当前 tcp pose 的 p/q；
-        2) quat 归一化；
-        3) 与上一帧做四元数符号对齐；
-        4) quat -> rpy 主值；
-        5) 基于上一帧做 unwrap，得到连续 RPY；
-        6) 更新缓存（对齐后 quat + unwrap 后 rpy）；
-        7) 输出 {"pose": xyz, "quat": wxyz, "rpy": [roll, pitch, yaw]}。
-
-        备注：该流程只做连续化稳定处理，不尝试全局最优欧拉参数化。
-        """
-        robot_endeffector_p = self.agent.tcp.pose.p
-        robot_endeffector_q = self.agent.tcp.pose.q
-
-        quat_normalized = self._normalize_quat_wxyz(robot_endeffector_q)
-        quat_aligned = self._align_quat_sign_with_prev(quat_normalized)
-        rpy_xyz = self._quat_wxyz_to_rpy_xyz(quat_aligned)
-        rpy_xyz_unwrapped = self._unwrap_rpy_with_prev(rpy_xyz)
-
-        # 缓存“本帧最终参与连续化的表示”，供下一帧继续使用。
-        self._prev_ee_quat_wxyz = quat_aligned.detach().clone()
-        self._prev_ee_rpy_xyz = rpy_xyz_unwrapped.detach().clone()
-        return {
-            "pose": robot_endeffector_p,      # xyz 位置
-            "quat": quat_aligned,              # wxyz 四元数（归一化 + 符号对齐后）
-            "rpy": rpy_xyz_unwrapped,          # 连续化 RPY (roll, pitch, yaw)
-        }
 
     def _augment_obs_and_info(self, obs, info, action):
         """直接从 obs 提取当前步数据并合并进 obs 和 info 后返回，不经过 list 缓冲区中转。"""
@@ -248,8 +170,14 @@ class DemonstrationWrapper(gym.Wrapper):
         wrist_camera_extrinsic_opencv = obs["sensor_param"]["hand_camera"]["extrinsic_cv"]
         wrist_camera_intrinsic_opencv = obs["sensor_param"]["hand_camera"]["intrinsic_cv"]
         wrist_camera_cam2world_opengl = obs["sensor_param"]["hand_camera"]["cam2world_gl"]
-        # 末端位姿以字典形式输出，包含 pose/quat/rpy 三个表示。
-        robot_endeffector_pose = self._build_robot_endeffector_pose_dict()
+        # 末端位姿以字典形式输出，包含 pose/quat/rpy 三个表示；同时更新连续化缓存。
+        robot_endeffector_pose, self._prev_ee_quat_wxyz, self._prev_ee_rpy_xyz = \
+            build_endeffector_pose_dict(
+                self.agent.tcp.pose.p,
+                self.agent.tcp.pose.q,
+                self._prev_ee_quat_wxyz,
+                self._prev_ee_rpy_xyz,
+            )
 
         new_obs = {
             'maniskill_obs': base_obs,

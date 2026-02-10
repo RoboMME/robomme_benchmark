@@ -110,27 +110,61 @@ def unwrap_rpy_with_prev_torch(rpy: torch.Tensor, prev_rpy: torch.Tensor | None)
     return prev + delta
 
 
+def build_endeffector_pose_dict(
+    position: torch.Tensor,
+    quat_wxyz: torch.Tensor,
+    prev_ee_quat_wxyz: torch.Tensor | None,
+    prev_ee_rpy_xyz: torch.Tensor | None,
+    eps: float = 1e-12,
+) -> tuple[dict, torch.Tensor, torch.Tensor]:
+    """
+    末端位姿连续化流水线。
+
+    流水线：
+    1) quat 归一化；
+    2) 与上一帧做四元数符号对齐；
+    3) quat -> rpy 主值；
+    4) 基于上一帧做 unwrap，得到连续 RPY；
+    5) 更新缓存（对齐后 quat + unwrap 后 rpy）；
+    6) 输出 {"pose": xyz, "quat": wxyz, "rpy": [roll, pitch, yaw]}。
+
+    输入：
+      - position: xyz 位置
+      - quat_wxyz: 当前帧 wxyz 四元数
+      - prev_ee_quat_wxyz / prev_ee_rpy_xyz: 上一帧缓存（None = 无缓存）
+
+    返回：
+      - pose_dict: {"pose": position, "quat": 对齐后 quat, "rpy": 连续化 RPY}
+      - new_prev_quat: 更新后的缓存 quat（detach+clone）
+      - new_prev_rpy: 更新后的缓存 rpy（detach+clone）
+    """
+    quat_normalized = normalize_quat_wxyz_torch(quat_wxyz, eps=eps)
+    quat_aligned = align_quat_sign_with_prev_torch(quat_normalized, prev_ee_quat_wxyz)
+    rpy_xyz = quat_wxyz_to_rpy_xyz_torch(quat_aligned)
+    rpy_xyz_unwrapped = unwrap_rpy_with_prev_torch(rpy_xyz, prev_ee_rpy_xyz)
+
+    new_prev_quat = quat_aligned.detach().clone()
+    new_prev_rpy = rpy_xyz_unwrapped.detach().clone()
+
+    pose_dict = {
+        "pose": position,          # xyz 位置
+        "quat": quat_aligned,      # wxyz 四元数（归一化 + 符号对齐后）
+        "rpy": rpy_xyz_unwrapped,  # 连续化 RPY (roll, pitch, yaw)
+    }
+    return pose_dict, new_prev_quat, new_prev_rpy
+
+
 def summarize_and_print_rpy_sequence(rpy_sequence: Any, label: str = "") -> dict[str, Any]:
     """
-    汇总一段 RPY 序列，并打印弧度/角度两份报告。
+    汇总一段 RPY 序列，并打印仅含 count 和 delta 的报告。
     """
     rpy = np.asarray(rpy_sequence, dtype=np.float64)
     if rpy.size == 0:
         summary = {
             "count": 0,
-            "axis_min_rad": None,
-            "axis_max_rad": None,
-            "axis_first_rad": None,
-            "axis_last_rad": None,
-            "axis_min_deg": None,
-            "axis_max_deg": None,
-            "axis_first_deg": None,
-            "axis_last_deg": None,
             "axis_max_abs_delta_rad": [0.0, 0.0, 0.0],
             "axis_max_abs_delta_deg": [0.0, 0.0, 0.0],
-            "prev_step_max_abs_delta_peak_rad": 0.0,
-            "prev_step_max_abs_delta_peak_deg": 0.0,
-            "prev_step_peak_transition": None,
+            "axis_max_abs_delta_transition": [None, None, None],
         }
         prefix = f"{label} " if label else ""
         print(f"{prefix}RPY summary: no RPY samples.")
@@ -149,100 +183,39 @@ def summarize_and_print_rpy_sequence(rpy_sequence: Any, label: str = "") -> dict
         raise ValueError(f"rpy_sequence last dimension must be 3, got shape {rpy.shape}")
 
     count = int(rpy.shape[0])
-    axis_min_rad = np.min(rpy, axis=0)
-    axis_max_rad = np.max(rpy, axis=0)
-    axis_first_rad = rpy[0]
-    axis_last_rad = rpy[-1]
-    rpy_deg = np.rad2deg(rpy)
-    axis_min_deg = np.min(rpy_deg, axis=0)
-    axis_max_deg = np.max(rpy_deg, axis=0)
-    axis_first_deg = rpy_deg[0]
-    axis_last_deg = rpy_deg[-1]
 
     if count < 2:
         axis_max_abs_delta_rad = np.zeros(3, dtype=np.float64)
         axis_max_abs_delta_deg = np.zeros(3, dtype=np.float64)
-        prev_step_max_abs_delta_peak_rad = 0.0
-        prev_step_max_abs_delta_peak_deg = 0.0
-        prev_step_peak_transition = None
+        axis_max_abs_delta_transition = [None, None, None]
     else:
         diff = np.diff(rpy, axis=0)
         abs_diff = np.abs(diff)
         axis_max_abs_delta_rad = np.max(abs_diff, axis=0)
         axis_max_abs_delta_deg = np.rad2deg(axis_max_abs_delta_rad)
-        prev_step_max_abs_delta = np.max(abs_diff, axis=1)
-        peak_idx = int(np.argmax(prev_step_max_abs_delta))
-        prev_step_max_abs_delta_peak_rad = float(prev_step_max_abs_delta[peak_idx])
-        prev_step_max_abs_delta_peak_deg = float(np.rad2deg(prev_step_max_abs_delta_peak_rad))
-        prev_step_peak_transition = [peak_idx, peak_idx + 1]
+
+        peak_indices = np.argmax(abs_diff, axis=0)
+        axis_max_abs_delta_transition = [[int(i), int(i) + 1] for i in peak_indices]
 
     summary = {
         "count": count,
-        "axis_min_rad": axis_min_rad.tolist(),
-        "axis_max_rad": axis_max_rad.tolist(),
-        "axis_first_rad": axis_first_rad.tolist(),
-        "axis_last_rad": axis_last_rad.tolist(),
-        "axis_min_deg": axis_min_deg.tolist(),
-        "axis_max_deg": axis_max_deg.tolist(),
-        "axis_first_deg": axis_first_deg.tolist(),
-        "axis_last_deg": axis_last_deg.tolist(),
         "axis_max_abs_delta_rad": axis_max_abs_delta_rad.tolist(),
         "axis_max_abs_delta_deg": axis_max_abs_delta_deg.tolist(),
-        "prev_step_max_abs_delta_peak_rad": float(prev_step_max_abs_delta_peak_rad),
-        "prev_step_max_abs_delta_peak_deg": float(prev_step_max_abs_delta_peak_deg),
-        "prev_step_peak_transition": prev_step_peak_transition,
+        "axis_max_abs_delta_transition": axis_max_abs_delta_transition,
     }
 
     prefix = f"{label} " if label else ""
     print(f"{prefix}RPY summary (rad):")
     print(f"  count={count}")
     print(
-        "  roll: "
-        f"min={axis_min_rad[0]:.6f}, max={axis_max_rad[0]:.6f}, "
-        f"first={axis_first_rad[0]:.6f}, last={axis_last_rad[0]:.6f}"
-    )
-    print(
-        "  pitch: "
-        f"min={axis_min_rad[1]:.6f}, max={axis_max_rad[1]:.6f}, "
-        f"first={axis_first_rad[1]:.6f}, last={axis_last_rad[1]:.6f}"
-    )
-    print(
-        "  yaw: "
-        f"min={axis_min_rad[2]:.6f}, max={axis_max_rad[2]:.6f}, "
-        f"first={axis_first_rad[2]:.6f}, last={axis_last_rad[2]:.6f}"
-    )
-    print(
         "  axis_max_abs_delta_rad (roll,pitch,yaw)="
         f"[{axis_max_abs_delta_rad[0]:.6f}, {axis_max_abs_delta_rad[1]:.6f}, {axis_max_abs_delta_rad[2]:.6f}]"
     )
-    print(
-        f"  prev_step_max_abs_delta_peak_rad={prev_step_max_abs_delta_peak_rad:.6f}, "
-        f"transition={prev_step_peak_transition}"
-    )
+    print(f"  transitions={axis_max_abs_delta_transition}")
     print(f"{prefix}RPY summary (deg):")
-    print(f"  count={count}")
-    print(
-        "  roll: "
-        f"min={axis_min_deg[0]:.6f}, max={axis_max_deg[0]:.6f}, "
-        f"first={axis_first_deg[0]:.6f}, last={axis_last_deg[0]:.6f}"
-    )
-    print(
-        "  pitch: "
-        f"min={axis_min_deg[1]:.6f}, max={axis_max_deg[1]:.6f}, "
-        f"first={axis_first_deg[1]:.6f}, last={axis_last_deg[1]:.6f}"
-    )
-    print(
-        "  yaw: "
-        f"min={axis_min_deg[2]:.6f}, max={axis_max_deg[2]:.6f}, "
-        f"first={axis_first_deg[2]:.6f}, last={axis_last_deg[2]:.6f}"
-    )
     print(
         "  axis_max_abs_delta_deg (roll,pitch,yaw)="
         f"[{axis_max_abs_delta_deg[0]:.6f}, {axis_max_abs_delta_deg[1]:.6f}, {axis_max_abs_delta_deg[2]:.6f}]"
-    )
-    print(
-        f"  prev_step_max_abs_delta_peak_deg={prev_step_max_abs_delta_peak_deg:.6f}, "
-        f"transition={prev_step_peak_transition}"
     )
 
     return summary

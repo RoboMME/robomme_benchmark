@@ -48,15 +48,15 @@ MAX_STEPS = 3000
 DATASET_ROOT = "/data/hongzefu/dataset_generate"
 
 DEFAULT_ENV_IDS = [
-    #"PickXtimes",
-    # "StopCube",
-    # "SwingXtimes",
-    # "BinFill",
+    "PickXtimes",
+    "StopCube",
+    "SwingXtimes",
+    "BinFill",
     # "VideoUnmaskSwap",
     # "VideoUnmask",
     # "ButtonUnmaskSwap",
     # "ButtonUnmask",
-     "VideoRepick",
+   #  "VideoRepick",
     # "VideoPlaceButton",
     # "VideoPlaceOrder",
     # "PickHighlight",
