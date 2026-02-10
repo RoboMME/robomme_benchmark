@@ -65,14 +65,13 @@ def _get_dummy_action(action_space):
     if action_space == "ee_pose":
         return np.array(
             [
-                -6.0499899e-02,
-                -2.8136521e-08,
-                5.2110010e-01,
-                -7.3355800e-08,
-                1.0000000e00,
-                -2.0861623e-07,
-                -1.8728323e-09,
-                1.0000000e00,
+                -6.0499899e-02,  # pose x
+                -2.8136521e-08,  # pose y
+                5.2110010e-01,   # pose z
+                0.0,             # roll
+                0.0,             # pitch
+                0.0,             # yaw
+                1.0,             # gripper
             ],
             dtype=np.float32,
         )

@@ -1,25 +1,29 @@
 """
 EndeffectorDemonstrationWrapper：外层包装器，接收 ee_pose 动作并经 IK 转成关节动作。
 
-- 统一外部接口：优先使用 action = [ee_p(3), ee_q(4), gripper(1)]，共 8 维
+- 统一外部接口：action = [ee_p(3), rpy(3), gripper(1)]，共 7 维
+- 内部将 RPY 转换为 quat（wxyz）后执行 IK
 - PatternLock/RouteStick：内部忽略 gripper，并下传 7 维 joint action
 """
 import numpy as np
+import torch
 import gymnasium as gym
 
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
+from .rpy_util import rpy_xyz_to_quat_wxyz_torch
 
 
 class EndeffectorDemonstrationWrapper(gym.Wrapper):
     """
     封装一个期望关节动作的环境。step(action) 接收 ee pose：
-    - 统一外部输入：action = [ee_p(3), ee_q(4), gripper(1)]（8 维）
-    - PatternLock/RouteStick 兼容 len>=7 输入，并在内部忽略 gripper
+    - 统一外部输入：action = [ee_p(3), rpy(3), gripper(1)]（7 维）
+    - 内部将 RPY 转换为 quat（wxyz）后执行 IK
+    - PatternLock/RouteStick 兼容 len>=6 输入，并在内部忽略 gripper
     内部先做 IK 得到 joint_action，再调用内层 env.step(joint_action)，并返回：
     (obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch)。
     """
 
-    # resolver 已统一 8 维输出；stick 环境内部忽略 gripper 并下传 7 维 joint action。
+    # stick 环境内部忽略 gripper 并下传 7 维 joint action。
     _EE_POSE_7D_ENV_IDS = ("PatternLock", "RouteStick")
 
     def __init__(self, env):
@@ -33,18 +37,22 @@ class EndeffectorDemonstrationWrapper(gym.Wrapper):
         no_gripper_env = env_id in self._EE_POSE_7D_ENV_IDS
 
         if no_gripper_env:
-            if action.size < 7:
+            if action.size < 6:
                 raise ValueError(
-                    f"[{env_id}] action must have at least 7 elements (ee_p, ee_q) for no-gripper env, got {action.size}"
+                    f"[{env_id}] action must have at least 6 elements (ee_p, rpy) for no-gripper env, got {action.size}"
                 )
-        elif action.size < 8:
+        elif action.size < 7:
             raise ValueError(
-                f"[{env_id}] action must have at least 8 elements (ee_p, ee_q, gripper), got {action.size}"
+                f"[{env_id}] action must have at least 7 elements (ee_p, rpy, gripper), got {action.size}"
             )
 
         ee_p = action[:3]
-        ee_q = action[3:7]
-        gripper = None if no_gripper_env else float(action[7])
+        rpy = action[3:6]
+        gripper = None if no_gripper_env else float(action[6])
+
+        # RPY → quat (wxyz)
+        rpy_t = torch.as_tensor(rpy, dtype=torch.float64)
+        ee_q = rpy_xyz_to_quat_wxyz_torch(rpy_t).numpy()
 
         if self._ee_pose_planner is None:
             self._ee_pose_planner = PandaArmMotionPlanningSolver(

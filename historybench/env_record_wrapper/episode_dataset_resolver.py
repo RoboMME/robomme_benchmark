@@ -126,30 +126,54 @@ class EpisodeDatasetResolver:
         return timestep_group
 
     def _is_demo_group(self, timestep_group: h5py.Group) -> bool:
+        # 新结构: info/is_demo；兼容旧结构: demonstration
+        info_grp = timestep_group.get("info")
+        if info_grp is not None and "is_demo" in info_grp:
+            return _as_bool(info_grp["is_demo"][()])
         if "demonstration" not in timestep_group:
             return False
         return _as_bool(timestep_group["demonstration"][()])
 
     def _extract_joint_action(self, timestep_group: h5py.Group) -> Optional[np.ndarray]:
-        raw_action = timestep_group["action"][()] if "action" in timestep_group else None
+        # 新结构: action/joint_action；兼容旧结构: action（直接 dataset）
+        action_grp = timestep_group.get("action")
+        if action_grp is not None and isinstance(action_grp, h5py.Group) and "joint_action" in action_grp:
+            raw_action = action_grp["joint_action"][()]
+        elif "action" in timestep_group:
+            raw_action = timestep_group["action"][()]
+        else:
+            raw_action = None
         return _action_to_8d(raw_action)
 
     def _extract_ee_pose_gripper(self, timestep_group: h5py.Group) -> Optional[np.ndarray]:
-        p = timestep_group["robot_endeffector_p"][()] if "robot_endeffector_p" in timestep_group else None
-        q = timestep_group["robot_endeffector_q"][()] if "robot_endeffector_q" in timestep_group else None
-        if p is None or q is None:
+        # 从新 HDF5 结构读取：action/eef_action/pose(3) + action/eef_action/rpy(3)
+        # 输出 [pose(3), rpy(3), gripper(1)] = 7 维
+        action_grp = timestep_group.get("action")
+        if action_grp is None or not isinstance(action_grp, h5py.Group):
             return None
-        p_flat = np.asarray(p, dtype=np.float64).flatten()
-        q_flat = np.asarray(q, dtype=np.float64).flatten()
-        if p_flat.size < 3 or q_flat.size < 4:
+        eef_grp = action_grp.get("eef_action")
+        if eef_grp is None or not isinstance(eef_grp, h5py.Group):
             return None
+        if "pose" not in eef_grp or "rpy" not in eef_grp:
+            return None
+        pose = np.asarray(eef_grp["pose"][()], dtype=np.float64).flatten()
+        rpy = np.asarray(eef_grp["rpy"][()], dtype=np.float64).flatten()
+        if pose.size < 3 or rpy.size < 3:
+            return None
+        # gripper 从 joint_action 最后一位获取
         action_8d = self._extract_joint_action(timestep_group)
         gripper = float(action_8d[-1]) if action_8d is not None and action_8d.size > 0 else -1.0
-        return np.concatenate([p_flat[:3], q_flat[:4], [gripper]]).astype(np.float64)
+        return np.concatenate([pose[:3], rpy[:3], [gripper]]).astype(np.float64)
 
     def _extract_keypoint_action(self, timestep_group: h5py.Group) -> Optional[np.ndarray]:
-        p = timestep_group["keypoint_p"][()] if "keypoint_p" in timestep_group else None
-        q = timestep_group["keypoint_q"][()] if "keypoint_q" in timestep_group else None
+        # 新结构: action/keypoint_p, action/keypoint_q；兼容旧结构
+        action_grp = timestep_group.get("action")
+        if action_grp is not None and isinstance(action_grp, h5py.Group):
+            src = action_grp
+        else:
+            src = timestep_group
+        p = src["keypoint_p"][()] if "keypoint_p" in src else None
+        q = src["keypoint_q"][()] if "keypoint_q" in src else None
         if p is None or q is None:
             return None
         p_flat = np.asarray(p, dtype=np.float64).flatten()
@@ -162,9 +186,16 @@ class EpisodeDatasetResolver:
 
     def _extract_subgoal_text(self, timestep_group: h5py.Group) -> Optional[str]:
         val = None
-        if "grounded_subgoal" in timestep_group:
+        # 新结构: info/grounded_subgoal；兼容旧结构
+        info_grp = timestep_group.get("info")
+        if info_grp is not None and isinstance(info_grp, h5py.Group):
+            if "grounded_subgoal" in info_grp:
+                val = info_grp["grounded_subgoal"][()]
+            elif "simple_subgoal" in info_grp:
+                val = info_grp["simple_subgoal"][()]
+        if val is None and "grounded_subgoal" in timestep_group:
             val = timestep_group["grounded_subgoal"][()]
-        elif "subgoal" in timestep_group:
+        if val is None and "subgoal" in timestep_group:
             val = timestep_group["subgoal"][()]
         if val is None:
             return None
@@ -179,7 +210,10 @@ class EpisodeDatasetResolver:
                 continue
 
             self._non_demo_steps.append(record_step)
-            if "keypoint_p" in timestep_group and "keypoint_q" in timestep_group:
+            # 新结构: action/keypoint_p, action/keypoint_q；兼容旧结构
+            action_grp = timestep_group.get("action")
+            kp_src = action_grp if (action_grp is not None and isinstance(action_grp, h5py.Group)) else timestep_group
+            if "keypoint_p" in kp_src and "keypoint_q" in kp_src:
                 self._keypoint_steps.append(record_step)
 
             current_subgoal = self._extract_subgoal_text(timestep_group)
