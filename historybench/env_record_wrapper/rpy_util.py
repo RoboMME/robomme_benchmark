@@ -66,6 +66,33 @@ def quat_wxyz_to_rpy_xyz_torch(quat: torch.Tensor) -> torch.Tensor:
     return torch.stack((roll, pitch, yaw), dim=-1)
 
 
+def rpy_xyz_to_quat_wxyz_torch(rpy: torch.Tensor) -> torch.Tensor:
+    """
+    将 XYZ 顺序 RPY（弧度）转换为 wxyz 四元数。
+
+    与 quat_wxyz_to_rpy_xyz_torch 互为逆操作。
+    使用 intrinsic XYZ（= extrinsic ZYX）Tait-Bryan 组合：
+        q = q_x(roll) ⊗ q_y(pitch) ⊗ q_z(yaw)
+    输出经过归一化，防止浮点积累误差。
+    """
+    roll, pitch, yaw = rpy.unbind(dim=-1)
+
+    cr = torch.cos(roll * 0.5)
+    sr = torch.sin(roll * 0.5)
+    cp = torch.cos(pitch * 0.5)
+    sp = torch.sin(pitch * 0.5)
+    cy = torch.cos(yaw * 0.5)
+    sy = torch.sin(yaw * 0.5)
+
+    w = cr * cp * cy - sr * sp * sy
+    x = sr * cp * cy + cr * sp * sy
+    y = cr * sp * cy - sr * cp * sy
+    z = cr * cp * sy + sr * sp * cy
+
+    quat = torch.stack((w, x, y, z), dim=-1)
+    return normalize_quat_wxyz_torch(quat)
+
+
 def unwrap_rpy_with_prev_torch(rpy: torch.Tensor, prev_rpy: torch.Tensor | None) -> torch.Tensor:
     """
     相对上一帧做 RPY 展开：将差分折叠到 (-pi, pi] 后再累加。

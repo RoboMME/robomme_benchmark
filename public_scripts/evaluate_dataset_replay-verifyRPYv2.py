@@ -26,17 +26,24 @@ from historybench.env_record_wrapper import (
     EpisodeDatasetResolver,
 )
 # RPY 汇总函数改为从共享 util 导入，避免依赖自验证脚本文件。
-from historybench.env_record_wrapper.rpy_util import summarize_and_print_rpy_sequence
+from historybench.env_record_wrapper.rpy_util import (
+    summarize_and_print_rpy_sequence,
+    normalize_quat_wxyz_torch,
+    align_quat_sign_with_prev_torch,
+    quat_wxyz_to_rpy_xyz_torch,
+    unwrap_rpy_with_prev_torch,
+    rpy_xyz_to_quat_wxyz_torch,
+)
 from save_reset_video import save_robomme_video
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
-ACTION_SPACE = "joint_angle"
-#ACTION_SPACE = "ee_pose"
+#ACTION_SPACE = "joint_angle"
+ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
 #ACTION_SPACE = "oracle_planner"
 
-GUI_RENDER = False
+GUI_RENDER = True
 MAX_STEPS = 3000
 DATASET_ROOT = "/data/hongzefu/dataset_generate"
 
@@ -210,6 +217,9 @@ def main():
                 rollout_base_frames: list[np.ndarray] = []
                 rollout_wrist_frames: list[np.ndarray] = []
                 rollout_subgoal_grounded: list[Any] = []
+                # ee_pose 回放时用于 RPY 连续化对齐的缓存（与 _build_robot_endeffector_pose_xyzrpy 一致）
+                _prev_ee_quat_wxyz = None
+                _prev_ee_rpy_xyz = None
                 # 单个 episode 的 RPY 序列，统计范围包含 reset + replay。
                 episode_rpy_seq: list[np.ndarray] = []
                 # 先计入 reset 返回批次中的所有 RPY（可能是多步 demonstration + init）。
@@ -223,6 +233,29 @@ def main():
                         action = _parse_oracle_command(action)
                     if action is None:
                         break
+
+                    # ---- ee_pose: quat→RPY(连续化对齐)→quat, 与 _build_robot_endeffector_pose_xyzrpy 保持一致 ----
+                    if ACTION_SPACE == "ee_pose":
+                        action_arr = np.asarray(action, dtype=np.float64).flatten()
+                        quat_wxyz = torch.as_tensor(action_arr[3:7], dtype=torch.float64)
+                        # 1) 归一化
+                        quat_normalized = normalize_quat_wxyz_torch(quat_wxyz)
+                        # 2) 与上一帧做四元数符号对齐
+                        quat_aligned = align_quat_sign_with_prev_torch(quat_normalized, _prev_ee_quat_wxyz)
+                        # 3) quat -> RPY 主值
+                        rpy_xyz = quat_wxyz_to_rpy_xyz_torch(quat_aligned)
+                        # 4) 基于上一帧做 unwrap, 得到连续 RPY
+                        rpy_xyz_unwrapped = unwrap_rpy_with_prev_torch(rpy_xyz, _prev_ee_rpy_xyz)
+                        # 5) 更新缓存
+                        _prev_ee_quat_wxyz = quat_aligned.detach().clone()
+                        _prev_ee_rpy_xyz = rpy_xyz_unwrapped.detach().clone()
+                        # 6) 连续 RPY 转回 quat
+                        quat_back = rpy_xyz_to_quat_wxyz_torch(rpy_xyz_unwrapped)
+                        quat_back_np = quat_back.detach().cpu().numpy().astype(np.float64)
+                        # 7) 替换 action 中的 quat 部分
+                        action_arr[3:7] = quat_back_np
+                        action = action_arr
+                    # ---- ee_pose quat→RPY→quat 转换结束 ----
 
                     obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.step(action)
 
