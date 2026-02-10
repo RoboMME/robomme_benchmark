@@ -30,6 +30,8 @@ from ..HistoryBench_env.util.segmentation_utils import (
     process_segmentation,
     create_segmentation_visuals,
 )
+from .rpy_util import build_endeffector_pose_dict
+
 class FailsafeTimeout(RuntimeError):
     """当 HistoryBench failsafe 提前终止 episode 时抛出的异常。"""
     pass
@@ -80,6 +82,10 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
         # 视频缓冲区
         self.video_frames = []  # 存储组合后的视频帧
         self.no_object_video_frames = []  # 视频帧中缺失目标时单独保存，用于调试
+
+        # 末端位姿连续化缓存（wxyz / XYZ-RPY），生命周期限定在单个 episode 内
+        self._prev_ee_quat_wxyz = None
+        self._prev_ee_rpy_xyz = None
 
         self.h5_file = None
 
@@ -428,6 +434,13 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                         f"Warning: Failed to save failed no-object video for episode {self.HistoryBench_episode}: {e}"
                     )
 
+    def reset(self, **kwargs):
+        # 每个 episode 重置连续化缓存，避免跨 episode 污染
+        self._prev_ee_quat_wxyz = None
+        self._prev_ee_rpy_xyz = None
+        self._failsafe_triggered = False
+        return super().reset(**kwargs)
+
     def step(self, action):
         self.no_object_flag=False
         obs, reward, terminated, truncated, info = super().step(action)
@@ -566,6 +579,18 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                 
                 env_unwrapped._pending_keypoint = None
 
+            eef_pose_dict, self._prev_ee_quat_wxyz, self._prev_ee_rpy_xyz = build_endeffector_pose_dict(
+                self.agent.tcp.pose.p,
+                self.agent.tcp.pose.q,
+                self._prev_ee_quat_wxyz,
+                self._prev_ee_rpy_xyz,
+            )
+
+            def _to_numpy(value):
+                if isinstance(value, torch.Tensor):
+                    return value.detach().cpu().numpy()
+                return np.asarray(value)
+
             record_data = {
                 'obs': {
                     'front_camera_rgb': base_camera_frame,
@@ -580,12 +605,13 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                     'wrist_camera_extrinsic_opencv': wrist_camera_extrinsic_opencv,
                 },
                 'action': {
-                    'eef_action': {
-                        'pose': self.agent.tcp.pose.p.cpu().numpy(),
-                        'quat': self.agent.tcp.pose.q.cpu().numpy(),
-                    },
                     'joint_action': action,
                     'keypoint': current_keypoint if current_keypoint else None,
+                    'eef_action': {
+                        'pose': _to_numpy(eef_pose_dict['pose']),
+                        'quat': _to_numpy(eef_pose_dict['quat']),
+                        'rpy': _to_numpy(eef_pose_dict['rpy']),
+                    },
                 },
                 'info': {
                     'record_timestep': record_timestep,
@@ -722,14 +748,10 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                 obs_group.create_dataset("front_camera_extrinsic_opencv", data=obs_data['front_camera_extrinsic_opencv'])
                 obs_group.create_dataset("wrist_camera_extrinsic_opencv", data=obs_data['wrist_camera_extrinsic_opencv'])
 
+
                 # ── action 子 group ──
                 action_group = ts_group.create_group("action")
                 action_data_dict = record_data['action']
-
-                # eef_action 子 group（pose + quat）
-                eef_action_group = action_group.create_group("eef_action")
-                eef_action_group.create_dataset("pose", data=action_data_dict['eef_action']['pose'])
-                eef_action_group.create_dataset("quat", data=action_data_dict['eef_action']['quat'])
 
                 # 动作有可能是 None（例如 planner 尚未输出），写入字符串避免 h5py 报 dtype 错误
                 if action_data_dict['joint_action'] is None:
@@ -750,6 +772,12 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                             action_data = np.concatenate([action_data, [-1]])
                             action_data = action_data.reshape(1, 8)
                     action_group.create_dataset("joint_action", data=action_data)
+
+                # eef_action information
+                eef_action_group = action_group.create_group("eef_action")
+                eef_action_group.create_dataset("pose", data=action_data_dict['eef_action']['pose'])
+                eef_action_group.create_dataset("quat", data=action_data_dict['eef_action']['quat'])
+                eef_action_group.create_dataset("rpy", data=action_data_dict['eef_action']['rpy'])
 
                 # 写入keypoint信息（如果存在）
                 keypoint = action_data_dict.get('keypoint', None)
