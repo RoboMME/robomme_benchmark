@@ -43,6 +43,13 @@ from ..HistoryBench_env.util.vqa_options import get_vqa_options
 from ..HistoryBench_env.util import reset_panda
 
 from . import planner_denseStep
+# 姿态连续化与 RPY 统计逻辑统一复用到共享 util，避免多处实现分叉。
+from .rpy_util import (
+    align_quat_sign_with_prev_torch,
+    normalize_quat_wxyz_torch,
+    quat_wxyz_to_rpy_xyz_torch,
+    unwrap_rpy_with_prev_torch,
+)
 
 
 class DemonstrationWrapper(gym.Wrapper):
@@ -147,20 +154,7 @@ class DemonstrationWrapper(gym.Wrapper):
         2. 对零范数或 NaN/Inf，回退为单位四元数 [1, 0, 0, 0]；
         3. 输出与输入形状保持一致，便于批处理。
         """
-        quat = torch.as_tensor(quat)
-        # 有效性判定：输入数值可用且可安全归一化。
-        quat_norm = torch.linalg.norm(quat, dim=-1, keepdim=True)
-        finite_quat = torch.all(torch.isfinite(quat), dim=-1, keepdim=True)
-        finite_norm = torch.isfinite(quat_norm)
-        valid = finite_quat & finite_norm & (quat_norm > 1e-12)
-
-        # 无效项先用 1.0 作为安全除数，随后整体由 where 覆盖 fallback。
-        safe_norm = torch.where(valid, quat_norm, torch.ones_like(quat_norm))
-        normalized = quat / safe_norm
-        # fallback 统一为单位四元数，确保后续转换稳定。
-        fallback = torch.zeros_like(normalized)
-        fallback[..., 0] = 1.0
-        return torch.where(valid.expand_as(normalized), normalized, fallback)
+        return normalize_quat_wxyz_torch(quat, eps=1e-12)
 
     def _align_quat_sign_with_prev(self, quat: torch.Tensor) -> torch.Tensor:
         """
@@ -171,17 +165,7 @@ class DemonstrationWrapper(gym.Wrapper):
         - 若无上一帧缓存，或形状不一致，直接返回当前 quat；
         - shape 不一致通常意味着 batch 结构变化，此时不强行对齐。
         """
-        prev = self._prev_ee_quat_wxyz
-        if prev is None:
-            return quat
-        if prev.shape != quat.shape:
-            return quat
-
-        prev = prev.to(device=quat.device, dtype=quat.dtype)
-        # dot<0 时代表位于单位球对径点，翻转可获得更连续的表示。
-        dot = torch.sum(quat * prev, dim=-1, keepdim=True)
-        sign = torch.where(dot < 0, -torch.ones_like(dot), torch.ones_like(dot))
-        return quat * sign
+        return align_quat_sign_with_prev_torch(quat, self._prev_ee_quat_wxyz)
 
     def _quat_wxyz_to_rpy_xyz(self, quat: torch.Tensor) -> torch.Tensor:
         """
@@ -191,23 +175,7 @@ class DemonstrationWrapper(gym.Wrapper):
         - 输出是欧拉主值（未 unwrap）；
         - pitch 在 asin 前做 clamp，防止浮点误差越界。
         """
-        w, x, y, z = quat.unbind(dim=-1)
-
-        # roll (X)
-        sinr_cosp = 2.0 * (w * x + y * z)
-        cosr_cosp = 1.0 - 2.0 * (x * x + y * y)
-        roll = torch.atan2(sinr_cosp, cosr_cosp)
-
-        # pitch (Y)：asin 入参裁剪到 [-1, 1]。
-        sinp = 2.0 * (w * y - z * x)
-        pitch = torch.asin(torch.clamp(sinp, -1.0, 1.0))
-
-        # yaw (Z)
-        siny_cosp = 2.0 * (w * z + x * y)
-        cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
-        yaw = torch.atan2(siny_cosp, cosy_cosp)
-
-        return torch.stack((roll, pitch, yaw), dim=-1)
+        return quat_wxyz_to_rpy_xyz_torch(quat)
 
     def _unwrap_rpy_with_prev(self, rpy: torch.Tensor) -> torch.Tensor:
         """
@@ -217,19 +185,7 @@ class DemonstrationWrapper(gym.Wrapper):
         - 优先保证跨帧无跳变；
         - 输出是“连续角”，可超出 [-pi, pi]（不是主值范围）。
         """
-        prev = self._prev_ee_rpy_xyz
-        if prev is None:
-            return rpy
-        if prev.shape != rpy.shape:
-            return rpy
-
-        prev = prev.to(device=rpy.device, dtype=rpy.dtype)
-        pi = torch.as_tensor(np.pi, dtype=rpy.dtype, device=rpy.device)
-        two_pi = torch.as_tensor(2.0 * np.pi, dtype=rpy.dtype, device=rpy.device)
-        # 相邻帧差分 -> 映射到 (-pi, pi] -> 加回上一帧，得到连续表示。
-        delta = rpy - prev
-        delta = torch.remainder(delta + pi, two_pi) - pi
-        return prev + delta
+        return unwrap_rpy_with_prev_torch(rpy, self._prev_ee_rpy_xyz)
 
     def _build_robot_endeffector_pose_xyzrpy(self) -> torch.Tensor:
         """

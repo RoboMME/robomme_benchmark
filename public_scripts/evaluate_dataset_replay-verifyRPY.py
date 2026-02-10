@@ -25,8 +25,9 @@ from historybench.env_record_wrapper import (
     BenchmarkEnvBuilder,
     EpisodeDatasetResolver,
 )
+# RPY 汇总函数改为从共享 util 导入，避免依赖自验证脚本文件。
+from historybench.env_record_wrapper.rpy_util import summarize_and_print_rpy_sequence
 from save_reset_video import save_robomme_video
-from verify_robot_endeffector_pose_rpy_continuity import summarize_and_print_rpy_sequence
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
 ACTION_SPACE = "joint_angle"
