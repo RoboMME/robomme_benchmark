@@ -441,10 +441,8 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
 
         base_camera_extrinsic_opencv=obs['sensor_param']['base_camera']['extrinsic_cv']
         base_camera_intrinsic_opencv=obs['sensor_param']['base_camera']['intrinsic_cv']
-        base_camera_cam2world_opengl=obs['sensor_param']['base_camera']['cam2world_gl']
         wrist_camera_extrinsic_opencv=obs['sensor_param']['hand_camera']['extrinsic_cv']
         wrist_camera_intrinsic_opencv=obs['sensor_param']['hand_camera']['intrinsic_cv']
-        wrist_camera_cam2world_opengl=obs['sensor_param']['hand_camera']['cam2world_gl']
         
         
         segmentation=obs['sensor_data']['base_camera']['segmentation'].cpu().numpy()[0]
@@ -569,30 +567,38 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                 env_unwrapped._pending_keypoint = None
 
             record_data = {
-                'record_timestep': record_timestep,
-                'robot_endeffector_p': self.agent.tcp.pose.p.cpu().numpy(),
-                'robot_endeffector_q': self.agent.tcp.pose.q.cpu().numpy(),
-                'image': base_camera_frame,
-                'wrist_image': wrist_camera_frame,
-                'base_camera_depth': base_camera_depth,
-                'wrist_camera_depth': wrist_camera_depth,
-                'base_camera_extrinsic_opencv': base_camera_extrinsic_opencv,
-                'base_camera_intrinsic_opencv': base_camera_intrinsic_opencv,
-                'base_camera_cam2world_opengl': base_camera_cam2world_opengl,
-                'wrist_camera_extrinsic_opencv': wrist_camera_extrinsic_opencv,
-                'wrist_camera_intrinsic_opencv': wrist_camera_intrinsic_opencv,
-                'wrist_camera_cam2world_opengl': wrist_camera_cam2world_opengl,
-                'action': action,
-                'state': self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos,
-                'velocity': end_effector_velocity,
-                'simple_subgoal': subgoal_text,
-                'simple_subgoal_online': subgoal_online_text,
-                'demonstration': self.current_task_demonstration if hasattr(self, 'current_task_demonstration') else False,
-                'segmentation':segmentation,
-                'segmentation_result':segmentation_result,
-                'grounded_subgoal': self.current_subgoal_segment_filled,
-                'grounded_subgoal_online': self.current_subgoal_segment_online_filled,
-                'keypoint': current_keypoint if current_keypoint else None
+                'obs': {
+                    'front_camera_rgb': base_camera_frame,
+                    'wrist_camera_rgb': wrist_camera_frame,
+                    'front_camera_depth': base_camera_depth,
+                    'wrist_camera_depth': wrist_camera_depth,
+                    'joint_angle': self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos,
+                    'eef_velocity': end_effector_velocity,
+                    'front_camera_segmentation': segmentation,
+                    'front_camera_segmentation_result': segmentation_result,
+                    'front_camera_extrinsic_opencv': base_camera_extrinsic_opencv,
+                    'wrist_camera_extrinsic_opencv': wrist_camera_extrinsic_opencv,
+                },
+                'action': {
+                    'eef_action': {
+                        'pose': self.agent.tcp.pose.p.cpu().numpy(),
+                        'quat': self.agent.tcp.pose.q.cpu().numpy(),
+                    },
+                    'joint_action': action,
+                    'keypoint': current_keypoint if current_keypoint else None,
+                },
+                'info': {
+                    'record_timestep': record_timestep,
+                    'simple_subgoal': subgoal_text,
+                    'simple_subgoal_online': subgoal_online_text,
+                    'grounded_subgoal': self.current_subgoal_segment_filled,
+                    'grounded_subgoal_online': self.current_subgoal_segment_online_filled,
+                    'is_demo': self.current_task_demonstration if hasattr(self, 'current_task_demonstration') else False,
+                },
+                '_setup_camera_intrinsics': {
+                    'front_camera_intrinsic_opencv': base_camera_intrinsic_opencv,
+                    'wrist_camera_intrinsic_opencv': wrist_camera_intrinsic_opencv,
+                },
             }
 
             self.buffer.append(record_data)
@@ -675,7 +681,7 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
 
             # 写入所有缓冲的数据
             for record_data in self.buffer:
-                record_timestep = record_data['record_timestep']
+                record_timestep = record_data['info']['record_timestep']
                 if isinstance(record_timestep, (torch.Tensor, np.ndarray)):
                     record_timestep = int(record_timestep.item())
                 else:
@@ -691,48 +697,16 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
 
                 ts_group = episode_group.create_group(group_name)
 
-                ts_group.create_dataset("record_timestep", data=record_timestep)
+                # ── obs 子 group ──
+                obs_group = ts_group.create_group("obs")
+                obs_data = record_data['obs']
+                obs_group.create_dataset("front_camera_rgb", data=obs_data['front_camera_rgb'])
+                obs_group.create_dataset("wrist_camera_rgb", data=obs_data['wrist_camera_rgb'])
+                obs_group.create_dataset("front_camera_depth", data=obs_data['front_camera_depth'])
+                obs_group.create_dataset("wrist_camera_depth", data=obs_data['wrist_camera_depth'])
 
-                #ts_group.create_dataset("real_timestep", data=record_data['real_timestep'])
-                ts_group.create_dataset("robot_endeffector_p", data=record_data['robot_endeffector_p'])
-                ts_group.create_dataset("robot_endeffector_q", data=record_data['robot_endeffector_q'])
-                ts_group.create_dataset("image", data=record_data['image'])
-                ts_group.create_dataset("wrist_image", data=record_data['wrist_image'])
-                ts_group.create_dataset("base_camera_depth", data=record_data['base_camera_depth'])
-                ts_group.create_dataset("wrist_camera_depth", data=record_data['wrist_camera_depth'])
-                ts_group.create_dataset("base_camera_extrinsic_opencv", data=record_data['base_camera_extrinsic_opencv'])
-                ts_group.create_dataset("base_camera_intrinsic_opencv", data=record_data['base_camera_intrinsic_opencv'])
-                ts_group.create_dataset("base_camera_cam2world_opengl", data=record_data['base_camera_cam2world_opengl'])
-                ts_group.create_dataset("wrist_camera_extrinsic_opencv", data=record_data['wrist_camera_extrinsic_opencv'])
-                ts_group.create_dataset("wrist_camera_intrinsic_opencv", data=record_data['wrist_camera_intrinsic_opencv'])
-                ts_group.create_dataset("wrist_camera_cam2world_opengl", data=record_data['wrist_camera_cam2world_opengl'])
-                ts_group.create_dataset("segmentation", data=record_data['segmentation'])
-                ts_group.create_dataset("segmentation_result", data=record_data['segmentation_result'])
-
-                # 动作有可能是 None（例如 planner 尚未输出），写入字符串避免 h5py 报 dtype 错误
-                if record_data['action'] is None:
-                    ts_group.create_dataset("action", data="None", dtype=h5py.special_dtype(vlen=str))
-                else:
-                    action_data = record_data['action']
-                    if isinstance(action_data, torch.Tensor):
-                        action_data = action_data.cpu().numpy()
-                    if isinstance(action_data, list):
-                        action_data = np.array(action_data)
-
-                    # action保证8维度 如果是7维度则填充一个-1
-                    # action保证8维度 如果是7维度则填充一个-1
-                    if isinstance(action_data, np.ndarray):
-                        if action_data.shape == (7,):
-                            action_data = np.concatenate([action_data, [-1]])
-                        elif action_data.shape == (1, 7):
-                            action_data = action_data.flatten()
-                            action_data = np.concatenate([action_data, [-1]])
-                            action_data = action_data.reshape(1, 8)
-                    
-                    ts_group.create_dataset("action", data=action_data)
-
-                state_data = record_data['state']
-                # state保证9维度 如果是7维度则填充两个0
+                # joint_angle 保证9维度 如果是7维度则填充两个0
+                state_data = obs_data['joint_angle']
                 if isinstance(state_data, np.ndarray):
                     if state_data.shape == (7,):
                         state_data = np.concatenate([state_data, [0, 0]])
@@ -740,64 +714,100 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                         state_data = state_data.flatten()
                         state_data = np.concatenate([state_data, [0, 0]])
                         state_data = state_data.reshape(1, 9)
+                obs_group.create_dataset("joint_angle", data=state_data)
 
-                ts_group.create_dataset("state", data=state_data)
-                ts_group.create_dataset("velocity", data=record_data['velocity'])
+                obs_group.create_dataset("eef_velocity", data=obs_data['eef_velocity'])
+                obs_group.create_dataset("front_camera_segmentation", data=obs_data['front_camera_segmentation'])
+                obs_group.create_dataset("front_camera_segmentation_result", data=obs_data['front_camera_segmentation_result'])
+                obs_group.create_dataset("front_camera_extrinsic_opencv", data=obs_data['front_camera_extrinsic_opencv'])
+                obs_group.create_dataset("wrist_camera_extrinsic_opencv", data=obs_data['wrist_camera_extrinsic_opencv'])
 
-                # 处理字符串任务名，确保编码正确
-                task_name = record_data['simple_subgoal']
-                if isinstance(task_name, str):
-                    task_name_encoded = task_name.encode('utf-8')
+                # ── action 子 group ──
+                action_group = ts_group.create_group("action")
+                action_data_dict = record_data['action']
+
+                # eef_action 子 group（pose + quat）
+                eef_action_group = action_group.create_group("eef_action")
+                eef_action_group.create_dataset("pose", data=action_data_dict['eef_action']['pose'])
+                eef_action_group.create_dataset("quat", data=action_data_dict['eef_action']['quat'])
+
+                # 动作有可能是 None（例如 planner 尚未输出），写入字符串避免 h5py 报 dtype 错误
+                if action_data_dict['joint_action'] is None:
+                    action_group.create_dataset("joint_action", data="None", dtype=h5py.special_dtype(vlen=str))
                 else:
-                    task_name_encoded = task_name
-                ts_group.create_dataset("simple_subgoal", data=task_name_encoded)
+                    action_data = action_data_dict['joint_action']
+                    if isinstance(action_data, torch.Tensor):
+                        action_data = action_data.cpu().numpy()
+                    if isinstance(action_data, list):
+                        action_data = np.array(action_data)
 
-                online_task_name = record_data.get('simple_subgoal_online', 'Unknown')
-                if isinstance(online_task_name, str):
-                    task_name_encoded = online_task_name.encode('utf-8')
-                else:
-                    task_name_encoded = online_task_name
-                ts_group.create_dataset("simple_subgoal_online", data=task_name_encoded)
-
-                task_name = record_data['grounded_subgoal']
-                if isinstance(task_name, str):
-                    task_name_encoded = task_name.encode('utf-8')
-                else:
-                    task_name_encoded = task_name
-                ts_group.create_dataset("grounded_subgoal", data=task_name_encoded)
-
-                task_name_online = record_data.get('grounded_subgoal_online', 'Unknown')
-                if isinstance(task_name_online, str):
-                    task_name_encoded = task_name_online.encode('utf-8')
-                else:
-                    task_name_encoded = task_name_online
-                ts_group.create_dataset("grounded_subgoal_online", data=task_name_encoded)
-
-                ts_group.create_dataset("demonstration", data=record_data['demonstration'])
+                    # joint_action 保证8维度 如果是7维度则填充一个-1
+                    if isinstance(action_data, np.ndarray):
+                        if action_data.shape == (7,):
+                            action_data = np.concatenate([action_data, [-1]])
+                        elif action_data.shape == (1, 7):
+                            action_data = action_data.flatten()
+                            action_data = np.concatenate([action_data, [-1]])
+                            action_data = action_data.reshape(1, 8)
+                    action_group.create_dataset("joint_action", data=action_data)
 
                 # 写入keypoint信息（如果存在）
-                keypoint = record_data.get('keypoint', None)
-                # 如果是demonstration就不记录这个keypoint
-                # if keypoint and not record_data['demonstration']:
-                if keypoint:  # 注释掉 demonstration 限制，现在 demonstration 阶段也会记录 keypoint
-                    ts_group.create_dataset("keypoint_p", data=keypoint['keypoint_p'])
-                    ts_group.create_dataset("keypoint_q", data=keypoint['keypoint_q'])
-                    
+                keypoint = action_data_dict.get('keypoint', None)
+                if keypoint:  # keypoint 条件写入 action 子 group
+                    action_group.create_dataset("keypoint_p", data=keypoint['keypoint_p'])
+                    action_group.create_dataset("keypoint_q", data=keypoint['keypoint_q'])
+
                     solve_function_name = keypoint.get('solve_function', 'unknown')
                     if isinstance(solve_function_name, str):
                         solve_function_name_encoded = solve_function_name.encode('utf-8')
                     else:
                         solve_function_name_encoded = solve_function_name
-                    ts_group.create_dataset("keypoint_solve_function", data=solve_function_name_encoded)
-                    
+                    action_group.create_dataset("keypoint_solve_function", data=solve_function_name_encoded)
+
                     keypoint_type = keypoint.get('keypoint_type', 'unknown')
                     if isinstance(keypoint_type, str):
                         keypoint_type_encoded = keypoint_type.encode('utf-8')
                     else:
                         keypoint_type_encoded = keypoint_type
-                    ts_group.create_dataset("keypoint_type", data=keypoint_type_encoded)
+                    action_group.create_dataset("keypoint_type", data=keypoint_type_encoded)
 
-            # 写入 setup 信息（种子、难度、任务列表）
+                # ── info 子 group ──
+                info_group = ts_group.create_group("info")
+                info_data = record_data['info']
+                info_group.create_dataset("record_timestep", data=record_timestep)
+
+                # 处理字符串任务名，确保编码正确
+                task_name = info_data['simple_subgoal']
+                if isinstance(task_name, str):
+                    task_name_encoded = task_name.encode('utf-8')
+                else:
+                    task_name_encoded = task_name
+                info_group.create_dataset("simple_subgoal", data=task_name_encoded)
+
+                online_task_name = info_data.get('simple_subgoal_online', 'Unknown')
+                if isinstance(online_task_name, str):
+                    task_name_encoded = online_task_name.encode('utf-8')
+                else:
+                    task_name_encoded = online_task_name
+                info_group.create_dataset("simple_subgoal_online", data=task_name_encoded)
+
+                task_name = info_data['grounded_subgoal']
+                if isinstance(task_name, str):
+                    task_name_encoded = task_name.encode('utf-8')
+                else:
+                    task_name_encoded = task_name
+                info_group.create_dataset("grounded_subgoal", data=task_name_encoded)
+
+                task_name_online = info_data.get('grounded_subgoal_online', 'Unknown')
+                if isinstance(task_name_online, str):
+                    task_name_encoded = task_name_online.encode('utf-8')
+                else:
+                    task_name_encoded = task_name_online
+                info_group.create_dataset("grounded_subgoal_online", data=task_name_encoded)
+
+                info_group.create_dataset("is_demo", data=info_data['is_demo'])
+
+            # 写入 setup 信息（种子、难度、任务列表、相机内参）
             setup_group = episode_group.create_group(f"setup")
             setup_group.create_dataset("seed", data=self.HistoryBench_seed)
             setup_group.create_dataset(
@@ -805,6 +815,14 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                     data=difficulty,
                     dtype=h5py.string_dtype(encoding="utf-8"),
                 )
+
+            # 相机内参：每 episode 只保存一次（取第一条 buffer 的值）
+            if self.buffer:
+                intrinsics = self.buffer[0].get('_setup_camera_intrinsics', {})
+                if 'front_camera_intrinsic_opencv' in intrinsics:
+                    setup_group.create_dataset("front_camera_intrinsic_opencv", data=intrinsics['front_camera_intrinsic_opencv'])
+                if 'wrist_camera_intrinsic_opencv' in intrinsics:
+                    setup_group.create_dataset("wrist_camera_intrinsic_opencv", data=intrinsics['wrist_camera_intrinsic_opencv'])
 
             # 记录任务列表（如果存在），便于离线复现每个 simple_subgoal 的语义
             if hasattr(self, 'task_list'):
