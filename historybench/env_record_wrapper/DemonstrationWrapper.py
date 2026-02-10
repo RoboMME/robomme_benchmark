@@ -82,6 +82,12 @@ class DemonstrationWrapper(gym.Wrapper):
         self._demo_rrt_max_attempts = 3
         # 当前 demonstration task 是否出现规划失败（用于 task 级继续执行）
         self._current_demo_task_screw_failed = False
+        # 末端姿态连续化缓存（wxyz / XYZ-RPY）：
+        # - _prev_ee_quat_wxyz：保存“符号对齐后”的上一帧四元数表示
+        # - _prev_ee_rpy_xyz：保存“unwrap 后”的上一帧连续 RPY
+        # 这两个缓存共同决定跨帧连续化行为，生命周期限定在单个 episode 内。
+        self._prev_ee_quat_wxyz = None
+        self._prev_ee_rpy_xyz = None
 
         # 与 RecordWrapper 一致：按物体 ID 生成区分度高的颜色表，用于分割可视化
         def generate_color_map(n=100, s_min=0.70, s_max=0.95, v_min=0.78, v_max=0.95):
@@ -106,6 +112,10 @@ class DemonstrationWrapper(gym.Wrapper):
         self.last_subgoal_segment = None
         self.latched_replacements = None
         self._failed_match_save_count = 0
+        # 每个 episode 从干净缓存开始，避免跨 episode 污染：
+        # 不允许上一局的“上一帧姿态”影响当前局第一帧的展开结果。
+        self._prev_ee_quat_wxyz = None
+        self._prev_ee_rpy_xyz = None
 
         super().reset(**kwargs)
         self.episode_success = False
@@ -127,6 +137,127 @@ class DemonstrationWrapper(gym.Wrapper):
         merged_batch = planner_denseStep.concat_step_batches([demo_batch, init_batch])
         self.demonstration_data = merged_batch
         return merged_batch
+
+    def _normalize_quat_wxyz(self, quat: torch.Tensor) -> torch.Tensor:
+        """
+        归一化四元数（wxyz）。
+
+        规则：
+        1. 仅当“元素有限 + 范数有限 + 范数>阈值”时按常规归一化；
+        2. 对零范数或 NaN/Inf，回退为单位四元数 [1, 0, 0, 0]；
+        3. 输出与输入形状保持一致，便于批处理。
+        """
+        quat = torch.as_tensor(quat)
+        # 有效性判定：输入数值可用且可安全归一化。
+        quat_norm = torch.linalg.norm(quat, dim=-1, keepdim=True)
+        finite_quat = torch.all(torch.isfinite(quat), dim=-1, keepdim=True)
+        finite_norm = torch.isfinite(quat_norm)
+        valid = finite_quat & finite_norm & (quat_norm > 1e-12)
+
+        # 无效项先用 1.0 作为安全除数，随后整体由 where 覆盖 fallback。
+        safe_norm = torch.where(valid, quat_norm, torch.ones_like(quat_norm))
+        normalized = quat / safe_norm
+        # fallback 统一为单位四元数，确保后续转换稳定。
+        fallback = torch.zeros_like(normalized)
+        fallback[..., 0] = 1.0
+        return torch.where(valid.expand_as(normalized), normalized, fallback)
+
+    def _align_quat_sign_with_prev(self, quat: torch.Tensor) -> torch.Tensor:
+        """
+        四元数符号对齐（q 与 -q 等价）：
+        通过与上一帧点积判断是否翻转，减少表示层面的突变。
+
+        注意：
+        - 若无上一帧缓存，或形状不一致，直接返回当前 quat；
+        - shape 不一致通常意味着 batch 结构变化，此时不强行对齐。
+        """
+        prev = self._prev_ee_quat_wxyz
+        if prev is None:
+            return quat
+        if prev.shape != quat.shape:
+            return quat
+
+        prev = prev.to(device=quat.device, dtype=quat.dtype)
+        # dot<0 时代表位于单位球对径点，翻转可获得更连续的表示。
+        dot = torch.sum(quat * prev, dim=-1, keepdim=True)
+        sign = torch.where(dot < 0, -torch.ones_like(dot), torch.ones_like(dot))
+        return quat * sign
+
+    def _quat_wxyz_to_rpy_xyz(self, quat: torch.Tensor) -> torch.Tensor:
+        """
+        将 wxyz 四元数转换为 XYZ 顺序的 RPY（弧度）。
+
+        说明：
+        - 输出是欧拉主值（未 unwrap）；
+        - pitch 在 asin 前做 clamp，防止浮点误差越界。
+        """
+        w, x, y, z = quat.unbind(dim=-1)
+
+        # roll (X)
+        sinr_cosp = 2.0 * (w * x + y * z)
+        cosr_cosp = 1.0 - 2.0 * (x * x + y * y)
+        roll = torch.atan2(sinr_cosp, cosr_cosp)
+
+        # pitch (Y)：asin 入参裁剪到 [-1, 1]。
+        sinp = 2.0 * (w * y - z * x)
+        pitch = torch.asin(torch.clamp(sinp, -1.0, 1.0))
+
+        # yaw (Z)
+        siny_cosp = 2.0 * (w * z + x * y)
+        cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+        yaw = torch.atan2(siny_cosp, cosy_cosp)
+
+        return torch.stack((roll, pitch, yaw), dim=-1)
+
+    def _unwrap_rpy_with_prev(self, rpy: torch.Tensor) -> torch.Tensor:
+        """
+        RPY 展开（unwrap）：基于上一帧，把相邻差分折叠到 (-pi, pi] 后再累加。
+
+        结果特性：
+        - 优先保证跨帧无跳变；
+        - 输出是“连续角”，可超出 [-pi, pi]（不是主值范围）。
+        """
+        prev = self._prev_ee_rpy_xyz
+        if prev is None:
+            return rpy
+        if prev.shape != rpy.shape:
+            return rpy
+
+        prev = prev.to(device=rpy.device, dtype=rpy.dtype)
+        pi = torch.as_tensor(np.pi, dtype=rpy.dtype, device=rpy.device)
+        two_pi = torch.as_tensor(2.0 * np.pi, dtype=rpy.dtype, device=rpy.device)
+        # 相邻帧差分 -> 映射到 (-pi, pi] -> 加回上一帧，得到连续表示。
+        delta = rpy - prev
+        delta = torch.remainder(delta + pi, two_pi) - pi
+        return prev + delta
+
+    def _build_robot_endeffector_pose_xyzrpy(self) -> torch.Tensor:
+        """
+        构建 xyz+rpy（连续）形式的末端位姿。
+
+        流水线：
+        1) 读取当前 tcp pose 的 p/q；
+        2) quat 归一化；
+        3) 与上一帧做四元数符号对齐；
+        4) quat -> rpy 主值；
+        5) 基于上一帧做 unwrap，得到连续 RPY；
+        6) 更新缓存（对齐后 quat + unwrap 后 rpy）；
+        7) 输出 [x, y, z, roll, pitch, yaw]。
+
+        备注：该流程只做连续化稳定处理，不尝试全局最优欧拉参数化。
+        """
+        robot_endeffector_p = self.agent.tcp.pose.p
+        robot_endeffector_q = self.agent.tcp.pose.q
+
+        quat_normalized = self._normalize_quat_wxyz(robot_endeffector_q)
+        quat_aligned = self._align_quat_sign_with_prev(quat_normalized)
+        rpy_xyz = self._quat_wxyz_to_rpy_xyz(quat_aligned)
+        rpy_xyz_unwrapped = self._unwrap_rpy_with_prev(rpy_xyz)
+
+        # 缓存“本帧最终参与连续化的表示”，供下一帧继续使用。
+        self._prev_ee_quat_wxyz = quat_aligned.detach().clone()
+        self._prev_ee_rpy_xyz = rpy_xyz_unwrapped.detach().clone()
+        return torch.cat((robot_endeffector_p, rpy_xyz_unwrapped), dim=-1)
 
     def _augment_obs_and_info(self, obs, info, action):
         """直接从 obs 提取当前步数据并合并进 obs 和 info 后返回，不经过 list 缓冲区中转。"""
@@ -157,9 +288,9 @@ class DemonstrationWrapper(gym.Wrapper):
         wrist_camera_extrinsic_opencv = obs["sensor_param"]["hand_camera"]["extrinsic_cv"]
         wrist_camera_intrinsic_opencv = obs["sensor_param"]["hand_camera"]["intrinsic_cv"]
         wrist_camera_cam2world_opengl = obs["sensor_param"]["hand_camera"]["cam2world_gl"]
-        robot_endeffector_p = self.agent.tcp.pose.p
-        robot_endeffector_q = self.agent.tcp.pose.q
-        robot_endeffector_pose = torch.cat((robot_endeffector_p, robot_endeffector_q), dim=-1)
+        # 这里统一产出 xyz+rpy（连续）而非历史的 xyz+quat，
+        # 便于下游直接做角度连续性统计与控制。
+        robot_endeffector_pose = self._build_robot_endeffector_pose_xyzrpy()
 
         new_obs = {
             'maniskill_obs': base_obs,
@@ -475,11 +606,19 @@ class DemonstrationWrapper(gym.Wrapper):
 
         # ---------- 终止时多执行一步，使最后一帧也被记录（动作与上一步相同） ----------
         if terminated.any() and not self._doing_extra_step:
+            # 在递归额外 step 前保存 RPY 连续化缓存。
+            # 原因：内层额外 step 不应改变“当前外层返回步”的上一帧基准，
+            # 否则会污染外层时序上的连续化结果。
+            cached_prev_quat = None if self._prev_ee_quat_wxyz is None else self._prev_ee_quat_wxyz.detach().clone()
+            cached_prev_rpy = None if self._prev_ee_rpy_xyz is None else self._prev_ee_rpy_xyz.detach().clone()
             self._doing_extra_step = True
             try:
                 self.step(normalized_action)
             finally:
                 self._doing_extra_step = False
+                # 恢复外层缓存，保证“额外 step 仅用于记录帧”，不干扰外层连续化状态。
+                self._prev_ee_quat_wxyz = cached_prev_quat
+                self._prev_ee_rpy_xyz = cached_prev_rpy
 
         obs, info = self._augment_obs_and_info(obs, info, normalized_action)
         return planner_denseStep.to_step_batch([(obs, reward, terminated, truncated, info)])
