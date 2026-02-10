@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "MoveCube",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 460,
+        "axis_max_abs_delta_rad": [
+          0.0015871524810791016,
+          0.006913423538208008,
+          0.21062135696411133
+        ],
+        "axis_max_abs_delta_deg": [
+          0.09093713860954977,
+          0.39610999072571945,
+          12.067714829361929
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            416,
+            417
+          ],
+          [
+            416,
+            417
+          ],
+          [
+            256,
+            257
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "MoveCube",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 453,
+        "axis_max_abs_delta_rad": [
+          0.0009071826934814453,
+          0.004475593566894531,
+          0.12811779975891113
+        ],
+        "axis_max_abs_delta_deg": [
+          0.051977739583797034,
+          0.25643262219895874,
+          7.3406092066878035
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            65,
+            66
+          ],
+          [
+            225,
+            226
+          ],
+          [
+            225,
+            226
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "MoveCube",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 452,
+        "axis_max_abs_delta_rad": [
+          0.003446817398071289,
+          0.0064618587493896484,
+          0.02369999885559082
+        ],
+        "axis_max_abs_delta_deg": [
+          0.1974880896617487,
+          0.37023723414971116,
+          1.357909908890235
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            410,
+            411
+          ],
+          [
+            159,
+            160
+          ],
+          [
+            284,
+            285
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "MoveCube",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 517,
+        "axis_max_abs_delta_rad": [
+          0.0047893524169921875,
+          0.0019845962524414062,
+          0.5104720592498779
+        ],
+        "axis_max_abs_delta_deg": [
+          0.2744096800944323,
+          0.11370898930237228,
+          29.247894554370102
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            282,
+            283
+          ],
+          [
+            282,
+            283
+          ],
+          [
+            282,
+            283
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "MoveCube",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 521,
+        "axis_max_abs_delta_rad": [
+          0.0027582645416259766,
+          0.002552509307861328,
+          0.18063902854919434
+        ],
+        "axis_max_abs_delta_deg": [
+          0.15803691701575504,
+          0.14624801050831301,
+          10.349853951212022
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            257,
+            258
+          ],
+          [
+            257,
+            258
+          ],
+          [
+            257,
+            258
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "MoveCube",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 470,
+        "axis_max_abs_delta_rad": [
+          0.0032684803009033203,
+          0.0013499259948730469,
+          1.1872273683547974
+        ],
+        "axis_max_abs_delta_deg": [
+          0.18727012666340961,
+          0.07734506216122439,
+          68.02311752915344
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            246,
+            247
+          ],
+          [
+            340,
+            341
+          ],
+          [
+            246,
+            247
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "MoveCube",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 464,
+        "axis_max_abs_delta_rad": [
+          0.0027611255645751953,
+          0.007559061050415039,
+          0.12058496475219727
+        ],
+        "axis_max_abs_delta_deg": [
+          0.15820084155583533,
+          0.43310229527050853,
+          6.909009553034698
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            418,
+            419
+          ],
+          [
+            418,
+            419
+          ],
+          [
+            257,
+            258
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "MoveCube",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 275,
+        "axis_max_abs_delta_rad": [
+          0.0020122528076171875,
+          0.0028035640716552734,
+          0.10682964324951172
+        ],
+        "axis_max_abs_delta_deg": [
+          0.11529359318981523,
+          0.16063238890035988,
+          6.1208876850852665
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            168,
+            169
+          ],
+          [
+            168,
+            169
+          ],
+          [
+            168,
+            169
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "MoveCube",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 495,
+        "axis_max_abs_delta_rad": [
+          0.0008342266082763672,
+          0.004956722259521484,
+          1.5333917140960693
+        ],
+        "axis_max_abs_delta_deg": [
+          0.047797663811749234,
+          0.2839992656891302,
+          87.85687355803576
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            62,
+            63
+          ],
+          [
+            278,
+            279
+          ],
+          [
+            278,
+            279
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "MoveCube",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 477,
+        "axis_max_abs_delta_rad": [
+          0.002019166946411133,
+          0.008524894714355469,
+          0.19369840621948242
+        ],
+        "axis_max_abs_delta_deg": [
+          0.11568974416167598,
+          0.48844048792595185,
+          11.098101174786919
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            427,
+            428
+          ],
+          [
+            427,
+            428
+          ],
+          [
+            276,
+            277
+          ]
+        ]
+      }
+    }
+  ]
+}

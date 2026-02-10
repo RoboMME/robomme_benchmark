@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "InsertPeg",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 603,
+        "axis_max_abs_delta_rad": [
+          0.008756160736083984,
+          0.008749008178710938,
+          1.6053259372711182
+        ],
+        "axis_max_abs_delta_deg": [
+          0.5016910549157766,
+          0.5012812435655758,
+          91.97840094851821
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            296,
+            297
+          ],
+          [
+            561,
+            562
+          ],
+          [
+            296,
+            297
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "InsertPeg",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 493,
+        "axis_max_abs_delta_rad": [
+          0.017545223236083984,
+          0.05097460746765137,
+          1.5606379508972168
+        ],
+        "axis_max_abs_delta_deg": [
+          1.0052672420424766,
+          2.9206298702324722,
+          89.41796793435553
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            245,
+            246
+          ],
+          [
+            245,
+            246
+          ],
+          [
+            245,
+            246
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "InsertPeg",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 590,
+        "axis_max_abs_delta_rad": [
+          0.0027396678924560547,
+          0.057202816009521484,
+          1.8636022806167603
+        ],
+        "axis_max_abs_delta_deg": [
+          0.15697140750523303,
+          3.2774799336089586,
+          106.77654537029527
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            216,
+            217
+          ],
+          [
+            294,
+            295
+          ],
+          [
+            294,
+            295
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "InsertPeg",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 510,
+        "axis_max_abs_delta_rad": [
+          0.0035092830657958984,
+          0.1068880558013916,
+          1.6062729358673096
+        ],
+        "axis_max_abs_delta_deg": [
+          0.20106710878683537,
+          6.124234477778573,
+          92.03265997128479
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            464,
+            465
+          ],
+          [
+            254,
+            255
+          ],
+          [
+            254,
+            255
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "InsertPeg",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 565,
+        "axis_max_abs_delta_rad": [
+          0.01124882698059082,
+          0.011439800262451172,
+          1.5642783641815186
+        ],
+        "axis_max_abs_delta_deg": [
+          0.6445103104607433,
+          0.6554522735111037,
+          89.62654825122938
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            280,
+            281
+          ],
+          [
+            526,
+            527
+          ],
+          [
+            280,
+            281
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "InsertPeg",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 541,
+        "axis_max_abs_delta_rad": [
+          0.016291379928588867,
+          0.006762027740478516,
+          1.6798279285430908
+        ],
+        "axis_max_abs_delta_deg": [
+          0.9334273123522826,
+          0.3874356504798033,
+          96.24705061372273
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            266,
+            267
+          ],
+          [
+            503,
+            504
+          ],
+          [
+            266,
+            267
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "InsertPeg",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 536,
+        "axis_max_abs_delta_rad": [
+          0.0027191638946533203,
+          0.07021164894104004,
+          1.8312335014343262
+        ],
+        "axis_max_abs_delta_deg": [
+          0.15579661496799085,
+          4.02283115697577,
+          104.92195093515087
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            267,
+            268
+          ],
+          [
+            267,
+            268
+          ],
+          [
+            267,
+            268
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "InsertPeg",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 535,
+        "axis_max_abs_delta_rad": [
+          0.014712095260620117,
+          0.0017580986022949219,
+          1.3601773977279663
+        ],
+        "axis_max_abs_delta_deg": [
+          0.8429409662279537,
+          0.10073162987934806,
+          77.93242427889963
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            266,
+            267
+          ],
+          [
+            266,
+            267
+          ],
+          [
+            266,
+            267
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "InsertPeg",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 535,
+        "axis_max_abs_delta_rad": [
+          0.015364885330200195,
+          0.11671948432922363,
+          1.746889352798462
+        ],
+        "axis_max_abs_delta_deg": [
+          0.8803430821229434,
+          6.687533839007864,
+          100.08938719169176
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            267,
+            268
+          ],
+          [
+            267,
+            268
+          ],
+          [
+            267,
+            268
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "InsertPeg",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 606,
+        "axis_max_abs_delta_rad": [
+          0.01580977439880371,
+          0.0011968612670898438,
+          1.3291510343551636
+        ],
+        "axis_max_abs_delta_deg": [
+          0.905833348105431,
+          0.06857509926692802,
+          76.15474460399876
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            302,
+            303
+          ],
+          [
+            80,
+            81
+          ],
+          [
+            302,
+            303
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "VideoUnmask",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 239,
+        "axis_max_abs_delta_rad": [
+          0.0003781318664550781,
+          0.0021958351135253906,
+          0.0057413578033447266
+        ],
+        "axis_max_abs_delta_deg": [
+          0.021665360047280445,
+          0.12581208451163486,
+          0.3289555708061541
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            153,
+            154
+          ],
+          [
+            155,
+            156
+          ],
+          [
+            97,
+            98
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "VideoUnmask",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 241,
+        "axis_max_abs_delta_rad": [
+          0.0003497600555419922,
+          0.0017974376678466797,
+          0.007801055908203125
+        ],
+        "axis_max_abs_delta_deg": [
+          0.02003977502481741,
+          0.10298559230545226,
+          0.4469675792856344
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            224,
+            225
+          ],
+          [
+            167,
+            168
+          ],
+          [
+            98,
+            99
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "VideoUnmask",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 256,
+        "axis_max_abs_delta_rad": [
+          0.0005280971527099609,
+          0.002630472183227539,
+          0.007921457290649414
+        ],
+        "axis_max_abs_delta_deg": [
+          0.030257738023156486,
+          0.15071495422550135,
+          0.45386607034734733
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            132,
+            133
+          ],
+          [
+            217,
+            218
+          ],
+          [
+            95,
+            96
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "VideoUnmask",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 462,
+        "axis_max_abs_delta_rad": [
+          0.005956888198852539,
+          0.006445169448852539,
+          0.035156965255737305
+        ],
+        "axis_max_abs_delta_deg": [
+          0.3413045528255372,
+          0.3692810076659094,
+          2.0143457296418203
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            307,
+            308
+          ],
+          [
+            307,
+            308
+          ],
+          [
+            203,
+            204
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "VideoUnmask",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 271,
+        "axis_max_abs_delta_rad": [
+          0.003947734832763672,
+          0.012892484664916992,
+          0.010695695877075195
+        ],
+        "axis_max_abs_delta_deg": [
+          0.22618854455414225,
+          0.738684958736879,
+          0.6128182327118841
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            143,
+            144
+          ],
+          [
+            143,
+            144
+          ],
+          [
+            100,
+            101
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "VideoUnmask",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 261,
+        "axis_max_abs_delta_rad": [
+          0.0007839202880859375,
+          0.0016787052154541016,
+          0.017556428909301758
+        ],
+        "axis_max_abs_delta_deg": [
+          0.04491532398200385,
+          0.09618272389211956,
+          1.005909279824458
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            158,
+            159
+          ],
+          [
+            158,
+            159
+          ],
+          [
+            98,
+            99
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "VideoUnmask",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 174,
+        "axis_max_abs_delta_rad": [
+          0.0002906322479248047,
+          0.002010822296142578,
+          0.008008003234863281
+        ],
+        "axis_max_abs_delta_deg": [
+          0.016652001196491087,
+          0.11521163091977508,
+          0.4588247876847766
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            140,
+            141
+          ],
+          [
+            140,
+            141
+          ],
+          [
+            91,
+            92
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "VideoUnmask",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 338,
+        "axis_max_abs_delta_rad": [
+          0.0017669200897216797,
+          0.005290031433105469,
+          0.01767873764038086
+        ],
+        "axis_max_abs_delta_deg": [
+          0.101237063877929,
+          0.3030964746084858,
+          1.0129170539128909
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            144,
+            145
+          ],
+          [
+            144,
+            145
+          ],
+          [
+            91,
+            92
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "VideoUnmask",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 195,
+        "axis_max_abs_delta_rad": [
+          0.00031447410583496094,
+          0.0006916522979736328,
+          0.020354270935058594
+        ],
+        "axis_max_abs_delta_deg": [
+          0.01801803903049364,
+          0.03962875756441398,
+          1.1662138196446572
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            173,
+            174
+          ],
+          [
+            188,
+            189
+          ],
+          [
+            95,
+            96
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "VideoUnmask",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 194,
+        "axis_max_abs_delta_rad": [
+          0.0006372928619384766,
+          0.0027344226837158203,
+          0.0077784061431884766
+        ],
+        "axis_max_abs_delta_deg": [
+          0.03651419130288817,
+          0.1566708791817525,
+          0.445669843343332
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            157,
+            158
+          ],
+          [
+            157,
+            158
+          ],
+          [
+            94,
+            95
+          ]
+        ]
+      }
+    }
+  ]
+}

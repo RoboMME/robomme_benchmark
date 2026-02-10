@@ -40,7 +40,7 @@ DEFAULT_ENV_IDS = [
     #"PickXtimes",
     # "StopCube",
     # "SwingXtimes",
-     "BinFill",
+    # "BinFill",
     # "VideoUnmaskSwap",
     # "VideoUnmask",
     # "ButtonUnmaskSwap",
@@ -50,7 +50,7 @@ DEFAULT_ENV_IDS = [
     # "VideoPlaceOrder",
     # "PickHighlight",
     # "InsertPeg",
-    # "MoveCube",
+    "MoveCube",
     # "PatternLock",
     # "RouteStick",
 ]
@@ -92,6 +92,8 @@ def main():
         print(f"[{env_id}] episode_count from metadata: {episode_count}")
 
         for episode in range(episode_count):
+            if episode !=1:
+                continue    
             env = None
             dataset_resolver = None
             try:

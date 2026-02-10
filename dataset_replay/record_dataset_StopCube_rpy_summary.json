@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "StopCube",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 329,
+        "axis_max_abs_delta_rad": [
+          0.0015747547149658203,
+          0.006635189056396484,
+          0.0035240650177001953
+        ],
+        "axis_max_abs_delta_deg": [
+          0.09022679893586844,
+          0.3801683292029097,
+          0.20191405224391695
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            286,
+            287
+          ],
+          [
+            286,
+            287
+          ],
+          [
+            286,
+            287
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "StopCube",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 257,
+        "axis_max_abs_delta_rad": [
+          0.0014154911041259766,
+          0.007775545120239258,
+          0.004423856735229492
+        ],
+        "axis_max_abs_delta_deg": [
+          0.0811016662047314,
+          0.4455059188032517,
+          0.2534683200991732
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            214,
+            215
+          ],
+          [
+            214,
+            215
+          ],
+          [
+            214,
+            215
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "StopCube",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 164,
+        "axis_max_abs_delta_rad": [
+          0.001516580581665039,
+          0.007857084274291992,
+          0.0036613941192626953
+        ],
+        "axis_max_abs_delta_deg": [
+          0.08689366662090221,
+          0.4501777681955404,
+          0.20978243016777162
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            120,
+            121
+          ],
+          [
+            120,
+            121
+          ],
+          [
+            120,
+            121
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "StopCube",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 136,
+        "axis_max_abs_delta_rad": [
+          0.0007975101470947266,
+          0.0064697265625,
+          0.0024225711822509766
+        ],
+        "axis_max_abs_delta_deg": [
+          0.04569396554738531,
+          0.370688026634932,
+          0.13880310431299914
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            99,
+            100
+          ],
+          [
+            90,
+            91
+          ],
+          [
+            94,
+            95
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "StopCube",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 144,
+        "axis_max_abs_delta_rad": [
+          0.001401662826538086,
+          0.008218765258789062,
+          0.0034723281860351562
+        ],
+        "axis_max_abs_delta_deg": [
+          0.08030936426100993,
+          0.4709005621373591,
+          0.1989497501441314
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            95,
+            96
+          ],
+          [
+            95,
+            96
+          ],
+          [
+            95,
+            96
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "StopCube",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 139,
+        "axis_max_abs_delta_rad": [
+          0.0034508705139160156,
+          0.00889134407043457,
+          0.004162788391113281
+        ],
+        "axis_max_abs_delta_deg": [
+          0.1977203160935291,
+          0.5094364894345711,
+          0.23851020581684526
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            95,
+            96
+          ],
+          [
+            95,
+            96
+          ],
+          [
+            94,
+            95
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "StopCube",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 339,
+        "axis_max_abs_delta_rad": [
+          0.0005376338958740234,
+          0.00629115104675293,
+          0.0017361640930175781
+        ],
+        "axis_max_abs_delta_deg": [
+          0.030804153156757507,
+          0.3604564032582529,
+          0.0994748750720657
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            301,
+            302
+          ],
+          [
+            299,
+            300
+          ],
+          [
+            301,
+            302
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "StopCube",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 192,
+        "axis_max_abs_delta_rad": [
+          0.0027649402618408203,
+          0.0069637298583984375,
+          0.00442957878112793
+        ],
+        "axis_max_abs_delta_deg": [
+          0.15841940760927575,
+          0.39899233055546485,
+          0.2537961691793338
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            156,
+            157
+          ],
+          [
+            155,
+            156
+          ],
+          [
+            153,
+            154
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "StopCube",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 195,
+        "axis_max_abs_delta_rad": [
+          0.0007104873657226562,
+          0.01034688949584961,
+          0.0023033618927001953
+        ],
+        "axis_max_abs_delta_deg": [
+          0.040707927453276,
+          0.5928330992004267,
+          0.13197291514298637
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            152,
+            153
+          ],
+          [
+            152,
+            153
+          ],
+          [
+            152,
+            153
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "StopCube",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 583,
+        "axis_max_abs_delta_rad": [
+          0.0003387928009033203,
+          0.006730556488037109,
+          0.0015673637390136719
+        ],
+        "axis_max_abs_delta_deg": [
+          0.01941139762117624,
+          0.3856324805389199,
+          0.08980332720732764
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            539,
+            540
+          ],
+          [
+            539,
+            540
+          ],
+          [
+            546,
+            547
+          ]
+        ]
+      }
+    }
+  ]
+}

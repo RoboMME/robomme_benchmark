@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "PickXtimes",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 735,
+        "axis_max_abs_delta_rad": [
+          0.0020313262939453125,
+          0.006582498550415039,
+          0.0431063175201416
+        ],
+        "axis_max_abs_delta_deg": [
+          0.11638642345701727,
+          0.3771493855897641,
+          2.469810064254951
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            589,
+            590
+          ],
+          [
+            696,
+            697
+          ],
+          [
+            656,
+            657
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "PickXtimes",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 364,
+        "axis_max_abs_delta_rad": [
+          0.001020669937133789,
+          0.0071642398834228516,
+          0.005012035369873047
+        ],
+        "axis_max_abs_delta_deg": [
+          0.058480079673649175,
+          0.4104807087394263,
+          0.2871684734640161
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            318,
+            319
+          ],
+          [
+            218,
+            219
+          ],
+          [
+            277,
+            278
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "PickXtimes",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 371,
+        "axis_max_abs_delta_rad": [
+          0.004842996597290039,
+          0.007662057876586914,
+          0.025843143463134766
+        ],
+        "axis_max_abs_delta_deg": [
+          0.277483265220938,
+          0.43900357871339957,
+          1.4807030497887244
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            219,
+            220
+          ],
+          [
+            332,
+            333
+          ],
+          [
+            283,
+            284
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "PickXtimes",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 995,
+        "axis_max_abs_delta_rad": [
+          0.002732992172241211,
+          0.007827997207641602,
+          0.022933244705200195
+        ],
+        "axis_max_abs_delta_deg": [
+          0.15658891691171234,
+          0.4485112020380573,
+          1.313978132148713
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            948,
+            949
+          ],
+          [
+            948,
+            949
+          ],
+          [
+            907,
+            908
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "PickXtimes",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 538,
+        "axis_max_abs_delta_rad": [
+          0.0022115707397460938,
+          0.007627725601196289,
+          0.040383338928222656
+        ],
+        "axis_max_abs_delta_deg": [
+          0.12671366948207655,
+          0.4370364842324359,
+          2.3137948832335193
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            498,
+            499
+          ],
+          [
+            498,
+            499
+          ],
+          [
+            460,
+            461
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "PickXtimes",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 548,
+        "axis_max_abs_delta_rad": [
+          0.004298686981201172,
+          0.012884140014648438,
+          0.03802490234375
+        ],
+        "axis_max_abs_delta_deg": [
+          0.2462966214706598,
+          0.7382068454949782,
+          2.1786664206939874
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            76,
+            77
+          ],
+          [
+            76,
+            77
+          ],
+          [
+            139,
+            140
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "PickXtimes",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 325,
+        "axis_max_abs_delta_rad": [
+          0.0009329319000244141,
+          0.006273984909057617,
+          0.0025413036346435547
+        ],
+        "axis_max_abs_delta_deg": [
+          0.053453060444519786,
+          0.35947285601777107,
+          0.14560597272633183
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            179,
+            180
+          ],
+          [
+            283,
+            284
+          ],
+          [
+            239,
+            240
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "PickXtimes",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 870,
+        "axis_max_abs_delta_rad": [
+          0.0016634464263916016,
+          0.009252548217773438,
+          0.013934135437011719
+        ],
+        "axis_max_abs_delta_deg": [
+          0.09530845967835792,
+          0.5301319626197096,
+          0.7983671517044504
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            719,
+            720
+          ],
+          [
+            719,
+            720
+          ],
+          [
+            787,
+            788
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "PickXtimes",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 448,
+        "axis_max_abs_delta_rad": [
+          0.0005898475646972656,
+          0.008347272872924805,
+          0.009233474731445312
+        ],
+        "axis_max_abs_delta_deg": [
+          0.03379577601322309,
+          0.47826350606263285,
+          0.5290391323525077
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            306,
+            307
+          ],
+          [
+            306,
+            307
+          ],
+          [
+            368,
+            369
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "PickXtimes",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 478,
+        "axis_max_abs_delta_rad": [
+          0.0039010047912597656,
+          0.007625102996826172,
+          0.02285170555114746
+        ],
+        "axis_max_abs_delta_deg": [
+          0.22351111039949725,
+          0.4368862200706956,
+          1.3093062827564244
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            331,
+            332
+          ],
+          [
+            436,
+            437
+          ],
+          [
+            388,
+            389
+          ]
+        ]
+      }
+    }
+  ]
+}

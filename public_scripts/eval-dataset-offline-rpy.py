@@ -15,14 +15,52 @@ if _PARENT not in sys.path:
 
 from historybench.env_record_wrapper.rpy_util import summarize_and_print_rpy_sequence
 
-def _write_ordered_rpy_summaries_json(path: str, summaries: list[dict[str, Any]]) -> None:
+def _write_split_rpy_summaries_json(
+    path: str,
+    demo_summaries: list[dict[str, Any]],
+    non_demo_summaries: list[dict[str, Any]],
+) -> None:
     """
-    将当前已完成 episode 的汇总按“运行顺序”写入 JSON。
+    将 demo / non-demo 两部分汇总写入 JSON。
     """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    payload = {"summaries": summaries}
+    if os.path.dirname(path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+    payload = {
+        "demo_summaries": demo_summaries,
+        "non_demo_summaries": non_demo_summaries,
+    }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
+
+
+def _read_is_demo(ts_group: h5py.Group) -> bool:
+    """从 timestep group 读取 info/is_demo，缺失时默认 False。"""
+    info_grp = ts_group.get("info")
+    if info_grp is not None and "is_demo" in info_grp:
+        val = info_grp["is_demo"][()]
+        if isinstance(val, (bytes, np.bytes_)):
+            return val in (b"True", b"true", b"1")
+        return bool(val)
+    return False
+
+
+def _extract_rpy_from_timestep(ts_group: h5py.Group) -> list[np.ndarray]:
+    """从单个 timestep 提取 RPY 向量列表。"""
+    if (
+        "action" in ts_group
+        and "eef_action" in ts_group["action"]
+        and "rpy" in ts_group["action"]["eef_action"]
+    ):
+        rpy_data = ts_group["action"]["eef_action"]["rpy"][()]
+        rpy_arr = np.asarray(rpy_data, dtype=np.float64)
+        if rpy_arr.ndim == 1:
+            rpy_arr = rpy_arr.reshape(1, -1)
+        else:
+            rpy_arr = rpy_arr.reshape(-1, rpy_arr.shape[-1])
+        if rpy_arr.shape[-1] == 3:
+            return [row.copy() for row in rpy_arr]
+    return []
+
 
 def main():
     # Hardcoded dataset directory as requested
@@ -59,9 +97,10 @@ def main():
         print(f"{'='*50}")
         
         # Generate output JSON path
-        output_json_path = dataset_path.parent / f"{dataset_path.stem}_rpy_summary.json"
+        output_json_path = Path("/data/hongzefu/dataset_replay") / f"{dataset_path.stem}_rpy_summary.json"
 
-        ordered_rpy_summaries: list[dict[str, Any]] = []
+        demo_summaries: list[dict[str, Any]] = []
+        non_demo_summaries: list[dict[str, Any]] = []
 
         try:
             with h5py.File(dataset_path, "r") as f:
@@ -104,43 +143,46 @@ def main():
                         
                         timestep_keys.sort(key=get_timestep_idx)
 
-                        episode_rpy_seq = []
+                        # Separate RPY sequences by is_demo flag
+                        demo_rpy_seq: list[np.ndarray] = []
+                        non_demo_rpy_seq: list[np.ndarray] = []
 
                         for ts_key in timestep_keys:
                             ts_group = episode_group[ts_key]
-                            
-                            # Navigate to action/eef_action/rpy
-                            if "action" in ts_group and "eef_action" in ts_group["action"] and "rpy" in ts_group["action"]["eef_action"]:
-                                rpy_data = ts_group["action"]["eef_action"]["rpy"][()]
-                                
-                                # Handle different data shapes effectively
-                                rpy_arr = np.asarray(rpy_data, dtype=np.float64)
-                                if rpy_arr.ndim == 1:
-                                    rpy_arr = rpy_arr.reshape(1, -1)
+                            rpy_rows = _extract_rpy_from_timestep(ts_group)
+                            if rpy_rows:
+                                if _read_is_demo(ts_group):
+                                    demo_rpy_seq.extend(rpy_rows)
                                 else:
-                                    rpy_arr = rpy_arr.reshape(-1, rpy_arr.shape[-1])
-                                
-                                # Valid RPY should have last dim 3
-                                if rpy_arr.shape[-1] == 3:
-                                    for row in rpy_arr:
-                                        episode_rpy_seq.append(row.copy())
-                            else:
-                                pass
+                                    non_demo_rpy_seq.extend(rpy_rows)
 
-                        # Summarize RPY sequence for this episode
-                        episode_summary = summarize_and_print_rpy_sequence(
-                            episode_rpy_seq,
-                            label=f"[{env_id}] episode {episode_idx}",
-                        )
+                        # Summarize demo portion
+                        if demo_rpy_seq:
+                            demo_summary = summarize_and_print_rpy_sequence(
+                                demo_rpy_seq,
+                                label=f"[{env_id}] episode {episode_idx} (demo)",
+                            )
+                            demo_summaries.append({
+                                "order_index": len(demo_summaries),
+                                "env_id": env_id,
+                                "episode": episode_idx,
+                                "action_space": "eef_pose",
+                                "summary": demo_summary,
+                            })
 
-                        episode_record = {
-                            "order_index": len(ordered_rpy_summaries),
-                            "env_id": env_id,
-                            "episode": episode_idx,
-                            "action_space": "eef_pose", 
-                            "summary": episode_summary,
-                        }
-                        ordered_rpy_summaries.append(episode_record)
+                        # Summarize non-demo portion
+                        if non_demo_rpy_seq:
+                            non_demo_summary = summarize_and_print_rpy_sequence(
+                                non_demo_rpy_seq,
+                                label=f"[{env_id}] episode {episode_idx} (non-demo)",
+                            )
+                            non_demo_summaries.append({
+                                "order_index": len(non_demo_summaries),
+                                "env_id": env_id,
+                                "episode": episode_idx,
+                                "action_space": "eef_pose",
+                                "summary": non_demo_summary,
+                            })
 
         except Exception as e:
             print(f"An error occurred while reading {dataset_path.name}: {e}")
@@ -148,9 +190,10 @@ def main():
             traceback.print_exc()
 
         # Write summary to JSON
-        if ordered_rpy_summaries:
-            _write_ordered_rpy_summaries_json(str(output_json_path), ordered_rpy_summaries)
-            print(f"Saved ordered RPY summaries to: {output_json_path}")
+        if demo_summaries or non_demo_summaries:
+            _write_split_rpy_summaries_json(str(output_json_path), demo_summaries, non_demo_summaries)
+            print(f"Saved split RPY summaries to: {output_json_path}")
+            print(f"  demo entries: {len(demo_summaries)}, non-demo entries: {len(non_demo_summaries)}")
         else:
             print(f"No summaries generated for {dataset_path.name}")
 

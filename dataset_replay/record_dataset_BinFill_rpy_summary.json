@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "BinFill",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 378,
+        "axis_max_abs_delta_rad": [
+          0.0006525516510009766,
+          0.007848978042602539,
+          0.005503177642822266
+        ],
+        "axis_max_abs_delta_deg": [
+          0.0373884555166498,
+          0.44971331533197956,
+          0.31530885284446863
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            363,
+            364
+          ],
+          [
+            333,
+            334
+          ],
+          [
+            282,
+            283
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "BinFill",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 372,
+        "axis_max_abs_delta_rad": [
+          0.002597808837890625,
+          0.00709843635559082,
+          0.009202957153320312
+        ],
+        "axis_max_abs_delta_deg": [
+          0.14884348239291786,
+          0.40671044431757924,
+          0.5272906039249844
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            332,
+            333
+          ],
+          [
+            332,
+            333
+          ],
+          [
+            289,
+            290
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "BinFill",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 867,
+        "axis_max_abs_delta_rad": [
+          0.004549264907836914,
+          0.006264925003051758,
+          0.05350518226623535
+        ],
+        "axis_max_abs_delta_deg": [
+          0.2606536791060266,
+          0.35895376164085013,
+          3.065621125933503
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            826,
+            827
+          ],
+          [
+            826,
+            827
+          ],
+          [
+            773,
+            774
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "BinFill",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 1010,
+        "axis_max_abs_delta_rad": [
+          0.010818719863891602,
+          0.010713815689086914,
+          0.061847686767578125
+        ],
+        "axis_max_abs_delta_deg": [
+          0.6198669879353372,
+          0.6138564214657259,
+          3.5436114244293355
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            674,
+            675
+          ],
+          [
+            674,
+            675
+          ],
+          [
+            917,
+            918
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "BinFill",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 409,
+        "axis_max_abs_delta_rad": [
+          0.0018553733825683594,
+          0.00680994987487793,
+          0.002977132797241211
+        ],
+        "axis_max_abs_delta_deg": [
+          0.10630506424207846,
+          0.3901813865261484,
+          0.17057714433189844
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            367,
+            368
+          ],
+          [
+            367,
+            368
+          ],
+          [
+            320,
+            321
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "BinFill",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 545,
+        "axis_max_abs_delta_rad": [
+          0.002305269241333008,
+          0.008023977279663086,
+          0.038567543029785156
+        ],
+        "axis_max_abs_delta_deg": [
+          0.13208219816970657,
+          0.45974003303355826,
+          2.2097574417958854
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            507,
+            508
+          ],
+          [
+            507,
+            508
+          ],
+          [
+            220,
+            221
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "BinFill",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 438,
+        "axis_max_abs_delta_rad": [
+          0.0008835792541503906,
+          0.008170127868652344,
+          0.015372514724731445
+        ],
+        "axis_max_abs_delta_deg": [
+          0.05062536212813451,
+          0.4681138449559939,
+          0.8807802142298243
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            221,
+            222
+          ],
+          [
+            394,
+            395
+          ],
+          [
+            186,
+            187
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "BinFill",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 1110,
+        "axis_max_abs_delta_rad": [
+          0.0025038719177246094,
+          0.007611274719238281,
+          0.04125356674194336
+        ],
+        "axis_max_abs_delta_deg": [
+          0.14346129332694782,
+          0.4360939181269741,
+          2.3636552641746125
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            1074,
+            1075
+          ],
+          [
+            1074,
+            1075
+          ],
+          [
+            1016,
+            1017
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "BinFill",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 723,
+        "axis_max_abs_delta_rad": [
+          0.0036385059356689453,
+          0.006503105163574219,
+          0.013223648071289062
+        ],
+        "axis_max_abs_delta_deg": [
+          0.20847103384712917,
+          0.3726004796025356,
+          0.7576592242511745
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            685,
+            686
+          ],
+          [
+            685,
+            686
+          ],
+          [
+            224,
+            225
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "BinFill",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 473,
+        "axis_max_abs_delta_rad": [
+          0.002133607864379883,
+          0.0060923099517822266,
+          0.04155373573303223
+        ],
+        "axis_max_abs_delta_deg": [
+          0.12224672576488822,
+          0.3490636477226717,
+          2.3808536805047047
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            435,
+            436
+          ],
+          [
+            435,
+            436
+          ],
+          [
+            211,
+            212
+          ]
+        ]
+      }
+    }
+  ]
+}

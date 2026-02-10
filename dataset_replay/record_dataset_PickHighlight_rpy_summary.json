@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "PickHighlight",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 282,
+        "axis_max_abs_delta_rad": [
+          0.0012590885162353516,
+          0.006760597229003906,
+          0.03034043312072754
+        ],
+        "axis_max_abs_delta_deg": [
+          0.07214045801367468,
+          0.3873536882097631,
+          1.7383787664166253
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            78,
+            79
+          ],
+          [
+            76,
+            77
+          ],
+          [
+            148,
+            149
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "PickHighlight",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 292,
+        "axis_max_abs_delta_rad": [
+          0.0021278858184814453,
+          0.00974416732788086,
+          0.010384798049926758
+        ],
+        "axis_max_abs_delta_deg": [
+          0.1219188766847276,
+          0.5582996627568423,
+          0.5950050993564908
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            79,
+            80
+          ],
+          [
+            79,
+            80
+          ],
+          [
+            151,
+            152
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "PickHighlight",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 473,
+        "axis_max_abs_delta_rad": [
+          0.004160881042480469,
+          0.008890867233276367,
+          0.028966188430786133
+        ],
+        "axis_max_abs_delta_deg": [
+          0.23840092279012506,
+          0.509409168677891,
+          1.6596403456647184
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            330,
+            331
+          ],
+          [
+            77,
+            78
+          ],
+          [
+            155,
+            156
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "PickHighlight",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 642,
+        "axis_max_abs_delta_rad": [
+          0.0009238719940185547,
+          0.015238285064697266,
+          0.0354161262512207
+        ],
+        "axis_max_abs_delta_deg": [
+          0.05293396606759882,
+          0.8730894212243899,
+          2.029194560897428
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            81,
+            82
+          ],
+          [
+            329,
+            330
+          ],
+          [
+            307,
+            308
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "PickHighlight",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 344,
+        "axis_max_abs_delta_rad": [
+          0.0009963512420654297,
+          0.007243633270263672,
+          0.05044126510620117
+        ],
+        "axis_max_abs_delta_deg": [
+          0.05708672108296657,
+          0.4150296147266548,
+          2.8900716038858354
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            84,
+            85
+          ],
+          [
+            84,
+            85
+          ],
+          [
+            154,
+            155
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "PickHighlight",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 314,
+        "axis_max_abs_delta_rad": [
+          0.0009281635284423828,
+          0.007110118865966797,
+          0.05861973762512207
+        ],
+        "axis_max_abs_delta_deg": [
+          0.05317985287771928,
+          0.40737980285624054,
+          3.35866356208373
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            75,
+            76
+          ],
+          [
+            75,
+            76
+          ],
+          [
+            136,
+            137
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "PickHighlight",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 391,
+        "axis_max_abs_delta_rad": [
+          0.0017883777618408203,
+          0.00870370864868164,
+          0.0053212642669677734
+        ],
+        "axis_max_abs_delta_deg": [
+          0.10246649792853128,
+          0.49868577168097095,
+          0.3048859841710292
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            78,
+            79
+          ],
+          [
+            237,
+            238
+          ],
+          [
+            309,
+            310
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "PickHighlight",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 594,
+        "axis_max_abs_delta_rad": [
+          0.002657175064086914,
+          0.008297443389892578,
+          0.04998350143432617
+        ],
+        "axis_max_abs_delta_deg": [
+          0.15224491659958422,
+          0.4754084869895675,
+          2.8638436774729863
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            435,
+            436
+          ],
+          [
+            76,
+            77
+          ],
+          [
+            135,
+            136
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "PickHighlight",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 241,
+        "axis_max_abs_delta_rad": [
+          0.0007846355438232422,
+          0.006644248962402344,
+          0.026160478591918945
+        ],
+        "axis_max_abs_delta_deg": [
+          0.04495630511702393,
+          0.3806874235798307,
+          1.4988850133592981
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            193,
+            194
+          ],
+          [
+            79,
+            80
+          ],
+          [
+            153,
+            154
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "PickHighlight",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 232,
+        "axis_max_abs_delta_rad": [
+          0.0006837844848632812,
+          0.006612300872802734,
+          0.020743131637573242
+        ],
+        "axis_max_abs_delta_deg": [
+          0.03917796507919314,
+          0.3788569328822673,
+          1.1884938967172387
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            87,
+            88
+          ],
+          [
+            85,
+            86
+          ],
+          [
+            152,
+            153
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -5,7 +5,6 @@
 import os
 import re
 import sys
-import json
 from typing import Any, Optional
 
 # 将包根目录、上级目录及 scripts 加入 sys.path，便于作为脚本直接运行（不依赖 PYTHONPATH）
@@ -25,18 +24,15 @@ from historybench.env_record_wrapper import (
     BenchmarkEnvBuilder,
     EpisodeDatasetResolver,
 )
-# RPY 汇总函数改为从共享 util 导入，避免依赖自验证脚本文件。
-from historybench.env_record_wrapper.rpy_util import summarize_and_print_rpy_sequence
 from save_reset_video import save_robomme_video
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
-ACTION_SPACE = "joint_angle"
-#ACTION_SPACE = "ee_pose"
+#ACTION_SPACE = "joint_angle"
+ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
-#ACTION_SPACE = "oracle_planner"
 
-GUI_RENDER = False
+GUI_RENDER = True
 MAX_STEPS = 3000
 DATASET_ROOT = "/data/hongzefu/dataset_generate"
 
@@ -49,12 +45,12 @@ DEFAULT_ENV_IDS = [
     # "VideoUnmask",
     # "ButtonUnmaskSwap",
     # "ButtonUnmask",
-     "VideoRepick",
+    # "VideoRepick",
     # "VideoPlaceButton",
     # "VideoPlaceOrder",
     # "PickHighlight",
     # "InsertPeg",
-    # "MoveCube",
+    "MoveCube",
     # "PatternLock",
     # "RouteStick",
 ]
@@ -62,8 +58,6 @@ DEFAULT_ENV_IDS = [
 # ######## 视频保存变量（输出目录）开始 ########
 # 视频输出目录：独立固定写死，不与 h5 路径或 env_id 对齐
 OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay"
-# RPY 汇总 JSON 输出路径：按 action_space 区分文件，避免多模式互相覆盖。
-OUT_RPY_SUMMARY_JSON = os.path.join("/data/hongzefu/", f"rpy_summary_{ACTION_SPACE}.json")
 # ######## 视频保存变量（输出目录）结束 ########
 
 def _parse_oracle_command(subgoal_text: Optional[str]) -> Optional[dict[str, Any]]:
@@ -79,87 +73,14 @@ def _parse_oracle_command(subgoal_text: Optional[str]) -> Optional[dict[str, Any
     return {"action": subgoal_text, "point": point}
 
 
-def _extract_rpy_from_obs_batch(obs_batch: dict[str, Any]) -> list[np.ndarray]:
-    """
-    从 columnar 结构的 obs_batch 中提取 RPY 序列。
-
-    输入兼容说明：
-    - 新格式：obs_batch["robot_endeffector_pose"] 的元素为 dict {"pose": ..., "quat": ..., "rpy": ...}
-    - 旧格式（兼容）：元素为 torch.Tensor / np.ndarray / list，取最后 3 维作为 RPY
-
-    返回值：
-    - list[np.ndarray]，每个元素是 shape=(3,) 的 [roll, pitch, yaw]（float64）
-    - 保持输入原有顺序，供后续按时间顺序汇总与写 JSON。
-    """
-    rpy_rows: list[np.ndarray] = []
-    pose_column = (obs_batch or {}).get("robot_endeffector_pose", None)
-    if pose_column is None:
-        return rpy_rows
-
-    for item in pose_column:
-        if item is None:
-            continue
-
-        # ---------- 新字典格式 ----------
-        if isinstance(item, dict):
-            rpy_val = item.get("rpy")
-            if rpy_val is None:
-                continue
-            if isinstance(rpy_val, torch.Tensor):
-                rpy_arr = rpy_val.detach().cpu().numpy()
-            else:
-                rpy_arr = np.asarray(rpy_val)
-            rpy_arr = np.asarray(rpy_arr, dtype=np.float64).reshape(-1, 3)
-            for row in rpy_arr:
-                rpy_rows.append(row.copy())
-            continue
-
-        # ---------- 旧 Tensor/array 格式（兼容） ----------
-        if isinstance(item, torch.Tensor):
-            pose_arr = item.detach().cpu().numpy()
-        else:
-            pose_arr = np.asarray(item)
-        if pose_arr.size == 0:
-            continue
-
-        pose_arr = np.asarray(pose_arr, dtype=np.float64)
-        if pose_arr.ndim == 1:
-            pose_arr = pose_arr.reshape(1, -1)
-        else:
-            pose_arr = pose_arr.reshape(-1, pose_arr.shape[-1])
-        if pose_arr.shape[-1] < 3:
-            continue
-
-        # 统一取最后 3 维作为 RPY。前面 3 维是 xyz，不参与此处统计。
-        for row in pose_arr[:, -3:]:
-            rpy_rows.append(np.asarray(row, dtype=np.float64).copy())
-    return rpy_rows
-
-
-def _write_ordered_rpy_summaries_json(path: str, summaries: list[dict[str, Any]]) -> None:
-    """
-    将当前已完成 episode 的汇总按“运行顺序”写入 JSON。
-
-    设计点：
-    - 每次写全量列表（覆盖写），中途异常时仍能保留已完成部分；
-    - summaries 内每条记录含 order_index，顺序与回放执行顺序一致；
-    - 使用 ensure_ascii=False + indent=2，便于人工查看与后处理脚本读取。
-    """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    payload = {"summaries": summaries}
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-
-
 def main():
     env_id_list = BenchmarkEnvBuilder.get_task_list()
     print(f"Running envs: {env_id_list}")
     print(f"Using action_space: {ACTION_SPACE}")
-    # 进程内累计：每完成一个 episode 追加一条，保证 order_index 单调递增。
-    ordered_rpy_summaries: list[dict[str, Any]] = []
 
     
 
+    #for env_id in env_id_list:
     for env_id in DEFAULT_ENV_IDS:
         env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
@@ -171,10 +92,8 @@ def main():
         print(f"[{env_id}] episode_count from metadata: {episode_count}")
 
         for episode in range(episode_count):
-            if episode > 5:
-                break
-
-            
+            if episode !=5:
+                continue    
             env = None
             dataset_resolver = None
             try:
@@ -226,10 +145,6 @@ def main():
                 rollout_base_frames: list[np.ndarray] = []
                 rollout_wrist_frames: list[np.ndarray] = []
                 rollout_subgoal_grounded: list[Any] = []
-                # 单个 episode 的 RPY 序列，统计范围包含 reset + replay。
-                episode_rpy_seq: list[np.ndarray] = []
-                # 先计入 reset 返回批次中的所有 RPY（可能是多步 demonstration + init）。
-                episode_rpy_seq.extend(_extract_rpy_from_obs_batch(obs_batch))
                 # ######## 视频保存变量初始化结束 ########
 
                 while step < MAX_STEPS:
@@ -239,6 +154,7 @@ def main():
                         action = _parse_oracle_command(action)
                     if action is None:
                         break
+
 
                     obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.step(action)
 
@@ -256,9 +172,6 @@ def main():
                     wrist_camera_intrinsic_opencv = obs_batch["wrist_camera_intrinsic_opencv"]
                     wrist_camera_cam2world_opengl = obs_batch["wrist_camera_cam2world_opengl"]
                     robot_endeffector_pose = obs_batch["robot_endeffector_pose"]
-                    # 每次 env.step 后把该批次所有 RPY 追加到当前 episode 序列。
-                    episode_rpy_seq.extend(_extract_rpy_from_obs_batch(obs_batch))
-
                     joint_states = obs_batch["joint_states"]
                     velocity = obs_batch["velocity"]
 
@@ -310,19 +223,6 @@ def main():
                     episode=episode,
                     episode_success=episode_success,
                 )
-                episode_summary = summarize_and_print_rpy_sequence(
-                    episode_rpy_seq,
-                    label=f"[{env_id}] episode {episode}",
-                )
-                # 记录到有序列表，后续统一写 JSON。
-                episode_record = {
-                    "order_index": len(ordered_rpy_summaries),
-                    "env_id": env_id,
-                    "episode": int(episode),
-                    "action_space": ACTION_SPACE,
-                    "summary": episode_summary,
-                }
-                ordered_rpy_summaries.append(episode_record)
                 # ######## 视频保存部分结束 ########
 
             except (FileNotFoundError, KeyError) as exc:
@@ -336,9 +236,6 @@ def main():
                     dataset_resolver.close()
                 if env is not None:
                     env.close()
-    # 全部任务结束后再写一次，确保文件是最新完整状态。
-    _write_ordered_rpy_summaries_json(OUT_RPY_SUMMARY_JSON, ordered_rpy_summaries)
-    print(f"Saved ordered RPY summaries to: {OUT_RPY_SUMMARY_JSON}")
 
 
 if __name__ == "__main__":

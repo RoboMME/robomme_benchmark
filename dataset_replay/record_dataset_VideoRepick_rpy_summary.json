@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "VideoRepick",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 906,
+        "axis_max_abs_delta_rad": [
+          0.0010166168212890625,
+          0.006949663162231445,
+          0.11493062973022461
+        ],
+        "axis_max_abs_delta_deg": [
+          0.05824785324186874,
+          0.39818636823340336,
+          6.585040020322653
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            268,
+            269
+          ],
+          [
+            763,
+            764
+          ],
+          [
+            268,
+            269
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "VideoRepick",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 618,
+        "axis_max_abs_delta_rad": [
+          0.0006506443023681641,
+          0.008452415466308594,
+          0.18769598007202148
+        ],
+        "axis_max_abs_delta_deg": [
+          0.037279172489929596,
+          0.4842877329105841,
+          10.754187489698436
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            481,
+            482
+          ],
+          [
+            577,
+            578
+          ],
+          [
+            266,
+            267
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "VideoRepick",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 1001,
+        "axis_max_abs_delta_rad": [
+          0.00563359260559082,
+          0.005982160568237305,
+          0.7266581058502197
+        ],
+        "axis_max_abs_delta_deg": [
+          0.3227810797964626,
+          0.34275255292957985,
+          41.634442614188224
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            843,
+            844
+          ],
+          [
+            960,
+            961
+          ],
+          [
+            382,
+            383
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "VideoRepick",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 645,
+        "axis_max_abs_delta_rad": [
+          0.011070728302001953,
+          0.005071401596069336,
+          0.707949161529541
+        ],
+        "axis_max_abs_delta_deg": [
+          0.6343060078407442,
+          0.29056990767068247,
+          40.56249906546808
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            210,
+            211
+          ],
+          [
+            608,
+            609
+          ],
+          [
+            210,
+            211
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "VideoRepick",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 959,
+        "axis_max_abs_delta_rad": [
+          0.008866071701049805,
+          0.013452291488647461,
+          0.533454418182373
+        ],
+        "axis_max_abs_delta_deg": [
+          0.5079884893305283,
+          0.7707595270792589,
+          30.56468672445686
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            388,
+            389
+          ],
+          [
+            388,
+            389
+          ],
+          [
+            317,
+            318
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "VideoRepick",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 925,
+        "axis_max_abs_delta_rad": [
+          0.0007765293121337891,
+          0.015455007553100586,
+          0.5173544883728027
+        ],
+        "axis_max_abs_delta_deg": [
+          0.04449185225346306,
+          0.8855067051354731,
+          29.64222869591162
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            169,
+            170
+          ],
+          [
+            355,
+            356
+          ],
+          [
+            282,
+            283
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "VideoRepick",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 665,
+        "axis_max_abs_delta_rad": [
+          0.0020287036895751953,
+          0.008137941360473633,
+          0.35468482971191406
+        ],
+        "axis_max_abs_delta_deg": [
+          0.116236159295277,
+          0.46626969388009043,
+          20.321943799808977
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            498,
+            499
+          ],
+          [
+            623,
+            624
+          ],
+          [
+            362,
+            363
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "VideoRepick",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 972,
+        "axis_max_abs_delta_rad": [
+          0.005772590637207031,
+          0.008052825927734375,
+          0.6275231838226318
+        ],
+        "axis_max_abs_delta_deg": [
+          0.33074508036869743,
+          0.4613929388127014,
+          35.95442997964894
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            214,
+            215
+          ],
+          [
+            214,
+            215
+          ],
+          [
+            214,
+            215
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "VideoRepick",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 849,
+        "axis_max_abs_delta_rad": [
+          0.0009102821350097656,
+          0.006247282028198242,
+          0.2599184513092041
+        ],
+        "axis_max_abs_delta_deg": [
+          0.05215532450221737,
+          0.35794289364368825,
+          14.892230277593981
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            282,
+            283
+          ],
+          [
+            808,
+            809
+          ],
+          [
+            282,
+            283
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "VideoRepick",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 637,
+        "axis_max_abs_delta_rad": [
+          0.004940032958984375,
+          0.006953716278076172,
+          0.6329107284545898
+        ],
+        "axis_max_abs_delta_deg": [
+          0.2830430392053284,
+          0.3984185946651838,
+          36.2631135489985
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            338,
+            339
+          ],
+          [
+            597,
+            598
+          ],
+          [
+            338,
+            339
+          ]
+        ]
+      }
+    }
+  ]
+}

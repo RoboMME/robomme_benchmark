@@ -161,6 +161,8 @@ class EpisodeDatasetResolver:
         if pose.size < 3 or rpy.size < 3:
             return None
         # gripper 从 joint_action 最后一位获取
+        with np.printoptions(suppress=True):
+            print(np.degrees(rpy))
         action_8d = self._extract_joint_action(timestep_group)
         gripper = float(action_8d[-1]) if action_8d is not None and action_8d.size > 0 else -1.0
         return np.concatenate([pose[:3], rpy[:3], [gripper]]).astype(np.float64)

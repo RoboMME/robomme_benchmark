@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "PatternLock",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 190,
+        "axis_max_abs_delta_rad": [
+          0.0009000301361083984,
+          0.00027751922607421875,
+          0.002011537551879883
+        ],
+        "axis_max_abs_delta_deg": [
+          0.05156792823359627,
+          0.015900680387789683,
+          0.11525261205479516
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            94,
+            95
+          ],
+          [
+            159,
+            160
+          ],
+          [
+            19,
+            20
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "PatternLock",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 208,
+        "axis_max_abs_delta_rad": [
+          0.0006313323974609375,
+          0.0005376338958740234,
+          0.005045175552368164
+        ],
+        "axis_max_abs_delta_deg": [
+          0.03617268184438753,
+          0.030804153156757507,
+          0.28906726605327965
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            103,
+            104
+          ],
+          [
+            103,
+            104
+          ],
+          [
+            103,
+            104
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "PatternLock",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 262,
+        "axis_max_abs_delta_rad": [
+          0.002595186233520508,
+          0.00047898292541503906,
+          0.0025892257690429688
+        ],
+        "axis_max_abs_delta_deg": [
+          0.1486932182311776,
+          0.027443700085111232,
+          0.14835170877267695
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            130,
+            131
+          ],
+          [
+            130,
+            131
+          ],
+          [
+            130,
+            131
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "PatternLock",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 418,
+        "axis_max_abs_delta_rad": [
+          0.004616260528564453,
+          0.0006833076477050781,
+          0.002402782440185547
+        ],
+        "axis_max_abs_delta_deg": [
+          0.2644922454195738,
+          0.03915064432251309,
+          0.137669292910777
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            208,
+            209
+          ],
+          [
+            208,
+            209
+          ],
+          [
+            208,
+            209
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "PatternLock",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 216,
+        "axis_max_abs_delta_rad": [
+          0.003479480743408203,
+          0.00040411949157714844,
+          0.0029723644256591797
+        ],
+        "axis_max_abs_delta_deg": [
+          0.19935956149433218,
+          0.023154341286343225,
+          0.17030393676509795
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            107,
+            108
+          ],
+          [
+            105,
+            106
+          ],
+          [
+            107,
+            108
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "PatternLock",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 78,
+        "axis_max_abs_delta_rad": [
+          0.002561330795288086,
+          0.0004456043243408203,
+          0.0014872550964355469
+        ],
+        "axis_max_abs_delta_deg": [
+          0.14675344450689395,
+          0.025531247117507663,
+          0.08521344008507908
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            38,
+            39
+          ],
+          [
+            36,
+            37
+          ],
+          [
+            36,
+            37
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "PatternLock",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 302,
+        "axis_max_abs_delta_rad": [
+          0.0007226467132568359,
+          0.0005986690521240234,
+          0.00179290771484375
+        ],
+        "axis_max_abs_delta_deg": [
+          0.0414046067486173,
+          0.034301210011804036,
+          0.10272604511699178
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            150,
+            151
+          ],
+          [
+            262,
+            263
+          ],
+          [
+            150,
+            151
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "PatternLock",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 196,
+        "axis_max_abs_delta_rad": [
+          0.0015668869018554688,
+          0.00044465065002441406,
+          0.004523515701293945
+        ],
+        "axis_max_abs_delta_deg": [
+          0.0897760064506476,
+          0.02547660560414756,
+          0.25917835824530383
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            97,
+            98
+          ],
+          [
+            69,
+            70
+          ],
+          [
+            97,
+            98
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "PatternLock",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 206,
+        "axis_max_abs_delta_rad": [
+          0.0009958744049072266,
+          0.00046825408935546875,
+          0.0030698776245117188
+        ],
+        "axis_max_abs_delta_deg": [
+          0.05705940032628652,
+          0.026828983059810085,
+          0.17589103150616836
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            102,
+            103
+          ],
+          [
+            34,
+            35
+          ],
+          [
+            102,
+            103
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "PatternLock",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 164,
+        "axis_max_abs_delta_rad": [
+          0.0013005733489990234,
+          0.00027251243591308594,
+          0.003576517105102539
+        ],
+        "axis_max_abs_delta_deg": [
+          0.07451736384483912,
+          0.01561381244264915,
+          0.20491933547872254
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            81,
+            82
+          ],
+          [
+            78,
+            79
+          ],
+          [
+            81,
+            82
+          ]
+        ]
+      }
+    }
+  ]
+}

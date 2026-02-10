@@ -1,0 +1,334 @@
+{
+  "summaries": [
+    {
+      "order_index": 0,
+      "env_id": "SwingXtimes",
+      "episode": 0,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 541,
+        "axis_max_abs_delta_rad": [
+          0.0015990734100341797,
+          0.009049654006958008,
+          0.007267951965332031
+        ],
+        "axis_max_abs_delta_deg": [
+          0.09162015752655105,
+          0.518506980652348,
+          0.4164229733173374
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            495,
+            496
+          ],
+          [
+            493,
+            494
+          ],
+          [
+            436,
+            437
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 1,
+      "env_id": "SwingXtimes",
+      "episode": 1,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 574,
+        "axis_max_abs_delta_rad": [
+          0.0027778148651123047,
+          0.0068874359130859375,
+          0.03619861602783203
+        ],
+        "axis_max_abs_delta_deg": [
+          0.1591570680396371,
+          0.3946210094866567,
+          2.074027922609392
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            533,
+            534
+          ],
+          [
+            532,
+            533
+          ],
+          [
+            488,
+            489
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 2,
+      "env_id": "SwingXtimes",
+      "episode": 2,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 551,
+        "axis_max_abs_delta_rad": [
+          0.0013773441314697266,
+          0.008410930633544922,
+          0.0062258243560791016
+        ],
+        "axis_max_abs_delta_deg": [
+          0.07891600567032732,
+          0.4819108270794197,
+          0.3567134595930859
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            514,
+            515
+          ],
+          [
+            505,
+            506
+          ],
+          [
+            506,
+            507
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 3,
+      "env_id": "SwingXtimes",
+      "episode": 3,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 582,
+        "axis_max_abs_delta_rad": [
+          0.0034008026123046875,
+          0.006350278854370117,
+          0.03144407272338867
+        ],
+        "axis_max_abs_delta_deg": [
+          0.19485163664212377,
+          0.36384417708657923,
+          1.8016126577526033
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            538,
+            539
+          ],
+          [
+            538,
+            539
+          ],
+          [
+            498,
+            499
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 4,
+      "env_id": "SwingXtimes",
+      "episode": 4,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 592,
+        "axis_max_abs_delta_rad": [
+          0.0015554428100585938,
+          0.008673906326293945,
+          0.03628039360046387
+        ],
+        "axis_max_abs_delta_deg": [
+          0.08912030829032637,
+          0.4969782243884678,
+          2.0787134323800207
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            544,
+            545
+          ],
+          [
+            543,
+            544
+          ],
+          [
+            498,
+            499
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 5,
+      "env_id": "SwingXtimes",
+      "episode": 5,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 414,
+        "axis_max_abs_delta_rad": [
+          0.002971172332763672,
+          0.007042884826660156,
+          0.02704310417175293
+        ],
+        "axis_max_abs_delta_deg": [
+          0.1702356348733978,
+          0.4035275761643533,
+          1.5494557339740727
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            372,
+            373
+          ],
+          [
+            372,
+            373
+          ],
+          [
+            126,
+            127
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 6,
+      "env_id": "SwingXtimes",
+      "episode": 6,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 342,
+        "axis_max_abs_delta_rad": [
+          0.001924753189086914,
+          0.006769657135009766,
+          0.028936386108398438
+        ],
+        "axis_max_abs_delta_deg": [
+          0.11028023433902588,
+          0.3878727825866841,
+          1.6579327983722152
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            186,
+            187
+          ],
+          [
+            303,
+            304
+          ],
+          [
+            27,
+            28
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 7,
+      "env_id": "SwingXtimes",
+      "episode": 7,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 512,
+        "axis_max_abs_delta_rad": [
+          0.001252889633178711,
+          0.0061664581298828125,
+          0.00934600830078125
+        ],
+        "axis_max_abs_delta_deg": [
+          0.07178528817683401,
+          0.3533120253864196,
+          0.5354868309289996
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            362,
+            363
+          ],
+          [
+            470,
+            471
+          ],
+          [
+            27,
+            28
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 8,
+      "env_id": "SwingXtimes",
+      "episode": 8,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 477,
+        "axis_max_abs_delta_rad": [
+          0.0031070709228515625,
+          0.008047819137573242,
+          0.033772945404052734
+        ],
+        "axis_max_abs_delta_deg": [
+          0.17802205052721234,
+          0.46110607086756084,
+          1.9350472333779725
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            437,
+            438
+          ],
+          [
+            437,
+            438
+          ],
+          [
+            393,
+            394
+          ]
+        ]
+      }
+    },
+    {
+      "order_index": 9,
+      "env_id": "SwingXtimes",
+      "episode": 9,
+      "action_space": "eef_pose",
+      "summary": {
+        "count": 537,
+        "axis_max_abs_delta_rad": [
+          0.0013432502746582031,
+          0.006076812744140625,
+          0.021911144256591797
+        ],
+        "axis_max_abs_delta_deg": [
+          0.07696257156770368,
+          0.34817572313057,
+          1.2554160902050238
+        ],
+        "axis_max_abs_delta_transition": [
+          [
+            403,
+            404
+          ],
+          [
+            489,
+            490
+          ],
+          [
+            30,
+            31
+          ]
+        ]
+      }
+    }
+  ]
+}
