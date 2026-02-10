@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 脚本功能：统一 dataset replay 入口，支持 joint_angle / ee_pose / keypoint / grounded_subgoal 四种 action_space。
+# 脚本功能：统一 dataset replay 入口，支持 joint_angle / ee_pose / keypoint / oracle_planner 四种 action_space。
 # 与 evaluate.py 的主循环与调试字段保持一致；差异在于动作来自 EpisodeDatasetResolver。
 
 import os
@@ -30,8 +30,8 @@ from save_reset_video import save_robomme_video
 #ACTION_SPACE = "joint_angle"
 #ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "keypoint"
-#ACTION_SPACE = "grounded_subgoal"
-ACTION_SPACE = "grounded_subgoal"
+#ACTION_SPACE = "oracle_planner"
+ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = True
 MAX_STEPS = 3000
@@ -106,23 +106,21 @@ def main():
 
                 # 保持 evaluate.py 中的调试变量语义
                 maniskill_obs = obs_batch["maniskill_obs"]
-                base_camera = obs_batch["base_camera"]
+                front_camera = obs_batch["front_camera"]
                 wrist_camera = obs_batch["wrist_camera"]
-                base_camera_depth = obs_batch["base_camera_depth"]
-                base_camera_segmentation = obs_batch["base_camera_segmentation"]
+                front_camera_depth = obs_batch["front_camera_depth"]
+                front_camera_segmentation = obs_batch["front_camera_segmentation"]
                 wrist_camera_depth = obs_batch["wrist_camera_depth"]
-                base_camera_extrinsic_opencv = obs_batch["base_camera_extrinsic_opencv"]
-                base_camera_intrinsic_opencv = obs_batch["base_camera_intrinsic_opencv"]
-                base_camera_cam2world_opengl = obs_batch["base_camera_cam2world_opengl"]
+                front_camera_extrinsic_opencv = obs_batch["front_camera_extrinsic_opencv"]
+                front_camera_intrinsic_opencv = obs_batch["front_camera_intrinsic_opencv"]
+                front_camera_cam2world_opengl = obs_batch["front_camera_cam2world_opengl"]
                 wrist_camera_extrinsic_opencv = obs_batch["wrist_camera_extrinsic_opencv"]
                 wrist_camera_intrinsic_opencv = obs_batch["wrist_camera_intrinsic_opencv"]
                 wrist_camera_cam2world_opengl = obs_batch["wrist_camera_cam2world_opengl"]
-                robot_endeffector_p = obs_batch["robot_endeffector_p"]
-                robot_endeffector_q = obs_batch["robot_endeffector_q"]
-                actions = obs_batch["actions"]
-                states = obs_batch["states"]
+                robot_endeffector_pose = obs_batch["robot_endeffector_pose"]
+                joint_states = obs_batch["joint_states"]
                 velocity = obs_batch["velocity"]
-                language_goal_list = obs_batch["language_goal"]
+                language_goal_list = info_batch["language_goal"]
                 language_goal = language_goal_list[0] if language_goal_list else None
 
                 subgoal = info_batch["subgoal"]
@@ -134,7 +132,7 @@ def main():
                 truncated = bool(truncated_batch[-1].item())
 
                 # ######## 视频保存变量准备（reset 阶段）开始 ########
-                reset_base_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in base_camera]
+                reset_base_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in front_camera]
                 reset_wrist_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_camera]
                 reset_subgoal_grounded = subgoal_grounded
                 # ######## 视频保存变量准备（reset 阶段）结束 ########
@@ -150,7 +148,7 @@ def main():
                 while step < MAX_STEPS:
                     replay_key = ACTION_SPACE
                     action = dataset_resolver.get_step(replay_key, step)
-                    if ACTION_SPACE == "grounded_subgoal":
+                    if ACTION_SPACE == "oracle_planner":
                         action = _parse_oracle_command(action)
                     if action is None:
                         break
@@ -159,30 +157,30 @@ def main():
 
                     # 保持 evaluate.py 中的调试变量语义
                     maniskill_obs = obs_batch["maniskill_obs"]
-                    base_camera = obs_batch["base_camera"]
+                    front_camera = obs_batch["front_camera"]
                     wrist_camera = obs_batch["wrist_camera"]
-                    base_camera_depth = obs_batch["base_camera_depth"]
-                    base_camera_segmentation = obs_batch["base_camera_segmentation"]
+                    front_camera_depth = obs_batch["front_camera_depth"]
+                    front_camera_segmentation = obs_batch["front_camera_segmentation"]
                     wrist_camera_depth = obs_batch["wrist_camera_depth"]
-                    base_camera_extrinsic_opencv = obs_batch["base_camera_extrinsic_opencv"]
-                    base_camera_intrinsic_opencv = obs_batch["base_camera_intrinsic_opencv"]
-                    base_camera_cam2world_opengl = obs_batch["base_camera_cam2world_opengl"]
+                    front_camera_extrinsic_opencv = obs_batch["front_camera_extrinsic_opencv"]
+                    front_camera_intrinsic_opencv = obs_batch["front_camera_intrinsic_opencv"]
+                    front_camera_cam2world_opengl = obs_batch["front_camera_cam2world_opengl"]
                     wrist_camera_extrinsic_opencv = obs_batch["wrist_camera_extrinsic_opencv"]
                     wrist_camera_intrinsic_opencv = obs_batch["wrist_camera_intrinsic_opencv"]
                     wrist_camera_cam2world_opengl = obs_batch["wrist_camera_cam2world_opengl"]
-                    robot_endeffector_p = obs_batch["robot_endeffector_p"]
-                    robot_endeffector_q = obs_batch["robot_endeffector_q"]
-                    actions = obs_batch["actions"]
-                    states = obs_batch["states"]
+                    robot_endeffector_pose = obs_batch["robot_endeffector_pose"]
+                    joint_states = obs_batch["joint_states"]
                     velocity = obs_batch["velocity"]
-                    language_goal_list = obs_batch["language_goal"]
 
+
+
+                    language_goal_list = info_batch["language_goal"]
                     subgoal = info_batch["subgoal"]
                     subgoal_grounded = info_batch["subgoal_grounded"]
                     available_options = info_batch["available_options"]
 
                     # ######## 视频保存变量准备（replay 阶段）开始 ########
-                    rollout_base_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in base_camera)
+                    rollout_base_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in front_camera)
                     rollout_wrist_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_camera)
                     rollout_subgoal_grounded.extend(subgoal_grounded)
                     # ######## 视频保存变量准备（replay 阶段）结束 ########

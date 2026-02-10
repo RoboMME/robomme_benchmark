@@ -159,32 +159,31 @@ class DemonstrationWrapper(gym.Wrapper):
         wrist_camera_cam2world_opengl = obs["sensor_param"]["hand_camera"]["cam2world_gl"]
         robot_endeffector_p = self.agent.tcp.pose.p
         robot_endeffector_q = self.agent.tcp.pose.q
+        robot_endeffector_pose = torch.cat((robot_endeffector_p, robot_endeffector_q), dim=-1)
 
         new_obs = {
             'maniskill_obs': base_obs,
-            'base_camera': image,
+            'front_camera': image,
             'wrist_camera': wrist_image,
-            'actions': action,
-            'states': state,
+            'joint_states': state,
             'velocity': end_effector_velocity,
-            'language_goal': language_goal,
-            'base_camera_depth': base_camera_depth,
-            'base_camera_segmentation': base_camera_segmentation,
+            'front_camera_depth': base_camera_depth,
+            'front_camera_segmentation': base_camera_segmentation,
             'wrist_camera_depth': wrist_camera_depth,
-            'base_camera_extrinsic_opencv': base_camera_extrinsic_opencv,
-            'base_camera_intrinsic_opencv': base_camera_intrinsic_opencv,
-            'base_camera_cam2world_opengl': base_camera_cam2world_opengl,
+            'front_camera_extrinsic_opencv': base_camera_extrinsic_opencv,
+            'front_camera_intrinsic_opencv': base_camera_intrinsic_opencv,
+            'front_camera_cam2world_opengl': base_camera_cam2world_opengl,
             'wrist_camera_extrinsic_opencv': wrist_camera_extrinsic_opencv,
             'wrist_camera_intrinsic_opencv': wrist_camera_intrinsic_opencv,
             'wrist_camera_cam2world_opengl': wrist_camera_cam2world_opengl,
-            'robot_endeffector_p': robot_endeffector_p,
-            'robot_endeffector_q': robot_endeffector_q,
+            'robot_endeffector_pose': robot_endeffector_pose,
         }
         new_info = {
             **info,
             'subgoal': subgoal_text,
             'subgoal_grounded': grounded_subgoal,
             'available_options': available_options,
+            'language_goal': language_goal,
         }
         return new_obs, new_info
 

@@ -189,13 +189,13 @@ class EpisodeDatasetResolver:
 
     def get_step(
         self,
-        mode: Literal["joint_angle", "ee_pose", "keypoint", "grounded_subgoal"],
+        mode: Literal["joint_angle", "ee_pose", "keypoint", "oracle_planner"],
         step: int,
     ) -> Optional[Union[np.ndarray, str]]:
         if step < 0:
             return None
 
-        if mode == "grounded_subgoal":
+        if mode == "oracle_planner":
             if step >= len(self._distinct_subgoal_steps):
                 return None
             timestep_group = self._get_timestep_group(self._distinct_subgoal_steps[step])

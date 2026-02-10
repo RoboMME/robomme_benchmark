@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 脚本功能：统一评测入口，支持 joint_angle / ee_pose / keypoint / grounded_subgoal 四种 action_space。
+# 脚本功能：统一评测入口，支持 joint_angle / ee_pose / keypoint / oracle_planner 四种 action_space。
 
 import os
 import sys
@@ -26,7 +26,7 @@ from historybench.env_record_wrapper import (
 ACTION_SPACE = "joint_angle"
 #ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "keypoint"
-#ACTION_SPACE = "grounded_subgoal"
+#ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = True
 MAX_STEPS = 3000
@@ -48,33 +48,6 @@ DEFAULT_ENV_IDS = [
     "MoveCube",
     "PatternLock",
     "RouteStick",
-]
-
-OBS_SUPER_KEYS = [
-    "maniskill_obs",
-    "base_camera",
-    "wrist_camera",
-    "base_camera_depth",
-    "base_camera_segmentation",
-    "wrist_camera_depth",
-    "base_camera_extrinsic_opencv",
-    "base_camera_intrinsic_opencv",
-    "base_camera_cam2world_opengl",
-    "wrist_camera_extrinsic_opencv",
-    "wrist_camera_intrinsic_opencv",
-    "wrist_camera_cam2world_opengl",
-    "robot_endeffector_p",
-    "robot_endeffector_q",
-    "actions",
-    "states",
-    "velocity",
-    "language_goal",
-]
-
-INFO_SUPER_KEYS = [
-    "subgoal",
-    "subgoal_grounded",
-    "available_options",
 ]
 
 
@@ -108,7 +81,7 @@ def _get_dummy_action(action_space):
             [-0.120827354, 0.17769682, 0.15, 0.0, 0.972572, 0.23260213, 0.0, 1.0],
             dtype=np.float32,
         )
-    if action_space == "grounded_subgoal":
+    if action_space == "oracle_planner":
         return {
             "action": "pick up the cube",
             "point": [0, 0],
@@ -137,25 +110,24 @@ def main():
 
             # 保持四个原评测脚本中的调试变量语义
             maniskill_obs = obs_batch["maniskill_obs"]
-            base_camera = obs_batch["base_camera"]
+            front_camera = obs_batch["front_camera"]
             wrist_camera = obs_batch["wrist_camera"]
-            base_camera_depth = obs_batch["base_camera_depth"]
-            base_camera_segmentation = obs_batch["base_camera_segmentation"]
+            front_camera_depth = obs_batch["front_camera_depth"]
+            front_camera_segmentation = obs_batch["front_camera_segmentation"]
             wrist_camera_depth = obs_batch["wrist_camera_depth"]
-            base_camera_extrinsic_opencv = obs_batch["base_camera_extrinsic_opencv"]
-            base_camera_intrinsic_opencv = obs_batch["base_camera_intrinsic_opencv"]
-            base_camera_cam2world_opengl = obs_batch["base_camera_cam2world_opengl"]
+            front_camera_extrinsic_opencv = obs_batch["front_camera_extrinsic_opencv"]
+            front_camera_intrinsic_opencv = obs_batch["front_camera_intrinsic_opencv"]
+            front_camera_cam2world_opengl = obs_batch["front_camera_cam2world_opengl"]
             wrist_camera_extrinsic_opencv = obs_batch["wrist_camera_extrinsic_opencv"]
             wrist_camera_intrinsic_opencv = obs_batch["wrist_camera_intrinsic_opencv"]
             wrist_camera_cam2world_opengl = obs_batch["wrist_camera_cam2world_opengl"]
-            robot_endeffector_p = obs_batch["robot_endeffector_p"]
-            robot_endeffector_q = obs_batch["robot_endeffector_q"]
-            actions = obs_batch["actions"]
-            states = obs_batch["states"]
+            robot_endeffector_pose = obs_batch["robot_endeffector_pose"]
+            joint_states = obs_batch["joint_states"]
             velocity = obs_batch["velocity"]
-            language_goal_list = obs_batch["language_goal"]
-            language_goal = language_goal_list[0] if language_goal_list else None
+            language_goal_list = info_batch["language_goal"]
 
+
+            language_goal = language_goal_list[0] if language_goal_list else None
             subgoal = info_batch["subgoal"]
             subgoal_grounded = info_batch["subgoal_grounded"]
             available_options = info_batch["available_options"]
@@ -174,24 +146,22 @@ def main():
 
                 # 保持四个原评测脚本中的调试变量语义
                 maniskill_obs = obs_batch["maniskill_obs"]
-                base_camera = obs_batch["base_camera"]
+                front_camera = obs_batch["front_camera"]
                 wrist_camera = obs_batch["wrist_camera"]
-                base_camera_depth = obs_batch["base_camera_depth"]
-                base_camera_segmentation = obs_batch["base_camera_segmentation"]
+                front_camera_depth = obs_batch["front_camera_depth"]
+                front_camera_segmentation = obs_batch["front_camera_segmentation"]
                 wrist_camera_depth = obs_batch["wrist_camera_depth"]
-                base_camera_extrinsic_opencv = obs_batch["base_camera_extrinsic_opencv"]
-                base_camera_intrinsic_opencv = obs_batch["base_camera_intrinsic_opencv"]
-                base_camera_cam2world_opengl = obs_batch["base_camera_cam2world_opengl"]
+                front_camera_extrinsic_opencv = obs_batch["front_camera_extrinsic_opencv"]
+                front_camera_intrinsic_opencv = obs_batch["front_camera_intrinsic_opencv"]
+                front_camera_cam2world_opengl = obs_batch["front_camera_cam2world_opengl"]
                 wrist_camera_extrinsic_opencv = obs_batch["wrist_camera_extrinsic_opencv"]
                 wrist_camera_intrinsic_opencv = obs_batch["wrist_camera_intrinsic_opencv"]
                 wrist_camera_cam2world_opengl = obs_batch["wrist_camera_cam2world_opengl"]
-                robot_endeffector_p = obs_batch["robot_endeffector_p"]
-                robot_endeffector_q = obs_batch["robot_endeffector_q"]
-                actions = obs_batch["actions"]
-                states = obs_batch["states"]
+                robot_endeffector_pose = obs_batch["robot_endeffector_pose"]
+                joint_states = obs_batch["joint_states"]
                 velocity = obs_batch["velocity"]
-                language_goal_list = obs_batch["language_goal"]
 
+                language_goal_list = info_batch["language_goal"]
                 subgoal = info_batch["subgoal"]
                 subgoal_grounded = info_batch["subgoal_grounded"]
                 available_options = info_batch["available_options"]
