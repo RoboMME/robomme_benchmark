@@ -11,16 +11,16 @@ import numpy as np
 from typing import Any, Dict, Iterable, List, Optional, Set
 import h5py
 
-# 将父目录添加到 Python 路径，以便导入 historybench 模块
+# 将父目录添加到 Python 路径，以便导入 robomme 模块
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _root)
 sys.path.insert(0, os.path.join(_root, "scripts"))
 import gymnasium as gym
 
-# 导入 HistoryBench 相关的环境包装器和异常类
-from historybench.env_record_wrapper import HistoryBenchRecordWrapper, FailsafeTimeout
-from historybench.HistoryBench_env import *
-from historybench.HistoryBench_env.errors import SceneGenerationError
+# 导入 Robomme 相关的环境包装器和异常类
+from robomme.env_record_wrapper import RobommeRecordWrapper, FailsafeTimeout
+from robomme.robomme_env import *
+from robomme.robomme_env.errors import SceneGenerationError
 
 # from util import *
 import torch
@@ -33,7 +33,7 @@ from planner_fail_safe import (
 )
 
 """
-脚本功能：并行生成 HistoryBench 环境的数据集。
+脚本功能：并行生成 Robomme 环境的数据集。
 该脚本支持多进程并行运行环境模拟，生成包含 RGB、深度、分割等观测数据的 HDF5 数据集。
 主要功能包括：
 1. 配置环境列表和参数。
@@ -66,7 +66,7 @@ DEFAULT_ENVS =[
 # "RouteStick"
     ]
 
-# 参考数据集 metadata 根目录：用于读取 difficulty 和 HistoryBench_seed
+# 参考数据集 metadata 根目录：用于读取 difficulty 和 Robomme_seed
 SOURCE_METADATA_ROOT = Path("/data/hongzefu/data_1206")
 VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
 DATASET_SCREW_MAX_ATTEMPTS = 3
@@ -78,7 +78,7 @@ def _load_env_metadata_records(
     metadata_root: Path,
 ) -> List[Dict[str, Any]]:
     """
-    从参考目录读取某个环境的 metadata 记录，用于控制 difficulty 和 HistoryBench_seed。
+    从参考目录读取某个环境的 metadata 记录，用于控制 difficulty 和 Robomme_seed。
     """
     metadata_path = metadata_root / f"record_dataset_{env_id}_metadata.json"
     if not metadata_path.exists():
@@ -214,7 +214,7 @@ def _run_episode_attempt(
     
     主要步骤：
     1. 初始化环境参数和 Gym 环境。
-    2. 应用 HistoryBenchRecordWrapper 进行数据记录。
+    2. 应用 RobommeRecordWrapper 进行数据记录。
     3. 根据环境类型选择合适的规划器 (PandaStick 或 PandaArm)。
     4. 获取任务列表并逐个执行任务。
     5. 使用规划器解决任务，并处理可能的规划失败。
@@ -231,29 +231,29 @@ def _run_episode_attempt(
             control_mode="pd_joint_pos",        # 控制模式：位置控制
             render_mode="rgb_array",            # 渲染模式
             reward_mode="dense",                # 奖励模式
-            HistoryBench_seed=seed,             # 随机种子
+            Robomme_seed=seed,             # 随机种子
             max_episode_steps=200,              # 最大步数
-            HistoryBench_difficulty=difficulty, # 难度设置
+            Robomme_difficulty=difficulty, # 难度设置
         )
         
         # 针对前几个 episode 的特殊故障恢复设置 (仅用于测试或演示目的)
         if episode <= 5:
-            env_kwargs["historybench_failure_recovery"] = True
+            env_kwargs["robomme_failure_recovery"] = True
             if episode <=2:
-                env_kwargs["historybench_failure_recovery_mode"] = "z"  # z轴恢复
+                env_kwargs["robomme_failure_recovery_mode"] = "z"  # z轴恢复
             else:
-                env_kwargs["historybench_failure_recovery_mode"] = "xy" # xy轴恢复
+                env_kwargs["robomme_failure_recovery_mode"] = "xy" # xy轴恢复
 
 
         env = gym.make(env_id, **env_kwargs)
         
         # 2. 包装环境以记录数据
-        env = HistoryBenchRecordWrapper(
+        env = RobommeRecordWrapper(
             env,
-            HistoryBench_dataset=str(temp_dataset_path), # 数据保存路径
-            HistoryBench_env=env_id,
-            HistoryBench_episode=episode,
-            HistoryBench_seed=seed,
+            Robomme_dataset=str(temp_dataset_path), # 数据保存路径
+            Robomme_env=env_id,
+            Robomme_episode=episode,
+            Robomme_seed=seed,
             save_video=save_video,
 
         )
@@ -534,7 +534,7 @@ def _merge_dataset_from_folder(
 
     final_dataset_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 查找 HistoryBenchRecordWrapper 创建的子文件夹
+    # 查找 RobommeRecordWrapper 创建的子文件夹
     # 它通常创建以 "_hdf5_files" 结尾的目录
     hdf5_folders = list(temp_folder.glob("*_hdf5_files"))
 
@@ -649,14 +649,14 @@ def _save_episode_metadata(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="HistoryBench 数据集生成器")
+    parser = argparse.ArgumentParser(description="Robomme 数据集生成器")
     parser.add_argument(
         "--env",
         "-e",
         type=str,
         nargs="+",
         default=None,
-        help="要运行的环境 ID。提供一个或多个值；默认为所有内置 HistoryBench 环境。",
+        help="要运行的环境 ID。提供一个或多个值；默认为所有内置 Robomme 环境。",
     )
     parser.add_argument(
         "--episodes",
@@ -670,7 +670,7 @@ def parse_args() -> argparse.Namespace:
         dest="save_video",
         action="store_true",
         default=True,
-        help="启用通过 HistoryBenchRecordWrapper 进行视频录制 (默认: 启用)。",
+        help="启用通过 RobommeRecordWrapper 进行视频录制 (默认: 启用)。",
     )
     parser.add_argument(
         "--no-save-video",

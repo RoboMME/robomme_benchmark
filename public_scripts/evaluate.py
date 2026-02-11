@@ -15,10 +15,10 @@ for _path in (_PARENT, _ROOT, _SCRIPTS):
 import numpy as np
 import torch
 
-# HistoryBench 环境及工具（保持与现有评测脚本一致的导入方式）
-from historybench.HistoryBench_env import *
-from historybench.HistoryBench_env.util import *
-from historybench.env_record_wrapper import (
+# Robomme 环境及工具（保持与现有评测脚本一致的导入方式）
+from robomme.robomme_env import *
+from robomme.robomme_env.util import *
+from robomme.env_record_wrapper import (
     BenchmarkEnvBuilder,
 )
 

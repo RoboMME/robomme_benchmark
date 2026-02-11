@@ -33,13 +33,13 @@ def get_dependencies():
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser(description="HistoryBench setup.py configuration")
+    parser = argparse.ArgumentParser(description="Robomme setup.py configuration")
     parser.add_argument(
         "--package_name",
         type=str,
-        default="historybench",
-        choices=["historybench", "historybench-nightly"],
-        help="the name of this output wheel. Should be either 'historybench' or 'historybench_nightly'",
+        default="robomme",
+        choices=["robomme", "robomme-nightly"],
+        help="the name of this output wheel. Should be either 'robomme' or 'robomme-nightly'",
     )
     return parser.parse_known_args(argv)
 
@@ -56,11 +56,11 @@ def main(argv):
     setup(
         name=name,
         version=version,
-        description="HistoryBench",
+        description="Robomme",
         python_requires=">=3.9",
         setup_requires=["setuptools>=62.3.0"],
         install_requires=get_dependencies(),
-        packages=find_packages(include=["historybench*"]),
+        packages=find_packages(include=["robomme*"]),
     )
 
 

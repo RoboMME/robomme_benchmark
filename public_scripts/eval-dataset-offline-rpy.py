@@ -13,7 +13,7 @@ _PARENT = os.path.dirname(_ROOT)
 if _PARENT not in sys.path:
     sys.path.insert(0, _PARENT)
 
-from historybench.env_record_wrapper.rpy_util import summarize_and_print_rpy_sequence
+from robomme.env_record_wrapper.rpy_util import summarize_and_print_rpy_sequence
 
 def _write_split_rpy_summaries_json(
     path: str,

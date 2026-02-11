@@ -19,9 +19,9 @@ for _path in (_PARENT, _ROOT, _SCRIPTS):
 import numpy as np
 import torch
 
-from historybench.HistoryBench_env import *
-from historybench.HistoryBench_env.util import *
-from historybench.env_record_wrapper import (
+from robomme.robomme_env import *
+from robomme.robomme_env.util import *
+from robomme.env_record_wrapper import (
     BenchmarkEnvBuilder,
     EpisodeDatasetResolver,
 )
