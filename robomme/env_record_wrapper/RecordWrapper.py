@@ -30,7 +30,7 @@ from ..robomme_env.util.segmentation_utils import (
     process_segmentation,
     create_segmentation_visuals,
 )
-from .rpy_util import build_endeffector_pose_dict
+from ..robomme_env.util.rpy_util import build_endeffector_pose_dict
 
 class FailsafeTimeout(RuntimeError):
     """当 Robomme failsafe 提前终止 episode 时抛出的异常。"""

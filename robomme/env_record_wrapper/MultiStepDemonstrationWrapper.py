@@ -12,8 +12,8 @@ import sapien
 import torch
 import gymnasium as gym
 
-from . import planner_denseStep
-from .rpy_util import rpy_xyz_to_quat_wxyz_torch
+from ..robomme_env.util import planner_denseStep
+from ..robomme_env.util.rpy_util import rpy_xyz_to_quat_wxyz_torch
 
 
 class RRTPlanFailure(RuntimeError):
@@ -55,7 +55,7 @@ class MultiStepDemonstrationWrapper(gym.Wrapper):
     def _get_planner(self):
         if self._planner is not None:
             return self._planner
-        from planner_fail_safe import (
+        from ..robomme_env.util.planner_fail_safe import (
             FailAwarePandaArmMotionPlanningSolver,
             FailAwarePandaStickMotionPlanningSolver,
         )

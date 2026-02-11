@@ -25,7 +25,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
 )
 
 from .util import *
-from .errors import SceneGenerationError
+from .util.SceneGenerationError import SceneGenerationError
 from .util.evaluate import static_check
 from .util.object_generation import spawn_fixed_cube, build_board_with_hole
 from .util import reset_panda

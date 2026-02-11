@@ -24,7 +24,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
     matrix_to_quaternion,
 )
 
-from .errors import SceneGenerationError
+from .util.SceneGenerationError import SceneGenerationError
 from .util import *
 from .util.evaluate import static_check, too_many_swings
 from .util.object_generation import spawn_fixed_cube, build_board_with_hole

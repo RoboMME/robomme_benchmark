@@ -22,7 +22,7 @@ from gymnasium.utils.save_video import save_video
 # 导入 Robomme 相关的环境包装器和异常类
 from robomme.env_record_wrapper import RobommeRecordWrapper, FailsafeTimeout
 from robomme.robomme_env import *
-from robomme.robomme_env.errors import SceneGenerationError
+from robomme.robomme_env.util.SceneGenerationError import SceneGenerationError
 
 
 from mani_skill.examples.motionplanning.base_motionplanner.utils import (
@@ -34,7 +34,7 @@ from mani_skill.examples.motionplanning.base_motionplanner.utils import (
 import torch
 
 # 导入规划器和相关异常类
-from planner_fail_safe import (
+from robomme.robomme_env.util.planner_fail_safe import (
     FailAwarePandaArmMotionPlanningSolver,
     FailAwarePandaStickMotionPlanningSolver,
     ScrewPlanFailure,

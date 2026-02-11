@@ -42,9 +42,9 @@ from ..robomme_env.util.vqa_options import get_vqa_options
 
 from ..robomme_env.util import reset_panda
 
-from . import planner_denseStep
+from ..robomme_env.util import planner_denseStep
 # 姿态连续化与 RPY 统计逻辑统一复用到共享 util，避免多处实现分叉。
-from .rpy_util import build_endeffector_pose_dict
+from ..robomme_env.util.rpy_util import build_endeffector_pose_dict
 
 
 class DemonstrationWrapper(gym.Wrapper):
@@ -533,7 +533,7 @@ class DemonstrationWrapper(gym.Wrapper):
         """
         # 懒加载 FailAware 规划器；若导入失败，回退到原 planner 实现
         try:
-            from planner_fail_safe import (
+            from ..robomme_env.util.planner_fail_safe import (
                 FailAwarePandaArmMotionPlanningSolver,
                 FailAwarePandaStickMotionPlanningSolver,
                 ScrewPlanFailure,

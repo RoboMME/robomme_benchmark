@@ -11,7 +11,7 @@ from mani_skill.examples.motionplanning.panda.motionplanner import (
 from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
     PandaStickMotionPlanningSolver,
 )
-from . import planner_denseStep
+from ..robomme_env.util import planner_denseStep
 
 
 # -----------------------------------------------------------------------------

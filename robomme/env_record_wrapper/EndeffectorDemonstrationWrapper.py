@@ -12,7 +12,7 @@ import gymnasium as gym
 from typing import Literal
 
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
-from .rpy_util import rpy_xyz_to_quat_wxyz_torch
+from ..robomme_env.util.rpy_util import rpy_xyz_to_quat_wxyz_torch
 
 
 class EndeffectorDemonstrationWrapper(gym.Wrapper):

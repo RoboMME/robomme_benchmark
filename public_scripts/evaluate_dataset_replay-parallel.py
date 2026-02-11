@@ -25,7 +25,7 @@ from robomme.env_record_wrapper import (
     BenchmarkEnvBuilder,
     EpisodeDatasetResolver,
 )
-from save_reset_video import save_robomme_video
+from robomme.robomme_env.util.save_reset_video import save_robomme_video
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
 #ACTION_SPACE = "joint_angle"
