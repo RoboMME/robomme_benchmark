@@ -28,15 +28,15 @@ from save_reset_video import save_robomme_video
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
 #ACTION_SPACE = "joint_angle"
-#ACTION_SPACE = "ee_pose"
-ACTION_SPACE = "ee_quat"
+ACTION_SPACE = "ee_pose"
+#ACTION_SPACE = "ee_quat"
 #ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = False
 MAX_STEPS = 3000
-DATASET_ROOT = "/data/hongzefu/dataset_generate-rpy4"
-OVERRIDE_METADATA_PATH = "/data/hongzefu/dataset_generate-rpy4"
+DATASET_ROOT = "/data/hongzefu/dataset_generate-rpy4-v2"
+OVERRIDE_METADATA_PATH = "/data/hongzefu/dataset_generate-rpy4-v2"
 
 DEFAULT_ENV_IDS = [
     # "PickXtimes",

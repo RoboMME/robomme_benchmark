@@ -662,7 +662,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=50,
+        default=25,
         help="每个环境生成的 episode 数量 (默认: 50)",
     )
     parser.add_argument(
@@ -711,8 +711,8 @@ def main() -> None:
         )
 
         # 为所有 episode 创建共享的临时文件夹
-        temp_folder =  Path(f"/data/hongzefu/dataset_generate-rpy4/temp_{env_id}_episodes")
-        final_dataset_path =  Path(f"/data/hongzefu/dataset_generate-rpy4/record_dataset_{env_id}.h5")
+        temp_folder =  Path(f"/data/hongzefu/dataset_generate-rpy4-v2/temp_{env_id}_episodes")
+        final_dataset_path =  Path(f"/data/hongzefu/dataset_generate-rpy4-v2/record_dataset_{env_id}.h5")
         #final_dataset_path =  Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")

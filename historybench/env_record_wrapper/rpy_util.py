@@ -46,51 +46,90 @@ def align_quat_sign_with_prev_torch(quat: torch.Tensor, prev_quat: torch.Tensor 
     return quat * sign
 
 
+from scipy.spatial.transform import Rotation
+
+
 def quat_wxyz_to_rpy_xyz_torch(quat: torch.Tensor) -> torch.Tensor:
     """
     将 wxyz 四元数转换为 XYZ 顺序 RPY（弧度）。
+    使用 scipy.spatial.transform.Rotation 实现。
+    注意：此过程会阻断梯度传播，且涉及 CPU/GPU 数据传输。
     """
-    w, x, y, z = quat.unbind(dim=-1)
+    # 保持输入 tensor 的设备和类型
+    device = quat.device
+    dtype = quat.dtype
+    
+    # 转为 numpy (CPU)
+    quat_np = quat.detach().cpu().numpy()
+    
+    # scipy 需要 xyzw 格式，输入是 wxyz
+    # 如果是单向量 (4,) -> (1, 4) 处理，最后再 squeeze
+    is_single = quat_np.ndim == 1
+    if is_single:
+        quat_np = quat_np[None, :]
+        
+    # wxyz -> xyzw
+    # quat_np: [..., 4] -> w, x, y, z
+    w = quat_np[..., 0]
+    x = quat_np[..., 1]
+    y = quat_np[..., 2]
+    z = quat_np[..., 3]
+    
+    # 重新堆叠为 xyzw
+    quat_xyzw = np.stack([x, y, z, w], axis=-1)
+    
+    # 创建 Rotation 对象
+    try:
+        rot = Rotation.from_quat(quat_xyzw)
+        # 转换为 euler 'xyz'
+        rpy_np = rot.as_euler('xyz', degrees=False)
+    except ValueError as e:
+        # 处理全 0 或非法四元数的情况，fallback 到 0
+        # scipy 比较严格，norm 为 0 会报错
+        # 简单处理：捕获异常返回全 0，或者在预处理时保证归一化
+        # 这里已经有 normalize_quat_wxyz_torch 在外部调用习惯，
+        # 但为了健壮性，若报错则返回 0
+        rpy_np = np.zeros((quat_np.shape[0], 3))
 
-    sinr_cosp = 2.0 * (w * x + y * z)
-    cosr_cosp = 1.0 - 2.0 * (x * x + y * y)
-    roll = torch.atan2(sinr_cosp, cosr_cosp)
-
-    sinp = 2.0 * (w * y - z * x)
-    pitch = torch.asin(torch.clamp(sinp, -1.0, 1.0))
-
-    siny_cosp = 2.0 * (w * z + x * y)
-    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
-    yaw = torch.atan2(siny_cosp, cosy_cosp)
-
-    return torch.stack((roll, pitch, yaw), dim=-1)
+    if is_single:
+        rpy_np = rpy_np[0]
+        
+    return torch.from_numpy(rpy_np).to(device=device, dtype=dtype)
 
 
 def rpy_xyz_to_quat_wxyz_torch(rpy: torch.Tensor) -> torch.Tensor:
     """
     将 XYZ 顺序 RPY（弧度）转换为 wxyz 四元数。
-
+    使用 scipy.spatial.transform.Rotation 实现。
     与 quat_wxyz_to_rpy_xyz_torch 互为逆操作。
-    使用 intrinsic XYZ（= extrinsic ZYX）Tait-Bryan 组合：
-        q = q_x(roll) ⊗ q_y(pitch) ⊗ q_z(yaw)
-    输出经过归一化，防止浮点积累误差。
+    注意：此过程会阻断梯度传播，且涉及 CPU/GPU 数据传输。
     """
-    roll, pitch, yaw = rpy.unbind(dim=-1)
+    device = rpy.device
+    dtype = rpy.dtype
+    
+    rpy_np = rpy.detach().cpu().numpy()
+    
+    is_single = rpy_np.ndim == 1
+    if is_single:
+        rpy_np = rpy_np[None, :]
+        
+    # scipy euler 'xyz' -> quat (xyzw)
+    rot = Rotation.from_euler('xyz', rpy_np, degrees=False)
+    quat_xyzw = rot.as_quat()
+    
+    # xyzw -> wxyz
+    x = quat_xyzw[..., 0]
+    y = quat_xyzw[..., 1]
+    z = quat_xyzw[..., 2]
+    w = quat_xyzw[..., 3]
+    
+    quat_wxyz = np.stack([w, x, y, z], axis=-1)
+    
+    if is_single:
+        quat_wxyz = quat_wxyz[0]
 
-    cr = torch.cos(roll * 0.5)
-    sr = torch.sin(roll * 0.5)
-    cp = torch.cos(pitch * 0.5)
-    sp = torch.sin(pitch * 0.5)
-    cy = torch.cos(yaw * 0.5)
-    sy = torch.sin(yaw * 0.5)
-
-    w = cr * cp * cy - sr * sp * sy
-    x = sr * cp * cy + cr * sp * sy
-    y = cr * sp * cy - sr * cp * sy
-    z = cr * cp * sy + sr * sp * cy
-
-    quat = torch.stack((w, x, y, z), dim=-1)
-    return normalize_quat_wxyz_torch(quat)
+    # 输出经过归一化（scipy 默认归一化），直接转回 tensor
+    return torch.from_numpy(quat_wxyz).to(device=device, dtype=dtype)
 
 
 def unwrap_rpy_with_prev_torch(rpy: torch.Tensor, prev_rpy: torch.Tensor | None) -> torch.Tensor:
