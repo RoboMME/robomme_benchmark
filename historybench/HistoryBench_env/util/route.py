@@ -87,20 +87,20 @@ def generate_dynamic_walk(indices, steps=50, start_idx=None, allow_backtracking=
     return path_values
 
 
-# --- 对比测试 (带种子) ---
-button_indices = [0, 2, 4, 6, 8]
+# # --- 对比测试 (带种子) ---
+# button_indices = [0, 2, 4, 6, 8]
 
-# 创建一个 Generator 并设定种子 (保证结果可复现)
-seed = 42
-rng = torch.Generator()
-rng.manual_seed(seed)
+# # 创建一个 Generator 并设定种子 (保证结果可复现)
+# seed = 42
+# rng = torch.Generator()
+# rng.manual_seed(seed)
 
-print(f"--- 测试开始 (Seed: {seed}) ---")
+# print(f"--- 测试开始 (Seed: {seed}) ---")
 
-# 1. 开启回溯
-print("方案1: 允许回溯")
-traj_1 = generate_dynamic_walk(button_indices, steps=30, allow_backtracking=True, generator=rng)
+# # 1. 开启回溯
+# print("方案1: 允许回溯")
+# traj_1 = generate_dynamic_walk(button_indices, steps=30, allow_backtracking=True, generator=rng)
 
-# 2. 关闭回溯 (注意：因为共用同一个 generator，这里的随机数序列是接续上一次调用的)
-print("\n方案2: 禁止回溯 (惯性模式)")
-traj_2 = generate_dynamic_walk(button_indices, steps=30, allow_backtracking=False, generator=rng)
+# # 2. 关闭回溯 (注意：因为共用同一个 generator，这里的随机数序列是接续上一次调用的)
+# print("\n方案2: 禁止回溯 (惯性模式)")
+# traj_2 = generate_dynamic_walk(button_indices, steps=30, allow_backtracking=False, generator=rng)
