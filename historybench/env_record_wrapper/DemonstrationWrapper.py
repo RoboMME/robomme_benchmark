@@ -196,8 +196,8 @@ class DemonstrationWrapper(gym.Wrapper):
             'wrist_camera_cam2world_opengl': wrist_camera_cam2world_opengl,
             'end_effector_pose_raw': robot_endeffector_pose,
             'end_effector_pose': (
-                robot_endeffector_pose['pose'].detach().cpu().tolist()[:3]
-                + robot_endeffector_pose['rpy'].detach().cpu().tolist()[:3]
+                robot_endeffector_pose['pose'].detach().cpu().flatten().tolist()[:3]
+                + robot_endeffector_pose['rpy'].detach().cpu().flatten().tolist()[:3]
             ),
         }
         new_info = {

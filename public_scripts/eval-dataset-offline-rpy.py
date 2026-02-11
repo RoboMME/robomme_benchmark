@@ -33,11 +33,11 @@ def _write_split_rpy_summaries_json(
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
 
-def _read_is_demo(ts_group: h5py.Group) -> bool:
-    """从 timestep group 读取 info/is_demo，缺失时默认 False。"""
+def _read_is_video_demo(ts_group: h5py.Group) -> bool:
+    """从 timestep group 读取 info/is_video_demo，缺失时默认 False。"""
     info_grp = ts_group.get("info")
-    if info_grp is not None and "is_demo" in info_grp:
-        val = info_grp["is_demo"][()]
+    if info_grp is not None and "is_video_demo" in info_grp:
+        val = info_grp["is_video_demo"][()]
         if isinstance(val, (bytes, np.bytes_)):
             return val in (b"True", b"true", b"1")
         return bool(val)
@@ -143,7 +143,7 @@ def main():
                         
                         timestep_keys.sort(key=get_timestep_idx)
 
-                        # Separate RPY sequences by is_demo flag
+                        # Separate RPY sequences by is_video_demo flag
                         demo_rpy_seq: list[np.ndarray] = []
                         non_demo_rpy_seq: list[np.ndarray] = []
 
@@ -151,7 +151,7 @@ def main():
                             ts_group = episode_group[ts_key]
                             rpy_rows = _extract_rpy_from_timestep(ts_group)
                             if rpy_rows:
-                                if _read_is_demo(ts_group):
+                                if _read_is_video_demo(ts_group):
                                     demo_rpy_seq.extend(rpy_rows)
                                 else:
                                     non_demo_rpy_seq.extend(rpy_rows)

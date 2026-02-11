@@ -591,13 +591,32 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                     return value.detach().cpu().numpy()
                 return np.asarray(value)
 
+            joint_state = self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos
+            joint_state_flat = np.asarray(joint_state, dtype=np.float64).reshape(-1)
+            if joint_state_flat.size == 7:
+                joint_state_flat = np.concatenate([joint_state_flat, [0.0, 0.0]])
+            elif joint_state_flat.size < 9:
+                joint_state_flat = np.pad(joint_state_flat, (0, 9 - joint_state_flat.size), constant_values=0.0)
+            gripper_state = joint_state_flat[-2:].astype(np.float64)
+            gripper_open = bool(np.any(gripper_state < 0.03))
+
+            eef_action = np.concatenate([
+                _to_numpy(eef_pose_dict['pose']).flatten()[:3],
+                _to_numpy(eef_pose_dict['rpy']).flatten()[:3],
+                _to_numpy(action).flatten()[-1:] if action is not None else np.array([-1.0]),
+            ]).astype(np.float64)
+            eef_state = eef_action[:6].astype(np.float64)
+
             record_data = {
                 'obs': {
                     'front_camera_rgb': base_camera_frame,
                     'wrist_camera_rgb': wrist_camera_frame,
                     'front_camera_depth': base_camera_depth,
                     'wrist_camera_depth': wrist_camera_depth,
-                    'joint_angle': self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos,
+                    'joint_state': joint_state,
+                    'eef_state': eef_state,
+                    'gripper_state': gripper_state,
+                    'gripper_open': gripper_open,
                     'eef_velocity': end_effector_velocity,
                     'front_camera_segmentation': segmentation,
                     'front_camera_segmentation_result': segmentation_result,
@@ -612,11 +631,7 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                         'quat': _to_numpy(eef_pose_dict['quat']),
                         'rpy': _to_numpy(eef_pose_dict['rpy']),
                     },
-                    'eef_action': np.concatenate([
-                        _to_numpy(eef_pose_dict['pose']).flatten()[:3],
-                        _to_numpy(eef_pose_dict['rpy']).flatten()[:3],
-                        _to_numpy(action).flatten()[-1:] if action is not None else np.array([-1.0]),
-                    ]).astype(np.float64),
+                    'eef_action': eef_action,
                 },
                 'info': {
                     'record_timestep': record_timestep,
@@ -624,7 +639,7 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                     'simple_subgoal_online': subgoal_online_text,
                     'grounded_subgoal': self.current_subgoal_segment_filled,
                     'grounded_subgoal_online': self.current_subgoal_segment_online_filled,
-                    'is_demo': self.current_task_demonstration if hasattr(self, 'current_task_demonstration') else False,
+                    'is_video_demo': self.current_task_demonstration if hasattr(self, 'current_task_demonstration') else False,
                 },
                 '_setup_camera_intrinsics': {
                     'front_camera_intrinsic_opencv': base_camera_intrinsic_opencv,
@@ -736,8 +751,8 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                 obs_group.create_dataset("front_camera_depth", data=obs_data['front_camera_depth'])
                 obs_group.create_dataset("wrist_camera_depth", data=obs_data['wrist_camera_depth'])
 
-                # joint_angle 保证9维度 如果是7维度则填充两个0
-                state_data = obs_data['joint_angle']
+                # joint_state 保证9维度 如果是7维度则填充两个0
+                state_data = obs_data['joint_state']
                 if isinstance(state_data, np.ndarray):
                     if state_data.shape == (7,):
                         state_data = np.concatenate([state_data, [0, 0]])
@@ -745,7 +760,10 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                         state_data = state_data.flatten()
                         state_data = np.concatenate([state_data, [0, 0]])
                         state_data = state_data.reshape(1, 9)
-                obs_group.create_dataset("joint_angle", data=state_data)
+                obs_group.create_dataset("joint_state", data=state_data)
+                obs_group.create_dataset("eef_state", data=obs_data['eef_state'])
+                obs_group.create_dataset("gripper_state", data=obs_data['gripper_state'])
+                obs_group.create_dataset("gripper_open", data=obs_data['gripper_open'])
 
                 obs_group.create_dataset("eef_velocity", data=obs_data['eef_velocity'])
                 obs_group.create_dataset("front_camera_segmentation", data=obs_data['front_camera_segmentation'])
@@ -841,7 +859,7 @@ class HistoryBenchRecordWrapper(gym.Wrapper):
                     task_name_encoded = task_name_online
                 info_group.create_dataset("grounded_subgoal_online", data=task_name_encoded)
 
-                info_group.create_dataset("is_demo", data=info_data['is_demo'])
+                info_group.create_dataset("is_video_demo", data=info_data['is_video_demo'])
 
             # 写入 setup 信息（种子、难度、任务列表、相机内参）
             setup_group = episode_group.create_group(f"setup")

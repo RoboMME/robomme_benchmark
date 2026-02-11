@@ -125,14 +125,12 @@ class EpisodeDatasetResolver:
         self._timestep_group_cache[record_step] = timestep_group
         return timestep_group
 
-    def _is_demo_group(self, timestep_group: h5py.Group) -> bool:
-        # 新结构: info/is_demo；兼容旧结构: demonstration
+    def _is_video_demo_group(self, timestep_group: h5py.Group) -> bool:
+        # 新结构: info/is_video_demo
         info_grp = timestep_group.get("info")
-        if info_grp is not None and "is_demo" in info_grp:
-            return _as_bool(info_grp["is_demo"][()])
-        if "demonstration" not in timestep_group:
+        if info_grp is None or "is_video_demo" not in info_grp:
             return False
-        return _as_bool(timestep_group["demonstration"][()])
+        return _as_bool(info_grp["is_video_demo"][()])
 
     def _extract_joint_action(self, timestep_group: h5py.Group) -> Optional[np.ndarray]:
         # 新结构: action/joint_action；兼容旧结构: action（直接 dataset）
@@ -195,7 +193,7 @@ class EpisodeDatasetResolver:
         prev_subgoal: Optional[str] = None
         for record_step in self._timestep_indexes:
             timestep_group = self._get_timestep_group(record_step)
-            if timestep_group is None or self._is_demo_group(timestep_group):
+            if timestep_group is None or self._is_video_demo_group(timestep_group):
                 continue
 
             self._non_demo_steps.append(record_step)
