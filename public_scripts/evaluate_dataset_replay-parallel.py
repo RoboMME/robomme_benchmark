@@ -35,12 +35,12 @@ ACTION_SPACE = "ee_pose"
 
 GUI_RENDER = False
 MAX_STEPS = 3000
-DATASET_ROOT = "/data/hongzefu/dataset_generate-rpy4"
-OVERRIDE_METADATA_PATH = "/data/hongzefu/dataset_generate-rpy4"
+DATASET_ROOT = "/data/hongzefu/dataset_generate-rpy4-v2"
+OVERRIDE_METADATA_PATH = "/data/hongzefu/dataset_generate-rpy4-v2"
 
 # ######## 视频保存变量（输出目录）开始 ########
 # 视频输出目录：独立固定写死，不与 h5 路径或 env_id 对齐
-OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay"
+OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-v2"
 # ######## 视频保存变量（输出目录）结束 ########
 
 def _parse_oracle_command(subgoal_text: Optional[str]) -> Optional[dict[str, Any]]:

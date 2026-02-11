@@ -662,7 +662,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=25,
+        default=50,
         help="每个环境生成的 episode 数量 (默认: 50)",
     )
     parser.add_argument(
