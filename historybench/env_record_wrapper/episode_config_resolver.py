@@ -10,7 +10,7 @@ import gymnasium as gym
 
 DATASET_ROOT = Path(__file__).resolve().parents[2] / "dataset_json"
 _ALLOWED_DATASETS = {"train"}
-_ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "keypoint", "oracle_planner"}
+_ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "ee_quat", "keypoint", "oracle_planner"}
 _DEFAULT_TASK_LIST = [
     "PickXtimes",
     "StopCube",
@@ -166,7 +166,7 @@ class BenchmarkEnvBuilder:
         return len(episode_set)
 
     def make_env_for_episode(self, episode: int):
-        """为特定 episode 创建并配置环境。action_space=ee_pose 时包 EndeffectorDemonstrationWrapper，keypoint 时包 MultiStepDemonstrationWrapper，oracle_planner 时包 OraclePlannerDemonstrationWrapper。"""
+        """为特定 episode 创建并配置环境。action_space=ee_pose/ee_quat 时包 EndeffectorDemonstrationWrapper，keypoint 时包 MultiStepDemonstrationWrapper，oracle_planner 时包 OraclePlannerDemonstrationWrapper。"""
         from .DemonstrationWrapper import DemonstrationWrapper
 
         seed, difficulty_hint = self.resolve_episode(episode)
@@ -196,7 +196,11 @@ class BenchmarkEnvBuilder:
         elif self.action_space == "ee_pose":
             from .EndeffectorDemonstrationWrapper import EndeffectorDemonstrationWrapper
 
-            env = EndeffectorDemonstrationWrapper(env)
+            env = EndeffectorDemonstrationWrapper(env, action_repr="rpy")
+        elif self.action_space == "ee_quat":
+            from .EndeffectorDemonstrationWrapper import EndeffectorDemonstrationWrapper
+
+            env = EndeffectorDemonstrationWrapper(env, action_repr="quat")
         elif self.action_space == "keypoint":
             from .MultiStepDemonstrationWrapper import MultiStepDemonstrationWrapper
 

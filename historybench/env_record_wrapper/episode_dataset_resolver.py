@@ -152,6 +152,34 @@ class EpisodeDatasetResolver:
             return None
         return np.asarray(action_grp["eef_action"][()], dtype=np.float64).flatten()
 
+    def _extract_ee_quat_gripper(self, timestep_group: h5py.Group) -> Optional[np.ndarray]:
+        # 读取 action/eef_action_raw/{pose,quat} + action/eef_action[-1] => 8D [pose(3), quat(4), gripper(1)]
+        action_grp = timestep_group.get("action")
+        if action_grp is None or not isinstance(action_grp, h5py.Group):
+            return None
+        if "eef_action_raw" not in action_grp:
+            return None
+
+        raw_grp = action_grp["eef_action_raw"]
+        if "pose" not in raw_grp or "quat" not in raw_grp:
+            return None
+
+        pose = np.asarray(raw_grp["pose"][()], dtype=np.float64).flatten()[:3]
+        quat = np.asarray(raw_grp["quat"][()], dtype=np.float64).flatten()[:4]
+        if pose.size < 3 or quat.size < 4:
+            return None
+
+        gripper = -1.0
+        if "eef_action" in action_grp:
+            try:
+                eef_action = np.asarray(action_grp["eef_action"][()], dtype=np.float64).flatten()
+            except (TypeError, ValueError):
+                eef_action = np.asarray([], dtype=np.float64)
+            if eef_action.size > 0 and np.isfinite(eef_action[-1]):
+                gripper = float(eef_action[-1])
+
+        return np.concatenate([pose, quat, [gripper]]).astype(np.float64)
+
     def _extract_keypoint_action(self, timestep_group: h5py.Group) -> Optional[np.ndarray]:
         # 新结构: action/keypoint_action (7D: pos(3)+rpy(3)+gripper(1))
         action_grp = timestep_group.get("action")
@@ -202,7 +230,7 @@ class EpisodeDatasetResolver:
 
     def get_step(
         self,
-        mode: Literal["joint_angle", "ee_pose", "keypoint", "oracle_planner"],
+        mode: Literal["joint_angle", "ee_pose", "ee_quat", "keypoint", "oracle_planner"],
         step: int,
     ) -> Optional[Union[np.ndarray, str]]:
         if step < 0:
@@ -222,6 +250,9 @@ class EpisodeDatasetResolver:
         elif mode == "ee_pose":
             selected_steps = self._non_demo_steps
             extractor = self._extract_ee_pose_gripper
+        elif mode == "ee_quat":
+            selected_steps = self._non_demo_steps
+            extractor = self._extract_ee_quat_gripper
         elif mode == "keypoint":
             selected_steps = self._keypoint_steps
             extractor = self._extract_keypoint_action

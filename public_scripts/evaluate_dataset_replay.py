@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 脚本功能：统一 dataset replay 入口，支持 joint_angle / ee_pose / keypoint / oracle_planner 四种 action_space。
+# 脚本功能：统一 dataset replay 入口，支持 joint_angle / ee_pose / ee_quat / keypoint / oracle_planner 五种 action_space。
 # 与 evaluate.py 的主循环与调试字段保持一致；差异在于动作来自 EpisodeDatasetResolver。
 
 import os
@@ -28,31 +28,33 @@ from save_reset_video import save_robomme_video
 
 # 只启用一个 ACTION_SPACE；其他选项保留在注释中供手动切换
 #ACTION_SPACE = "joint_angle"
-ACTION_SPACE = "ee_pose"
+#ACTION_SPACE = "ee_pose"
+ACTION_SPACE = "ee_quat"
 #ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
 
-GUI_RENDER = True
+GUI_RENDER = False
 MAX_STEPS = 3000
-DATASET_ROOT = "/data/hongzefu/dataset_generate"
+DATASET_ROOT = "/data/hongzefu/dataset_generate-rpy4"
+OVERRIDE_METADATA_PATH = "/data/hongzefu/dataset_generate-rpy4"
 
 DEFAULT_ENV_IDS = [
-    "PickXtimes",
-    "StopCube",
-    "SwingXtimes",
+    # "PickXtimes",
+    # "StopCube",
+    # "SwingXtimes",
     "BinFill",
-    "VideoUnmaskSwap",
-    "VideoUnmask",
-    "ButtonUnmaskSwap",
-    "ButtonUnmask",
-    "VideoRepick",
-    "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "PickHighlight",
-    "InsertPeg",
-    "MoveCube",
-    "PatternLock",
-    "RouteStick",
+    # "VideoUnmaskSwap",
+    # "VideoUnmask",
+    # "ButtonUnmaskSwap",
+    # "ButtonUnmask",
+    # "VideoRepick",
+    # "VideoPlaceButton",
+    # "VideoPlaceOrder",
+    # "PickHighlight",
+    # "InsertPeg",
+    # "MoveCube",
+    # "PatternLock",
+    # "RouteStick",
 ]
 
 # ######## 视频保存变量（输出目录）开始 ########
@@ -87,12 +89,13 @@ def main():
             dataset="train",
             action_space=ACTION_SPACE,
             gui_render=GUI_RENDER,
+            override_metadata_path=OVERRIDE_METADATA_PATH,
         )
         episode_count = env_builder.get_episode_num()
         print(f"[{env_id}] episode_count from metadata: {episode_count}")
 
         for episode in range(episode_count):
-            if episode !=6:
+            if episode !=15:
                 continue    
             env = None
             dataset_resolver = None
@@ -102,6 +105,7 @@ def main():
                     env_id=env_id,
                     episode=episode,
                     dataset_directory=DATASET_ROOT,
+                    
                 )
 
                 obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.reset()
