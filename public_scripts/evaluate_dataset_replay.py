@@ -86,10 +86,10 @@ def main():
     for env_id in DEFAULT_ENV_IDS:
         env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
-            dataset="train",
+            dataset="eval",
             action_space=ACTION_SPACE,
             gui_render=GUI_RENDER,
-            override_metadata_path=OVERRIDE_METADATA_PATH,
+            #override_metadata_path=OVERRIDE_METADATA_PATH,
         )
         episode_count = env_builder.get_episode_num()
         print(f"[{env_id}] episode_count from metadata: {episode_count}")

@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 
-DATASET_ROOT = Path(__file__).resolve().parents[2] / "dataset_json"
+DATASET_ROOT = Path(__file__).resolve().parents[2] / "env_metadata"
 _ALLOWED_DATASETS = {"train"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "ee_quat", "keypoint", "oracle_planner"}
 _DEFAULT_TASK_LIST = [

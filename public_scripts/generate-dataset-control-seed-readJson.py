@@ -45,25 +45,25 @@ from planner_fail_safe import (
 
 # 所有支持的环境模块名称列表
 DEFAULT_ENVS =[
-"PickXtimes",
-"StopCube",
-"SwingXtimes",
-"BinFill",
+#"PickXtimes",
+# "StopCube",
+# "SwingXtimes",
+ "BinFill",
 
-"VideoUnmaskSwap",
-"VideoUnmask",
-"ButtonUnmaskSwap",
-"ButtonUnmask",
+# "VideoUnmaskSwap",
+# "VideoUnmask",
+# "ButtonUnmaskSwap",
+# "ButtonUnmask",
 
- "VideoRepick",
-"VideoPlaceButton",
-"VideoPlaceOrder",
-"PickHighlight",
+#  "VideoRepick",
+# "VideoPlaceButton",
+# "VideoPlaceOrder",
+# "PickHighlight",
 
-"InsertPeg",
-'MoveCube',
-"PatternLock",
-"RouteStick"
+# "InsertPeg",
+# 'MoveCube',
+# "PatternLock",
+# "RouteStick"
     ]
 
 # 参考数据集 metadata 根目录：用于读取 difficulty 和 HistoryBench_seed
@@ -662,7 +662,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=50,
+        default=1,
         help="每个环境生成的 episode 数量 (默认: 50)",
     )
     parser.add_argument(
@@ -711,8 +711,8 @@ def main() -> None:
         )
 
         # 为所有 episode 创建共享的临时文件夹
-        temp_folder =  Path(f"/data/hongzefu/dataset_generate-rpy4-v2/temp_{env_id}_episodes")
-        final_dataset_path =  Path(f"/data/hongzefu/dataset_generate-rpy4-v2/record_dataset_{env_id}.h5")
+        temp_folder =  Path(f"/data/hongzefu/dataset_generate-b4/temp_{env_id}_episodes")
+        final_dataset_path =  Path(f"/data/hongzefu/dataset_generate-b4/record_dataset_{env_id}.h5")
         #final_dataset_path =  Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")
