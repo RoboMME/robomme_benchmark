@@ -67,7 +67,7 @@ DEFAULT_ENVS =[
     ]
 
 # 参考数据集 metadata 根目录：用于读取 difficulty 和 HistoryBench_seed
-SOURCE_METADATA_ROOT = Path("/data/hongzefu/robomme-0.2b3-rpy2/dataset_json")
+SOURCE_METADATA_ROOT = Path("/data/hongzefu/data_1206")
 VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
 DATASET_SCREW_MAX_ATTEMPTS = 3
 DATASET_RRT_MAX_ATTEMPTS = 3
@@ -711,8 +711,8 @@ def main() -> None:
         )
 
         # 为所有 episode 创建共享的临时文件夹
-        temp_folder =  Path(f"/data/hongzefu/dataset_generate/temp_{env_id}_episodes")
-        final_dataset_path =  Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
+        temp_folder =  Path(f"/data/hongzefu/dataset_generate-rpy4/temp_{env_id}_episodes")
+        final_dataset_path =  Path(f"/data/hongzefu/dataset_generate-rpy4/record_dataset_{env_id}.h5")
         #final_dataset_path =  Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")

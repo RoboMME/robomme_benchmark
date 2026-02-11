@@ -32,27 +32,27 @@ ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
 
-GUI_RENDER = True
+GUI_RENDER = False
 MAX_STEPS = 3000
-DATASET_ROOT = "/data/hongzefu/dataset_generate"
+DATASET_ROOT = "/data/hongzefu/dataset_generate-rpy4"
 
 DEFAULT_ENV_IDS = [
-    #"PickXtimes",
-    # "StopCube",
-    # "SwingXtimes",
-     "BinFill",
-    # "VideoUnmaskSwap",
-    # "VideoUnmask",
-    # "ButtonUnmaskSwap",
-    # "ButtonUnmask",
-    # "VideoRepick",
-    # "VideoPlaceButton",
-    # "VideoPlaceOrder",
-    # "PickHighlight",
-    # "InsertPeg",
-    #"MoveCube",
-    # "PatternLock",
-    # "RouteStick",
+    "PickXtimes",
+    "StopCube",
+    "SwingXtimes",
+    "BinFill",
+    "VideoUnmaskSwap",
+    "VideoUnmask",
+    "ButtonUnmaskSwap",
+    "ButtonUnmask",
+    "VideoRepick",
+    "VideoPlaceButton",
+    "VideoPlaceOrder",
+    "PickHighlight",
+    "InsertPeg",
+    "MoveCube",
+    "PatternLock",
+    "RouteStick",
 ]
 
 # ######## 视频保存变量（输出目录）开始 ########
@@ -92,8 +92,7 @@ def main():
         print(f"[{env_id}] episode_count from metadata: {episode_count}")
 
         for episode in range(episode_count):
-            if episode !=0:
-                continue    
+ 
             env = None
             dataset_resolver = None
             try:
@@ -155,7 +154,6 @@ def main():
                         action = _parse_oracle_command(action)
                     if action is None:
                         break
-
 
                     obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.step(action)
 
