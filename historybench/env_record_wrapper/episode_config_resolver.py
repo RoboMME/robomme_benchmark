@@ -97,6 +97,7 @@ class BenchmarkEnvBuilder:
         dataset: str,
         action_space: str,
         gui_render: bool,
+        override_metadata_path: Optional[Union[str, Path]] = None,
     ):
         if dataset not in _ALLOWED_DATASETS:
             raise ValueError(f"Unsupported dataset '{dataset}'. Allowed datasets: {sorted(_ALLOWED_DATASETS)}")
@@ -110,6 +111,9 @@ class BenchmarkEnvBuilder:
         self.dataset = dataset
         self.action_space = action_space
         self.gui_render = gui_render
+        self.override_metadata_path = (
+            Path(override_metadata_path) if override_metadata_path is not None else None
+        )
         self.render_mode = "human" if gui_render else "rgb_array"
         self.max_steps_without_demonstration = 10000
 
@@ -126,6 +130,10 @@ class BenchmarkEnvBuilder:
         return list(_DEFAULT_TASK_LIST)
 
     def _resolve_metadata_path(self) -> str:
+        if self.override_metadata_path is not None:
+            return str(
+                self.override_metadata_path / f"record_dataset_{self.env_id}_metadata.json"
+            )
         if self.dataset == "train":
             return os.path.join(str(DATASET_ROOT), f"record_dataset_{self.env_id}_metadata.json")
         raise ValueError(f"Unsupported dataset '{self.dataset}'.")
