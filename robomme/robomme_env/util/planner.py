@@ -19,11 +19,43 @@ from mani_skill.utils.geometry.rotation_conversions import (
     quaternion_multiply,
 )
 from robomme.robomme_env.util import *
- 
-import random
 
 # Probability for deliberately triggering a failed hover before pickup.
 FAILED_HOVER_PROB = 0.03
+
+
+def _coerce_seed_to_int(value, default: int = 0) -> int:
+    if value is None:
+        return default
+    if isinstance(value, torch.Tensor):
+        value = value.detach().cpu().item()
+    elif isinstance(value, np.ndarray):
+        value = np.asarray(value).reshape(-1)[0]
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _get_fail_recover_rng(env):
+    env_unwrapped = getattr(env, "unwrapped", env)
+    seed_anchor = _coerce_seed_to_int(getattr(env_unwrapped, "Robomme_seed", None), default=0)
+    cached_seed = getattr(env_unwrapped, "_fail_recover_seed_anchor", None)
+    generator = getattr(env_unwrapped, "_fail_recover_rng", None)
+    if not isinstance(generator, torch.Generator) or cached_seed != seed_anchor:
+        generator = torch.Generator()
+        generator.manual_seed(seed_anchor)
+        env_unwrapped._fail_recover_rng = generator
+        env_unwrapped._fail_recover_seed_anchor = seed_anchor
+    return generator, seed_anchor
+
+
+def _sample_fail_recover_xy_signs(env) -> tuple[np.ndarray, int]:
+    generator, seed_anchor = _get_fail_recover_rng(env)
+    signs = torch.randint(-1, 2, (2,), generator=generator, dtype=torch.int64)
+    while bool(torch.all(signs == 0)):
+        signs = torch.randint(-1, 2, (2,), generator=generator, dtype=torch.int64)
+    return signs.detach().cpu().numpy().astype(np.int32), seed_anchor
 
 
 def grasp_and_lift_peg_side(env, planner,obj):
@@ -903,21 +935,24 @@ def solve_pickup_fail(env, planner, obj=None,z_offset=None,xy_offset=None,obj_ty
 
     normalized_mode = mode.lower() if isinstance(mode, str) else mode
 
-    # Randomly pick whether to perturb the failed hover in XY or Z.
-    #mode = random.choice(["xy", "z"])
-    #mode="xy"
+    fail_seed_anchor = _coerce_seed_to_int(getattr(env, "Robomme_seed", None), default=0)
+    env.fail_recover_mode = normalized_mode
+    env.fail_recover_seed_anchor = fail_seed_anchor
+    env.fail_recover_xy_signs = None
+    env.fail_recover_xy_signed_offset = None
+
     if normalized_mode == "xy":
         env.fail="xy"
         xy_offset = np.asarray(xy_offset, dtype=np.float32).reshape(-1)
         if xy_offset.size == 1:
             xy_offset = np.repeat(xy_offset, 2)
-        # allow +/- adjustments or no change per axis, but ensure at least one axis moves
-        signs = [random.choice((-1, 0, 1)) for _ in range(2)]
-        while signs[0] == 0 and signs[1] == 0:
-            signs = [random.choice((-1, 0, 1)) for _ in range(2)]
-        signed_offset = xy_offset * np.array(signs, dtype=np.float32)
+        signs, fail_seed_anchor = _sample_fail_recover_xy_signs(env)
+        signed_offset = xy_offset * signs.astype(np.float32)
         fail_pose_p[0] += float(signed_offset[0])
         fail_pose_p[1] += float(signed_offset[1])
+        env.fail_recover_seed_anchor = fail_seed_anchor
+        env.fail_recover_xy_signs = signs.astype(np.int32)
+        env.fail_recover_xy_signed_offset = signed_offset.astype(np.float32)
     elif normalized_mode == "z":
         env.fail="z"
         z_shift = z_offset 

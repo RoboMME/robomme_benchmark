@@ -48,7 +48,7 @@ DEFAULT_ENVS =[
 # "PickXtimes",
 # "StopCube",
 # "SwingXtimes",
-# "BinFill",
+"BinFill",
 
 # "VideoUnmaskSwap",
 # "VideoUnmask",
@@ -56,8 +56,8 @@ DEFAULT_ENVS =[
 # "ButtonUnmask",
 
 # "VideoRepick",
-"VideoPlaceButton",
-"VideoPlaceOrder",
+# "VideoPlaceButton",
+# "VideoPlaceOrder",
 # "PickHighlight",
 
 # "InsertPeg",
@@ -679,7 +679,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=50,
+        default=5,
         help="每个环境生成的 episode 数量 (默认: 50)",
     )
     parser.add_argument(

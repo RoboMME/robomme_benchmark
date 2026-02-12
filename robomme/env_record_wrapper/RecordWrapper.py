@@ -938,6 +938,42 @@ class RobommeRecordWrapper(gym.Wrapper):
                     data=difficulty,
                     dtype=h5py.string_dtype(encoding="utf-8"),
                 )
+            env_unwrapped = getattr(self.env, "unwrapped", self.env)
+            fail_recover_mode = getattr(env_unwrapped, "fail_recover_mode", None)
+            if fail_recover_mode is not None:
+                setup_group.create_dataset(
+                    "fail_recover_mode",
+                    data=str(fail_recover_mode),
+                    dtype=h5py.string_dtype(encoding="utf-8"),
+                )
+            fail_recover_seed_anchor = getattr(env_unwrapped, "fail_recover_seed_anchor", None)
+            if fail_recover_seed_anchor is not None:
+                setup_group.create_dataset(
+                    "fail_recover_seed_anchor",
+                    data=int(fail_recover_seed_anchor),
+                )
+            fail_recover_xy_signs = getattr(env_unwrapped, "fail_recover_xy_signs", None)
+            if fail_recover_xy_signs is not None:
+                xy_signs_np = np.asarray(fail_recover_xy_signs, dtype=np.int32).reshape(-1)
+                if xy_signs_np.size == 2:
+                    setup_group.create_dataset("fail_recover_xy_signs", data=xy_signs_np)
+                else:
+                    print(
+                        "Warning: skip writing fail_recover_xy_signs due to invalid size "
+                        f"{xy_signs_np.size}"
+                    )
+            fail_recover_xy_signed_offset = getattr(env_unwrapped, "fail_recover_xy_signed_offset", None)
+            if fail_recover_xy_signed_offset is not None:
+                xy_signed_offset_np = np.asarray(fail_recover_xy_signed_offset, dtype=np.float32).reshape(-1)
+                if xy_signed_offset_np.size == 2:
+                    setup_group.create_dataset(
+                        "fail_recover_xy_signed_offset", data=xy_signed_offset_np
+                    )
+                else:
+                    print(
+                        "Warning: skip writing fail_recover_xy_signed_offset due to invalid size "
+                        f"{xy_signed_offset_np.size}"
+                    )
 
             # 相机内参：每 episode 只保存一次（取第一条 buffer 的值）
             if self.buffer:

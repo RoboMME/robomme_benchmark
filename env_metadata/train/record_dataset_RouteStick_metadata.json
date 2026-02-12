@@ -1,0 +1,306 @@
+{
+  "env_id": "RouteStick",
+  "record_count": 50,
+  "records": [
+    {
+      "task": "RouteStick",
+      "episode": 0,
+      "seed": 16000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 1,
+      "seed": 16100,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 2,
+      "seed": 16200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 3,
+      "seed": 16300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 4,
+      "seed": 16400,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 5,
+      "seed": 16500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 6,
+      "seed": 16600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 7,
+      "seed": 16700,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 8,
+      "seed": 16800,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 9,
+      "seed": 16900,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 10,
+      "seed": 17000,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 11,
+      "seed": 17100,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 12,
+      "seed": 17200,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 13,
+      "seed": 17300,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 14,
+      "seed": 17400,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 15,
+      "seed": 17500,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 16,
+      "seed": 17600,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 17,
+      "seed": 17700,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 18,
+      "seed": 17800,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 19,
+      "seed": 17900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 20,
+      "seed": 18000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 21,
+      "seed": 18100,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 22,
+      "seed": 18200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 23,
+      "seed": 18300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 24,
+      "seed": 18400,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 25,
+      "seed": 18500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 26,
+      "seed": 18600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 27,
+      "seed": 18700,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 28,
+      "seed": 18800,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 29,
+      "seed": 18900,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 30,
+      "seed": 19000,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 31,
+      "seed": 19100,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 32,
+      "seed": 19200,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 33,
+      "seed": 19300,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 34,
+      "seed": 19400,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 35,
+      "seed": 19500,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 36,
+      "seed": 19600,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 37,
+      "seed": 19700,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 38,
+      "seed": 19800,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 39,
+      "seed": 19900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 40,
+      "seed": 20000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 41,
+      "seed": 20100,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 42,
+      "seed": 20200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 43,
+      "seed": 20300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 44,
+      "seed": 20400,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 45,
+      "seed": 20500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 46,
+      "seed": 20600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 47,
+      "seed": 20700,
+      "difficulty": "hard"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 48,
+      "seed": 20800,
+      "difficulty": "easy"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 49,
+      "seed": 20900,
+      "difficulty": "easy"
+    }
+  ]
+}
