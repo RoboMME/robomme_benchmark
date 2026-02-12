@@ -70,15 +70,14 @@ def _action_to_8d(raw_action) -> Optional[np.ndarray]:
         raw_action = raw_action.decode("utf-8") if isinstance(raw_action, bytes) else raw_action
     if isinstance(raw_action, str) and raw_action.strip().lower() == "none":
         return None
-    # Use float32 as default for new format, but float64 compatible
-    action = np.asarray(raw_action, dtype=np.float32).flatten()
+    action = np.asarray(raw_action).flatten()
     if action.size == 0:
         return None
     if action.size == 7:
         action = np.concatenate([action, [-1.0]])
     elif action.size < 8:
         action = np.pad(action, (0, 8 - action.size), constant_values=-1.0)
-    return action[:8].astype(np.float32)
+    return action[:8]
 
 
 class EpisodeDatasetResolver:
@@ -180,7 +179,7 @@ class EpisodeDatasetResolver:
             return None
         if "eef_action" not in action_grp:
             return None
-        return np.asarray(action_grp["eef_action"][()], dtype=np.float32).flatten()
+        return np.asarray(action_grp["eef_action"][()]).flatten()
 
     def _extract_ee_quat_gripper(self, timestep_group: h5py.Group) -> Optional[np.ndarray]:
         # 读取 action/eef_action_raw/{pose,quat} + action/eef_action[-1] => 8D [pose(3), quat(4), gripper(1)]
@@ -194,21 +193,21 @@ class EpisodeDatasetResolver:
         if "pose" not in raw_grp or "quat" not in raw_grp:
             return None
 
-        pose = np.asarray(raw_grp["pose"][()], dtype=np.float32).flatten()[:3]
-        quat = np.asarray(raw_grp["quat"][()], dtype=np.float32).flatten()[:4]
+        pose = np.asarray(raw_grp["pose"][()]).flatten()[:3]
+        quat = np.asarray(raw_grp["quat"][()]).flatten()[:4]
         if pose.size < 3 or quat.size < 4:
             return None
 
         gripper = -1.0
         if "eef_action" in action_grp:
             try:
-                eef_action = np.asarray(action_grp["eef_action"][()], dtype=np.float32).flatten()
+                eef_action = np.asarray(action_grp["eef_action"][()]).flatten()
             except (TypeError, ValueError):
-                eef_action = np.asarray([], dtype=np.float32)
+                eef_action = np.asarray([])
             if eef_action.size > 0 and np.isfinite(eef_action[-1]):
                 gripper = float(eef_action[-1])
 
-        return np.concatenate([pose, quat, [gripper]]).astype(np.float32)
+        return np.concatenate([pose, quat, [gripper]])
 
     def _extract_keypoint_action(self, timestep_group: h5py.Group) -> Optional[np.ndarray]:
         # 新结构: action/keypoint_action (7D: pos(3)+rpy(3)+gripper(1))
@@ -219,7 +218,7 @@ class EpisodeDatasetResolver:
             src = timestep_group
         if "keypoint_action" not in src:
             return None
-        return np.asarray(src["keypoint_action"][()], dtype=np.float32).flatten()
+        return np.asarray(src["keypoint_action"][()]).flatten()
 
     def _extract_subgoal_text(self, timestep_group: h5py.Group) -> Optional[str]:
         val = None

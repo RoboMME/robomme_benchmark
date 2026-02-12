@@ -33,7 +33,7 @@ class MultiStepDemonstrationWrapper(gym.Wrapper):
         self._gui_render = gui_render
         self._vis = vis
         self.action_space = gym.spaces.Box(
-            low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(7,), dtype=np.float64
         )
 
     @staticmethod

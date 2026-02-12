@@ -478,7 +478,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 )
                 continue
 
-            target_kp = np.asarray(curr_keypoint_action, dtype=np.float32).flatten()
+            target_kp = np.asarray(curr_keypoint_action).flatten()
             if target_kp.size != 7:
                 print(
                     f"Warning: keyframe {curr_idx} keypoint_action shape invalid {target_kp.shape}, "
@@ -623,8 +623,8 @@ class RobommeRecordWrapper(gym.Wrapper):
                         f"_pending_keypoint missing keypoint_p/keypoint_q: {current_keypoint}"
                     )
 
-                keypoint_p_np = np.asarray(current_keypoint['keypoint_p'], dtype=np.float32).reshape(-1)
-                keypoint_q_np = np.asarray(current_keypoint['keypoint_q'], dtype=np.float32).reshape(-1)
+                keypoint_p_np = np.asarray(current_keypoint['keypoint_p']).reshape(-1)
+                keypoint_q_np = np.asarray(current_keypoint['keypoint_q']).reshape(-1)
                 if keypoint_p_np.size != 3 or keypoint_q_np.size != 4:
                     raise ValueError(
                         f"_pending_keypoint keypoint shape invalid: p={keypoint_p_np.shape}, q={keypoint_q_np.shape}"
@@ -643,7 +643,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                     kp_pose_dict['pose'].detach().cpu().numpy().flatten()[:3],
                     kp_pose_dict['rpy'].detach().cpu().numpy().flatten()[:3],
                     [gripper_val],
-                ]).astype(np.float32)
+                ])
                 is_keyframe = True
 
                 env_unwrapped._pending_keypoint = None
@@ -661,21 +661,21 @@ class RobommeRecordWrapper(gym.Wrapper):
                 return np.asarray(value)
 
             joint_state = self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos
-            joint_state = np.asarray(joint_state, dtype=np.float32)
+            joint_state = np.asarray(joint_state)
             joint_state_flat = joint_state.flatten()
             if joint_state_flat.size == 7:
                 joint_state_flat = np.concatenate([joint_state_flat, [0.0, 0.0]])
             elif joint_state_flat.size < 9:
                 joint_state_flat = np.pad(joint_state_flat, (0, 9 - joint_state_flat.size), constant_values=0.0)
-            gripper_state = joint_state_flat[-2:].astype(np.float32)
+            gripper_state = joint_state_flat[-2:]
             gripper_close= bool(np.any(gripper_state < 0.03))
 
             eef_action = np.concatenate([
                 _to_numpy(eef_pose_dict['pose']).flatten()[:3],
                 _to_numpy(eef_pose_dict['rpy']).flatten()[:3],
                 _to_numpy(action).flatten()[-1:] if action is not None else np.array([-1.0]),
-            ]).astype(np.float32)
-            eef_state = eef_action[:6].astype(np.float32)
+            ])
+            eef_state = eef_action[:6]
 
             record_data = {
                 'obs': {
@@ -841,8 +841,8 @@ class RobommeRecordWrapper(gym.Wrapper):
                 obs_group.create_dataset("gripper_close", data=obs_data['gripper_close'])
 
                 obs_group.create_dataset("eef_velocity", data=obs_data['eef_velocity'])
-                obs_group.create_dataset("front_camera_segmentation", data=obs_data['front_camera_segmentation'])
-                obs_group.create_dataset("front_camera_segmentation_result", data=obs_data['front_camera_segmentation_result'])
+                # obs_group.create_dataset("front_camera_segmentation", data=obs_data['front_camera_segmentation'])
+                # obs_group.create_dataset("front_camera_segmentation_result", data=obs_data['front_camera_segmentation_result'])
                 obs_group.create_dataset("front_camera_extrinsic", data=obs_data['front_camera_extrinsic'])
                 obs_group.create_dataset("wrist_camera_extrinsic", data=obs_data['wrist_camera_extrinsic'])
 
@@ -861,8 +861,6 @@ class RobommeRecordWrapper(gym.Wrapper):
                     if isinstance(action_data, list):
                         action_data = np.array(action_data)
                     
-                    action_data = action_data.astype(np.float32)
-
                     # joint_action 保证8维度 如果是7维度则填充一个-1
                     if isinstance(action_data, np.ndarray):
                         if action_data.shape == (7,):
@@ -885,11 +883,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 # 写入 keypoint_action（7D: pos(3)+rpy(3)+gripper(1)，值已在 close() 前完成回填）
                 kp_action = action_data_dict.get('keypoint_action', None)
                 if kp_action is None:
-                    kp_action = np.zeros(7, dtype=np.float32)
-                
-                # Ensure float32
-                if kp_action.dtype == np.float64:
-                    kp_action = kp_action.astype(np.float32)
+                    kp_action = np.zeros(7)
                     
                 action_group.create_dataset("keypoint_action", data=kp_action)
 
@@ -954,7 +948,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 )
             fail_recover_xy_signs = getattr(env_unwrapped, "fail_recover_xy_signs", None)
             if fail_recover_xy_signs is not None:
-                xy_signs_np = np.asarray(fail_recover_xy_signs, dtype=np.int32).reshape(-1)
+                xy_signs_np = np.asarray(fail_recover_xy_signs).reshape(-1)
                 if xy_signs_np.size == 2:
                     setup_group.create_dataset("fail_recover_xy_signs", data=xy_signs_np)
                 else:
@@ -964,7 +958,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                     )
             fail_recover_xy_signed_offset = getattr(env_unwrapped, "fail_recover_xy_signed_offset", None)
             if fail_recover_xy_signed_offset is not None:
-                xy_signed_offset_np = np.asarray(fail_recover_xy_signed_offset, dtype=np.float32).reshape(-1)
+                xy_signed_offset_np = np.asarray(fail_recover_xy_signed_offset).reshape(-1)
                 if xy_signed_offset_np.size == 2:
                     setup_group.create_dataset(
                         "fail_recover_xy_signed_offset", data=xy_signed_offset_np
