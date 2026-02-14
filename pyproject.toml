@@ -1,0 +1,15 @@
+[project]
+name = "robomme"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mani-skill",
+    "setuptools==80.9.0",
+    "torch==2.9.1",
+    "torchvision==0.24.1",
+]
+
+[tool.uv.sources]
+mani-skill = { git = "https://github.com/YinpeiDai/ManiSkill.git", rev = "dev" }
