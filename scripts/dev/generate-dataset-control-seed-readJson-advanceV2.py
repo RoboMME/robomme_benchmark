@@ -680,7 +680,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=10,
+        default=20,
         help="Number of episodes generated per environment (Default: 100)",
     )
     parser.add_argument(

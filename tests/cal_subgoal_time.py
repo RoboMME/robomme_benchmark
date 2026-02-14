@@ -79,7 +79,7 @@ def extract_episode_data(file_path, env_id):
 
             # Sort episodes numerically
             episode_keys.sort(key=lambda x: int(x.split('_')[-1]))
-            episode_keys = episode_keys[5:10]  # episode 6-10
+            episode_keys = episode_keys[5:20]  # episode 6-10
 
             for ep_key in episode_keys:
                 ep_num = int(ep_key.split('_')[-1])

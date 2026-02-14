@@ -92,6 +92,88 @@ EnvID: VideoPlaceButton
       'drop the cube onto table': 90 vs 82 steps
       'pick up the cube': 119 vs 113 steps
   ------------------------------------------------------------
+
+  episode_10:
+  ------------------------------------------------------------
+    [data_1206]  seed=11000, difficulty=medium, total_timesteps=993
+    [dataset_generate-b4]  seed=11000, difficulty=medium, total_timesteps=980
+      'drop the cube onto table': 100 vs 87 steps
+  ------------------------------------------------------------
+
+  episode_11:
+  ------------------------------------------------------------
+    [data_1206]  seed=11100, difficulty=hard, total_timesteps=953
+    [dataset_generate-b4]  seed=11100, difficulty=hard, total_timesteps=946
+      'drop the cube onto table': 86 vs 79 steps
+  ------------------------------------------------------------
+
+  episode_12:
+  ------------------------------------------------------------
+    [data_1206]  seed=11200, difficulty=easy, total_timesteps=932
+    [dataset_generate-b4]  seed=11200, difficulty=easy, total_timesteps=916
+      'drop the cube onto table': 99 vs 85 steps
+      'pick up the cube': 116 vs 114 steps
+  ------------------------------------------------------------
+
+  episode_13:
+  ------------------------------------------------------------
+    [data_1206]  seed=11300, difficulty=easy, total_timesteps=1011
+    [dataset_generate-b4]  seed=11300, difficulty=easy, total_timesteps=1017
+      'drop the cube onto table': 112 vs 111 steps
+      'pick up the cube': 117 vs 118 steps
+      'place the cube onto the correct target': 79 vs 85 steps
+  ------------------------------------------------------------
+
+  episode_14:
+  ------------------------------------------------------------
+    [data_1206]  seed=11400, difficulty=medium, total_timesteps=957
+    [dataset_generate-b4]  seed=11400, difficulty=medium, total_timesteps=951
+      'drop the cube onto table': 86 vs 80 steps
+  ------------------------------------------------------------
+
+  episode_15:
+  ------------------------------------------------------------
+    [data_1206]  seed=11500, difficulty=hard, total_timesteps=982
+    [dataset_generate-b4]  seed=11500, difficulty=hard, total_timesteps=969
+      'drop the cube onto table': 93 vs 79 steps
+      'pick up the cube': 112 vs 113 steps
+  ------------------------------------------------------------
+
+  episode_16:
+  ------------------------------------------------------------
+    [data_1206]  seed=11600, difficulty=easy, total_timesteps=971
+    [dataset_generate-b4]  seed=11600, difficulty=easy, total_timesteps=957
+      'drop the cube onto table': 94 vs 84 steps
+      'pick up the cube': 115 vs 113 steps
+      'place the cube onto the correct target': 71 vs 69 steps
+  ------------------------------------------------------------
+
+  episode_17:
+  ------------------------------------------------------------
+    [data_1206]  seed=11700, difficulty=easy, total_timesteps=950
+    [dataset_generate-b4]  seed=11700, difficulty=easy, total_timesteps=932
+      'drop the cube onto table': 93 vs 80 steps
+      'pick up the cube': 118 vs 112 steps
+      'All tasks completed': 17 vs 18 steps
+  ------------------------------------------------------------
+
+  episode_18:
+  ------------------------------------------------------------
+    [data_1206]  seed=11800, difficulty=medium, total_timesteps=964
+    [dataset_generate-b4]  seed=11800, difficulty=medium, total_timesteps=954
+      'drop the cube onto table': 90 vs 78 steps
+      'pick up the cube': 116 vs 118 steps
+  ------------------------------------------------------------
+
+  episode_19:
+  ------------------------------------------------------------
+    [data_1206]  seed=11900, difficulty=hard, total_timesteps=917
+    [dataset_generate-b4]  seed=11900, difficulty=hard, total_timesteps=900
+      'drop the cube onto table': 91 vs 81 steps
+      'pick up the cube': 119 vs 116 steps
+      'place the cube onto the correct target': 73 vs 68 steps
+      'All tasks completed': 12 vs 13 steps
+  ------------------------------------------------------------
 ======================================================================
 EnvID: VideoPlaceOrder
 ======================================================================
@@ -137,6 +219,86 @@ EnvID: VideoPlaceOrder
     [dataset_generate-b4]  seed=11901, difficulty=easy, total_timesteps=1165
       'drop the cube onto table': 92 vs 81 steps
       'static': 122 vs 116 steps
+  ------------------------------------------------------------
+
+  episode_10:
+  ------------------------------------------------------------
+    [data_1206]  seed=12002, difficulty=medium, total_timesteps=1354
+    [dataset_generate-b4]  seed=12002, difficulty=medium, total_timesteps=1342
+      'drop the cube onto table': 113 vs 104 steps
+      'place the cube onto the correct target': 74 vs 71 steps
+  ------------------------------------------------------------
+
+  episode_11:
+  ------------------------------------------------------------
+    [data_1206]  seed=12100, difficulty=hard, total_timesteps=1314
+    [dataset_generate-b4]  seed=12100, difficulty=hard, total_timesteps=1311
+      'drop the cube onto table': 111 vs 104 steps
+      'place the cube onto the correct target': 65 vs 69 steps
+  ------------------------------------------------------------
+
+  episode_12:
+  ------------------------------------------------------------
+    [data_1206]  seed=12200, difficulty=easy, total_timesteps=1124
+    [dataset_generate-b4]  seed=12200, difficulty=easy, total_timesteps=1116
+      'drop the cube onto table': 100 vs 91 steps
+      'pick up the cube': 113 vs 114 steps
+  ------------------------------------------------------------
+
+  episode_13:
+  ------------------------------------------------------------
+    [data_1206]  seed=12300, difficulty=easy, total_timesteps=1165
+    [dataset_generate-b4]  seed=12300, difficulty=easy, total_timesteps=1164
+      'drop the cube onto table': 113 vs 105 steps
+      'pick up the cube': 115 vs 117 steps
+      'place the cube onto the correct target': 74 vs 79 steps
+  ------------------------------------------------------------
+
+  episode_14:
+  ------------------------------------------------------------
+    [data_1206]  seed=12400, difficulty=medium, total_timesteps=1279
+    [dataset_generate-b4]  seed=12400, difficulty=medium, total_timesteps=1271
+      'drop the cube onto table': 120 vs 111 steps
+      'pick up the cube': 117 vs 118 steps
+  ------------------------------------------------------------
+
+  episode_15:
+  ------------------------------------------------------------
+    [data_1206]  seed=12501, difficulty=hard, total_timesteps=1097
+    [dataset_generate-b4]  seed=12501, difficulty=hard, total_timesteps=1099
+      'drop the cube onto table': 112 vs 104 steps
+      'pick up the cube': 113 vs 118 steps
+      'place the cube onto the correct target': 68 vs 73 steps
+  ------------------------------------------------------------
+
+  episode_16:
+  ------------------------------------------------------------
+    [data_1206]  seed=12600, difficulty=easy, total_timesteps=919
+    [dataset_generate-b4]  seed=12600, difficulty=easy, total_timesteps=910
+      'drop the cube onto table': 88 vs 79 steps
+  ------------------------------------------------------------
+
+  episode_17:
+  ------------------------------------------------------------
+    [data_1206]  seed=12700, difficulty=easy, total_timesteps=1166
+    [dataset_generate-b4]  seed=12700, difficulty=easy, total_timesteps=1160
+      'drop the cube onto table': 119 vs 111 steps
+      'pick up the cube': 114 vs 116 steps
+  ------------------------------------------------------------
+
+  episode_18:
+  ------------------------------------------------------------
+    [data_1206]  seed=12801, difficulty=medium, total_timesteps=932
+    [dataset_generate-b4]  seed=12801, difficulty=medium, total_timesteps=923
+      'drop the cube onto table': 91 vs 82 steps
+  ------------------------------------------------------------
+
+  episode_19:
+  ------------------------------------------------------------
+    [data_1206]  seed=12900, difficulty=hard, total_timesteps=1121
+    [dataset_generate-b4]  seed=12900, difficulty=hard, total_timesteps=1111
+      'drop the cube onto table': 92 vs 81 steps
+      'All tasks completed': 15 vs 16 steps
   ------------------------------------------------------------
 ======================================================================
 EnvID: VideoRepick
