@@ -44,6 +44,8 @@ We provide four action types: `joint_action`, `ee_pose`, `keypoint`, and `multi_
 
 Training data can be downloaded [here](). There are 1,600 demonstrations in total (100 per task). The HDF5 format is described in [doc/h5_data_format.md](doc/h5_data_format.md).
 
+> **Note:** Currenetly, the robomme is still under development, the training data format is not finalized yet.
+
 After downloading, replay the dataset for a sanity check:
 
 ```bash
