@@ -11,7 +11,7 @@ episode_<N>/
     info/
   setup/
 ```
-- `env_id`: Task name.
+- `env_id`: Task name, e.g., 'RouteStick'.
 - `timestep_<K>/`: per-timestep data.
 - `setup/`: episode-level configuration.
 
@@ -60,5 +60,5 @@ episode_<N>/
 | `grounded_subgoal` | `bytes (UTF-8)` | Grounded subgoal text |
 | `grounded_subgoal_online` | `bytes (UTF-8)` | Online grounded subgoal text |
 | `is_video_demo` | `bool` | Whether this frame is from the conditioning video input before execution |
-| `is_keyframe` | `bool` | Whether this is a keyframe (i.e. a boundary between subtasks) |
+| `is_keyframe` | `bool` | Whether this is a keyframe (i.e. predefined waypoints for trajectory generation)|
 | `is_completed` | `bool` | Whether the task is finished |
