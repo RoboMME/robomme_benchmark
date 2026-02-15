@@ -3,6 +3,7 @@
 Structure inside each `record_dataset_<EnvID>.h5` file:
 
 ```text
+env_id/
 episode_<N>/
   timestep_<K>/
     obs/
@@ -17,7 +18,6 @@ episode_<N>/
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `env_id`|  `str`  | Environment name |
 | `seed` | `int` | Environment seed |
 | `difficulty` | `str` | Difficulty level |
 | `task_goal` | `str` | Natural-language task description |
