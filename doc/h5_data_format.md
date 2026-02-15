@@ -58,3 +58,4 @@ episode_<N>/
 | `grounded_subgoal_online` | `bytes (UTF-8)` | Online grounded subgoal text |
 | `is_video_demo` | `bool` | Whether this frame is from the conditioning video input before execution |
 | `is_keyframe` | `bool` | Whether this is a keyframe (i.e. a boundary between subtasks) |
+| `is_completed` | `bool` | Whether the task is finished |
