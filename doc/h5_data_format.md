@@ -11,6 +11,7 @@ episode_<N>/
     info/
   setup/
 ```
+- `env_id`: Task name.
 - `timestep_<K>/`: per-timestep data.
 - `setup/`: episode-level configuration.
 
