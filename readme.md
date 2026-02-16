@@ -46,7 +46,7 @@ We provide four action types: `joint_action`, `ee_pose`, `keypoint`, and `multi_
 
 Training data can be downloaded [here](https://huggingface.co/Yinpei/data_0214). There are 1,600 demonstrations in total (100 per task). The HDF5 format is described in [doc/h5_data_format.md](doc/h5_data_format.md).
 
-> **Note:** Currenetly, the training data is not finalized, and has difference from the doc.
+> **Note:** Currenetly, the training data format is not finalized, and has difference from the doc.
 
 After downloading, replay the dataset for a sanity check:
 
