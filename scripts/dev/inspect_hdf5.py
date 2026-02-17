@@ -49,7 +49,7 @@ def print_recursive(obj, indent=0):
             # Regular items (meta, obs, action, info etc)
             print_recursive(item, indent + 1)
 
-DEFAULT_PATH = "/data/hongzefu/dataset_generate-b4/record_dataset_PickXtimes.h5"
+DEFAULT_PATH = "/data/hongzefu/data_0214/record_dataset_PickXtimes.h5"
 
 def main():
     filepath = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_PATH
