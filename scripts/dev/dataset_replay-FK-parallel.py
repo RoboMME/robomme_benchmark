@@ -213,7 +213,7 @@ def process_episode(
                     env.render()
 
                 # TODO: hongze 修正嵌套列表的处理
-                if terminated[-1]:
+                if terminated:
                     if info.get("success", False)[-1][-1]:
                         outcome = "success"
                     if info.get("fail", False)[-1][-1]:

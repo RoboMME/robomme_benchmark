@@ -49,21 +49,21 @@ OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-b4"
 
 DEFAULT_ENV_IDS = [
     "PickXtimes",
-    "StopCube",
-    "SwingXtimes",
-    "BinFill",
-    "VideoUnmaskSwap",
-    "VideoUnmask",
-    "ButtonUnmaskSwap",
-    "ButtonUnmask",
-    "VideoRepick",
-    "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "PickHighlight",
-    "InsertPeg",
-    "MoveCube",
-    "PatternLock",
-    "RouteStick",
+    # "StopCube",
+    # "SwingXtimes",
+    # "BinFill",
+    # "VideoUnmaskSwap",
+    # "VideoUnmask",
+    # "ButtonUnmaskSwap",
+    # "ButtonUnmask",
+    # "VideoRepick",
+    # "VideoPlaceButton",
+    # "VideoPlaceOrder",
+    # "PickHighlight",
+    # "InsertPeg",
+    # "MoveCube",
+    # "PatternLock",
+    # "RouteStick",
 ]
 
 def _parse_oracle_command(subgoal_text: Optional[str]) -> Optional[dict[str, Any]]:
@@ -172,8 +172,8 @@ def evaluate_episode(
             # ######## Video saving variable preparation (replay phase) end ########
 
             info = {k: v[-1] for k, v in info_batch.items()}
-            terminated = bool(terminated_batch[-1].item())
-            truncated = bool(truncated_batch[-1].item())
+            terminated = bool(terminated_batch.item())
+            truncated = bool(truncated_batch.item())
 
             step += 1
             if gui_render:

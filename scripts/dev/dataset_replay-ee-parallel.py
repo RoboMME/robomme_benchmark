@@ -92,7 +92,7 @@ def process_episode(
 
                 # TODO: hongze makes this correct
                 # there are two many nested lists here, need to flatten them
-                if terminated[-1]:
+                if terminated:
                     if info.get("success", False)[-1][-1]:
                         outcome = "success"
                     if info.get("fail", False)[-1][-1]:

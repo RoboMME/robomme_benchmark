@@ -135,14 +135,15 @@ class DemonstrationWrapper(gym.Wrapper):
             action = reset_panda.get_reset_panda_param("action", gripper=gripper)
 
         # Execute one initial step, append to demonstration trajectory batch
-        init_batch = self.step(action)
+        init_batch = self._step_batch(action)
         merged_batch = planner_denseStep.concat_step_batches([demo_batch, init_batch])
         merged_batch = self._filter_no_record_from_step_batch(merged_batch)
         self.demonstration_data = merged_batch
         
         # Unpack the batch to return only obs and info, but keep the full batch in self.demonstration_data
         obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = merged_batch
-        return obs_batch, info_batch
+        info_flat = self._flatten_info_batch(info_batch)
+        return obs_batch, info_flat
 
     def _filter_no_record_from_step_batch(self, batch):
         """
@@ -170,7 +171,7 @@ class DemonstrationWrapper(gym.Wrapper):
         if int(terminated_batch.numel()) != n or int(truncated_batch.numel()) != n:
             return batch
 
-        subgoal_list = info_batch.get("subgoal")
+        subgoal_list = info_batch.get("simple_subgoal_online")
         if not isinstance(subgoal_list, list) or len(subgoal_list) != n:
             return batch
 
@@ -251,33 +252,38 @@ class DemonstrationWrapper(gym.Wrapper):
                 self._prev_ee_rpy_xyz,
             )
 
+        # Extract gripper state from the last 2 dims of joint positions
+        state_flat = state.cpu().numpy().flatten() if hasattr(state, 'cpu') else np.asarray(state).flatten()
+        gripper_state = state_flat[-2:]
+
         new_obs = {
             'maniskill_obs': base_obs,
-            'front_camera': image,
-            'wrist_camera': wrist_image,
-            'joint_states': state,
+            'front_rgb_list': image,
+            'wrist_rgb_list': wrist_image,
+            'joint_state_list': state,
             'velocity': end_effector_velocity,
-            'front_camera_depth': base_camera_depth,
+            'front_depth_list': base_camera_depth,
             # 'front_camera_segmentation': base_camera_segmentation,
-            'wrist_camera_depth': wrist_camera_depth,
+            'wrist_depth_list': wrist_camera_depth,
             # 'front_camera_cam2world_opengl': base_camera_cam2world_opengl,
             # 'wrist_camera_cam2world_opengl': wrist_camera_cam2world_opengl,
             'end_effector_pose_raw': robot_endeffector_pose,
-            'end_effector_pose': (
+            'eef_state_list': (
                 robot_endeffector_pose['pose'].detach().cpu().flatten().tolist()[:3]
                 + robot_endeffector_pose['rpy'].detach().cpu().flatten().tolist()[:3]
             ),
+            'gripper_state_list': gripper_state,
+            'front_camera_extrinsic_list': base_camera_extrinsic_opencv,
+            'wrist_camera_extrinsic_list': wrist_camera_extrinsic_opencv,
         }
         new_info = {
             **info,
-            'subgoal': subgoal_text,
-            'subgoal_grounded': grounded_subgoal,
+            'simple_subgoal_online': subgoal_text,
+            'grounded_subgoal_online': grounded_subgoal,
             'available_options': available_options,
-            'language_goal': language_goal,
-            'front_camera_extrinsic_opencv': base_camera_extrinsic_opencv,
-            'front_camera_intrinsic_opencv': base_camera_intrinsic_opencv,
-            'wrist_camera_extrinsic_opencv': wrist_camera_extrinsic_opencv,
-            'wrist_camera_intrinsic_opencv': wrist_camera_intrinsic_opencv,
+            'task_goal': language_goal,
+            'front_camera_intrinsic': base_camera_intrinsic_opencv,
+            'wrist_camera_intrinsic': wrist_camera_intrinsic_opencv,
         }
         return new_obs, new_info
 
@@ -541,8 +547,17 @@ class DemonstrationWrapper(gym.Wrapper):
             raise ValueError(f"[{env_id}] action must have at least 8 elements, got {action_arr.size}")
         return action_arr[:8]
 
-    def step(self, action):
-        """Execute one step and return unified batch (N=1)."""
+    @staticmethod
+    def _flatten_info_batch(info_batch: dict) -> dict:
+        """Convert columnar info dict-of-lists to flat dict by taking the last value of each key."""
+        return {k: v[-1] if isinstance(v, list) and v else v for k, v in info_batch.items()}
+
+    def _step_batch(self, action):
+        """Internal step returning full batch format (dict-of-lists for both obs and info).
+
+        Used by reset() and other internal callers that need batch-compatible output
+        for concat_step_batches.
+        """
         normalized_action = self._normalize_action_for_env_step(action)
         obs, reward, terminated, truncated, info = super().step(normalized_action)
 
@@ -575,7 +590,7 @@ class DemonstrationWrapper(gym.Wrapper):
             cached_prev_rpy = None if self._prev_ee_rpy_xyz is None else self._prev_ee_rpy_xyz.detach().clone()
             self._doing_extra_step = True
             try:
-                self.step(normalized_action)
+                self._step_batch(normalized_action)
             finally:
                 self._doing_extra_step = False
                 # Restore outer cache, ensuring "extra step only used for recording frames", not interfering with outer continuousness state.
@@ -583,7 +598,30 @@ class DemonstrationWrapper(gym.Wrapper):
                 self._prev_ee_rpy_xyz = cached_prev_rpy
 
         obs, info = self._augment_obs_and_info(obs, info, normalized_action)
+
+        # Compute status field from terminated/truncated/success
+        raw_success = info.get("success")
+        is_success = (isinstance(raw_success, torch.Tensor) and raw_success.item()) or raw_success is True
+        if is_success:
+            info["status"] = "success"
+        elif terminated.any():
+            info["status"] = "fail"
+        elif truncated.any():
+            info["status"] = "timeout"
+        else:
+            info["status"] = "ongoing"
+
         return planner_denseStep.to_step_batch([(obs, reward, terminated, truncated, info)])
+
+    def step(self, action):
+        """Execute one step and return (obs_batch, reward, terminated, truncated, info).
+
+        obs_batch is dict[str, list]; info is a flat dict (last values only).
+        """
+        batch = self._step_batch(action)
+        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = batch
+        info_flat = self._flatten_info_batch(info_batch)
+        return (obs_batch, reward_batch[-1], terminated_batch[-1], truncated_batch[-1], info_flat)
 
     def close(self):
         """Close environment, release resources (this wrapper no longer saves video)."""

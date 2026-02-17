@@ -25,8 +25,8 @@ VIDEO_FPS = 30
 
 def _frame_from_obs(obs: dict, is_video_frame: bool = False) -> np.ndarray:
     """Build a single side-by-side frame from front and wrist camera obs."""
-    front = obs["front_camera"][0].cpu().numpy()
-    wrist = obs["wrist_camera"][0].cpu().numpy()
+    front = obs["front_rgb_list"][0].cpu().numpy()
+    wrist = obs["wrist_rgb_list"][0].cpu().numpy()
     frame = np.concatenate([front, wrist], axis=1).astype(np.uint8)
     if is_video_frame:
         frame = cv2.rectangle(
@@ -84,7 +84,7 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
     obs, info = env.reset()
     # Obs lists: length 1 = no video, length > 1 = video; last element is current.
     frames = []
-    n_obs = len(obs["front_camera"])
+    n_obs = len(obs["front_rgb_list"])
     for i in range(n_obs):
         single_obs = {k: [v[i]] for k, v in obs.items()}
         frames.append(_frame_from_obs(single_obs, is_video_frame=(i < n_obs - 1)))
@@ -103,12 +103,10 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
             if GUI_RENDER:
                 env.render()
 
-            # TODO: hongze makes this correct
-            # there are two many nested lists here, need to flatten them
-            if terminated[-1]:
-                if info.get("success", False)[-1][-1]:
+            if terminated:
+                if info.get("status") == "success":
                     outcome = "success"
-                if info.get("fail", False)[-1][-1]:
+                elif info.get("status") == "fail":
                     outcome = "fail"
                 break
             step_idx += 1

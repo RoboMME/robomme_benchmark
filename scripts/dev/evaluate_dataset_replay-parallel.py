@@ -181,8 +181,8 @@ def main():
                 # ######## Video saving variable preparation (replay phase) end ########
 
                 info = {k: v[-1] for k, v in info_batch.items()}
-                terminated = bool(terminated_batch[-1].item())
-                truncated = bool(truncated_batch[-1].item())
+                terminated = bool(terminated_batch.item())
+                truncated = bool(truncated_batch.item())
 
                 step += 1
                 if GUI_RENDER:

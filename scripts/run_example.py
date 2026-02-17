@@ -76,8 +76,8 @@ def generate_sample_actions(action_space: str):
 
 def _frame_from_obs(obs, is_video_demo: bool = False) -> np.ndarray:
     """Build a single side-by-side frame from front and wrist camera obs."""
-    front = obs["front_camera"][0].cpu().numpy()
-    wrist = obs["wrist_camera"][0].cpu().numpy()
+    front = obs["front_rgb_list"][0].cpu().numpy()
+    wrist = obs["wrist_rgb_list"][0].cpu().numpy()
     frame = np.hstack([front, wrist]).astype(np.uint8)
     if is_video_demo:
         frame = cv2.rectangle(
@@ -117,7 +117,7 @@ def main(
 
     # Obs values are lists: length 1 for no video, >1 for video; last element is current.
     frames = []
-    n_obs = len(obs["front_camera"])
+    n_obs = len(obs["front_rgb_list"])
     for i in range(n_obs):
         frame = _frame_from_obs(
             {k: [v[i]] for k, v in obs.items()},
@@ -125,10 +125,10 @@ def main(
         )
         frames.append(frame)
 
-    task_goal = info["language_goal"][0]
+    task_goal = info["task_goal"]
     print(f"Task goal: {task_goal}")
-    print(f"Oracle simple subgoal: {info['subgoal'][-1]}")
-    print(f"Oracle grounded subgoal: {info['subgoal_grounded'][-1]}")
+    print(f"Oracle simple subgoal: {info['simple_subgoal_online']}")
+    print(f"Oracle grounded subgoal: {info['grounded_subgoal_online']}")
 
     step = 0
     action_gen = generate_sample_actions(action_space_type)
@@ -145,10 +145,10 @@ def main(
         if step == MAX_STEPS:
             print(f"Step {step} exceeded, terminating episode {episode_idx}.")
             break
-        if terminated[-1]: #TODO: hongze remove redundant nested lists 
-            if info.get("success", False)[-1][-1]:
+        if terminated:
+            if info.get("status") == "success":
                 print(f"[{env_id}] episode {episode_idx} success.")
-            elif info.get("fail", False)[-1][-1]:
+            elif info.get("status") == "fail":
                 print(f"[{env_id}] episode {episode_idx} failed.")
             break
 
