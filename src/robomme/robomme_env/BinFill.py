@@ -126,6 +126,7 @@ class BinFill(BaseEnv):
             else:  # seed_mod == 2
                 self.difficulty = "hard"
         #self.difficulty = "hard"
+        self.Robomme_difficulty = self.difficulty
 
         if robot_uids in PICK_CUBE_CONFIGS:
             cfg = PICK_CUBE_CONFIGS[robot_uids]

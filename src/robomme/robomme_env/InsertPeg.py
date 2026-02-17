@@ -109,7 +109,7 @@ class InsertPeg(BaseEnv):
                 self.difficulty = "medium"
             else:
                 self.difficulty = "hard"
-
+        self.Robomme_difficulty = self.difficulty
 
         self.restore_flag=False
         super().__init__(*args, robot_uids=robot_uids, **kwargs)

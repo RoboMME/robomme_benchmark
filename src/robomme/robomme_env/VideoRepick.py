@@ -134,6 +134,7 @@ class VideoRepick(BaseEnv):
             else:  # seed_mod == 2
                 self.difficulty = "hard"
         #self.difficulty = "hard"
+        self.Robomme_difficulty = self.difficulty
         # Use seed to randomly determine number of repetitions (1-5)
         self.generator = torch.Generator()
         self.generator.manual_seed(Robomme_seed)

@@ -85,8 +85,6 @@ class StopCube(BaseEnv):
         self.Robomme_seed = Robomme_seed
         self.stop=False
 
-
-        self.Robomme_seed = Robomme_seed
         self.robomme_failure_recovery = bool(
             kwargs.pop("robomme_failure_recovery", False)
         )
@@ -111,8 +109,7 @@ class StopCube(BaseEnv):
                 self.difficulty = "medium"
             else:  # seed_mod == 2
                 self.difficulty = "hard"
-
-
+        self.Robomme_difficulty = self.difficulty
 
         self.highlight_starts = {}  # Use dictionary to store highlight start time for each button
         super().__init__(*args, robot_uids=robot_uids, **kwargs)

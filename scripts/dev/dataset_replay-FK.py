@@ -160,7 +160,7 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
         action_space=EE_POSE_ACTION_SPACE,
         gui_render=GUI_RENDER,
     )
-    env, _, _ = env_builder.make_env_for_episode(episode_idx)
+    env = env_builder.make_env_for_episode(episode_idx)
     print(f"任务: {env_id}, episode: {episode_idx}, 目标: {task_goal}")
 
     obs, info = env.reset()

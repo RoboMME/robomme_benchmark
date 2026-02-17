@@ -66,7 +66,7 @@ def process_episode(
             action_space=EE_POSE_ACTION_SPACE,
             gui_render=gui_render,
         )
-        env, _, _ = env_builder.make_env_for_episode(episode_idx)
+        env = env_builder.make_env_for_episode(episode_idx)
         print(f"[ep{episode_idx}] 任务: {env_id}, 目标: {task_goal}")
 
         obs, info = env.reset()

@@ -95,7 +95,7 @@ def main():
         env = None
         dataset_resolver = None
         try:
-            env, seed, difficulty = env_builder.make_env_for_episode(episode)
+            env = env_builder.make_env_for_episode(episode)
             dataset_resolver = EpisodeDatasetResolver(
                 env_id=env_id,
                 episode=episode,

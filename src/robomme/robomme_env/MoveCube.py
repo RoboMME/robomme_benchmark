@@ -108,7 +108,7 @@ class MoveCube(BaseEnv):
                 self.difficulty = "medium"
             else:
                 self.difficulty = "hard"
-
+        self.Robomme_difficulty = self.difficulty
 
         self.restore_flag=False
         self.use_demonstrationwrapper=False

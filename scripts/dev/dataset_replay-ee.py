@@ -58,7 +58,7 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
         action_space=EE_POSE_ACTION_SPACE,
         gui_render=GUI_RENDER,
     )
-    env, _, _ = env_builder.make_env_for_episode(episode_idx) # TODO: hongze merge the labbels into env
+    env = env_builder.make_env_for_episode(episode_idx)
     print(f"task_name: {env_id}, episode_idx: {episode_idx}, task_goal: {task_goal}")
 
     obs, info = env.reset()

@@ -142,8 +142,7 @@ class VideoPlaceOrder(BaseEnv):
             else:  # seed_mod == 2
                 self.difficulty = "hard"
             # keep the difficulty selected by the seed instead of forcing it to easy
-        
-
+        self.Robomme_difficulty = self.difficulty
 
         self.onto_goalsite=False
         self.start_step=99999

@@ -58,7 +58,28 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
         action_space=JOINT_ACTION_SPACE,
         gui_render=GUI_RENDER,
     )
-    env, _, _ = env_builder.make_env_for_episode(episode_idx) # TODO: hongze merge the labbels into env
+    env = env_builder.make_env_for_episode(episode_idx)
+    print(f"seed={env.unwrapped.Robomme_seed}, difficulty={env.unwrapped.Robomme_difficulty}")
+    setup_group = episode_data.get("setup")
+    if setup_group is not None:
+        env_unwrapped = getattr(env, "unwrapped", env)
+        reserved_setup_keys = {
+            "seed",
+            "difficulty",
+            "task_goal",
+            "subgoal_list",
+            "front_camera_intrinsic",
+            "wrist_camera_intrinsic",
+        }
+        for key, value in setup_group.items():
+            if key in reserved_setup_keys or isinstance(value, h5py.Group):
+                continue
+            merged_value = value[()]
+            if isinstance(merged_value, (bytes, np.bytes_)):
+                merged_value = merged_value.decode("utf-8")
+            elif isinstance(merged_value, np.ndarray) and merged_value.dtype.kind == "S":
+                merged_value = np.char.decode(merged_value, "utf-8")
+            setattr(env_unwrapped, key, merged_value)
     print(f"task_name: {env_id}, episode_idx: {episode_idx}, task_goal: {task_goal}")
 
     obs, info = env.reset()

@@ -130,6 +130,7 @@ class VideoUnmask(BaseEnv):
                 self.difficulty = "medium"
             else:  # seed_mod == 2
                 self.difficulty = "hard"
+        self.Robomme_difficulty = self.difficulty
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 

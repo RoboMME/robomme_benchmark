@@ -111,7 +111,8 @@ def main(
         print(f"No episodes in {dataset} for {env_id}. Exiting.")
         return
 
-    env, _, _ = env_builder.make_env_for_episode(episode_idx) # TODO: hongze put the maxsteps as input here 
+    env = env_builder.make_env_for_episode(episode_idx) # TODO: hongze put the maxsteps as input here
+    print(f"seed={env.unwrapped.Robomme_seed}, difficulty={env.unwrapped.Robomme_difficulty}")
     obs, info = env.reset()
 
     # Obs values are lists: length 1 for no video, >1 for video; last element is current.

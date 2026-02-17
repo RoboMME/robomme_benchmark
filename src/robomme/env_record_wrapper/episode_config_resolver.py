@@ -211,4 +211,4 @@ class BenchmarkEnvBuilder:
             from .OraclePlannerDemonstrationWrapper import OraclePlannerDemonstrationWrapper
             env = OraclePlannerDemonstrationWrapper(env, env_id=self.env_id, gui_render=self.gui_render)
 
-        return env, seed, difficulty_hint
+        return env
