@@ -7,12 +7,16 @@ from typing import Callable, List, Optional, Union
 import gymnasium as gym
 import h5py
 import numpy as np
+import sapien
 import sapien.physx as physx
 import torch
 import cv2
 import colorsys
 
 from mani_skill import get_commit_info
+from mani_skill.examples.motionplanning.panda.motionplanner import (
+    PandaArmMotionPlanningSolver,
+)
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.io_utils import dump_json
@@ -434,13 +438,102 @@ class RobommeRecordWrapper(gym.Wrapper):
                         f"Warning: Failed to save failed no-object video for episode {self.Robomme_episode}: {e}"
                     )
 
+    def _init_fk_planner(self):
+        """Initialize mplib FK planner after env.reset().
+
+        Stores pinocchio_model, ee_link_idx and robot_base_pose for
+        forward-kinematics computation in _joint_action_to_ee_pose_dict().
+        Sets self._fk_available = False on failure so callers can fall back.
+        """
+        try:
+            solver = PandaArmMotionPlanningSolver(
+                self,
+                debug=False,
+                vis=False,
+                base_pose=self.unwrapped.agent.robot.pose,
+                visualize_target_grasp_pose=False,
+                print_env_info=False,
+            )
+            self._mplib_planner = solver.planner
+            self._ee_link_idx = self._mplib_planner.link_name_2_idx[
+                self._mplib_planner.move_group
+            ]
+            self._robot_base_pose = self.unwrapped.agent.robot.pose
+            self._fk_available = True
+        except Exception as exc:
+            print(f"[RecordWrapper] FK planner init failed, eef_action_raw/eef_action "
+                  f"will be zeros: {exc}")
+            self._mplib_planner = None
+            self._ee_link_idx = None
+            self._robot_base_pose = None
+            self._fk_available = False
+
+    def _joint_action_to_ee_pose_dict(self, action):
+        """Compute end-effector pose dict from joint_action via forward kinematics.
+
+        Uses the same build_endeffector_pose_dict pipeline as eef_state_raw
+        (normalization, sign alignment, RPY unwrapping) but with independent
+        prev-frame caches so that state and action continuity do not interfere.
+
+        Returns None if FK is unavailable or the action is invalid.
+        """
+        if not self._fk_available or action is None:
+            return None
+
+        try:
+            if isinstance(action, torch.Tensor):
+                action_np = action.detach().cpu().numpy()
+            else:
+                action_np = np.asarray(action)
+            action_np = action_np.astype(np.float64).flatten()
+
+            arm_qpos = action_np[:7]
+            gripper = float(action_np[7]) if action_np.size > 7 else -1.0
+
+            finger_pos = max(gripper, 0.0) if gripper >= 0 else 0.04
+            full_qpos = np.concatenate([arm_qpos, [finger_pos, finger_pos]])
+
+            pmodel = self._mplib_planner.pinocchio_model
+            pmodel.compute_forward_kinematics(full_qpos)
+            fk_result = pmodel.get_link_pose(self._ee_link_idx)
+
+            p_base = fk_result[:3]
+            q_base_wxyz = fk_result[3:]
+
+            pose_in_base = sapien.Pose(p_base, q_base_wxyz)
+            world_pose = self._robot_base_pose * pose_in_base
+
+            position_t = torch.as_tensor(
+                np.asarray(world_pose.p, dtype=np.float64), dtype=torch.float64
+            )
+            quat_wxyz_t = torch.as_tensor(
+                np.asarray(world_pose.q, dtype=np.float64), dtype=torch.float64
+            )
+
+            pose_dict, self._prev_action_ee_quat_wxyz, self._prev_action_ee_rpy_xyz = (
+                build_endeffector_pose_dict(
+                    position_t,
+                    quat_wxyz_t,
+                    self._prev_action_ee_quat_wxyz,
+                    self._prev_action_ee_rpy_xyz,
+                )
+            )
+            return pose_dict
+        except Exception as exc:
+            print(f"[RecordWrapper] FK computation failed: {exc}")
+            return None
+
     def reset(self, **kwargs):
         # Reset continuousness cache per episode to avoid cross-episode pollution
         self._prev_ee_quat_wxyz = None
         self._prev_ee_rpy_xyz = None
+        self._prev_action_ee_quat_wxyz = None
+        self._prev_action_ee_rpy_xyz = None
         self._current_keypoint_action = None  # Persist keypoint_action (7D ndarray)
         self._failsafe_triggered = False
-        return super().reset(**kwargs)
+        result = super().reset(**kwargs)
+        self._init_fk_planner()
+        return result
 
     def _consume_pending_keypoint(self) -> bool:
         """
@@ -723,6 +816,24 @@ class RobommeRecordWrapper(gym.Wrapper):
             ])
             eef_state = eef_action[:6]
 
+            # FK from joint_action -> eef_action_raw (pose/quat/rpy) and eef_action (7D)
+            action_pose_dict = self._joint_action_to_ee_pose_dict(action)
+            if action_pose_dict is not None:
+                fk_pose = _to_numpy(action_pose_dict['pose']).flatten()[:3]
+                fk_quat = _to_numpy(action_pose_dict['quat']).flatten()[:4]
+                fk_rpy = _to_numpy(action_pose_dict['rpy']).flatten()[:3]
+                gripper_val = (
+                    _to_numpy(action).flatten()[-1:]
+                    if action is not None
+                    else np.array([-1.0])
+                )
+                fk_eef_action = np.concatenate([fk_pose, fk_rpy, gripper_val])
+            else:
+                fk_pose = np.zeros(3)
+                fk_quat = np.zeros(4)
+                fk_rpy = np.zeros(3)
+                fk_eef_action = np.zeros(7)
+
             record_data = {
                 'obs': {
                     'front_camera_rgb': base_camera_frame,
@@ -748,11 +859,11 @@ class RobommeRecordWrapper(gym.Wrapper):
                     'joint_action': action,
                     'keypoint_action': self._current_keypoint_action,  # 7D ndarray or None (backward fill done before close())
                     'eef_action_raw': {
-                        'pose': np.zeros(3),
-                        'quat': np.zeros(4),
-                        'rpy': np.zeros(3),
+                        'pose': fk_pose,
+                        'quat': fk_quat,
+                        'rpy': fk_rpy,
                     },
-                    'eef_action': np.zeros(7),
+                    'eef_action': fk_eef_action,
                 },
                 'info': {
                     'record_timestep': record_timestep,
