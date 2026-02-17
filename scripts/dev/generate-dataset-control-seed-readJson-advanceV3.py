@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 import sys
 import argparse
 import json
@@ -435,6 +435,7 @@ def run_env_dataset(
     temp_folder: Path,
     save_video: bool,
     metadata_records: List[Dict[str, Any]],
+    gpu_id: int,
 ) -> List[Dict[str, Any]]:
     """
     Run dataset generation for a batch of episodes and save data to temporary folder.
@@ -445,10 +446,14 @@ def run_env_dataset(
         temp_folder: Temporary folder to save data
         save_video: Whether to save video
         metadata_records: Records from reference dataset metadata
+        gpu_id: GPU ID to use
     
     Returns:
         Generated episode metadata record list
     """
+    # Set GPU used by current process
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
     temp_folder.mkdir(parents=True, exist_ok=True)
     episode_indices = list(episode_indices)
     if not episode_indices:
@@ -675,8 +680,8 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=50,
-        help="Number of episodes generated per environment (Default: 50)",
+        default=100,
+        help="Number of episodes generated per environment (Default: 100)",
     )
     parser.add_argument(
         "--save-video",
@@ -695,16 +700,21 @@ def parse_args() -> argparse.Namespace:
         "--max-workers",
         "-w",
         type=int,
-        default=32,
+        default=50,
         help="Number of parallel workers when running multiple environments.",
+    )
+    parser.add_argument(
+        "--dual-gpu",
+        dest="dual_gpu",
+        action="store_true",
+        default=True,
+        help="Use two GPUs (GPU 0 and GPU 1) for parallel processing. Default: single GPU (GPU 0 only).",
     )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    # Generate only first 50 entries
-    args.episodes = min(50, args.episodes)
     env_inputs = args.env or DEFAULT_ENVS
     env_ids: List[str] = []
     # Parse environment list arguments, support comma separation
@@ -724,14 +734,15 @@ def main() -> None:
         )
 
         # Create shared temporary folder for all episodes
-        temp_folder =  Path(f"/data/hongzefu/dataset_generate-b4/temp_{env_id}_episodes")
-        final_dataset_path =  Path(f"/data/hongzefu/dataset_generate-b4/record_dataset_{env_id}.h5")
+        temp_folder =  Path(f"/data/hongzefu/data_0217/temp_{env_id}_episodes")
+        final_dataset_path =  Path(f"/data/hongzefu/data_0217/record_dataset_{env_id}.h5")
         #final_dataset_path =  Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")
         print(f"Environment: {env_id}")
         print(f"Episodes: {args.episodes}")
         print(f"Workers: {num_workers}")
+        print(f"GPU mode: {'Dual GPU (0,1)' if args.dual_gpu else 'Single GPU (0)'}")
         print(f"Temporary folder: {temp_folder}")
         print(f"Final dataset: {final_dataset_path}")
         print(f"{'='*80}\n")
@@ -751,6 +762,7 @@ def main() -> None:
                     temp_folder,
                     args.save_video,
                     source_metadata_records,
+                    0,  # Default use GPU 0
                 )
             else:
                 worker_count = len(episode_chunks)
@@ -758,33 +770,86 @@ def main() -> None:
                     f"Running {env_id} with {worker_count} workers across {args.episodes} episodes..."
                 )
 
-                # 2. Parallel execution
-                # Each worker writes to the same temp folder (but uses different file/dir names)
-                with ProcessPoolExecutor(max_workers=worker_count) as executor:
-                    future_to_chunk = {
-                        executor.submit(
-                            run_env_dataset,
-                            env_id,
-                            chunk,
-                            temp_folder,  # All workers use the same temporary folder path
-                            args.save_video,
-                            source_metadata_records,
-                        ): chunk
-                        for chunk in episode_chunks
-                    }
+                from contextlib import ExitStack
+                
+                future_to_chunk = {}
+                futures = []
 
-                    for future in as_completed(future_to_chunk):
-                        chunk = future_to_chunk[future]
-                        chunk_label = (chunk[0], chunk[-1]) if chunk else ("?", "?")
-                        try:
-                            records = future.result()
-                            episode_records.extend(records)
-                            print(f"✓ Completed episodes {chunk_label[0]}-{chunk_label[1]} for {env_id}")
-                        except Exception as exc:
-                            print(
-                                f"✗ Environment {env_id} failed on episodes "
-                                f"{chunk_label[0]}-{chunk_label[1]} with error: {exc}"
+                if args.dual_gpu:
+                    # Dual GPU mode: split chunks across GPU 0 and GPU 1
+                    chunks_gpu0 = episode_chunks[0::2]
+                    chunks_gpu1 = episode_chunks[1::2]
+                    
+                    workers_gpu0 = num_workers // 2
+                    workers_gpu1 = num_workers - workers_gpu0
+                    
+                    if workers_gpu0 == 0 and chunks_gpu0: workers_gpu0 = 1
+                    if workers_gpu1 == 0 and chunks_gpu1: workers_gpu1 = 1
+                    
+                    print(f"Assigning {len(chunks_gpu0)} chunks to GPU 0 ({workers_gpu0} workers)")
+                    print(f"Assigning {len(chunks_gpu1)} chunks to GPU 1 ({workers_gpu1} workers)")
+
+                    with ExitStack() as stack:
+                        executor0 = None
+                        if workers_gpu0 > 0:
+                            executor0 = stack.enter_context(ProcessPoolExecutor(max_workers=workers_gpu0))
+                        
+                        executor1 = None
+                        if workers_gpu1 > 0:
+                            executor1 = stack.enter_context(ProcessPoolExecutor(max_workers=workers_gpu1))
+                        
+                        if executor0:
+                            for chunk in chunks_gpu0:
+                                f = executor0.submit(
+                                    run_env_dataset, env_id, chunk, temp_folder, args.save_video, source_metadata_records, 0
+                                )
+                                future_to_chunk[f] = chunk
+                                futures.append(f)
+                                
+                        if executor1:
+                            for chunk in chunks_gpu1:
+                                f = executor1.submit(
+                                    run_env_dataset, env_id, chunk, temp_folder, args.save_video, source_metadata_records, 1
+                                )
+                                future_to_chunk[f] = chunk
+                                futures.append(f)
+
+                        for future in as_completed(futures):
+                            chunk = future_to_chunk[future]
+                            chunk_label = (chunk[0], chunk[-1]) if chunk else ("?", "?")
+                            try:
+                                records = future.result()
+                                episode_records.extend(records)
+                                print(f"✓ Completed episodes {chunk_label[0]}-{chunk_label[1]} for {env_id}")
+                            except Exception as exc:
+                                print(
+                                    f"✗ Environment {env_id} failed on episodes "
+                                    f"{chunk_label[0]}-{chunk_label[1]} with error: {exc}"
+                                )
+                else:
+                    # Single GPU mode: all chunks use GPU 0
+                    print(f"Assigning all {len(episode_chunks)} chunks to GPU 0 ({num_workers} workers)")
+
+                    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+                        for chunk in episode_chunks:
+                            f = executor.submit(
+                                run_env_dataset, env_id, chunk, temp_folder, args.save_video, source_metadata_records, 0
                             )
+                            future_to_chunk[f] = chunk
+                            futures.append(f)
+
+                        for future in as_completed(futures):
+                            chunk = future_to_chunk[future]
+                            chunk_label = (chunk[0], chunk[-1]) if chunk else ("?", "?")
+                            try:
+                                records = future.result()
+                                episode_records.extend(records)
+                                print(f"✓ Completed episodes {chunk_label[0]}-{chunk_label[1]} for {env_id}")
+                            except Exception as exc:
+                                print(
+                                    f"✗ Environment {env_id} failed on episodes "
+                                    f"{chunk_label[0]}-{chunk_label[1]} with error: {exc}"
+                                )
 
             # 3. Merge all episode files into final dataset
             print(f"\nMerging all episodes into final dataset...")
@@ -801,6 +866,7 @@ def main() -> None:
                 temp_folder,
                 args.save_video,
                 source_metadata_records,
+                0, # gpu_id
             )
 
             # Merge episodes into final dataset
