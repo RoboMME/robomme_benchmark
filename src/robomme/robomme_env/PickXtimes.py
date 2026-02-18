@@ -321,7 +321,7 @@ class PickXtimes(BaseEnv):
                 "name": "press the button to stop",
                 "subgoal_segment": "press the button at <> to stop",
                 "demonstration": False,
-                "failure_func":lambda:is_any_obj_pickup(self, self.non_target_cubes),
+                "failure_func":lambda:is_any_obj_pickup(self, self.all_cubes),
                 "solve": lambda env, planner: solve_button(env, planner, obj=self.button),
                 "segment":self.cap_link 
             })
