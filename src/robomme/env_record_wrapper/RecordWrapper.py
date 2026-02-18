@@ -800,14 +800,11 @@ class RobommeRecordWrapper(gym.Wrapper):
                 return np.asarray(value)
 
             joint_state = self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos
-            joint_state = np.asarray(joint_state)
-            joint_state_flat = joint_state.flatten()
-            if joint_state_flat.size == 7:
-                joint_state_flat = np.concatenate([joint_state_flat, [0.0, 0.0]])
-            elif joint_state_flat.size < 9:
-                joint_state_flat = np.pad(joint_state_flat, (0, 9 - joint_state_flat.size), constant_values=0.0)
-            gripper_state = joint_state_flat[-2:]
-            gripper_close= bool(np.any(gripper_state < 0.03))
+            joint_state = np.asarray(joint_state).flatten()
+            # gripper is at indices 7-8; joint_state stored as first 7 dims
+            gripper_state = joint_state[7:9] if joint_state.size >= 9 else np.zeros(2)
+            gripper_close = bool(np.any(gripper_state < 0.03))
+            joint_state = joint_state[:7]
 
             eef_action = np.concatenate([
                 _to_numpy(eef_pose_dict['pose']).flatten()[:3],
@@ -1002,16 +999,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 obs_group.create_dataset("front_depth", data=obs_data['front_depth'])
                 obs_group.create_dataset("wrist_depth", data=obs_data['wrist_depth'])
 
-                # joint_state ensure 9 dims, fill two 0s if 7 dims
-                state_data = obs_data['joint_state']
-                if isinstance(state_data, np.ndarray):
-                    if state_data.shape == (7,):
-                        state_data = np.concatenate([state_data, [0, 0]])
-                    elif state_data.shape == (1, 7):
-                        state_data = state_data.flatten()
-                        state_data = np.concatenate([state_data, [0, 0]])
-                        state_data = state_data.reshape(1, 9)
-                obs_group.create_dataset("joint_state", data=state_data)
+                obs_group.create_dataset("joint_state", data=obs_data['joint_state'])
                 obs_group.create_dataset("eef_state", data=obs_data['eef_state'])
                 obs_group.create_dataset("gripper_state", data=obs_data['gripper_state'])
                 obs_group.create_dataset("is_gripper_close", data=obs_data['is_gripper_close'])
@@ -1110,6 +1098,11 @@ class RobommeRecordWrapper(gym.Wrapper):
             # Write setup info (seed, difficulty, task list, camera intrinsics)
             setup_group = episode_group.create_group(f"setup")
             setup_group.create_dataset("seed", data=self.Robomme_seed)
+            setup_group.create_dataset(
+                "available_multi_choices",
+                data="",
+                dtype=h5py.string_dtype(encoding="utf-8"),
+            )
             setup_group.create_dataset(
                     "difficulty",
                     data=difficulty,
