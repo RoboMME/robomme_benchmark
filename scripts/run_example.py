@@ -135,15 +135,16 @@ def main(
     action_gen = generate_sample_actions(action_space_type)
     while True:
         action = next(action_gen)
-        obs, _, terminated, _, info = env.step(action)
+        obs, _, terminated, truncated, info = env.step(action)
+        print("step!!!")
 
         frames.append(_frame_from_obs(obs))
         step += 1
 
         if GUI_RENDER:
             env.render()
-        
-        if terminated:
+
+        if terminated or truncated:
             if info.get("status") == "success":
                 print(f"[{env_id}] episode {episode_idx} success.")
             elif info.get("status") == "fail":

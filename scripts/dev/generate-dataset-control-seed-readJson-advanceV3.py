@@ -46,12 +46,12 @@ Key features include:
 
 # List of all supported environment module names
 DEFAULT_ENVS =[
-"PickXtimes",
+#"PickXtimes",
 # "StopCube",
 # "SwingXtimes",
 # "BinFill",
 
-# "VideoUnmaskSwap",
+ "VideoUnmaskSwap",
 # "VideoUnmask",
 # "ButtonUnmaskSwap",
 # "ButtonUnmask",

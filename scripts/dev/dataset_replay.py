@@ -29,11 +29,11 @@ GUI_RENDER = True
 DATASET_ROOT = "/data/hongzefu/data_1206"
 
 DEFAULT_ENV_IDS = [
-     "PickXtimes",
+    # "PickXtimes",
     # "StopCube",
     # "SwingXtimes",
     #"BinFill",
-    # "VideoUnmaskSwap",
+     "VideoUnmaskSwap",
     # "VideoUnmask",
     # "ButtonUnmaskSwap",
     # "ButtonUnmask",
@@ -111,16 +111,17 @@ def main():
 
             # --- Explicitly read all info fields (flat dict, last frame values) ---
             task_goal = info["task_goal"]
-            simple_subgoal = info["simple_subgoal_online"]
-            grounded_subgoal = info["grounded_subgoal_online"]
-            available_options = info["available_options"]
+            simple_subgoal_online = info["simple_subgoal_online"]
+            grounded_subgoal_online = info["grounded_subgoal_online"]
+            available_multi_choices = info.get("available_multi_choices")
             front_camera_intrinsic = info["front_camera_intrinsic"]
             wrist_camera_intrinsic = info["wrist_camera_intrinsic"]
+            status = info.get("status")
 
             # --- Video saving variable preparation (reset phase) ---
             reset_base_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in front_rgb_list]
             reset_wrist_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_rgb_list]
-            reset_subgoal_grounded = [grounded_subgoal] * len(front_rgb_list)
+            reset_subgoal_grounded = [grounded_subgoal_online] * len(front_rgb_list)
 
             step = 0
             episode_success = False
@@ -157,9 +158,9 @@ def main():
 
                 # --- Explicitly read all info fields (flat dict) ---
                 task_goal = info["task_goal"]
-                simple_subgoal = info["simple_subgoal_online"]
-                grounded_subgoal = info["grounded_subgoal_online"]
-                available_options = info["available_options"]
+                simple_subgoal_online = info["simple_subgoal_online"]
+                grounded_subgoal_online = info["grounded_subgoal_online"]
+                available_multi_choices = info.get("available_multi_choices")
                 front_camera_intrinsic = info["front_camera_intrinsic"]
                 wrist_camera_intrinsic = info["wrist_camera_intrinsic"]
                 status = info.get("status")
@@ -171,7 +172,7 @@ def main():
                 rollout_wrist_frames.extend(
                     torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_rgb_list
                 )
-                rollout_subgoal_grounded.extend([grounded_subgoal] * len(front_rgb_list))
+                rollout_subgoal_grounded.extend([grounded_subgoal_online] * len(front_rgb_list))
 
                 terminated_flag = bool(terminated.item())
                 truncated_flag = bool(truncated.item())

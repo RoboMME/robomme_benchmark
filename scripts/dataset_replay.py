@@ -104,7 +104,7 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
             if GUI_RENDER:
                 env.render()
 
-            if terminated:
+            if terminated or truncated:
                 if info.get("status") == "success":
                     outcome = "success"
                 elif info.get("status") == "fail":
