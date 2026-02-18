@@ -18,15 +18,15 @@ from robomme.env_record_wrapper import (
 from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 
 # Only enable one ACTION_SPACE; others are commented out for manual switching
-ACTION_SPACE = "joint_angle"
+#ACTION_SPACE = "joint_angle"
 #ACTION_SPACE = "ee_pose"
 #ACTION_SPACE = "ee_quat"
-#ACTION_SPACE = "keypoint"
+ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = True
 
-DATASET_ROOT = "/data/hongzefu/data_1206"
+DATASET_ROOT = "/data/hongzefu/data_0217"
 
 DEFAULT_ENV_IDS = [
     # "PickXtimes",
@@ -49,6 +49,8 @@ DEFAULT_ENV_IDS = [
 
 OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay"
 MAX_STEPS = 1000
+
+
 
 
 def _parse_oracle_command(subgoal_text: Optional[str]) -> Optional[dict[str, Any]]:
@@ -117,6 +119,7 @@ def main():
             front_camera_intrinsic = info["front_camera_intrinsic"]
             wrist_camera_intrinsic = info["wrist_camera_intrinsic"]
             status = info.get("status")
+
 
             # --- Video saving variable preparation (reset phase) ---
             reset_base_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in front_rgb_list]

@@ -13,6 +13,13 @@ import numpy as np
 import torch
 
 
+def _collapse_singleton_lists(value):
+    """Recursively unwrap singleton lists while preserving non-singleton lists."""
+    while isinstance(value, list) and len(value) == 1:
+        value = value[0]
+    return value
+
+
 def _to_scalar(value):
     """Convert scalar or tensor value to Python scalar."""
     if isinstance(value, torch.Tensor):
@@ -115,7 +122,7 @@ def _dicts_to_columnar_dict(dict_steps):
             if key not in out:
                 out[key] = [None] * idx
         for key in out:
-            out[key].append(current.get(key, None))
+            out[key].append(_collapse_singleton_lists(current.get(key, None)))
     for key in out:
         if len(out[key]) < n:
             out[key].extend([None] * (n - len(out[key])))
@@ -187,7 +194,7 @@ def concat_step_batches(batches):
             if values is None:
                 obs_out[key].extend([None] * n)
             else:
-                obs_out[key].extend(list(values))
+                obs_out[key].extend(_collapse_singleton_lists(v) for v in values)
 
         for key in info_batch:
             if key not in info_out:
@@ -197,7 +204,7 @@ def concat_step_batches(batches):
             if values is None:
                 info_out[key].extend([None] * n)
             else:
-                info_out[key].extend(list(values))
+                info_out[key].extend(_collapse_singleton_lists(v) for v in values)
 
         reward_out.append(reward_batch.reshape(-1).to(torch.float32))
         terminated_out.append(terminated_batch.reshape(-1).to(torch.bool))
