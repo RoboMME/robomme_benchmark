@@ -1,4 +1,4 @@
-## RoboMME: A Robotic Benchmark for Memory-Augmented Manipulation
+# RoboMME: A Robotic Benchmark for Memory-Augmented Manipulation
 
 ![Robomme bench](assets/robomme_bench.jpg)
 
