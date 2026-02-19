@@ -12,6 +12,9 @@ import gymnasium as gym
 from typing import Literal
 
 from mani_skill.examples.motionplanning.panda.motionplanner import PandaArmMotionPlanningSolver
+from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
+    PandaStickMotionPlanningSolver,
+)
 from ..robomme_env.utils.rpy_util import rpy_xyz_to_quat_wxyz_torch
 
 
@@ -71,14 +74,25 @@ class EndeffectorDemonstrationWrapper(gym.Wrapper):
         gripper = None if no_gripper_env else float(action[gripper_idx])
 
         if self._ee_pose_planner is None:
-            self._ee_pose_planner = PandaArmMotionPlanningSolver(
-                self.env,
-                debug=False,
-                vis=False,
-                base_pose=self.env.unwrapped.agent.robot.pose,
-                visualize_target_grasp_pose=False,
-                print_env_info=False,
-            )
+            if no_gripper_env:
+                self._ee_pose_planner = PandaStickMotionPlanningSolver(
+                    self.env,
+                    debug=False,
+                    vis=False,
+                    base_pose=self.env.unwrapped.agent.robot.pose,
+                    visualize_target_grasp_pose=False,
+                    print_env_info=False,
+                    joint_vel_limits=0.3,
+                )
+            else:
+                self._ee_pose_planner = PandaArmMotionPlanningSolver(
+                    self.env,
+                    debug=False,
+                    vis=False,
+                    base_pose=self.env.unwrapped.agent.robot.pose,
+                    visualize_target_grasp_pose=False,
+                    print_env_info=False,
+                )
         planner = self._ee_pose_planner
         goal_world = np.concatenate([ee_p, ee_q])
         goal_base = planner.planner.transform_goal_to_wrt_base(goal_world)

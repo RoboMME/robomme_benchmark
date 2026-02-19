@@ -19,9 +19,9 @@ from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 
 # Only enable one ACTION_SPACE; others are commented out for manual switching
 #ACTION_SPACE = "joint_angle"
-#ACTION_SPACE = "ee_pose"
-#ACTION_SPACE = "ee_quat"
-ACTION_SPACE = "keypoint"
+ACTION_SPACE = "ee_pose"
+
+#ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = False
@@ -33,7 +33,7 @@ DEFAULT_ENV_IDS = [
     # "StopCube",
     # "SwingXtimes",
     #"BinFill",
-     "VideoUnmaskSwap",
+     #"VideoUnmaskSwap",
     # "VideoUnmask",
     # "ButtonUnmaskSwap",
     # "ButtonUnmask",
@@ -43,8 +43,8 @@ DEFAULT_ENV_IDS = [
    # "PickHighlight",
     # "InsertPeg",
     # "MoveCube",
-    # "PatternLock",
-    # "RouteStick",
+    "PatternLock",
+     "RouteStick",
 ]
 
 OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay"

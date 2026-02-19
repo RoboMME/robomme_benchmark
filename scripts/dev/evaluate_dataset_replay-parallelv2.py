@@ -49,7 +49,7 @@ OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-b4"
 MAX_STEPS = 1000
 
 DEFAULT_ENV_IDS = [
-    "PickXtimes",
+    #"PickXtimes",
     # "StopCube",
     # "SwingXtimes",
     # "BinFill",
@@ -63,8 +63,8 @@ DEFAULT_ENV_IDS = [
     # "PickHighlight",
     # "InsertPeg",
     # "MoveCube",
-    # "PatternLock",
-    # "RouteStick",
+     "PatternLock",
+     "RouteStick",
 ]
 
 def _parse_oracle_command(subgoal_text: Optional[str]) -> Optional[dict[str, Any]]:
@@ -124,12 +124,12 @@ def evaluate_episode(
         # Maintain debug variable semantics from evaluate.py
         # Note: These local variables in multi-processing can be simplified if printing is not needed, but unpacking logic is retained for consistency.
         maniskill_obs = obs_batch["maniskill_obs"]
-        front_camera = obs_batch["front_camera"]
-        wrist_camera = obs_batch["wrist_camera"]
+        front_camera = obs_batch["front_rgb_list"]
+        wrist_camera = obs_batch["wrist_rgb_list"]
         # Other variables unpacking skipped unless used downstream
 
-        language_goal_list = info_batch["language_goal"]
-        # language_goal = language_goal_list[0] if language_goal_list else None
+        task_goal_list = info_batch["task_goal"]
+        # task_goal = task_goal_list[0] if task_goal_list else None
         
         info = {k: v[-1] for k, v in info_batch.items()}
         # terminated = bool(terminated_batch[-1].item())
@@ -138,7 +138,7 @@ def evaluate_episode(
         # ######## Video saving variable preparation (reset phase) start ########
         reset_base_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in front_camera]
         reset_wrist_frames = [torch.as_tensor(f).detach().cpu().numpy().copy() for f in wrist_camera]
-        reset_subgoal_grounded = info_batch["subgoal_grounded"]
+        reset_subgoal_grounded = info_batch["grounded_subgoal_online"]
         # ######## Video saving variable preparation (reset phase) end ########
 
         # ######## Video saving variable initialization start ########
@@ -160,10 +160,10 @@ def evaluate_episode(
             obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.step(action)
 
             # Maintain debug variable semantics from evaluate.py
-            front_camera = obs_batch["front_camera"]
-            wrist_camera = obs_batch["wrist_camera"]
+            front_camera = obs_batch["front_rgb_list"]
+            wrist_camera = obs_batch["wrist_rgb_list"]
 
-            subgoal_grounded = info_batch["subgoal_grounded"]
+            subgoal_grounded = info_batch["grounded_subgoal_online"]
 
             # ######## Video saving variable preparation (replay phase) start ########
             rollout_base_frames.extend(torch.as_tensor(f).detach().cpu().numpy().copy() for f in front_camera)

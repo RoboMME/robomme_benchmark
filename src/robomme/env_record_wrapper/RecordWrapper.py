@@ -17,6 +17,9 @@ from mani_skill import get_commit_info
 from mani_skill.examples.motionplanning.panda.motionplanner import (
     PandaArmMotionPlanningSolver,
 )
+from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
+    PandaStickMotionPlanningSolver,
+)
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.utils import common, gym_utils, sapien_utils
 from mani_skill.utils.io_utils import dump_json
@@ -446,19 +449,27 @@ class RobommeRecordWrapper(gym.Wrapper):
         Sets self._fk_available = False on failure so callers can fall back.
         """
         try:
-            solver = PandaArmMotionPlanningSolver(
-                self,
+            _STICK_IDS = ("PatternLock", "RouteStick")
+            env_id = getattr(getattr(self.unwrapped, "spec", None), "id", None) or self.Robomme_env
+            use_stick = env_id in _STICK_IDS
+
+            solver_cls = PandaStickMotionPlanningSolver if use_stick else PandaArmMotionPlanningSolver
+            solver_kwargs = dict(
                 debug=False,
                 vis=False,
                 base_pose=self.unwrapped.agent.robot.pose,
                 visualize_target_grasp_pose=False,
                 print_env_info=False,
             )
+            if use_stick:
+                solver_kwargs["joint_vel_limits"] = 0.3
+            solver = solver_cls(self, **solver_kwargs)
             self._mplib_planner = solver.planner
             self._ee_link_idx = self._mplib_planner.link_name_2_idx[
                 self._mplib_planner.move_group
             ]
             self._robot_base_pose = self.unwrapped.agent.robot.pose
+            self._fk_qpos_size = len(self._mplib_planner.user_joint_names)
             self._fk_available = True
         except Exception as exc:
             print(f"[RecordWrapper] FK planner init failed, eef_action_raw/eef_action "
@@ -488,10 +499,14 @@ class RobommeRecordWrapper(gym.Wrapper):
             action_np = action_np.astype(np.float64).flatten()
 
             arm_qpos = action_np[:7]
-            gripper = float(action_np[7]) if action_np.size > 7 else -1.0
-
-            finger_pos = max(gripper, 0.0) if gripper >= 0 else 0.04
-            full_qpos = np.concatenate([arm_qpos, [finger_pos, finger_pos]])
+            if self._fk_qpos_size == 7:
+                # stick 机器人：pinocchio 只有 7 维，不拼 finger
+                full_qpos = arm_qpos
+            else:
+                # 标准 panda：pinocchio 有 9 维，拼两个 finger
+                gripper = float(action_np[7]) if action_np.size > 7 else -1.0
+                finger_pos = max(gripper, 0.0) if gripper >= 0 else 0.04
+                full_qpos = np.concatenate([arm_qpos, [finger_pos, finger_pos]])
 
             pmodel = self._mplib_planner.pinocchio_model
             pmodel.compute_forward_kinematics(full_qpos)
