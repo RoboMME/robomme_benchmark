@@ -27,16 +27,15 @@ uv pip install -e .
 
 ## Running Examples
 
-Run an environment with fixed predefined setups:
+Start an environment with a specificed setup.
 
 ```bash
-uv run scripts/run_example.py --action-space-type joint_angle --dataset test
+uv run scripts/run_example.py --action-space-type joint_angle --dataset test --env-id PickXtimes --episode-idx 0
 ```
+It'll generate a video in `sample_run_videos` directory for the rollout.
 
-- **Train dataset:** 100 episodes per env.
-- **Val/test dataset:** 50 episodes per env.
-
-We provide four action types: `joint_action`, `ee_pose`, `keypoint`, and `multi_choice`, e.g. predict continuous actions with `joint_action` or `ee_pose`, discrete waypoint actions with `keypoint`, or use `multi_choice` for VideoQA-style data.
+We provide four action types: `joint_action`, `ee_pose`, `keypoint`, and `multi_choice`.   
+`joint_action` and `ee_pose` can be used to predict continuous actions. `keypoint` is used to predict discrete waypoint actions. `multi_choice` is designed for VideoQA problem.
 
 > **Note:** Currenetly, only `joint_action` is verified. please use it rather than other types.
 
@@ -51,10 +50,21 @@ Training data can be downloaded [here](https://huggingface.co/Yinpei/data_0214).
 After downloading, replay the dataset for a sanity check:
 
 ```bash
-uv run scripts/dataset_replay.py --h5-data-dir=<your_downloaded_data_dir>
+uv run scripts/dataset_replay.py --h5-data-dir <your_downloaded_data_dir> --action-space-type joint_angle
 ```
 
-You can also re-generate your own HDF5 data (see scripts in `scripts/dev/xxxx`).
+### Data Generation
+You can also re-generate your own HDF5 data with 
+```
+uv run scripts/dev/xxxx 
+```
+explain sth about parrellel generation (@hongze)
+
+### Play with Online Demo
+Start gradio GUI to play (@hongze)
+```
+```
+
 
 ## Model Training
 
@@ -66,7 +76,7 @@ The [MME-VLA-Suite](https://github.com/RoboMME/MME-VLA-Suite) repo provides VLA 
 
 We have four task suites, each with 4 tasks:
 
-| Suite      | Focus             | Tasks                                                                 |
+| Suite      | Focus             | Task ID                                                                 |
 | ---------- | ----------------- | --------------------------------------------------------------------- |
 | Counting   | Temporal memory   | BinFill, PickXtimes, SwingXtimes, StopCube                            |
 | Permanence | Spatial memory    | VideoUnmask, VideoUnmaskSwap, ButtonUnmask, ButtonUnmaskSwap         |
@@ -83,10 +93,20 @@ A1: Use a physical display or set up a virtual display for GUI rendering (e.g. i
 
 **Q2: Failure related to Vulkan installation.**
 
-A2: We recommend reinstalling the NVIDIA driver and Vulkan packages. We use NVIDIA driver 570.211.01 and Vulkan 1.3.275.
+A2: We recommend reinstalling the NVIDIA driver and Vulkan packages. We use NVIDIA driver 570.211.01 and Vulkan 1.3.275.  If it still does not work, you can switch to CPU rendering:
+```
+os.environ['SAPIEN_RENDER_DEVICE'] = 'cpu'
+os.environ['MUJOCO_GL'] = 'osmesa'
+```
+
 
 
 ## Acknowledgements
+This work was supported in part by NSF SES-2128623, NSF CAREER #2337870, NSF NRI #2220876, NSF NAIRR250085. We would also like to thank the wonderful [OpenPi](https://github.com/Physical-Intelligence/openpi/tree/main) codebase from Physical-Intelligence.
 
 
 ## Citation
+
+```
+...
+```

@@ -99,7 +99,7 @@ class BenchmarkEnvBuilder:
         action_space: str = "joint_angle",
         gui_render: bool = False,
         override_metadata_path: Optional[Union[str, Path]] = None,
-        max_steps: int = 1000,
+        max_steps: int = 10000,
     ):
         if dataset not in _ALLOWED_DATASETS:
             raise ValueError(f"Unsupported dataset '{dataset}'. Allowed datasets: {sorted(_ALLOWED_DATASETS)}")
@@ -167,7 +167,7 @@ class BenchmarkEnvBuilder:
         episode_set = {episode for (task, episode) in self.metadata_index if task == self.env_id}
         return len(episode_set)
 
-    def make_env_for_episode(self, episode: int, max_steps: Optional[int] = None):
+    def make_env_for_episode(self, episode_idx: int, max_steps: Optional[int] = None):
         """Create and configure environment for specific episode. Wrap EndeffectorDemonstrationWrapper for action_space=ee_pose/ee_quat, MultiStepDemonstrationWrapper for keypoint, OraclePlannerDemonstrationWrapper for oracle_planner."""
         from .DemonstrationWrapper import DemonstrationWrapper
 
@@ -175,7 +175,7 @@ class BenchmarkEnvBuilder:
             max_steps + 2 if max_steps is not None else self.max_steps_without_demonstration
         )
 
-        seed, difficulty_hint = self.resolve_episode(episode)
+        seed, difficulty_hint = self.resolve_episode(episode_idx)
         env_kwargs = dict(
             obs_mode="rgb+depth+segmentation",
             control_mode="pd_joint_pos",
@@ -188,7 +188,7 @@ class BenchmarkEnvBuilder:
             env_kwargs["Robomme_difficulty"] = difficulty_hint
         seed_desc = seed if seed is not None else "default"
         difficulty_str = f", difficulty={difficulty_hint}" if difficulty_hint else ""
-        print(f"[{self.env_id}] Episode {episode}: seed={seed_desc}{difficulty_str}")
+        print(f"[{self.env_id}] Episode {episode_idx}: seed={seed_desc}{difficulty_str}")
 
         env = gym.make(self.env_id, **env_kwargs)
         env = DemonstrationWrapper(

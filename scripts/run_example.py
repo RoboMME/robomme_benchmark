@@ -26,11 +26,11 @@ from robomme.robomme_env.utils import (
 )
 
 
-GUI_RENDER = True
+GUI_RENDER = False
 
 VIDEO_FPS = 30
 VIDEO_OUTPUT_DIR = "sample_run_videos"
-MAX_STEPS = 10
+MAX_STEPS = 100
 
 
 def _add_small_noise(
@@ -42,7 +42,7 @@ def _add_small_noise(
     return action + noise
 
 
-def generate_sample_actions(action_space: str):
+def generate_sample_actions(action_space: str, task_id: str=None):
     if action_space == JOINT_ACTION_SPACE:
         base = np.array(
             [0.0, 0.0, 0.0, -np.pi / 2, 0.0, np.pi / 2, np.pi / 4, 1.0],
@@ -90,29 +90,32 @@ def _frame_from_obs(obs, is_video_demo: bool = False) -> np.ndarray:
 def main(
     action_space_type: Literal["joint_angle", "ee_pose", "keypoint", "multi_choice"] = "joint_angle",
     dataset: Literal["train", "test", "val"] = "test",
+    task_id: Literal["BinFill", "PickXtimes", "SwingXtimes", "StopCube", "VideoUnmask", "VideoUnmaskSwap", "ButtonUnmask", "ButtonUnmaskSwap", "PickHighlight", "VideoRepick", "VideoPlaceButton", "VideoPlaceOrder", "MoveCube", "InsertPeg", "PatternLock", "RouteStick"] = "RouteStick",
+    episode_idx: int = 0, # [0, 100) for train, [0, 50) for test and val
 ) -> None:
-    env_id_list = BenchmarkEnvBuilder.get_task_list()
-    print(f"All RoboMME tasks: {env_id_list}")
+    task_id_list = BenchmarkEnvBuilder.get_task_list()
+    print(f"All RoboMME tasks: {task_id_list}")
     print(f"Using action_space: {action_space_type}")
-
-    env_id = "PickXtimes"
-    episode_idx = 0
-
-    print(f"Running task: {env_id}")
+    print(f"Running task: {task_id}, episode: {episode_idx}, dataset: {dataset}")
+    
+    assert task_id in task_id_list, f"Invalid env_id: {task_id}. Allowed env_ids: {task_id_list}"
+    if dataset == "train":
+        assert 0 <= episode_idx < 100, f"Invalid episode_idx: {episode_idx}. Allowed episode_idx: [0, 100)"
+    else:   # test or val
+        assert 0 <= episode_idx < 50, f"Invalid episode_idx: {episode_idx}. Allowed episode_idx: [0, 50)"
+    
     env_builder = BenchmarkEnvBuilder(
-        env_id=env_id,
+        env_id=task_id,
         dataset=dataset,
         action_space=action_space_type,
         gui_render=GUI_RENDER,
+        max_steps=MAX_STEPS,
     )
     episode_count = env_builder.get_episode_num()
-    print(f"[{env_id}] contains {episode_count} episodes in {dataset} dataset")
+    print(f"[{task_id}] contains {episode_count} episodes in {dataset} dataset")
 
-    if episode_count == 0:
-        print(f"No episodes in {dataset} for {env_id}. Exiting.")
-        return
 
-    env = env_builder.make_env_for_episode(episode_idx, max_steps=MAX_STEPS)
+    env = env_builder.make_env_for_episode(episode_idx)
     print(f"seed={env.unwrapped.Robomme_seed}, difficulty={env.unwrapped.Robomme_difficulty}")
     obs, info = env.reset()
 
@@ -133,10 +136,10 @@ def main(
 
     step = 0
     action_gen = generate_sample_actions(action_space_type)
+    
     while True:
         action = next(action_gen)
         obs, _, terminated, truncated, info = env.step(action)
-        print("step!!!")
 
         frames.append(_frame_from_obs(obs))
         step += 1
@@ -146,16 +149,18 @@ def main(
 
         if terminated or truncated:
             if info.get("status") == "success":
-                print(f"[{env_id}] episode {episode_idx} success.")
+                print(f"[{task_id}] episode {episode_idx} is successful.")
             elif info.get("status") == "fail":
-                print(f"[{env_id}] episode {episode_idx} failed.")
+                print(f"[{task_id}] episode {episode_idx} is failed.")
+            elif info.get("status") == "timeout":
+                print(f"[{task_id}] episode {episode_idx} is timeout.")
             break
 
     env.close()
 
     os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
     video_path = os.path.join(
-        VIDEO_OUTPUT_DIR, f"{env_id}_ep{episode_idx}_{action_space_type}.mp4"
+        VIDEO_OUTPUT_DIR, f"{task_id}_ep{episode_idx}_{action_space_type}.mp4"
     )
     imageio.mimsave(video_path, frames, fps=VIDEO_FPS)
     print(f"Saved video to {video_path}")

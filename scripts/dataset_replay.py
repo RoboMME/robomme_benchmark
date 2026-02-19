@@ -6,22 +6,21 @@ and writes side-by-side front/wrist camera videos to disk.
 """
 
 import os
-
 import cv2
 import h5py
 import imageio
 import numpy as np
+from typing import Literal
 
 from robomme.robomme_env import *
 from robomme.robomme_env.utils import *
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
-from robomme.robomme_env.utils import JOINT_ACTION_SPACE
+from robomme.robomme_env.utils import JOINT_ACTION_SPACE, EE_POSE_ACTION_SPACE, KEYPOINT_ACTION_SPACE, MULTI_CHOICE_ACTION_SPACE
 
 # --- Config ---
 GUI_RENDER = False
 REPLAY_VIDEO_DIR = "replay_videos"
 VIDEO_FPS = 30
-MAX_STEPS = 1000
 
 
 def _frame_from_obs(obs: dict, is_video_frame: bool = False) -> np.ndarray:
@@ -44,7 +43,7 @@ def _first_execution_step(episode_data) -> int:
     return step_idx
 
 
-def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
+def process_episode(env_data: h5py.File, episode_idx: int, task_id: str, action_space_type: str) -> None:
     """Replay one episode from HDF5 data, record frames, and save a video."""
     episode_data = env_data[f"episode_{episode_idx}"]
     task_goal = episode_data["setup"]["task_goal"][()].decode()
@@ -54,12 +53,12 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
     print(f"Execution start step index: {step_idx}")
 
     env_builder = BenchmarkEnvBuilder(
-        env_id=env_id,
+        env_id=task_id,
         dataset="train",
-        action_space=JOINT_ACTION_SPACE,
+        action_space=action_space_type,
         gui_render=GUI_RENDER,
     )
-    env = env_builder.make_env_for_episode(episode_idx, max_steps=MAX_STEPS)
+    env = env_builder.make_env_for_episode(episode_idx)
     print(f"seed={env.unwrapped.Robomme_seed}, difficulty={env.unwrapped.Robomme_difficulty}")
     setup_group = episode_data.get("setup")
     if setup_group is not None:
@@ -80,7 +79,7 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
             elif isinstance(merged_value, np.ndarray) and merged_value.dtype.kind == "S":
                 merged_value = np.char.decode(merged_value, "utf-8")
             setattr(env_unwrapped, key, merged_value)
-    print(f"task_name: {env_id}, episode_idx: {episode_idx}, task_goal: {task_goal}")
+    print(f"task_name: {task_id}, episode_idx: {episode_idx}, task_goal: {task_goal}")
 
     obs, info = env.reset()
     # Obs lists: length 1 = no video, length > 1 = video; last element is current.
@@ -90,57 +89,73 @@ def process_episode(env_data: h5py.File, episode_idx: int, env_id: str) -> None:
         single_obs = {k: [v[i]] for k, v in obs.items()}
         frames.append(_frame_from_obs(single_obs, is_video_frame=(i < n_obs - 1)))
     print(f"Initial frames (video + current): {len(frames)}")
+    
 
     outcome = "unknown"
-    try:
-        while step_idx < total_steps:
+    while step_idx < total_steps:
+        if action_space_type == JOINT_ACTION_SPACE:
             action = np.asarray(
                 episode_data[f"timestep_{step_idx}"]["action"]["joint_action"][()],
                 dtype=np.float32,
             )
-            obs, _, terminated, _, info = env.step(action)
-            frames.append(_frame_from_obs(obs))
+        elif action_space_type == EE_POSE_ACTION_SPACE:
+            action = np.asarray(
+                episode_data[f"timestep_{step_idx}"]["action"]["eef_action"][()],
+                dtype=np.float32,
+            )
+        elif action_space_type == KEYPOINT_ACTION_SPACE:
+            raise NotImplementedError(f"Keypoint action space type is not supported for dataset replay.")
+        else:
+            raise NotImplementedError(f"Multi-choice action space type is not supported for dataset replay.")
 
-            if GUI_RENDER:
-                env.render()
+        obs, _, terminated, truncated, info = env.step(action)
+        frames.append(_frame_from_obs(obs))
 
-            if terminated or truncated:
-                if info.get("status") == "success":
-                    outcome = "success"
-                elif info.get("status") == "fail":
-                    outcome = "fail"
-                break
-            step_idx += 1
-    finally:
-        env.close()
+        if GUI_RENDER:
+            env.render()
+
+        if terminated or truncated:
+            if info.get("status") == "success":
+                outcome = "success"
+            elif info.get("status") == "fail":
+                outcome = "fail"
+            break
+        step_idx += 1
+    
+    env.close()
 
     safe_goal = task_goal.replace(" ", "_").replace("/", "_")
-    os.makedirs(REPLAY_VIDEO_DIR, exist_ok=True)
-    video_name = f"{outcome}_{env_id}_ep{episode_idx}_{safe_goal}_step-{len(frames)}.mp4"
-    video_path = os.path.join(REPLAY_VIDEO_DIR, video_name)
+    video_dir = os.path.join(REPLAY_VIDEO_DIR, action_space_type)
+    os.makedirs(video_dir, exist_ok=True)
+    video_name = f"{outcome}_{task_id}_ep{episode_idx}_{safe_goal}_step-{len(frames)}.mp4"
+    video_path = os.path.join(video_dir, video_name)
     imageio.mimsave(video_path, frames, fps=VIDEO_FPS)
     print(f"Saved video to {video_path}")
 
 
-def replay(h5_data_dir: str = "data/robomme_h5_data") -> None:
+def replay(h5_data_dir: str = "data/robomme_h5_data", 
+           task_id: Literal["BinFill", "PickXtimes", "SwingXtimes", "StopCube", "VideoUnmask", "VideoUnmaskSwap", "ButtonUnmask", "ButtonUnmaskSwap", "PickHighlight", "VideoRepick", "VideoPlaceButton", "VideoPlaceOrder", "MoveCube", "InsertPeg", "PatternLock", "RouteStick"] = "RouteStick",
+           action_space_type: Literal["joint_angle", "ee_pose", "keypoint", "multi_choice"] = "joint_angle") -> None:
     """Replay all episodes from all task HDF5 files in the given directory."""
     env_id_list = BenchmarkEnvBuilder.get_task_list()
-    for env_id in env_id_list:
-        file_name = f"record_dataset_{env_id}.h5"
-        file_path = os.path.join(h5_data_dir, file_name)
-        if not os.path.exists(file_path):
-            print(f"Skipping {env_id}: file not found: {file_path}")
-            continue
-
-        with h5py.File(file_path, "r") as data:
-            episode_indices = sorted(
-                int(k.split("_")[1])
-                for k in data.keys()
-                if k.startswith("episode_")
-            )
-            print(f"Task: {env_id}, has {len(episode_indices)} episodes")
-            for episode_idx in episode_indices[:1]:
-                process_episode(data, episode_idx, env_id)
+    assert task_id in env_id_list, f"Invalid task_id: {task_id}. Allowed task_ids: {env_id_list}"
+    
+    
+    file_name = f"record_dataset_{task_id}.h5"
+    file_path = os.path.join(h5_data_dir, file_name)
+    if not os.path.exists(file_path):
+        print(f"Skipping {task_id}: file not found: {file_path}")
+        return
+    
+    with h5py.File(file_path, "r") as data:
+        episode_indices = sorted(
+            int(k.split("_")[1])
+            for k in data.keys()
+            if k.startswith("episode_")
+        )
+        print(f"Task: {task_id}, has {len(episode_indices)} episodes")
+        for episode_idx in episode_indices[:1]:
+            process_episode(data, episode_idx, task_id, action_space_type)
 
 
 if __name__ == "__main__":
