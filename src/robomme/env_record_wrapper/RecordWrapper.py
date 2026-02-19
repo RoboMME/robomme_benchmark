@@ -1,4 +1,5 @@
 import copy
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -85,6 +86,10 @@ class RobommeRecordWrapper(gym.Wrapper):
         self.previous_subgoal_segment_online = None
         self.current_subgoal_segment_online_filled = None
         self.segmentation_points_online = []  # Cache online segmentation target points
+
+        # choice_action tracking
+        self._current_choice_label = ""      # choice_label of the current subgoal
+        self._prev_task_index = -1           # Task index from previous step, used to detect subgoal switch
 
         # Video buffer
         self.video_frames = []  # Store combined video frames
@@ -312,6 +317,9 @@ class RobommeRecordWrapper(gym.Wrapper):
         grounded_text,
         subgoal_online_text,
         grounded_online_text,
+        choice_action_label,
+        choice_action_point,
+        task_index,
     ):
         """Stitch and overlay planner / online text rows."""
         combined = prepared["combined"]
@@ -320,7 +328,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         # Add subgoal_text and grounded_subgoal text for first row (PLANNER view)
         combined = self._add_text_to_frame(
             combined,
-            ["PLANNER:", subgoal_text, grounded_text],
+            ["PLANNER:", subgoal_text, grounded_text, str(choice_action_label), str(choice_action_point), str(task_index)],
             position="top_right",
         )
 
@@ -546,6 +554,9 @@ class RobommeRecordWrapper(gym.Wrapper):
         self._prev_action_ee_rpy_xyz = None
         self._current_keypoint_action = None  # Persist keypoint_action (7D ndarray)
         self._failsafe_triggered = False
+        # Reset choice_action tracking per episode
+        self._current_choice_label = ""
+        self._prev_task_index = -1
         result = super().reset(**kwargs)
         self._init_fk_planner()
         return result
@@ -720,14 +731,18 @@ class RobommeRecordWrapper(gym.Wrapper):
             existing_subgoal_filled=self.current_subgoal_segment_filled,
         )
         segmentation_result = segmentation_output["segmentation_result"]
+        # Detect non-online subgoal switch via task_index (integer comparison).
+        # This correctly handles consecutive tasks with identical subgoal_segment strings.
+        _cur_task_index = getattr(self.unwrapped, 'current_task_index', -1)
+        if _cur_task_index != self._prev_task_index:
+            self._current_choice_label = getattr(self.unwrapped, 'current_choice_label', "")
+            self._prev_task_index = _cur_task_index
+            self.previous_subgoal_segment = segmentation_output["updated_previous_subgoal_segment"]
         self.segmentation_points = segmentation_output["segmentation_points"]
         self.current_subgoal_segment_filled = segmentation_output[
             "current_subgoal_segment_filled"
         ]
         self.no_object_flag = segmentation_output["no_object_flag"]
-        self.previous_subgoal_segment = segmentation_output[
-            "updated_previous_subgoal_segment"
-        ]
         self.vis_obj_id_list = segmentation_output["vis_obj_id_list"]
 
         # Process online planning segmentation info (logic same as above, but for online target)
@@ -781,6 +796,9 @@ class RobommeRecordWrapper(gym.Wrapper):
                 self.current_subgoal_segment_filled,
                 subgoal_online_text,
                 self.current_subgoal_segment_online_filled,
+                choice_action_label=self._current_choice_label,
+                choice_action_point=list(self.segmentation_points[0]) if self.segmentation_points else [],
+                task_index=_cur_task_index,
             )
             combined = self._video_apply_overlays(
                 combined,
@@ -874,7 +892,11 @@ class RobommeRecordWrapper(gym.Wrapper):
                         'rpy': fk_rpy,
                     },
                     'eef_action': fk_eef_action,
-                    'choice_action': "{}",
+                    'choice_action': json.dumps({
+                        "action": self._current_choice_label,
+                        "point": list(self.segmentation_points[0]) if self.segmentation_points else [],
+                        "serial_number": _cur_task_index,
+                    }),
                 },
                 'info': {
                     'simple_subgoal': subgoal_text,

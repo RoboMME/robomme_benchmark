@@ -39,7 +39,6 @@ def _options_default(env, planner, require_target, base) -> List[dict]:
 
     return options
 
-
 def _options_videorepick(env, planner, require_target, base) -> List[dict]:
     options: List[dict] = [
         {

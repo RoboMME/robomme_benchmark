@@ -369,16 +369,17 @@ class BinFill(BaseEnv):
                         "func": lambda c=self.all_cubes: is_any_obj_pickup_flag_currentpickup(self,objects=c),
                         "name": subgoal_language.get_subgoal_with_index(i, "pick up the {idx} {color} cube", color=color_name),
                         "subgoal_segment": subgoal_language.get_subgoal_with_index(i, "pick up the {idx} {color} cube at <>", color=color_name),
+                        "choice_label": "pick up the cube",
                         "demonstration": False,
                         "failure_func":  lambda:is_button_pressed(self, obj=self.button),
                         "solve": lambda env, planner, c=cube: solve_pickup(env, planner, obj=c),
                         "segment":[cube_collection[i]]
-
                     })
                     tasks.append({
                         "func": lambda c=self.all_cubes: is_any_obj_dropped_onto_delete(self, objects=c, target=self.board_with_hole),
                         "name": f"put it into the bin",
                         "subgoal_segment":"put it into the bin at <>",
+                        "choice_label": "put it into the bin",
                         "demonstration": False,
                         "failure_func":  lambda:is_button_pressed(self, obj=self.button),
                         "solve": lambda env, planner, c=cube: [
@@ -390,6 +391,7 @@ class BinFill(BaseEnv):
                 "func": lambda: is_button_pressed(self, obj=self.button),
                 "name": "press the button",
                 "subgoal_segment":"press the button at <>",
+                "choice_label": "press the button",
                 "demonstration": False,
                 "failure_func":lambda  c=self.all_cubes:[not check_in_bin_number(self,in_bin_list= [self.red_cubes_in_bin, self.blue_cubes_in_bin, self.green_cubes_in_bin],
                                                             total_number_list=[self.red_cubes_target_number, self.blue_cubes_target_number, self.green_cubes_target_number])

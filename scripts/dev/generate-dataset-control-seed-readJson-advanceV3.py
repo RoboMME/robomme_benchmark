@@ -49,7 +49,7 @@ DEFAULT_ENVS =[
 # "PickXtimes",
 # "StopCube",
 # "SwingXtimes",
-# "BinFill",
+"BinFill",
 
 #  "VideoUnmaskSwap",
 # "VideoUnmask",
@@ -63,8 +63,8 @@ DEFAULT_ENVS =[
 
 # "InsertPeg",
 # 'MoveCube',
-  "PatternLock",
-"RouteStick"
+#   "PatternLock",
+# "RouteStick"
     ]
 
 # Reference dataset metadata root directory: used to read difficulty and Robomme_seed
@@ -733,8 +733,8 @@ def main() -> None:
         )
 
         # Create shared temporary folder for all episodes
-        temp_folder =  Path(f"/data/hongzefu/data_0217/temp_{env_id}_episodes")
-        final_dataset_path =  Path(f"/data/hongzefu/data_0217/record_dataset_{env_id}.h5")
+        temp_folder =  Path(f"/data/hongzefu/data_0219/temp_{env_id}_episodes")
+        final_dataset_path =  Path(f"/data/hongzefu/data_0219/record_dataset_{env_id}.h5")
         #final_dataset_path =  Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")
