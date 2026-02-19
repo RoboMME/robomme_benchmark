@@ -34,7 +34,7 @@ DEFAULT_ENV_IDS = [
     # "SwingXtimes",
     #"BinFill",
      #"VideoUnmaskSwap",
-    # "VideoUnmask",
+     "VideoUnmask",
     # "ButtonUnmaskSwap",
     # "ButtonUnmask",
      #"VideoRepick",
@@ -43,8 +43,8 @@ DEFAULT_ENV_IDS = [
    # "PickHighlight",
     # "InsertPeg",
     # "MoveCube",
-    "PatternLock",
-     "RouteStick",
+    #"PatternLock",
+   #  "RouteStick",
 ]
 
 OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay"
