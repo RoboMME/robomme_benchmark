@@ -236,12 +236,13 @@ class VideoUnmask(BaseEnv):
 
         tasks = [
              {
-                        "func": lambda: static_check(self, timestep=int(self.elapsed_steps), static_steps=64),
-                        "name": "static",
-                        "subgoal_segment": "static",
-                        "demonstration": True,
-                        "failure_func": None,
-                        "solve": lambda env, planner: solve_hold_obj(env, planner, static_steps=64),
+                            "func": lambda: static_check(self, timestep=int(self.elapsed_steps), static_steps=64),
+                            "name": "static",
+                            "subgoal_segment": "static",
+                            "choice_label": "static",
+                            "demonstration": True,
+                            "failure_func": None,
+                            "solve": lambda env, planner: solve_hold_obj(env, planner, static_steps=64),
                         },
             
 
@@ -250,6 +251,7 @@ class VideoUnmask(BaseEnv):
                 "func": (lambda: is_bin_pickup(self, obj=self.bin_0)),
                 "name": f"pick up the container that hides the {self.color_names[0]} cube",
                 "subgoal_segment":f"pick up the container at <> that hides the {self.color_names[0]} cube",
+                "choice_label": "pick up the container",
                 "demonstration": False,
                 "failure_func": lambda: is_any_bin_pickup(self,[bin for bin in self.spawned_bins if bin != self.bin_0]),
                 "solve": lambda env, planner: solve_pickup_bin(env, planner, obj=self.bin_0),
@@ -260,6 +262,7 @@ class VideoUnmask(BaseEnv):
                     "func": (lambda: is_bin_putdown(self, obj=self.bin_0)),
                     "name": "put down the container",
                     "subgoal_segment":"put down the container",
+                    "choice_label": "put down the container",
                     "demonstration": False,
                     "failure_func": lambda:is_any_bin_pickup(self,[bin for bin in self.spawned_bins if bin != self.bin_0]),
                     "solve": lambda env, planner: solve_putdown_whenhold(env, planner),
@@ -270,6 +273,7 @@ class VideoUnmask(BaseEnv):
                     "func": (lambda: is_bin_pickup(self, obj=self.bin_1)),
                     "name": f"pick up the container that hides the {self.color_names[1]} cube",
                     "subgoal_segment":f"pick up the container at <> that hides the {self.color_names[1]} cube",
+                    "choice_label": "pick up the container",
                     "demonstration": False,
                     "failure_func": lambda: is_any_bin_pickup(self,[bin for bin in self.spawned_bins if bin != self.bin_1]),
                     "solve": lambda env, planner: solve_pickup_bin(env, planner,obj=self.bin_1),

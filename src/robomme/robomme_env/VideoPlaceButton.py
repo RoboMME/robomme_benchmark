@@ -361,6 +361,7 @@ class VideoPlaceButton(BaseEnv):
                         "func": (lambda: is_obj_pickup(self, obj=self.target_cube)),
                         "name": f"pick up the cube",
                         "subgoal_segment": f"pick up the cube at <>",
+                        "choice_label": "pick up the cube",
                         "demonstration": True,
                         "failure_func": None,
                         "solve": lambda env, planner: solve_pickup(
@@ -378,6 +379,7 @@ class VideoPlaceButton(BaseEnv):
                         ),
                         "name": "drop the cube onto target",
                         "subgoal_segment": f"drop the cube onto target at <>",
+                        "choice_label": "drop onto",
                         "demonstration": True,
                         "failure_func": None,
                         "solve": lambda env, planner: solve_putonto_whenhold(
@@ -392,6 +394,7 @@ class VideoPlaceButton(BaseEnv):
                     "func": (lambda: is_obj_pickup(self, obj=self.target_cube)),
                     "name": f"pick up the cube",
                     "subgoal_segment": f"pick up the cube at <>",
+                    "choice_label": "pick up the cube",
                     "demonstration": True,
                     "failure_func": None,
                     "solve": lambda env, planner: solve_pickup(
@@ -409,6 +412,7 @@ class VideoPlaceButton(BaseEnv):
                     ),
                     "name": "drop the cube onto target",
                     "subgoal_segment": f"drop the cube onto target at <>",
+                    "choice_label": "drop onto",
                     "demonstration": True,
                     "failure_func": None,
                     "solve": lambda env, planner: solve_putonto_whenhold(
@@ -423,6 +427,7 @@ class VideoPlaceButton(BaseEnv):
                     "func": (lambda: is_button_pressed(self, obj=self.button)),
                     "name": "press the button",
                     "subgoal_segment": f"press the button at <>",
+                    "choice_label": "press the button",
                     "demonstration": True,
                     "failure_func": None,
                     "solve": lambda env, planner: solve_button(env, planner, self.button),
@@ -436,6 +441,7 @@ class VideoPlaceButton(BaseEnv):
                         "func": (lambda: is_obj_pickup(self, obj=self.target_cube)),
                         "name": f"pick up the cube",
                         "subgoal_segment": f"pick up the cube at <>",
+                        "choice_label": "pick up the cube",
                         "demonstration": True,
                         "failure_func": None,
                         "solve": lambda env, planner: solve_pickup(
@@ -453,6 +459,7 @@ class VideoPlaceButton(BaseEnv):
                         ),
                         "name": "drop the cube onto target",
                         "subgoal_segment": f"drop the cube onto target at <>",
+                        "choice_label": "drop onto",
                         "demonstration": True,
                         "failure_func": None,
                         "solve": lambda env, planner: solve_putonto_whenhold(
@@ -467,6 +474,7 @@ class VideoPlaceButton(BaseEnv):
                     "func": (lambda: is_obj_pickup(self, obj=self.target_cube)),
                     "name": f"pick up the cube",
                     "subgoal_segment": f"pick up the cube at <>",
+                    "choice_label": "pick up the cube",
                     "demonstration": True,
                     "failure_func": None,
                     "solve": lambda env, planner: solve_pickup(
@@ -484,6 +492,7 @@ class VideoPlaceButton(BaseEnv):
                     ),
                     "name": "drop the cube onto target",
                     "subgoal_segment": f"drop the cube onto target at <>",
+                    "choice_label": "drop onto",
                     "demonstration": True,
                     "failure_func": None,
                     "solve": lambda env, planner: solve_putonto_whenhold(
@@ -515,6 +524,7 @@ class VideoPlaceButton(BaseEnv):
                     ),
                     "name": "drop the cube onto table",
                     "subgoal_segment": f"drop the cube onto table",
+                    "choice_label": "drop onto",
                     "demonstration": True,
                     "failure_func": None,
                     "solve": lambda env, planner: [
@@ -571,6 +581,7 @@ class VideoPlaceButton(BaseEnv):
                     "func": (lambda: is_obj_pickup(self, obj=self.target_cube)),
                     "name": f"pick up the cube",
                     "subgoal_segment": f"pick up the cube at <>",
+                    "choice_label": "pick up the cube",
                     "demonstration": False,
                     "failure_func": lambda: is_any_obj_pickup(self, self.non_target_cubes),
                     "solve": lambda env, planner: [
@@ -588,6 +599,7 @@ class VideoPlaceButton(BaseEnv):
                     ),
                     "name": "place the cube onto the correct target",
                     "subgoal_segment": f"place the cube onto the correct target at <>",
+                    "choice_label": "drop onto",
                     "demonstration": False,
                     "failure_func": (
                         lambda: is_obj_dropped_onto_any(

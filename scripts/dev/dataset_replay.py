@@ -23,27 +23,27 @@ from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 #ACTION_SPACE = "keypoint"
 ACTION_SPACE = "oracle_planner"
 
-GUI_RENDER = True
+GUI_RENDER = False
 
 DATASET_ROOT = "/data/hongzefu/data_0219"
 
 DEFAULT_ENV_IDS = [
-    # "PickXtimes",
-    # "StopCube",
-    # "SwingXtimes",
-    "BinFill",
-     #"VideoUnmaskSwap",
-     #"VideoUnmask",
-    # "ButtonUnmaskSwap",
-    # "ButtonUnmask",
-     #"VideoRepick",
-    # "VideoPlaceButton",
-    # "VideoPlaceOrder",
-   # "PickHighlight",
-    # "InsertPeg",
-    # "MoveCube",
-    #"PatternLock",
-   #  "RouteStick",
+"PickXtimes",
+# "StopCube",
+# "SwingXtimes",
+# "BinFill",
+# "VideoUnmaskSwap",
+# "VideoUnmask",
+# "ButtonUnmaskSwap",
+# "ButtonUnmask",
+# "VideoRepick",
+# "VideoPlaceButton",
+# "VideoPlaceOrder",
+# "PickHighlight",
+# "InsertPeg",
+# "MoveCube",
+# "PatternLock",
+# "RouteStick",
 ]
 
 OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay"
@@ -70,13 +70,21 @@ def main():
 
         env = None
         for episode in range(episode_count):
+            if episode != 5:
+                continue
 
             env = env_builder.make_env_for_episode(episode, max_steps=MAX_STEPS)
-            dataset_resolver = EpisodeDatasetResolver(
-                env_id=env_id,
-                episode=episode,
-                dataset_directory=DATASET_ROOT,
-            )
+            try:
+                dataset_resolver = EpisodeDatasetResolver(
+                    env_id=env_id,
+                    episode=episode,
+                    dataset_directory=DATASET_ROOT,
+                )
+            except KeyError as e:
+                print(f"[{env_id}] Episode {episode} missing in H5, skipping. ({e})")
+                if env is not None:
+                    env.close()
+                continue
 
             # ======== Reset ========
             # obs: dict-of-lists (columnar batch, list length = number of demo frames)

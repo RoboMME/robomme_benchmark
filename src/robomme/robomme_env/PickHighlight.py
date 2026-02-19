@@ -252,6 +252,7 @@ class PickHighlight(BaseEnv):
             "func": lambda: is_button_pressed(self, obj=self.button),
                 "name": "press the button",
                 "subgoal_segment":"press the button at <>",
+                "choice_label": "press button",
                 "demonstration": False,
                 "failure_func":is_any_obj_pickup(self,[cube for cube in self.all_cubes]),
                 "solve": lambda env, planner:solve_button(env, planner, obj=self.button),
@@ -272,6 +273,7 @@ class PickHighlight(BaseEnv):
                     "func": (lambda c=cube: is_any_obj_pickup_flag_currentpickup(self, objects=[c])),
                     "name": task_name,
                     "subgoal_segment": task_subgoal,
+                    "choice_label": "pick up the highlighted cube",
                     "demonstration": False,
                     "failure_func": lambda idx=cube_idx:
                         [is_any_obj_pickup(self,[cube for cube in self.all_cubes if cube not in self.target_cubes] ),
@@ -284,6 +286,7 @@ class PickHighlight(BaseEnv):
                         "func": (lambda :is_obj_dropped_currentpickup(self,self.target_cubes)),
                         "name": f"place the cube onto the table",
                         "subgoal_segment":"place the cube onto the table",
+                        "choice_label": "place the cube onto the table",
                         "demonstration": False,
                         "failure_func": lambda idx=cube_idx:
                         [ is_any_obj_pickup(self,[cube for cube in self.all_cubes if cube not in self.target_cubes] ),

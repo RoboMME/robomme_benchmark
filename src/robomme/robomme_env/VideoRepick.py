@@ -323,6 +323,7 @@ class VideoRepick(BaseEnv):
                 "func": (lambda: is_obj_pickup(self, obj=self.target_cube_1)),
                 "name": f"pick up the cube",
                 "subgoal_segment":f"pick up the cube at <>",
+                "choice_label": "pick up the cube",
                 "demonstration": True,
                 "failure_func": lambda:None,
                 "solve": lambda env, planner: [solve_pickup(env, planner, obj=self.target_cube_1)],
@@ -331,6 +332,7 @@ class VideoRepick(BaseEnv):
                 "func": (lambda: is_obj_dropped(self, obj=self.target_cube_1)),
                 "name": "drop the cube on the table",
                 "subgoal_segment":f"drop the cube on the table",
+                "choice_label": "put it down",
                 "demonstration": True,
                 "failure_func": lambda: None,
                 "solve": lambda env, planner: [solve_putdown_whenhold(env, planner,release_z=0.03)]
@@ -383,6 +385,7 @@ class VideoRepick(BaseEnv):
                         "func": (lambda: is_obj_pickup(self, obj=self.target_cube_1)),
                         "name": f"pick up the correct cube for the {ordinal} time" ,
                         "subgoal_segment":f"pick up the correct cube at <> for the {ordinal} time" ,
+                        "choice_label": "pick up the cube",
                         "demonstration": False,
                         "failure_func": lambda: [
                             is_any_obj_pickup(self,[cube for cube in self.spawned_cubes if cube != self.target_cube_1]),
@@ -395,6 +398,7 @@ class VideoRepick(BaseEnv):
                         "func": lambda: is_obj_dropped(self,obj=self.target_cube_1),
                     "name": "put it down",
                     "subgoal_segment":f"put it down",
+                    "choice_label": "put it down",
                         "demonstration": False,
                         "failure_func": lambda:[
                             is_any_obj_pickup(self,[cube for cube in self.spawned_cubes if cube != self.target_cube_1]),
@@ -406,6 +410,7 @@ class VideoRepick(BaseEnv):
                     "func": lambda: is_button_pressed(self, obj=self.button_left),
                     "name": "press the button to finish",
                     "subgoal_segment":f"press the button at <> to finish",
+                    "choice_label": "press the button to finish",
                     "demonstration": False,
                     "failure_func":lambda: is_any_obj_pickup(self,[cube for cube in self.spawned_cubes]),
                     "solve": lambda env, planner: solve_button(env, planner, obj=self.button_left),

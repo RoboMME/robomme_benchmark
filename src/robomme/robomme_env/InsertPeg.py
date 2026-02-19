@@ -346,6 +346,7 @@ class InsertPeg(BaseEnv):
                     "func": lambda: is_A_pickup_notB(self, self.grasp_target, self.insert_target),
                     "name": f"Pick up the peg by grasping the {self.grasp_target_distance} end",
                     "subgoal_segment":f"Pick up the peg by grasping the {self.grasp_target_distance} end at <>",
+                    "choice_label": "pick up the peg by grasping one end",
                     "demonstration": True,
                     "failure_func": lambda: is_A_pickup_notB(self, self.insert_target, self.grasp_target),
                     "solve": lambda env, planner: grasp_and_lift_peg_side(env, planner, env.grasp_target),
@@ -355,6 +356,7 @@ class InsertPeg(BaseEnv):
                     "func": lambda: is_A_insert_notB(self, self.insert_target, self.grasp_target, self.box,direction=self.direction),
                     "name": f"Insert the peg from the {self.insert_way} side of the box",
                     "subgoal_segment":f"Insert the peg from the {self.insert_way} side of the box at <>",
+                    "choice_label": f"insert the peg from the {self.insert_way} side",
                     "demonstration": True,
                     "failure_func": None,
                     "solve": lambda env, planner: insert_peg(env, planner,  direction=self.direction,obj=self.obj_flag,insert_obj=self.insert_target),
@@ -384,6 +386,7 @@ class InsertPeg(BaseEnv):
                     "func": lambda: is_A_pickup_notB(self, self.grasp_target, self.insert_target),
                     "name": f"Pick up the peg by grasping the {self.grasp_target_distance} end",
                     "subgoal_segment":f"Pick up the peg by grasping the {self.grasp_target_distance} end at <>",
+                    "choice_label": "pick up the peg by grasping one end",
                     "demonstration": False,
                     "failure_func": lambda: [
                         is_A_pickup_notB(self, self.insert_target, self.grasp_target),
@@ -397,6 +400,7 @@ class InsertPeg(BaseEnv):
                     "func": lambda: is_A_insert_notB(self, self.insert_target, self.grasp_target,self.box,direction=self.direction,mark_end_flag=True),
                     "name": f"Insert the peg from the {self.insert_way} side",
                     "subgoal_segment":f"Insert the peg from the {self.insert_way} side at <>",
+                    "choice_label": f"insert the peg from the {self.insert_way} side",
                     "demonstration": False,
                     "failure_func": lambda: [
                         is_A_insert_notB(self, self.grasp_target, self.insert_target, self.box),

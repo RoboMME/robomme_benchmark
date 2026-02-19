@@ -31,24 +31,24 @@ from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 
 # Enable only one ACTION_SPACE; other options are kept in comments for manual switching
 #ACTION_SPACE = "joint_angle"
-ACTION_SPACE = "ee_pose"
-#ACTION_SPACE = "ee_quat"
+#ACTION_SPACE = "ee_pose"
+
 #ACTION_SPACE = "keypoint"
-#ACTION_SPACE = "oracle_planner"
+ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = False
 
-DATASET_ROOT = "/data/hongzefu/data_0217"
-OVERRIDE_METADATA_PATH = "/data/hongzefu/data_0217"
+DATASET_ROOT = "/data/hongzefu/data_0219"
+OVERRIDE_METADATA_PATH = "/data/hongzefu/data_0219"
 
 # ######## Video saving variables (output directory) start ########
 # Video output directory: Independently hardcoded, not aligned with h5 path or env_id
-OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-b4"
+OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-0219"
 # ######## Video saving variables (output directory) end ########
 MAX_STEPS = 1000
 
 DEFAULT_ENV_IDS = [
-    #"PickXtimes",
+    "PickXtimes",
     # "StopCube",
     # "SwingXtimes",
     # "BinFill",
@@ -62,8 +62,8 @@ DEFAULT_ENV_IDS = [
     # "PickHighlight",
     # "InsertPeg",
     # "MoveCube",
-     "PatternLock",
-     "RouteStick",
+    #  "PatternLock",
+    #  "RouteStick",
 ]
 
 def _parse_oracle_command(choice_action: Optional[Any]) -> Optional[dict[str, Any]]:
