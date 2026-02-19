@@ -93,7 +93,7 @@ def _print_obs(obs: dict, tag: str):
     end_effector_pose_raw = obs["end_effector_pose_raw"]
     eef_state_list = obs["eef_state_list"]
     joint_state_list = obs["joint_state_list"]
-    velocity = obs["velocity"]
+
     gripper_state_list = obs["gripper_state_list"]
     front_camera_extrinsic_list = obs["front_camera_extrinsic_list"]
     wrist_camera_extrinsic_list = obs["wrist_camera_extrinsic_list"]
@@ -106,7 +106,7 @@ def _print_obs(obs: dict, tag: str):
         "end_effector_pose_raw": end_effector_pose_raw,
         "eef_state_list": eef_state_list,
         "joint_state_list": joint_state_list,
-        "velocity": velocity,
+
         "gripper_state_list": gripper_state_list,
         "front_camera_extrinsic_list": front_camera_extrinsic_list,
         "wrist_camera_extrinsic_list": wrist_camera_extrinsic_list,

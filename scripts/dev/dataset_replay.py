@@ -24,7 +24,7 @@ from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 ACTION_SPACE = "keypoint"
 #ACTION_SPACE = "oracle_planner"
 
-GUI_RENDER = True
+GUI_RENDER = False
 
 DATASET_ROOT = "/data/hongzefu/data_0217"
 
