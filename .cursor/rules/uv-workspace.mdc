@@ -1,0 +1,35 @@
+---
+description: This workspace is managed by uv; use uv for dependencies and commands
+alwaysApply: true
+---
+
+# Workspace package management: uv
+
+This workspace uses **uv** for Python dependency and virtual environment management.
+
+## Conventions
+
+- **Install dependencies**: Use `uv sync` or `uv pip install`, not `pip install`.
+- **Run scripts/commands**: Prefer `uv run` from the project root (e.g. `uv run python script.py`, `uv run pytest`).
+- **Add dependencies**: Use `uv add <package>` to update `pyproject.toml`; do not edit `requirements.txt` or rely on pip only.
+- **Create/use virtual environment**: uv manages it from `pyproject.toml`; use `uv venv` if needed, or rely on `uv run`.
+
+## Examples
+
+```bash
+# ✅ Install and sync dependencies
+uv sync
+
+# ✅ Run Python or tests
+uv run python -m src.robomme.main
+uv run pytest
+
+# ✅ Add a new dependency
+uv add some-package
+```
+
+```bash
+# ❌ Avoid using directly in this project
+pip install -r requirements.txt
+python script.py   # Prefer uv run when a venv is needed
+```

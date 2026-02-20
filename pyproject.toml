@@ -6,10 +6,14 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mani-skill",
+    "opencv-python>=4.11.0.86",
     "setuptools==80.9.0",
     "torch==2.9.1",
     "torchvision==0.24.1",
 ]
+
+[project.optional-dependencies]
+dev = ["opencv-python", "pytest"]
 
 [tool.uv.sources]
 mani-skill = { git = "https://github.com/YinpeiDai/ManiSkill.git", rev = "dev" }
