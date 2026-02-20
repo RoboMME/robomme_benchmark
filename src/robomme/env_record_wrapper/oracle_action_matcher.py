@@ -47,6 +47,47 @@ def _collect_candidates(item: Any, out: List[Any]) -> None:
         out.append(item)
 
 
+def _unique_candidates(available: Any) -> List[Any]:
+    candidates: List[Any] = []
+    _collect_candidates(available, candidates)
+    # Keep object identity uniqueness to avoid redundant scans.
+    return list(dict.fromkeys(candidates))
+
+
+def _target_ids_for_actor(seg_id_map: Dict[int, Any], actor: Any) -> List[int]:
+    return [int(seg_id) for seg_id, obj in seg_id_map.items() if obj is actor]
+
+
+def _scan_actor_masks(
+    seg_raw: np.ndarray,
+    seg_id_map: Dict[int, Any],
+    actor: Any,
+    click_xy: Tuple[int, int],
+) -> Tuple[Optional[Tuple[int, Tuple[int, int]]], Optional[Tuple[int, Tuple[int, int]]]]:
+    """
+    Return (hit, observed):
+    - hit: clicked (seg_id, centroid) for this actor if click is inside mask.
+    - observed: first visible (seg_id, centroid) for this actor.
+    """
+    cx, cy = click_xy
+    observed: Optional[Tuple[int, Tuple[int, int]]] = None
+
+    for target_id in _target_ids_for_actor(seg_id_map, actor):
+        mask = seg_raw == target_id
+        if not np.any(mask):
+            continue
+
+        ys, xs = np.nonzero(mask)
+        centroid_point = (int(xs.mean()), int(ys.mean()))
+        if observed is None:
+            observed = (target_id, centroid_point)
+
+        if bool(mask[cy, cx]):
+            return (target_id, centroid_point), observed
+
+    return None, observed
+
+
 def select_target_with_point(
     seg_raw: np.ndarray,
     seg_id_map: Dict[int, Any],
@@ -60,41 +101,38 @@ def select_target_with_point(
     """
     if seg_raw is None:
         return None
+
     h, w = seg_raw.shape[:2]
     point_xy = normalize_and_clip_point_xy(point_like, width=w, height=h)
     if point_xy is None:
         return None
 
-    candidates: List[Any] = []
-    _collect_candidates(available, candidates)
-    if not candidates:
+    unique_candidates = _unique_candidates(available)
+    if not unique_candidates:
         return None
-
-    # Keep object identity uniqueness to avoid redundant scans.
-    unique_candidates = list(dict.fromkeys(candidates))
 
     cx, cy = point_xy
     observed_info: Dict[Any, Tuple[int, Tuple[int, int]]] = {}
 
     for actor in unique_candidates:
-        target_ids = [int(seg_id) for seg_id, obj in seg_id_map.items() if obj is actor]
-        for target_id in target_ids:
-            mask = seg_raw == target_id
-            if not np.any(mask):
-                continue
-            ys, xs = np.nonzero(mask)
-            centroid_point = (int(xs.mean()), int(ys.mean()))
-            if actor not in observed_info:
-                observed_info[actor] = (target_id, centroid_point)
+        hit, observed = _scan_actor_masks(
+            seg_raw=seg_raw,
+            seg_id_map=seg_id_map,
+            actor=actor,
+            click_xy=point_xy,
+        )
+        if observed is not None and actor not in observed_info:
+            observed_info[actor] = observed
 
-            if bool(mask[cy, cx]):
-                return {
-                    "obj": actor,
-                    "name": getattr(actor, "name", f"id_{target_id}"),
-                    "seg_id": target_id,
-                    "click_point": (int(cx), int(cy)),
-                    "centroid_point": centroid_point,
-                }
+        if hit is not None:
+            target_id, centroid_point = hit
+            return {
+                "obj": actor,
+                "name": getattr(actor, "name", f"id_{target_id}"),
+                "seg_id": target_id,
+                "click_point": (int(cx), int(cy)),
+                "centroid_point": centroid_point,
+            }
 
     fallback_actor = random.choice(unique_candidates)
     fallback_seg_id: Optional[int] = None

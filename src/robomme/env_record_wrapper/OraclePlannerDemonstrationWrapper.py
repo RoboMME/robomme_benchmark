@@ -24,68 +24,6 @@ from .oracle_action_matcher import (
 # planner_denseStep, aggregating multiple internal env.step calls into a unified batch return.
 # -----------------------------------------------------------------------------
 
-def step_after(env, planner, env_id, seg_raw, command_dict):
-    """
-    Execute one Oracle action based on command_dict (containing action and optional point),
-    Return unified dense batch (obs/info values are list, reward/terminated/truncated are 1D tensor).
-    """
-    selected_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
-    solve_options = get_vqa_options(env, planner, selected_target, env_id)
-    if not isinstance(command_dict, dict):
-        return planner_denseStep.empty_step_batch()
-    target_action = command_dict.get("action")
-    target_param = command_dict.get("point")
-    # Return empty batch if no action
-    if "action" not in command_dict:
-        return planner_denseStep.empty_step_batch()
-    if target_action is None:
-        return planner_denseStep.empty_step_batch()
-    # Strict exact label matching only.
-    found_idx = find_exact_option_index(target_action, solve_options)
-    if found_idx == -1:
-        print(
-            f"Error: Action '{target_action}' not found in current options by exact label match."
-        )
-        return planner_denseStep.empty_step_batch()
-    # If click coordinates provided and segmentation map exists, parse nearest object and fill selected_target
-    if target_param is not None and seg_raw is not None:
-        h, w = seg_raw.shape[:2]
-        seg_id_map = getattr(env.unwrapped, "segmentation_id_map", {}) or {}
-        avail = solve_options[found_idx].get("available")
-        best_cand = select_target_with_point(
-            seg_raw=seg_raw,
-            seg_id_map=seg_id_map,
-            available=avail,
-            point_like=target_param,
-        )
-        if best_cand is not None:
-            selected_target.update(best_cand)
-        else:
-            click_point = normalize_and_clip_point_xy(target_param, width=w, height=h)
-            if click_point is not None:
-                selected_target["click_point"] = click_point
-    print(f"Executing option: {found_idx + 1} - {solve_options[found_idx].get('label')}")
-
-    # Wrap solve() with dense collection, collecting results of all intermediate env.step calls
-    result = planner_denseStep._run_with_dense_collection(
-        planner,
-        lambda: solve_options[found_idx].get("solve")()
-    )
-
-    if result == -1:
-        action_label = solve_options[found_idx].get("label", "Unknown")
-        raise RuntimeError(
-            f"Oracle solve failed after screw->RRT* retries for env '{env_id}', "
-            f"action '{action_label}' (index {found_idx + 1})."
-        )
-
-    env.unwrapped.evaluate()
-    evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
-    print(f"Evaluation result: {evaluation}")
-    return result
-
-
-
 
 class OraclePlannerDemonstrationWrapper(gym.Wrapper):
     """
@@ -93,6 +31,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
     Input to step is command_dict (containing action and optional point).
     step returns obs as dict-of-lists and reward/terminated/truncated as last-step values.
     """
+
     def __init__(self, env, env_id, gui_render=True):
         super().__init__(env)
         self.env_id = env_id
@@ -233,30 +172,94 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
             return value[-1] if value else value
         return value
 
-    def step(self, action):
-        """
-        Execute one step: action is command_dict, must contain "action", optional "point".
-        Return last-step signals for reward/terminated/truncated while keeping obs as dict-of-lists.
-        """
-        command_dict = action
+    @staticmethod
+    def _empty_target():
+        return {
+            "obj": None,
+            "name": None,
+            "seg_id": None,
+            "click_point": None,
+            "centroid_point": None,
+        }
 
-        # Directly get current observation and segmentation map (no separate step_before)
+    def _extract_seg_raw(self):
         obs = self.env.unwrapped.get_obs(unflattened=True)
         seg = obs["sensor_data"]["base_camera"]["segmentation"]
         seg = seg.cpu().numpy() if hasattr(seg, "cpu") else np.asarray(seg)
-        self.seg_raw = (seg[0] if seg.ndim > 2 else seg).squeeze().astype(np.int64)
+        seg_raw = (seg[0] if seg.ndim > 2 else seg).squeeze().astype(np.int64)
+        return seg_raw
 
-        dummy_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
-        raw_options = get_vqa_options(self.env, self.planner, dummy_target, self.env_id)
+    def _build_step_options(self):
+        selected_target = self._empty_target()
+        solve_options = get_vqa_options(self.env, self.planner, selected_target, self.env_id)
         self.available_options = [
             {"action": opt.get("label", "Unknown"), "need_parameter": bool(opt.get("available"))}
-            for opt in raw_options
+            for opt in solve_options
         ]
+        return selected_target, solve_options
 
-        # Call step_after to execute action and get unified batch
-        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = step_after(
-            self.env, self.planner, self.env_id, self.seg_raw, command_dict
+    def _resolve_command(self, command_dict, solve_options):
+        if not isinstance(command_dict, dict):
+            return None, None
+        if "action" not in command_dict:
+            return None, None
+
+        target_action = command_dict.get("action")
+        if target_action is None:
+            return None, None
+
+        found_idx = find_exact_option_index(target_action, solve_options)
+        if found_idx == -1:
+            print(
+                f"Error: Action '{target_action}' not found in current options by exact label match."
+            )
+            return None, None
+
+        return found_idx, command_dict.get("point")
+
+    def _apply_click_target(self, selected_target, option, target_point, seg_raw):
+        if target_point is None or seg_raw is None:
+            return
+
+        h, w = seg_raw.shape[:2]
+        seg_id_map = getattr(self.env.unwrapped, "segmentation_id_map", {}) or {}
+        best_cand = select_target_with_point(
+            seg_raw=seg_raw,
+            seg_id_map=seg_id_map,
+            available=option.get("available"),
+            point_like=target_point,
         )
+        if best_cand is not None:
+            selected_target.update(best_cand)
+            return
+
+        click_point = normalize_and_clip_point_xy(target_point, width=w, height=h)
+        if click_point is not None:
+            selected_target["click_point"] = click_point
+
+    def _execute_selected_option(self, option_idx, solve_options):
+        option = solve_options[option_idx]
+        print(f"Executing option: {option_idx + 1} - {option.get('label')}")
+
+        result = planner_denseStep._run_with_dense_collection(
+            self.planner,
+            lambda: option.get("solve")(),
+        )
+        if result == -1:
+            action_label = option.get("label", "Unknown")
+            raise RuntimeError(
+                f"Oracle solve failed after screw->RRT* retries for env '{self.env_id}', "
+                f"action '{action_label}' (index {option_idx + 1})."
+            )
+        return result
+
+    def _post_eval(self):
+        self.env.unwrapped.evaluate()
+        evaluation = self.env.unwrapped.evaluate(solve_complete_eval=True)
+        print(f"Evaluation result: {evaluation}")
+
+    def _format_step_output(self, batch):
+        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = batch
         info_flat = self._flatten_info_batch(info_batch)
         return (
             obs_batch,
@@ -265,3 +268,33 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
             self._take_last_step_value(truncated_batch),
             info_flat,
         )
+
+    def step(self, action):
+        """
+        Execute one step: action is command_dict, must contain "action", optional "point".
+        Return last-step signals for reward/terminated/truncated while keeping obs as dict-of-lists.
+        """
+        # 1) Read the latest segmentation map from current observation for click-to-target grounding.
+        self.seg_raw = self._extract_seg_raw()
+        # 2) Build solver options once and prepare a mutable selected_target holder for solve() closures.
+        selected_target, solve_options = self._build_step_options()
+        # 3) Validate/resolve the incoming command into (option index, optional click point).
+        found_idx, target_point = self._resolve_command(action, solve_options)
+
+        # 4) For invalid command or unmatched action, keep legacy behavior: return an empty dense batch.
+        if found_idx is None:
+            return self._format_step_output(planner_denseStep.empty_step_batch())
+
+        # 5) If a point is provided, map it to a concrete candidate target (or fallback click point only).
+        self._apply_click_target(
+            selected_target=selected_target,
+            option=solve_options[found_idx],
+            target_point=target_point,
+            seg_raw=self.seg_raw,
+        )
+        # 6) Execute selected solve() with dense step collection; raise on solve == -1.
+        batch = self._execute_selected_option(found_idx, solve_options)
+        # 7) Run post-solve environment evaluation to keep existing side effects and logging.
+        self._post_eval()
+        # 8) Convert batch to wrapper output contract (last reward/terminated/truncated + flattened info).
+        return self._format_step_output(batch)

@@ -20,6 +20,7 @@ def _load_oracle_action_matcher_module():
 
 _MATCHER_MODULE = _load_oracle_action_matcher_module()
 select_target_with_point = _MATCHER_MODULE.select_target_with_point
+normalize_and_clip_point_xy = _MATCHER_MODULE.normalize_and_clip_point_xy
 
 
 class _Obj:
@@ -77,6 +78,18 @@ class TestOracleActionMatcherTwoStage(unittest.TestCase):
             )
         self.assertIsNotNone(selected)
         self.assertIs(selected["obj"], self.obj_c)
+
+    def test_normalize_and_clip_point_xy_bounds_and_invalid_inputs(self):
+        self.assertEqual(
+            normalize_and_clip_point_xy(point_like=[-4.3, 9.1], width=4, height=3),
+            (0, 2),
+        )
+        self.assertIsNone(
+            normalize_and_clip_point_xy(point_like=["x", 1], width=4, height=3)
+        )
+        self.assertIsNone(
+            normalize_and_clip_point_xy(point_like=[1], width=4, height=3)
+        )
 
 
 if __name__ == "__main__":
