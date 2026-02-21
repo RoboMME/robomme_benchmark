@@ -25,8 +25,8 @@ from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 #ACTION_SPACE = "joint_angle"
 #ACTION_SPACE = "ee_pose"
 
-#ACTION_SPACE = "keypoint"
-ACTION_SPACE = "oracle_planner"
+ACTION_SPACE = "keypoint"
+#ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = False
 
@@ -268,13 +268,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max_workers",
         type=int,
-        default=20,
+        default=10,
         help="Total max workers (split across GPUs when using 2 GPUs).",
     )
     parser.add_argument(
         "--gpus",
         type=_parse_gpus,
-        default=[0],
+        default=[1],
         help="GPUs to use: '0' (GPU 0 only), '1' (GPU 1 only), '0,1' (both). Default: 0.",
     )
     return parser.parse_args()

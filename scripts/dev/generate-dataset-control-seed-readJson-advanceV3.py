@@ -41,25 +41,25 @@ Key features include:
 
 # List of all supported environment module names
 DEFAULT_ENVS =[
-# "PickXtimes",
-# "StopCube",
-# "SwingXtimes",
+"PickXtimes",
+"StopCube",
+"SwingXtimes",
  "BinFill",
 
-#  "VideoUnmaskSwap",
-#  "VideoUnmask",
-# "ButtonUnmaskSwap",
-# "ButtonUnmask",
+ "VideoUnmaskSwap",
+ "VideoUnmask",
+"ButtonUnmaskSwap",
+"ButtonUnmask",
 
-# "VideoRepick",
-# "VideoPlaceButton",
-# "VideoPlaceOrder",
-# "PickHighlight",
+"VideoRepick",
+"VideoPlaceButton",
+"VideoPlaceOrder",
+"PickHighlight",
 
-# "InsertPeg",
-# 'MoveCube',
-# "PatternLock",
-# "RouteStick"
+"InsertPeg",
+'MoveCube',
+"PatternLock",
+"RouteStick"
     ]
 
 # Reference dataset metadata root directory: used to read difficulty and seed
@@ -674,7 +674,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=1,
+        default=20,
         help="Number of episodes generated per environment (Default: 100)",
     )
     parser.add_argument(
@@ -698,13 +698,40 @@ def parse_args() -> argparse.Namespace:
         help="Number of parallel workers when running multiple environments.",
     )
     parser.add_argument(
-        "--dual-gpu",
-        dest="dual_gpu",
-        action="store_true",
-        default=False,
-        help="Use two GPUs (GPU 0 and GPU 1) for parallel processing. Default: single GPU (GPU 0 only).",
+        "--gpus",
+        type=str,
+        default="1",
+        help="GPU selection. Supported values: '0', '1', '0,1' (or '1,0'). Default: '0'.",
     )
     return parser.parse_args()
+
+
+def _parse_gpu_ids(gpu_spec: str) -> List[int]:
+    """Parse user GPU spec string to a deduplicated GPU id list."""
+    valid_gpu_ids = {0, 1}
+    raw_tokens = [token.strip() for token in gpu_spec.split(",") if token.strip()]
+    if not raw_tokens:
+        raise ValueError("GPU spec is empty. Use one of: 0, 1, 0,1")
+
+    gpu_ids: List[int] = []
+    for token in raw_tokens:
+        try:
+            gpu_id = int(token)
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid GPU id '{token}'. Supported values are 0 and 1."
+            ) from exc
+
+        if gpu_id not in valid_gpu_ids:
+            raise ValueError(
+                f"Unsupported GPU id '{gpu_id}'. Supported values are 0 and 1."
+            )
+        if gpu_id not in gpu_ids:
+            gpu_ids.append(gpu_id)
+
+    if not gpu_ids:
+        raise ValueError("No valid GPU id provided. Use one of: 0, 1, 0,1")
+    return gpu_ids
 
 
 def main() -> None:
@@ -719,6 +746,8 @@ def main() -> None:
         env_ids = DEFAULT_ENVS.copy()
 
     num_workers = max(1, args.max_workers)
+    gpu_spec = args.gpus
+    gpu_ids = _parse_gpu_ids(gpu_spec)
     episode_indices = list(range(args.episodes))
 
     for env_id in env_ids:
@@ -736,7 +765,10 @@ def main() -> None:
         print(f"Environment: {env_id}")
         print(f"Episodes: {args.episodes}")
         print(f"Workers: {num_workers}")
-        print(f"GPU mode: {'Dual GPU (0,1)' if args.dual_gpu else 'Single GPU (0)'}")
+        if len(gpu_ids) == 1:
+            print(f"GPU mode: Single GPU ({gpu_ids[0]})")
+        else:
+            print(f"GPU mode: Multi GPU ({','.join(str(gpu) for gpu in gpu_ids)})")
         print(f"Temporary folder: {temp_folder}")
         print(f"Final dataset: {final_dataset_path}")
         print(f"{'='*80}\n")
@@ -756,94 +788,54 @@ def main() -> None:
                     temp_folder,
                     args.save_video,
                     source_metadata_records,
-                    0,  # Default use GPU 0
+                    gpu_ids[0],
                 )
             else:
                 worker_count = len(episode_chunks)
                 print(
                     f"Running {env_id} with {worker_count} workers across {args.episodes} episodes..."
                 )
-
-                from contextlib import ExitStack
                 
                 future_to_chunk = {}
                 futures = []
-
-                if args.dual_gpu:
-                    # Dual GPU mode: split chunks across GPU 0 and GPU 1
-                    chunks_gpu0 = episode_chunks[0::2]
-                    chunks_gpu1 = episode_chunks[1::2]
-                    
-                    workers_gpu0 = num_workers // 2
-                    workers_gpu1 = num_workers - workers_gpu0
-                    
-                    if workers_gpu0 == 0 and chunks_gpu0: workers_gpu0 = 1
-                    if workers_gpu1 == 0 and chunks_gpu1: workers_gpu1 = 1
-                    
-                    print(f"Assigning {len(chunks_gpu0)} chunks to GPU 0 ({workers_gpu0} workers)")
-                    print(f"Assigning {len(chunks_gpu1)} chunks to GPU 1 ({workers_gpu1} workers)")
-
-                    with ExitStack() as stack:
-                        executor0 = None
-                        if workers_gpu0 > 0:
-                            executor0 = stack.enter_context(ProcessPoolExecutor(max_workers=workers_gpu0))
-                        
-                        executor1 = None
-                        if workers_gpu1 > 0:
-                            executor1 = stack.enter_context(ProcessPoolExecutor(max_workers=workers_gpu1))
-                        
-                        if executor0:
-                            for chunk in chunks_gpu0:
-                                f = executor0.submit(
-                                    run_env_dataset, env_id, chunk, temp_folder, args.save_video, source_metadata_records, 0
-                                )
-                                future_to_chunk[f] = chunk
-                                futures.append(f)
-                                
-                        if executor1:
-                            for chunk in chunks_gpu1:
-                                f = executor1.submit(
-                                    run_env_dataset, env_id, chunk, temp_folder, args.save_video, source_metadata_records, 1
-                                )
-                                future_to_chunk[f] = chunk
-                                futures.append(f)
-
-                        for future in as_completed(futures):
-                            chunk = future_to_chunk[future]
-                            chunk_label = (chunk[0], chunk[-1]) if chunk else ("?", "?")
-                            try:
-                                records = future.result()
-                                episode_records.extend(records)
-                                print(f"✓ Completed episodes {chunk_label[0]}-{chunk_label[1]} for {env_id}")
-                            except Exception as exc:
-                                print(
-                                    f"✗ Environment {env_id} failed on episodes "
-                                    f"{chunk_label[0]}-{chunk_label[1]} with error: {exc}"
-                                )
+                if len(gpu_ids) == 1:
+                    print(
+                        f"Assigning all {len(episode_chunks)} chunks to GPU {gpu_ids[0]} ({num_workers} workers)"
+                    )
                 else:
-                    # Single GPU mode: all chunks use GPU 0
-                    print(f"Assigning all {len(episode_chunks)} chunks to GPU 0 ({num_workers} workers)")
+                    print(
+                        f"Assigning {len(episode_chunks)} chunks across GPUs {','.join(str(gpu) for gpu in gpu_ids)}"
+                    )
 
-                    with ProcessPoolExecutor(max_workers=num_workers) as executor:
-                        for chunk in episode_chunks:
-                            f = executor.submit(
-                                run_env_dataset, env_id, chunk, temp_folder, args.save_video, source_metadata_records, 0
+                with ProcessPoolExecutor(max_workers=num_workers) as executor:
+                    for chunk_idx, chunk in enumerate(episode_chunks):
+                        assigned_gpu = gpu_ids[chunk_idx % len(gpu_ids)]
+                        f = executor.submit(
+                            run_env_dataset,
+                            env_id,
+                            chunk,
+                            temp_folder,
+                            args.save_video,
+                            source_metadata_records,
+                            assigned_gpu,
+                        )
+                        future_to_chunk[f] = (chunk, assigned_gpu)
+                        futures.append(f)
+
+                    for future in as_completed(futures):
+                        chunk, assigned_gpu = future_to_chunk[future]
+                        chunk_label = (chunk[0], chunk[-1]) if chunk else ("?", "?")
+                        try:
+                            records = future.result()
+                            episode_records.extend(records)
+                            print(
+                                f"✓ Completed episodes {chunk_label[0]}-{chunk_label[1]} for {env_id} on GPU {assigned_gpu}"
                             )
-                            future_to_chunk[f] = chunk
-                            futures.append(f)
-
-                        for future in as_completed(futures):
-                            chunk = future_to_chunk[future]
-                            chunk_label = (chunk[0], chunk[-1]) if chunk else ("?", "?")
-                            try:
-                                records = future.result()
-                                episode_records.extend(records)
-                                print(f"✓ Completed episodes {chunk_label[0]}-{chunk_label[1]} for {env_id}")
-                            except Exception as exc:
-                                print(
-                                    f"✗ Environment {env_id} failed on episodes "
-                                    f"{chunk_label[0]}-{chunk_label[1]} with error: {exc}"
-                                )
+                        except Exception as exc:
+                            print(
+                                f"✗ Environment {env_id} failed on episodes "
+                                f"{chunk_label[0]}-{chunk_label[1]} (GPU {assigned_gpu}) with error: {exc}"
+                            )
 
             # 3. Merge all episode files into final dataset
             print(f"\nMerging all episodes into final dataset...")
@@ -860,7 +852,7 @@ def main() -> None:
                 temp_folder,
                 args.save_video,
                 source_metadata_records,
-                0, # gpu_id
+                gpu_ids[0], # gpu_id
             )
 
             # Merge episodes into final dataset
