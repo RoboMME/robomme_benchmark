@@ -911,11 +911,15 @@ class RobommeRecordWrapper(gym.Wrapper):
                 fk_pose = _to_numpy(action_pose_dict['pose']).flatten()[:3]
                 fk_quat = _to_numpy(action_pose_dict['quat']).flatten()[:4]
                 fk_rpy = _to_numpy(action_pose_dict['rpy']).flatten()[:3]
-                gripper_val = (
-                    _to_numpy(action).flatten()[-1:]
-                    if action is not None
-                    else np.array([-1.0])
-                )
+                # stick 机器人无夹爪，补 -1；标准 panda 从 action[-1] 取 gripper
+                if self._fk_qpos_size == 7:
+                    gripper_val = np.array([-1.0])
+                else:
+                    gripper_val = (
+                        _to_numpy(action).flatten()[-1:]
+                        if action is not None
+                        else np.array([-1.0])
+                    )
                 fk_eef_action = np.concatenate([fk_pose, fk_rpy, gripper_val])
             else:
                 fk_pose = np.zeros(3)
@@ -1103,6 +1107,13 @@ class RobommeRecordWrapper(gym.Wrapper):
                 eef_state_raw_group.create_dataset("pose", data=obs_data['eef_state_raw']['pose'])
                 eef_state_raw_group.create_dataset("quat", data=obs_data['eef_state_raw']['quat'])
                 eef_state_raw_group.create_dataset("rpy", data=obs_data['eef_state_raw']['rpy'])
+
+                # eef_state: 6D [pose(3), rpy(3)] 与 h5_data_format.md 一致
+                eef_state = np.concatenate([
+                    np.asarray(obs_data['eef_state_raw']['pose']).flatten()[:3],
+                    np.asarray(obs_data['eef_state_raw']['rpy']).flatten()[:3],
+                ]).astype(np.float32)
+                obs_group.create_dataset("eef_state", data=eef_state)
 
                 # ── action sub group ──
                 action_group = ts_group.create_group("action")

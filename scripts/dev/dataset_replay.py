@@ -21,11 +21,11 @@ from robomme.env_record_wrapper import (
 from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 
 # Only enable one ACTION_SPACE; others are commented out for manual switching
-#ACTION_SPACE = "joint_angle"
+ACTION_SPACE = "joint_angle"
 #ACTION_SPACE = "ee_pose"
 
 #ACTION_SPACE = "keypoint"
-ACTION_SPACE = "oracle_planner"
+#ACTION_SPACE = "oracle_planner"
 
 GUI_RENDER = False
 

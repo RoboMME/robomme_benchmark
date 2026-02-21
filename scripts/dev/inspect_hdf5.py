@@ -1,5 +1,24 @@
 import h5py
 import sys
+import numpy as np
+
+def _decode_h5_object(value):
+    """Decode HDF5 object dtype (vlen str) to Python str for display."""
+    if value is None:
+        return None
+    if isinstance(value, np.ndarray):
+        if value.size == 0:
+            return None
+        value = np.reshape(value, -1)[0]
+    if isinstance(value, (bytes, np.bytes_)):
+        try:
+            return value.decode("utf-8")
+        except Exception:
+            return repr(value)
+    if isinstance(value, str):
+        return value
+    return str(value)
+
 
 def print_hdf5_structure(name, obj, indent=0):
     """
@@ -18,7 +37,20 @@ def print_hdf5_structure(name, obj, indent=0):
 def print_recursive(obj, indent=0):
     tab = "  " * indent
     if isinstance(obj, h5py.Dataset):
-        print(f"{tab}- [Dataset] {obj.name.split('/')[-1]}: shape={obj.shape}, dtype={obj.dtype}")
+        name = obj.name.split('/')[-1]
+        print(f"{tab}- [Dataset] {name}: shape={obj.shape}, dtype={obj.dtype}")
+        if obj.shape == () and obj.dtype == object:
+            try:
+                raw = obj[()]
+                content = _decode_h5_object(raw)
+                if content is not None:
+                    # Truncate very long content for readability
+                    max_len = 200
+                    if len(content) > max_len:
+                        content = content[:max_len] + "..."
+                    print(f"{tab}    -> {content}")
+            except Exception as e:
+                print(f"{tab}    -> (read error: {e})")
     elif isinstance(obj, h5py.Group):
         print(f"{tab}+ [Group] {obj.name.split('/')[-1]}")
         
@@ -49,7 +81,7 @@ def print_recursive(obj, indent=0):
             # Regular items (meta, obs, action, info etc)
             print_recursive(item, indent + 1)
 
-DEFAULT_PATH = "/data/hongzefu/data_0220/record_dataset_VideoUnmaskSwap.h5"
+DEFAULT_PATH = "/data/hongzefu/data_0220/record_dataset_PatternLock.h5"
 
 def main():
     filepath = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_PATH
