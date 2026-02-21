@@ -569,10 +569,10 @@ class RobommeRecordWrapper(gym.Wrapper):
 
             arm_qpos = action_np[:7]
             if self._fk_qpos_size == 7:
-                # stick 机器人：pinocchio 只有 7 维，不拼 finger
+                # stick robot: pinocchio has only 7 dims; do not append finger joints
                 full_qpos = arm_qpos
             else:
-                # 标准 panda：pinocchio 有 9 维，拼两个 finger
+                # standard panda: pinocchio has 9 dims; append two finger joints
                 gripper = float(action_np[7]) if action_np.size > 7 else -1.0
                 finger_pos = max(gripper, 0.0) if gripper >= 0 else 0.04
                 full_qpos = np.concatenate([arm_qpos, [finger_pos, finger_pos]])
@@ -958,7 +958,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 fk_pose = _to_numpy(action_pose_dict['pose']).flatten()[:3]
                 fk_quat = _to_numpy(action_pose_dict['quat']).flatten()[:4]
                 fk_rpy = _to_numpy(action_pose_dict['rpy']).flatten()[:3]
-                # stick 机器人无夹爪，补 -1；标准 panda 从 action[-1] 取 gripper
+                # stick robot has no gripper, use -1; standard panda takes gripper from action[-1]
                 if self._fk_qpos_size == 7:
                     gripper_val = np.array([-1.0])
                 else:
@@ -1156,7 +1156,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 eef_state_raw_group.create_dataset("quat", data=obs_data['eef_state_raw']['quat'])
                 eef_state_raw_group.create_dataset("rpy", data=obs_data['eef_state_raw']['rpy'])
 
-                # eef_state: 6D [pose(3), rpy(3)] 与 h5_data_format.md 一致
+                # eef_state: 6D [pose(3), rpy(3)] consistent with h5_data_format.md
                 eef_state = np.concatenate([
                     np.asarray(obs_data['eef_state_raw']['pose']).flatten()[:3],
                     np.asarray(obs_data['eef_state_raw']['rpy']).flatten()[:3],

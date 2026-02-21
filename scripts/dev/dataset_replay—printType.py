@@ -49,7 +49,7 @@ MAX_STEPS = 1000
 
 
 def _describe(value: Any, indent: int = 0) -> str:
-    """递归描述一个值的类型、shape 和内容摘要。"""
+    """Recursively describe a value's type, shape, and content summary."""
     prefix = "  " * indent
     if isinstance(value, torch.Tensor):
         return f"{prefix}Tensor  dtype={value.dtype}  shape={tuple(value.shape)}  device={value.device}"
@@ -79,11 +79,11 @@ def _describe(value: Any, indent: int = 0) -> str:
 
 
 def _print_obs(obs: dict, tag: str):
-    """打印 obs 字典中所有字段的数据格式。"""
+    """Print data formats of all fields in the obs dict."""
     print(f"\n{'='*60}")
     print(f"[{tag}] obs fields:")
     print(f"{'='*60}")
-    # maniskill_obs 不打印（数据量大）
+    # maniskill_obs not printed (data volume is large)
     _ = obs["maniskill_obs"]
     front_rgb_list = obs["front_rgb_list"]
     wrist_rgb_list = obs["wrist_rgb_list"]
@@ -117,7 +117,7 @@ def _print_obs(obs: dict, tag: str):
 
 
 def _print_info(info: dict, tag: str):
-    """打印 info 字典中所有字段的数据格式。"""
+    """Print data formats of all fields in the info dict."""
     print(f"\n[{tag}] info fields:")
     print(f"{'-'*60}")
     task_goal = info["task_goal"]
@@ -144,7 +144,7 @@ def _print_info(info: dict, tag: str):
 
 
 def _print_step_extras(reward, terminated, truncated, tag: str):
-    """打印 reward / terminated / truncated 的数据格式。"""
+    """Print data formats of reward / terminated / truncated."""
     print(f"\n[{tag}] reward / terminated / truncated:")
     print(f"{'-'*60}")
     print(f"  reward:     {_describe(reward, 0)}")

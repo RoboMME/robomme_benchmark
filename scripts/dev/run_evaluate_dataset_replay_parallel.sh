@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # run_evaluate_dataset_replay_parallel.sh
-# Micromamba 环境: /data/hongzefu/maniskillenv1114
+# Micromamba environment: /data/hongzefu/maniskillenv1114
 #
-# 使用案例:
-# 1) 启动并行回放（默认16个环境，每个 envid 一个进程，启动后自动进入总览日志监控）
+# Usage examples:
+# 1) Start parallel replay（default 16 envs, one process per env_id; auto-enter aggregated log monitor after start）
 #    bash run_evaluate_dataset_replay_parallel.sh start
-# 2) 启动并行回放（手动指定 envids）
+# 2) Start parallel replay（manually specify env_ids）
 #    bash run_evaluate_dataset_replay_parallel.sh start --env_ids PickXtimes,StopCube
-# 3) 仅查看当前 active run 的状态
+# 3) show only current active run status
 #    bash run_evaluate_dataset_replay_parallel.sh status
-# 4) 重新连接日志监控（Ctrl+C 只退出监控，不停止任务）
+# 4) reconnect log monitor (Ctrl+C exits monitor only, does not stop jobs)
 #    bash run_evaluate_dataset_replay_parallel.sh monitor
-# 5) 一键停止当前 active run 的全部进程
+# 5) stop all processes in the current active run
 #    bash run_evaluate_dataset_replay_parallel.sh stop
-# 6) 重启（先 stop，再按新 env_ids 启动；不传则默认16个）
+# 6) restart (stop first, then start with new env_ids; defaults to 16 if omitted)
 #    bash run_evaluate_dataset_replay_parallel.sh restart --env_ids PickXtimes,StopCube
 
 set -u

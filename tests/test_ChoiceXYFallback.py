@@ -1,24 +1,24 @@
 """
-可视化 test：模仿 select_target_with_point 的完整过程。
+Visualization test: mimic the full process of select_target_with_point.
 
-流程：
-1. 构造合成 seg_raw、seg_id_map、available、point_like
-2. 调用 select_target_with_point 得到选中目标
-3. 绘制分割图 + 点击点 + 质心，保存到 tests/ 目录。
+Flow:
+1. Build synthetic seg_raw、seg_id_map、available、point_like
+2. Call select_target_with_point to get selected target
+3. Draw segmentation + click point + centroid, and save to tests/ directory.
 """
 from pathlib import Path
 
 import numpy as np
 import random
 
-# 可选：若环境有 cv2 则用于保存图像
+# Optional: if cv2 is available, use it to save images
 try:
     import cv2
     HAS_CV2 = True
 except ImportError:
     HAS_CV2 = False
 
-# 仅加载 oracle_action_matcher，避免拉取 RecordWrapper/gymnasium 等依赖
+# Load only oracle_action_matcher to avoid pulling dependencies like RecordWrapper/gymnasium
 import importlib.util
 
 _src_root = Path(__file__).resolve().parents[1]
@@ -31,14 +31,14 @@ select_target_with_point = _matcher.select_target_with_point
 
 
 def _make_mock_actor(name: str):
-    """构造带 name 的 mock actor，用于 seg_id_map 和 available。"""
+    """Build a mock actor with a name, used for seg_id_map and available."""
     return type("MockActor", (), {"name": name})()
 
 
 def _build_synthetic_scene(height=240, width=320):
     """
-    构造合成场景（2 个对象均在 segment 中）：
-    - seg_raw: 两个物体区域，seg_id 分别为 1、2
+    Build a synthetic scene (both 2 objects are visible in the segment):
+    - seg_raw: two object regions with seg_id 1 and 2
     - seg_id_map: 1 -> actor_a, 2 -> actor_b
     - available: [actor_a, actor_b]
     """
@@ -56,16 +56,16 @@ def _build_synthetic_scene(height=240, width=320):
 
 def _build_synthetic_scene_three_objects_one_missing(height=240, width=320):
     """
-    构造 3 个对象、仅 2 个在 segment 中可见的场景：
-    - seg_raw: 只有 seg_id 1、2 有像素；seg_id 3 不在图中（物体 C 不可见）
+    Build a scene with 3 objects where only 2 are visible in the segment:
+    - seg_raw: only seg_id 1 and 2 have pixels; seg_id 3 is absent (object C is invisible)
     - seg_id_map: 1 -> A, 2 -> B, 3 -> C
     - available: [A, B, C]
-    点击不命中任何 mask 时，fallback 可能选中 C，此时 seg_id/centroid 为 None。
+    When click misses all masks, fallback may select C; then seg_id/centroid is None.
     """
     seg_raw = np.zeros((height, width), dtype=np.int64)
-    seg_raw[40:120, 30:130] = 1   # 物体 A 可见
-    seg_raw[80:200, 180:280] = 2  # 物体 B 可见
-    # 物体 C 对应 seg_id=3，但 seg_raw 中没有任何 3 -> C 不在 segment 中
+    seg_raw[40:120, 30:130] = 1   # object A visible
+    seg_raw[80:200, 180:280] = 2  # object B visible
+    # Object C maps to seg_id=3, but seg_raw contains no 3 -> C is not in the segment
 
     actor_a = _make_mock_actor("object_A")
     actor_b = _make_mock_actor("object_B")
@@ -77,15 +77,15 @@ def _build_synthetic_scene_three_objects_one_missing(height=240, width=320):
 
 
 def _colorize_seg(seg_raw, color_map=None):
-    """把 seg_raw 转成 BGR 图，用于可视化。"""
+    """Convert seg_raw to a BGR image for visualization."""
     if color_map is None:
         color_map = {
-            1: [0, 180, 255],   # BGR 橙
-            2: [255, 180, 0],   # BGR 蓝
+            1: [0, 180, 255],   # BGR orange
+            2: [255, 180, 0],   # BGR blue
         }
     h, w = seg_raw.shape[:2]
     vis = np.zeros((h, w, 3), dtype=np.uint8)
-    vis[:] = [40, 40, 40]  # 背景深灰
+    vis[:] = [40, 40, 40]  # dark gray background
     for seg_id in np.unique(seg_raw):
         if seg_id <= 0:
             continue
@@ -96,11 +96,11 @@ def _colorize_seg(seg_raw, color_map=None):
 
 
 def _draw_result(vis_bgr, result, label_prefix=""):
-    """在 vis_bgr 上画 click_point（红）和 centroid_point（绿），并加文字。"""
+    """Draw click_point (red) and centroid_point (green) on vis_bgr, and annotate text."""
     if result is None:
         return vis_bgr
     out = vis_bgr.copy()
-    # 点击点：红色圆
+    # Click point: red circle
     click = result.get("click_point")
     if click is not None:
         cx, cy = click
@@ -109,7 +109,7 @@ def _draw_result(vis_bgr, result, label_prefix=""):
             out, f"{label_prefix}click", (cx + 12, cy),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1,
         )
-    # 质心：绿色圆
+    # Centroid: green circle
     centroid = result.get("centroid_point")
     if centroid is not None:
         cx, cy = centroid
@@ -128,9 +128,9 @@ def _draw_result(vis_bgr, result, label_prefix=""):
 
 
 def test_select_target_with_point_process_visualization():
-    """模仿 select_target_with_point 的完整过程并生成可视化图。"""
+    """Mimic the full select_target_with_point process and generate visualization images."""
     if not HAS_CV2:
-        raise RuntimeError("此可视化测试需要 opencv-python，请安装: uv add opencv-python")
+        raise RuntimeError("This visualization test requires opencv-python, install with: uv add opencv-python")
 
     out_dir = Path(__file__).resolve().parent  # tests/
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -138,8 +138,8 @@ def test_select_target_with_point_process_visualization():
     seg_raw, seg_id_map, available = _build_synthetic_scene()
     h, w = seg_raw.shape[:2]
 
-    # 用例 1：点击落在物体 1 上 -> 应命中 object_A
-    point_on_obj1 = (80, 70)  # (x,y) 在 seg_id=1 区域内
+    # case 1：click lands on object 1 -> should hit object_A
+    point_on_obj1 = (80, 70)  # (x,y) inside seg_id=1 region
     clipped1 = normalize_and_clip_point_xy(point_on_obj1, width=w, height=h)
     assert clipped1 is not None
 
@@ -154,19 +154,19 @@ def test_select_target_with_point_process_visualization():
     assert result_hit.get("seg_id") == 1
     assert result_hit.get("centroid_point") is not None
 
-    # 可视化：hit 用例
+    # Visualization: hit case
     vis_base = _colorize_seg(seg_raw)
     vis_hit = _draw_result(vis_base.copy(), result_hit, "hit ")
     path_hit = out_dir / "select_target_hit.png"
     cv2.imwrite(str(path_hit), vis_hit)
     print(f"Hit case:      obj={result_hit['name']} seg_id={result_hit['seg_id']} -> {path_hit}")
 
-    # 用例 2（fallback）：3 个对象，仅 2 个在 segment 中；点击不命中时可能选中「不在 segment 中」的那个
+    # case 2（fallback）：3 objects, only 2 in segment; when click misses, fallback may pick the one not in segment
     seg_raw_3, seg_id_map_3, available_3 = _build_synthetic_scene_three_objects_one_missing()
     h3, w3 = seg_raw_3.shape[:2]
     point_on_bg = (160, 120)
 
-    # 多试几次种子，得到两种结果：选中可见对象 / 选中不可见对象（object_C）
+    # Try multiple seeds to get both outcomes: visible object selected / invisible object selected (object_C)
     result_fallback_visible = None
     result_fallback_invisible = None
     for seed in range(50):
@@ -187,8 +187,8 @@ def test_select_target_with_point_process_visualization():
             if result_fallback_invisible is not None:
                 break
 
-    # 至少应能随机到可见对象；再试更多种子以得到不可见对象
-    assert result_fallback_visible is not None, "fallback 应能选中在 segment 中的对象"
+    # Should at least randomly pick a visible object; then try more seeds to get an invisible object
+    assert result_fallback_visible is not None, "fallback should be able to select an object that is in the segment"
     for seed in range(50, 200):
         random.seed(seed)
         res = select_target_with_point(
@@ -200,7 +200,7 @@ def test_select_target_with_point_process_visualization():
         if res.get("name") == "object_C" and res.get("seg_id") is None:
             result_fallback_invisible = res
             break
-    assert result_fallback_invisible is not None, "fallback 应能选中不在 segment 中的对象（object_C）"
+    assert result_fallback_invisible is not None, "fallback should be able to select an object not in the segment (object_C)"
 
     color_map_3 = {1: [0, 180, 255], 2: [255, 180, 0], 3: [200, 200, 200]}
     vis_base_3 = _colorize_seg(seg_raw_3, color_map=color_map_3)
@@ -218,9 +218,9 @@ def test_select_target_with_point_process_visualization():
 
 
 def test_normalize_and_clip_point_xy_visualization():
-    """可视化 normalize_and_clip_point_xy：不同输入在图像上的合法范围。"""
+    """Visualize normalize_and_clip_point_xy: valid ranges of different inputs on the image."""
     if not HAS_CV2:
-        raise RuntimeError("此可视化测试需要 opencv-python，请安装: uv add opencv-python")
+        raise RuntimeError("This visualization test requires opencv-python, install with: uv add opencv-python")
 
     out_dir = Path(__file__).resolve().parent  # tests/
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -11,7 +11,7 @@ import torch
 
 TEXT_AREA_HEIGHT = 60
 
-# 无 subgoal demonstration 的任务：保存视频时不加红框（无 demonstration 阶段需高亮）
+# Tasks without subgoal demonstration: do not add red border when saving video (no demonstration phase to highlight)
 NO_HIGHLIGHT_BORDER_ENV_IDS = frozenset({
     "SwingXtimes",
     "PickXtimes",

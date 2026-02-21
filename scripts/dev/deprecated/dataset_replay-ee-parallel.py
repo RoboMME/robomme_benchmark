@@ -1,9 +1,9 @@
 """
-从 HDF5 数据集回放 episode 并保存视频。
+Replay episodes from an HDF5 dataset and save videos.
 
-从 record_dataset_<Task>.h5 中读取已录制的末端执行器位姿动作 (eef_action)，
-输入到以 EE_POSE_ACTION_SPACE 包裹的环境中执行回放，
-最后将前置/腕部相机的左右拼接视频写入磁盘。
+Read recorded end-effector pose actions (eef_action) from record_dataset_<Task>.h5,
+replay them in an environment wrapped by EE_POSE_ACTION_SPACE,
+and finally save side-by-side front/wrist camera videos to disk.
 """
 
 import os
@@ -49,9 +49,9 @@ def _first_execution_step(episode_data) -> int:
 def process_episode(
     h5_file_path: str, episode_idx: int, env_id: str, gui_render: bool = False,
 ) -> None:
-    """回放 HDF5 中的一个 episode：读取 EE 位姿动作、环境执行、保存视频。
+    """Replay one episode in HDF5: read EE pose actions, run the environment, and save video.
 
-    每个 worker 进程独立打开 HDF5 文件，避免跨进程共享文件句柄。
+    Each worker process opens the HDF5 file independently to avoid cross-process shared file handles.
     """
     with h5py.File(h5_file_path, "r") as env_data:
         episode_data = env_data[f"episode_{episode_idx}"]
@@ -59,7 +59,7 @@ def process_episode(
         total_steps = sum(1 for k in episode_data.keys() if k.startswith("timestep_"))
 
         step_idx = _first_execution_step(episode_data)
-        print(f"[ep{episode_idx}] 执行起始步索引: {step_idx}")
+        print(f"[ep{episode_idx}] execution start step index: {step_idx}")
 
         env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
@@ -68,7 +68,7 @@ def process_episode(
             gui_render=gui_render,
         )
         env = env_builder.make_env_for_episode(episode_idx, max_steps=MAX_STEPS)
-        print(f"[ep{episode_idx}] 任务: {env_id}, 目标: {task_goal}")
+        print(f"[ep{episode_idx}] task: {env_id}, goal: {task_goal}")
 
         obs, info = env.reset()
         frames = []
@@ -76,7 +76,7 @@ def process_episode(
         for i in range(n_obs):
             single_obs = {k: [v[i]] for k, v in obs.items()}
             frames.append(_frame_from_obs(single_obs, is_video_frame=(i < n_obs - 1)))
-        print(f"[ep{episode_idx}] 初始帧数（视频 + 当前帧）: {len(frames)}")
+        print(f"[ep{episode_idx}] initial frame count (demo video + current frame): {len(frames)}")
 
         outcome = "unknown"
         try:
@@ -103,28 +103,28 @@ def process_episode(
         finally:
             env.close()
 
-    # 保存回放视频
+    # Save replay video
     safe_goal = task_goal.replace(" ", "_").replace("/", "_")
     os.makedirs(REPLAY_VIDEO_DIR, exist_ok=True)
     video_name = f"{outcome}_{env_id}_ep{episode_idx}_{safe_goal}_step-{len(frames)}.mp4"
     video_path = os.path.join(REPLAY_VIDEO_DIR, video_name)
     imageio.mimsave(video_path, frames, fps=VIDEO_FPS)
-    print(f"[ep{episode_idx}] 视频已保存到 {video_path}")
+    print(f"[ep{episode_idx}] Video saved to {video_path}")
 
 
 def _worker_init(gpu_id_queue) -> None:
-    """Pool worker 初始化函数，在 CUDA 初始化前绑定 GPU。
+    """Pool worker initializer that binds a GPU before CUDA initialization.
 
-    每个 worker 进程启动时从队列中取出一个 GPU ID 并设置环境变量，
-    确保该进程的所有后续 CUDA 操作都在指定 GPU 上执行。
+    When each worker starts, it takes one GPU ID from the queue and sets env vars,
+    ensuring all later CUDA ops in that process run on the assigned GPU.
     """
     gpu_id = gpu_id_queue.get()
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-    print(f"[Worker PID {os.getpid()}] 绑定 GPU {gpu_id}")
+    print(f"[Worker PID {os.getpid()}] bind GPU {gpu_id}")
 
 
 def _process_episode_worker(args: Tuple[str, int, str, bool]) -> str:
-    """multiprocessing worker 入口，解包参数并调用 process_episode。"""
+    """multiprocessing worker entrypoint: unpack args and call process_episode."""
     h5_file_path, episode_idx, env_id, gui_render = args
     gpu_id = os.environ.get("CUDA_VISIBLE_DEVICES", "?")
     try:
@@ -142,51 +142,51 @@ def replay(
     gui_render: bool = False,
     gpu_ids: str = "0,1",
 ) -> None:
-    """遍历指定目录下所有任务的 HDF5 文件，对每个 env 的多 episode 并行回放。
+    """Iterate through all task HDF5 files in the given directory and replay multiple episodes per env in parallel.
 
-    参数:
-        h5_data_dir: HDF5 数据集所在目录。
-        num_workers: 每个 env 的并行 worker 数量。
-        gui_render: 是否开启 GUI 渲染（多进程下建议关闭）。
-        gpu_ids: 逗号分隔的 GPU ID 列表，worker 按轮询方式交替使用。
-                 例如 "0,1" 表示在 GPU 0 和 GPU 1 之间交替分配。
+    Args:
+        h5_data_dir: Directory containing HDF5 datasets.
+        num_workers: Number of parallel workers per env.
+        gui_render: Whether to enable GUI rendering (recommended off in multiprocessing).
+        gpu_ids: Comma-separated GPU ID list; workers use them in round-robin order.
+                 For example, "0,1" alternates assignment between GPU 0 and GPU 1.
     """
     import multiprocessing as mp
     ctx = mp.get_context("spawn")
 
     gpu_id_list = [int(g.strip()) for g in gpu_ids.split(",")]
-    print(f"使用 GPU: {gpu_id_list}, workers: {num_workers}")
+    print(f"Using GPUs: {gpu_id_list}, workers: {num_workers}")
 
     env_id_list = BenchmarkEnvBuilder.get_task_list()
     for env_id in env_id_list:
         file_name = f"record_dataset_{env_id}.h5"
         file_path = os.path.join(h5_data_dir, file_name)
         if not os.path.exists(file_path):
-            print(f"跳过 {env_id}: 文件不存在: {file_path}")
+            print(f"Skip {env_id}: file does not exist: {file_path}")
             continue
 
-        # 快速读取 episode 列表后关闭文件
+        # Quickly read episode list and close file
         with h5py.File(file_path, "r") as data:
             episode_indices = sorted(
                 int(k.split("_")[1])
                 for k in data.keys()
                 if k.startswith("episode_")
             )
-        print(f"任务: {env_id}, 共 {len(episode_indices)} 个 episode, "
+        print(f"task: {env_id}, total {len(episode_indices)} episodes, "
               f"workers: {num_workers}, GPUs: {gpu_id_list}")
 
-        # 构造 worker 参数列表
+        # Build worker argument list
         worker_args = [
             (file_path, ep_idx, env_id, gui_render)
             for ep_idx in episode_indices
         ]
 
-        # 每轮创建新的 GPU 分配队列，worker 启动时各取一个 GPU ID
+        # Create a new GPU assignment queue for each round; each worker grabs one GPU ID at startup
         gpu_id_queue = ctx.Queue()
         for i in range(num_workers):
             gpu_id_queue.put(gpu_id_list[i % len(gpu_id_list)])
 
-        # 并行回放（initializer 在每个 worker 进程启动时绑定 GPU）
+        # Parallel replay (initializer binds GPU when each worker starts)
         with ctx.Pool(
             processes=num_workers,
             initializer=_worker_init,

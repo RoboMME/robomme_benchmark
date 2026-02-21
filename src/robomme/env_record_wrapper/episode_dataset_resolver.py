@@ -136,7 +136,7 @@ class EpisodeDatasetResolver:
         self._timestep_group_cache: Dict[int, h5py.Group] = {}
         self._non_demo_steps: List[int] = []
         self._keypoint_steps: List[int] = []
-        # oracle_planner: indexed by serial_number and request order (step = 第几次请求)
+        # oracle_planner: indexed by serial_number and request order (step = request index)
         self._oracle_serials: List[int] = []
         self._oracle_commands_by_serial: Dict[int, Dict[str, Any]] = {}
         self._build_indexes()
@@ -325,7 +325,7 @@ class EpisodeDatasetResolver:
             return None
 
         if mode == "oracle_planner":
-            # step = 第几次请求 (0-based); 每次请求对应一个递增的 serial_number
+            # step = request index (0-based); each request maps to an increasing serial_number
             if step >= len(self._oracle_serials):
                 return None
             serial = self._oracle_serials[step]

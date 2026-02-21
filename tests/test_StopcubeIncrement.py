@@ -1,10 +1,10 @@
 """
-StopCube 任务中「remain static」选项的单元测试。
+Unit tests for the 'remain static' option in the StopCube task.
 
-测试 vqa_options._options_stopcube 里「保持静止」选项的步数递增与饱和逻辑：
-- 每次选择「remain static」时，内部会调用 solve_hold_obj_absTimestep(absTimestep)；
-- absTimestep 按 100 -> 200 -> ... 递增，且不超过 final_target（由 steps_press、interval 算出）；
-- 若 env.elapsed_steps 回退，内部状态应重置，下次再从 100 开始。
+Test increment and saturation logic of the 'remain static' option in vqa_options._options_stopcube:
+- Each time 'remain static' is selected, solve_hold_obj_absTimestep(absTimestep) is called internally;
+- absTimestep increases as 100 -> 200 -> ... and does not exceed final_target (computed from steps_press and interval);
+- If env.elapsed_steps goes backward, internal state should reset and start from 100 next time.
 """
 from pathlib import Path
 import importlib.util
@@ -12,7 +12,7 @@ import sys
 import types
 
 
-# 与 vqa_options 所依赖的 planner 模块中需存在的符号一致，用于构造 stub
+# Keep symbols consistent with planner module dependencies in vqa_options, used to build stubs
 PLANNER_SYMBOLS = [
     "grasp_and_lift_peg_side",
     "insert_peg",
@@ -35,7 +35,7 @@ PLANNER_SYMBOLS = [
 
 
 def _load_vqa_options_module():
-    """注入 stub 的 planner 模块并加载 vqa_options，返回 (模块, hold_calls 列表)。"""
+    """Inject a stub planner module and load vqa_options, returning (module, hold_calls list)."""
     hold_calls = []
 
     planner_stub = types.ModuleType("robomme.robomme_env.utils.planner")
@@ -47,7 +47,7 @@ def _load_vqa_options_module():
         setattr(planner_stub, symbol, _noop)
 
     def _hold_spy(env, planner, absTimestep):
-        """记录每次「remain static」实际传入的 absTimestep，用于断言。"""
+        """Record the actual absTimestep passed for each 'remain static' call for assertions."""
         hold_calls.append(int(absTimestep))
         return None
 
@@ -90,13 +90,13 @@ def _load_vqa_options_module():
 
 
 class _DummyEnv:
-    """模拟环境，仅提供 elapsed_steps 供 _options_stopcube 使用。"""
+    """Mock environment exposing only elapsed_steps for _options_stopcube."""
     def __init__(self, elapsed_steps=0):
         self.elapsed_steps = elapsed_steps
 
 
 class _DummyBase:
-    """模拟 StopCube 的 base，提供 steps_press、interval，用于计算 final_target。"""
+    """Mock StopCube base providing steps_press and interval to compute final_target."""
     def __init__(self, steps_press, interval=30):
         self.steps_press = steps_press
         self.interval = interval
@@ -104,7 +104,7 @@ class _DummyBase:
 
 
 def _get_remain_static_solver(options):
-    """从 StopCube 选项列表中取出 label 为 'remain static' 的 solve 函数。"""
+    """Get the solve function whose label is 'remain static' from StopCube options."""
     for option in options:
         if option.get("label") == "remain static":
             return option["solve"]
@@ -112,7 +112,7 @@ def _get_remain_static_solver(options):
 
 
 def test_stopcube_remain_static_increment_and_saturation():
-    """测试：多次选「remain static」时，absTimestep 按 100→200→… 递增，且不超过 final_target 并饱和。"""
+    """Test: when selecting 'remain static' multiple times, absTimestep increments 100->200->... and saturates at final_target."""
     module, hold_calls = _load_vqa_options_module()
     env = _DummyEnv(elapsed_steps=0)
     base = _DummyBase(steps_press=270, interval=30)  # final_target = 240
@@ -126,7 +126,7 @@ def test_stopcube_remain_static_increment_and_saturation():
 
 
 def test_stopcube_remain_static_small_final_target():
-    """测试：final_target 较小时（如 60），首次即达上限，后续调用保持 60 不变（饱和）。"""
+    """Test: when final_target is small (e.g., 60), first call hits the cap and later calls stay at 60 (saturation)."""
     module, hold_calls = _load_vqa_options_module()
     env = _DummyEnv(elapsed_steps=0)
     base = _DummyBase(steps_press=90, interval=30)  # final_target = 60
@@ -140,7 +140,7 @@ def test_stopcube_remain_static_small_final_target():
 
 
 def test_stopcube_remain_static_resets_when_elapsed_steps_go_back():
-    """测试：elapsed_steps 被改小（如从 150 改回 0）时，内部步数状态应重置，下次再从 100 开始。"""
+    """Test: when elapsed_steps is reduced (e.g., 150 back to 0), internal step state should reset and restart from 100."""
     module, hold_calls = _load_vqa_options_module()
     env = _DummyEnv(elapsed_steps=0)
     base = _DummyBase(steps_press=270, interval=30)  # final_target = 240
@@ -157,7 +157,7 @@ def test_stopcube_remain_static_resets_when_elapsed_steps_go_back():
 
 
 def test_stopcube_option_label_order_stays_stable():
-    """测试：StopCube 选项的 label 顺序固定为：先准备、再保持静止、最后按按钮。"""
+    """Test: StopCube option label order must stay fixed: prepare first, then remain static, then press button."""
     module, _ = _load_vqa_options_module()
     env = _DummyEnv(elapsed_steps=0)
     base = _DummyBase(steps_press=270, interval=30)
