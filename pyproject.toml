@@ -2,7 +2,7 @@
 name = "robomme"
 version = "0.1.0"
 description = "Add your description here"
-readme = "README.md"
+readme = "readme.md"
 requires-python = ">=3.11"
 dependencies = [
     "mani-skill",
@@ -17,3 +17,10 @@ dev = ["opencv-python", "pytest"]
 
 [tool.uv.sources]
 mani-skill = { git = "https://github.com/YinpeiDai/ManiSkill.git", rev = "dev" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/robomme"]

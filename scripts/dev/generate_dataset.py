@@ -1,6 +1,5 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-import sys
 import argparse
 import json
 import shutil
@@ -12,10 +11,6 @@ import sapien
 from typing import Any, Dict, Iterable, List, Optional
 import h5py
 
-# Add parent directory to Python path to import robomme module
-_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, _root)
-sys.path.insert(0, os.path.join(_root, "scripts"))
 import gymnasium as gym
 from gymnasium.utils.save_video import save_video
 

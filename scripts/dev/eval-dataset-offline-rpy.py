@@ -7,12 +7,6 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-# Ensure project root is in sys.path
-_ROOT = os.path.abspath(os.path.dirname(__file__))
-_PARENT = os.path.dirname(os.path.dirname(_ROOT))
-if _PARENT not in sys.path:
-    sys.path.insert(0, _PARENT)
-
 from robomme.robomme_env.utils.rpy_util import summarize_and_print_rpy_sequence
 
 def _write_split_rpy_summaries_json(

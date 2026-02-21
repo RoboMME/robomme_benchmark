@@ -22,10 +22,10 @@ from robomme.robomme_env.utils import (
 )
 
 # --- Configuration ---
-GUI_RENDER = False
+GUI_RENDER = True
 VIDEO_FPS = 30
 VIDEO_OUTPUT_DIR = "sample_run_videos"
-MAX_STEPS = 100
+MAX_STEPS = 1000
 
 # Episode index limits
 TRAIN_EPISODE_LIMIT = 100
@@ -68,44 +68,58 @@ def _add_small_noise(
     return action + noise
 
 
+def _get_current_joint_action(env) -> np.ndarray:
+    """Read current joint positions and gripper state from the env."""
+    state = env.unwrapped.agent.robot.qpos
+    state_flat = state.cpu().numpy().flatten() if hasattr(state, 'cpu') else np.asarray(state).flatten()
+    joint_state = state_flat[:7]  # 7 arm joints
+    gripper_state = state_flat[-1]  # gripper open/close
+    return np.concatenate([joint_state, [gripper_state]]).astype(np.float32)
+
+
+def _get_current_ee_action(env) -> np.ndarray:
+    """Read current end-effector pose and gripper state from the env."""
+    tcp_pose = env.unwrapped.agent.tcp.pose
+    pos = tcp_pose.p.cpu().numpy().flatten() if hasattr(tcp_pose.p, 'cpu') else np.asarray(tcp_pose.p).flatten()
+    # Convert quaternion (wxyz) to rpy
+    from robomme.robomme_env.utils.rpy_util import build_endeffector_pose_dict
+    ee_dict, _, _ = build_endeffector_pose_dict(tcp_pose.p, tcp_pose.q, None, None)
+    rpy = ee_dict['rpy'].cpu().numpy().flatten() if hasattr(ee_dict['rpy'], 'cpu') else np.asarray(ee_dict['rpy']).flatten()
+    gripper_state = env.unwrapped.agent.robot.qpos
+    gripper_val = gripper_state.cpu().numpy().flatten()[-1] if hasattr(gripper_state, 'cpu') else np.asarray(gripper_state).flatten()[-1]
+    return np.concatenate([pos[:3], rpy[:3], [gripper_val]]).astype(np.float32)
+
+
 def generate_sample_actions(
-    action_space: str, task_id: Optional[str] = None
+    action_space: str, env=None, task_id: Optional[str] = None
 ) -> Generator[Union[np.ndarray, dict], None, None]:
     if action_space == JOINT_ACTION_SPACE:
-        # Joint angles: [base_x, base_y, base_theta, shoulder, elbow, wrist, gripper_angle, gripper_state]
-        base = np.array(
-            [0.0, 0.0, 0.0, -np.pi / 2, 0.0, np.pi / 2, np.pi / 4, 1.0],
-            dtype=np.float32,
-        )
+        # Read current joint state from env and add small random noise
         while True:
-            yield _add_small_noise(base.copy(), noise_level=NOISE_LEVEL)
+            base = _get_current_joint_action(env)
+            yield _add_small_noise(base, noise_level=NOISE_LEVEL)
 
     elif action_space == EE_POSE_ACTION_SPACE:
-        # End-effector pose: [x, y, z, roll, pitch, yaw, gripper]
-        base = np.array(
-            [0.0, 0.0, 0.52, -np.pi, 0.0, 0.0, 1.0],
-            dtype=np.float32,
-        )
+        # Read current EE pose from env and add small random noise
         while True:
-            yield _add_small_noise(base.copy(), noise_level=NOISE_LEVEL)
+            base = _get_current_ee_action(env)
+            yield _add_small_noise(base, noise_level=NOISE_LEVEL)
 
     elif action_space == KEYPOINT_ACTION_SPACE:
-        # TODO: hongze makes this correct — predefined keypoints for PickXtimes episode 0
-        waypoints = [
-            [-0.01452322, 0.00461263, 0.06710568],
-            [0.00062228, 0.00461263, 0.06710568],
-            [0.01576777, 0.00461263, 0.06710568],
-        ]
-        for waypoint in waypoints:
-            yield np.array(waypoint, dtype=np.float32)
+        # Read current EE pose + gripper; add small noise to xyz only, z-0.1
+        from robomme.robomme_env.utils.rpy_util import build_endeffector_pose_dict
+        while True:
+            base = _get_current_ee_action(env)  # [x, y, z, r, p, y, gripper]
+            base[:3] += np.random.normal(0, NOISE_LEVEL, 3)
+            yield base
 
     elif action_space == MULTI_CHOICE_ACTION_SPACE:
-        # TODO: hongze makes this correct, give the correct choices for PickXtimes episode 0
-
+        # Sample multi-choice actions for demonstration.
+        # Format follows dataset convention: lowercase "label" + optional [x, y] pixel point.
         choices = [
-            {"choice": "A", "point": [2, 1]},
-            {"choice": "B", "point": [2, 2]},
-            {"choice": "C", "point": None},
+            {"label": "a", "point": [128, 64]},
+            {"label": "b", "point": [200, 150]},
+            {"label": "c", "point": None},
         ]
         for choice in choices:
             yield choice
@@ -175,9 +189,9 @@ def _save_video(
 
 
 def main(
-    action_space_type: ActionSpaceType = "joint_angle",
+    action_space_type: ActionSpaceType = "multi_choice",
     dataset: DatasetType = "test",
-    task_id: TaskID = "RouteStick",
+    task_id: TaskID = "PickXtimes",
     episode_idx: int = 0,
 ) -> None:
     """
@@ -245,7 +259,7 @@ def main(
 
     # Run episode
     step = 0
-    action_gen = generate_sample_actions(action_space_type)
+    action_gen = generate_sample_actions(action_space_type, env=env)
 
     while True:
         action = next(action_gen)

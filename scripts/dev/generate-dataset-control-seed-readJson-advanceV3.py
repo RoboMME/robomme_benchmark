@@ -1,6 +1,5 @@
 import os
 
-import sys
 import argparse
 import json
 import shutil
@@ -11,11 +10,6 @@ import numpy as np
 from typing import Any, Dict, Iterable, List, Optional, Set
 import h5py
 
-# Add src and scripts to Python path to import robomme module
-_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_src = os.path.join(_root, "src")
-sys.path.insert(0, _src)
-sys.path.insert(0, os.path.join(_root, "scripts"))
 import gymnasium as gym
 
 # Import Robomme related environment wrappers and exception classes

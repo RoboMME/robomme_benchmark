@@ -10,15 +10,6 @@ import concurrent.futures
 import multiprocessing as mp
 from typing import Any, Optional
 
-# Add package root and src so "robomme" can be imported when running script directly
-_ROOT = os.path.abspath(os.path.dirname(__file__))
-_PARENT = os.path.dirname(_ROOT)  # scripts
-_PROJECT_ROOT = os.path.dirname(_PARENT)  # repo root
-_SRC = os.path.join(_PROJECT_ROOT, "src")
-for _path in (_SRC, _PROJECT_ROOT, _PARENT, _ROOT):
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
 import numpy as np
 import torch
 

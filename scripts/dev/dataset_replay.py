@@ -8,10 +8,6 @@ from typing import Any, Optional
 import numpy as np
 import torch
 
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
-
 from robomme.robomme_env import *
 from robomme.robomme_env.utils import *
 from robomme.env_record_wrapper import (

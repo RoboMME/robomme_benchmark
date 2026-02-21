@@ -10,14 +10,6 @@ import concurrent.futures
 import multiprocessing as mp
 from typing import Any, Optional
 
-# Add package root, parent directory, and scripts to sys.path for direct script execution (independent of PYTHONPATH)
-_ROOT = os.path.abspath(os.path.dirname(__file__))
-_PARENT = os.path.dirname(os.path.dirname(_ROOT))
-_SCRIPTS = os.path.join(_PARENT, "scripts")
-for _path in (_PARENT, _ROOT, _SCRIPTS):
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
-
 import numpy as np
 import torch
 
