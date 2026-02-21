@@ -66,9 +66,23 @@ def _make_self(unwrapped_attrs=None, **self_attrs):
 def _call(env_id, mock_self):
     result = get_language_goal(mock_self, env_id)
     print()
-    print(f"[{env_id}] goal1: {result[0]}")
-    print(f"[{env_id}] goal2: {result[1]}")
+    for idx, goal in enumerate(result, start=1):
+        print(f"[{env_id}] goal{idx}: {goal}")
     return result
+
+
+def test_unknown_env_returns_single_goal_when_equal():
+    """未知 env_id 走默认空字符串分支，两个 goal 相同时返回单元素列表。"""
+    s = _make_self()
+    result = _call("UnknownEnv", s)
+    assert result == [""]
+
+
+def test_movecube_still_returns_two_goals():
+    """已定义分支且两条文案不同，仍返回双元素列表。"""
+    s = _make_self()
+    result = _call("MoveCube", s)
+    assert len(result) == 2
 
 
 # ── BinFill: 3 branches（0 种颜色不测）──
@@ -86,7 +100,6 @@ def test_binfill_one_color():
     assert "three red cubes" in result[0]
     assert " and " not in result[0]
     assert "three red cubes" in result[1]
-    assert result[1].endswith(".")
 
 
 def test_binfill_two_colors():
@@ -102,7 +115,6 @@ def test_binfill_two_colors():
     assert " and " in result[0]
     assert "one red cube" in result[1]
     assert "two blue cubes" in result[1]
-    assert result[1].endswith(".")
 
 
 def test_binfill_three_colors():
@@ -119,7 +131,6 @@ def test_binfill_three_colors():
     assert "two red cubes" in result[1]
     assert "three blue cubes" in result[1]
     assert "one green cube" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── PickXtimes: 2 branches ──
@@ -132,9 +143,9 @@ def test_pickxtimes_once():
     result = _call("PickXtimes", s)
     assert "repeating" not in result[0]
     assert "red cube" in result[0]
-    assert "repeating" not in result[1]
-    assert "red cube" in result[1]
-    assert result[1].endswith(".")
+    if len(result) > 1:
+        assert "repeating" not in result[1]
+        assert "red cube" in result[1]
 
 
 def test_pickxtimes_multiple():
@@ -145,7 +156,6 @@ def test_pickxtimes_multiple():
     assert "blue cube" in result[0]
     assert "pick-and-place action three times" in result[1]
     assert "blue cube" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── SwingXtimes: 2 branches ──
@@ -160,7 +170,6 @@ def test_swingxtimes_once():
     assert "repeating" not in result[0]
     assert "left-side target" in result[1]
     assert "repeating" not in result[1]
-    assert result[1].endswith(".")
 
 
 def test_swingxtimes_multiple():
@@ -169,7 +178,6 @@ def test_swingxtimes_multiple():
     result = _call("SwingXtimes", s)
     assert "repeating this back and forth motion five times" in result[0]
     assert "right-to-left swing motion five times" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── VideoUnmask: 2 branches ──
@@ -188,9 +196,9 @@ def test_videounmask_pick_one():
     result = _call("VideoUnmask", s)
     assert "red cube" in result[0]
     assert "another container" not in result[0]
-    assert "red cube" in result[1]
-    assert "another container" not in result[1]
-    assert result[1].endswith(".")
+    g = result[1] if len(result) > 1 else result[0]
+    assert "red cube" in g
+    assert "another container" not in g
 
 
 def test_videounmask_pick_two():
@@ -205,9 +213,9 @@ def test_videounmask_pick_two():
     result = _call("VideoUnmask", s)
     assert "red cube" in result[0]
     assert "another container hiding the blue cube" in result[0]
-    assert "red cube" in result[1]
-    assert "another container hiding the blue cube" in result[1]
-    assert result[1].endswith(".")
+    g = result[1] if len(result) > 1 else result[0]
+    assert "red cube" in g
+    assert "another container hiding the blue cube" in g
 
 
 # ── VideoUnmaskSwap: 2 branches ──
@@ -223,9 +231,9 @@ def test_videounmaskswap_pick_one():
     result = _call("VideoUnmaskSwap", s)
     assert "red cube" in result[0]
     assert "another container" not in result[0]
-    assert "red cube" in result[1]
-    assert "another container" not in result[1]
-    assert result[1].endswith(".")
+    g = result[1] if len(result) > 1 else result[0]
+    assert "red cube" in g
+    assert "another container" not in g
 
 
 def test_videounmaskswap_pick_two():
@@ -237,9 +245,9 @@ def test_videounmaskswap_pick_two():
     result = _call("VideoUnmaskSwap", s)
     assert "red cube" in result[0]
     assert "another container hiding the blue cube" in result[0]
-    assert "red cube" in result[1]
-    assert "another container hiding the blue cube" in result[1]
-    assert result[1].endswith(".")
+    g = result[1] if len(result) > 1 else result[0]
+    assert "red cube" in g
+    assert "another container hiding the blue cube" in g
 
 
 # ── ButtonUnmask: 2 branches ──
@@ -259,10 +267,10 @@ def test_buttonunmask_pick_one():
     assert "press the button" in result[0]
     assert "green cube" in result[0]
     assert "another container" not in result[0]
-    assert "press the button" in result[1]
-    assert "green cube" in result[1]
-    assert "another container" not in result[1]
-    assert result[1].endswith(".")
+    g = result[1] if len(result) > 1 else result[0]
+    assert "press the button" in g
+    assert "green cube" in g
+    assert "another container" not in g
 
 
 def test_buttonunmask_pick_two():
@@ -277,9 +285,9 @@ def test_buttonunmask_pick_two():
     result = _call("ButtonUnmask", s)
     assert "press the button" in result[0]
     assert "another container hiding the red cube" in result[0]
-    assert "press the button" in result[1]
-    assert "another container hiding the red cube" in result[1]
-    assert result[1].endswith(".")
+    g = result[1] if len(result) > 1 else result[0]
+    assert "press the button" in g
+    assert "another container hiding the red cube" in g
 
 
 # ── ButtonUnmaskSwap: 2 branches ──
@@ -296,10 +304,10 @@ def test_buttonunmaskswap_pick_one():
     assert "press both buttons" in result[0]
     assert "blue cube" in result[0]
     assert "another container" not in result[0]
-    assert "press both buttons" in result[1]
-    assert "blue cube" in result[1]
-    assert "another container" not in result[1]
-    assert result[1].endswith(".")
+    g = result[1] if len(result) > 1 else result[0]
+    assert "press both buttons" in g
+    assert "blue cube" in g
+    assert "another container" not in g
 
 
 def test_buttonunmaskswap_pick_two():
@@ -311,9 +319,9 @@ def test_buttonunmaskswap_pick_two():
     result = _call("ButtonUnmaskSwap", s)
     assert "press both buttons" in result[0]
     assert "another container hiding the green cube" in result[0]
-    assert "press both buttons" in result[1]
-    assert "another container hiding the green cube" in result[1]
-    assert result[1].endswith(".")
+    g = result[1] if len(result) > 1 else result[0]
+    assert "press both buttons" in g
+    assert "another container hiding the green cube" in g
 
 
 # ── VideoPlaceButton: 1 branch ──
@@ -331,7 +339,6 @@ def test_videoplacebutton():
     assert "right after the button was pressed" in result[0]
     assert "red cube" in result[1]
     assert "where it was placed immediately after the button was pressed" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── VideoPlaceOrder: 1 branch ──
@@ -350,7 +357,6 @@ def test_videoplaceorder():
     assert "blue cube" in result[1]
     assert "third target" in result[1]
     assert "where it was placed" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── PickHighlight: 1 branch ──
@@ -364,7 +370,6 @@ def test_pickhighlight():
     assert "highlighteted" in result[0]
     assert "highlighted cubes" in result[1]
     assert "press the button again to stop" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── VideoRepick: 2 branches ──
@@ -379,7 +384,6 @@ def test_videorepick_once():
     assert "repeatedly" not in result[0]
     assert "pick up the same cube" in result[1]
     assert "repeatedly" not in result[1]
-    assert result[1].endswith(".")
 
 
 def test_videorepick_multiple():
@@ -390,7 +394,6 @@ def test_videorepick_multiple():
     assert "four times" in result[0]
     assert "same cube" in result[1]
     assert "four times" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── StopCube: 1 branch ──
@@ -403,7 +406,6 @@ def test_stopcube():
     result = _call("StopCube", s)
     assert "second time" in result[0]
     assert "second visit" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── InsertPeg: 1 branch ──
@@ -416,7 +418,6 @@ def test_insertpeg():
     assert "grasp the same end" in result[0]
     assert "grasp the same peg at the same end" in result[1]
     assert "as in the video" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── MoveCube: 1 branch ──
@@ -428,7 +429,6 @@ def test_movecube():
     result = _call("MoveCube", s)
     assert "move the cube to the target" in result[0]
     assert "shown in the video" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── PatternLock: 1 branch ──
@@ -440,7 +440,6 @@ def test_patternlock():
     result = _call("PatternLock", s)
     assert "retrace the same pattern" in result[0]
     assert "retrace the same pattern shown in the video" in result[1]
-    assert result[1].endswith(".")
 
 
 # ── RouteStick: 1 branch ──
@@ -452,4 +451,3 @@ def test_routestick():
     result = _call("RouteStick", s)
     assert "navigate around the sticks" in result[0]
     assert "following the same path shown in the video" in result[1]
-    assert result[1].endswith(".")

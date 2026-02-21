@@ -1,5 +1,7 @@
 import copy
+import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, List, Optional, Union
@@ -345,13 +347,52 @@ class RobommeRecordWrapper(gym.Wrapper):
         # Stack two video streams vertically
         return np.vstack([combined, combined_online])
 
+    def _normalize_language_goal_list(self, language_goal):
+        """Normalize language goal input to a list[str], filtering only None values."""
+        if language_goal is None:
+            return []
+        if isinstance(language_goal, str):
+            raw_items = [language_goal]
+        elif isinstance(language_goal, (list, tuple)):
+            raw_items = list(language_goal)
+        else:
+            raw_items = [language_goal]
+
+        normalized = []
+        for item in raw_items:
+            if item is None:
+                continue
+            normalized.append(str(item))
+        return normalized
+
+    def _sanitize_filename_component(self, text):
+        """Sanitize arbitrary text into a filesystem-safe filename fragment."""
+        text = str(text).strip()
+        if not text:
+            return ""
+        text = text.replace("/", "_").replace("\\", "_")
+        text = re.sub(r"\s+", "_", text)
+        text = re.sub(r"[^A-Za-z0-9._-]", "_", text)
+        text = re.sub(r"_+", "_", text)
+        return text.strip("._")
+
+    def _truncate_filename_with_hash(self, text, max_len=220):
+        """Truncate long filename fragments and append deterministic hash."""
+        if len(text) <= max_len:
+            return text
+        digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
+        marker = "__HASH__"
+        keep_len = max(1, max_len - len(marker) - len(digest))
+        return f"{text[:keep_len]}{marker}{digest}"
+
     def _video_apply_overlays(self, frame, is_demonstration, language_goal):
         """Apply demonstration red border and language goal text."""
         # If demonstration phase, add red border to entire frame
         if is_demonstration:
             frame = self._add_red_border(frame)
 
-        return self._add_text_to_frame(frame, language_goal, position="top_right")
+        normalized_goals = self._normalize_language_goal_list(language_goal)
+        return self._add_text_to_frame(frame, normalized_goals, position="top_right")
 
     def _video_append_step_frame(self, frame, no_object_flag):
         """Append single step video frame to corresponding buffer."""
@@ -370,24 +411,29 @@ class RobommeRecordWrapper(gym.Wrapper):
 
     def _video_build_filename_parts(self, language_goal, difficulty):
         """Build suffix in video filename."""
-        goal_text = language_goal[0]
-        sanitized_goal = (
-            goal_text.replace(" ", "_").replace("/", "_")
-            if goal_text
-            else "no_goal"
-        )
-        difficulty_tag = (
-            str(difficulty).replace(" ", "_").replace("/", "_")
-            if difficulty
-            else None
-        )
-        filename_suffix = sanitized_goal
+        normalized_goals = self._normalize_language_goal_list(language_goal)
+        sanitized_goals = []
+        for goal_text in normalized_goals:
+            sanitized_goal = self._sanitize_filename_component(goal_text)
+            if sanitized_goal:
+                sanitized_goals.append(sanitized_goal)
+        goal_tag = "__ALT__".join(sanitized_goals) if sanitized_goals else "no_goal"
+        goal_tag = self._truncate_filename_with_hash(goal_tag, max_len=180)
+
+        difficulty_tag = None
+        if difficulty is not None:
+            difficulty_tag = self._sanitize_filename_component(difficulty)
+            if not difficulty_tag:
+                difficulty_tag = None
+
+        filename_suffix = goal_tag
         if difficulty_tag:
             filename_suffix = (
                 f"{difficulty_tag}_{filename_suffix}"
                 if filename_suffix
                 else difficulty_tag
             )
+        filename_suffix = self._truncate_filename_with_hash(filename_suffix, max_len=220)
         return {"filename_suffix": filename_suffix}
 
     def _video_write_mp4(self, frames, output_path):
@@ -1031,6 +1077,7 @@ class RobommeRecordWrapper(gym.Wrapper):
        
         # language_goal mainly used for video naming and HDF5 metadata, needed for both failure/success
         language_goal_list = task_goal.get_language_goal(self.env, self.Robomme_env)
+        language_goal_list = self._normalize_language_goal_list(language_goal_list)
         filename_parts = self._video_build_filename_parts(language_goal_list, difficulty)
         filename_suffix = filename_parts["filename_suffix"]
         fail_recover_suffix = ""
