@@ -11,7 +11,7 @@ import gymnasium as gym
 DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
 
 _ALLOWED_DATASETS = {"train", "test"}
-_ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "ee_quat", "keypoint", "oracle_planner"}
+_ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "ee_quat", "keypoint", "multi_choice"}
 _DEFAULT_TASK_LIST = [
     "PickXtimes",
     "StopCube",
@@ -168,7 +168,7 @@ class BenchmarkEnvBuilder:
         return len(episode_set)
 
     def make_env_for_episode(self, episode_idx: int, max_steps: Optional[int] = None):
-        """Create and configure environment for specific episode. Wrap EndeffectorDemonstrationWrapper for action_space=ee_pose/ee_quat, MultiStepDemonstrationWrapper for keypoint, OraclePlannerDemonstrationWrapper for oracle_planner."""
+        """Create and configure environment for specific episode. Wrap EndeffectorDemonstrationWrapper for action_space=ee_pose/ee_quat, MultiStepDemonstrationWrapper for keypoint, OraclePlannerDemonstrationWrapper for multi_choice."""
         from .DemonstrationWrapper import DemonstrationWrapper
 
         max_steps_without_demo = (
@@ -210,7 +210,7 @@ class BenchmarkEnvBuilder:
             from .MultiStepDemonstrationWrapper import MultiStepDemonstrationWrapper
 
             env = MultiStepDemonstrationWrapper(env, gui_render=self.gui_render, vis=self.gui_render)
-        elif self.action_space == "oracle_planner":
+        elif self.action_space == "multi_choice":
             from .OraclePlannerDemonstrationWrapper import OraclePlannerDemonstrationWrapper
             env = OraclePlannerDemonstrationWrapper(env, env_id=self.env_id, gui_render=self.gui_render)
 
