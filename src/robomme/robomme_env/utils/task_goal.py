@@ -44,10 +44,10 @@ num2words_2 = {
     20: "twentieth"
 }
 
-def get_language_goal(self, robomme_env):
+def get_language_goal(self, env):
     language_goal = ""
     language_goal_2 = ""
-    if robomme_env == "BinFill":
+    if env == "BinFill":
         color_counts = {
             "red": getattr(self.env.unwrapped, "red_cubes_target_number", 0),
             "blue": getattr(self.env.unwrapped, "blue_cubes_target_number", 0),
@@ -74,7 +74,7 @@ def get_language_goal(self, robomme_env):
             language_goal = f"put {', '.join(phrases[:-1])} and {phrases[-1]} into the bin, then press the button to stop"
             language_goal_2 = f"put {', '.join(phrases[:-1])} and {phrases[-1]} into the bin and press the button to stop"
 
-    elif robomme_env == "PickXtimes":
+    elif env == "PickXtimes":
         repeats = getattr(self.env.unwrapped, "num_repeats", 1)
         target_color = getattr(self.env.unwrapped, "target_color_name", "unknown")
         if repeats > 1:
@@ -85,7 +85,7 @@ def get_language_goal(self, robomme_env):
             language_goal = f"pick up the {target_color} cube and place it on the target, then press the button to stop"
             language_goal_2 = f"pick up the {target_color} cube and place it on the target, then press the button to stop"
 
-    elif robomme_env == "SwingXtimes":
+    elif env == "SwingXtimes":
         repeats = getattr(self.env.unwrapped, "num_repeats", 1)
         target_color = getattr(self.env.unwrapped, "target_color_name", "unknown")
         if repeats > 1:
@@ -96,7 +96,7 @@ def get_language_goal(self, robomme_env):
             language_goal = f"pick up the {target_color} cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop"
             language_goal_2 = f"pick up the {target_color} cube, move it to the right-side target and then put it down on the left-side target, then press the button to stop"
 
-    elif robomme_env == "VideoUnmask":
+    elif env == "VideoUnmask":
         color_names = getattr(self.env.unwrapped, "color_names", ["unknown", "unknown", "unknown"])
         cube_0_color = color_names[0]
         cube_1_color = color_names[1]
@@ -107,7 +107,7 @@ def get_language_goal(self, robomme_env):
             language_goal = f"watch the video carefully, then pick up the container hiding the {cube_0_color} cube"
             language_goal_2 = f"watch the video carefully, then pick up the container hiding the {cube_0_color} cube"
 
-    elif robomme_env == "VideoUnmaskSwap":
+    elif env == "VideoUnmaskSwap":
         color_names = getattr(self.env.unwrapped, "color_names", ["unknown", "unknown", "unknown"])
         cube_0_color = color_names[0]
         cube_1_color = color_names[1]
@@ -118,7 +118,7 @@ def get_language_goal(self, robomme_env):
             language_goal = f"watch the video carefully, then pick up the container hiding the {cube_0_color} cube"
             language_goal_2 = f"watch the video carefully, then pick up the container hiding the {cube_0_color} cube"
 
-    elif robomme_env == "ButtonUnmask":
+    elif env == "ButtonUnmask":
         color_names = getattr(self.env.unwrapped, "color_names", ["unknown", "unknown", "unknown"])
         cube_0_color = color_names[0]
         cube_1_color = color_names[1]
@@ -129,7 +129,7 @@ def get_language_goal(self, robomme_env):
             language_goal = f"first press the button, then pick up the container hiding the {cube_0_color} cube"
             language_goal_2 = f"first press the button, then pick up the container hiding the {cube_0_color} cube"
 
-    elif robomme_env == "ButtonUnmaskSwap":
+    elif env == "ButtonUnmaskSwap":
         color_names = getattr(self.env.unwrapped, "color_names", ["unknown", "unknown", "unknown"])
         cube_0_color = color_names[0]
         cube_1_color = color_names[1]
@@ -140,24 +140,24 @@ def get_language_goal(self, robomme_env):
             language_goal = f"first press both buttons on the table, then pick up the container hiding the {cube_0_color} cube"
             language_goal_2 = f"first press both buttons on the table, then pick up the container hiding the {cube_0_color} cube"
 
-    elif robomme_env == "VideoPlaceButton":
+    elif env == "VideoPlaceButton":
         target_color_name = self.target_color_name
         target_target_language = self.target_target_language
         language_goal = f"watch the video carefully, then place the {target_color_name} cube on the target right {target_target_language} the button was pressed"
         language_goal_2 = f"watch the video carefully and place the {target_color_name} cube on the target where it was placed immediately {target_target_language} the button was pressed"
 
-    elif robomme_env == "VideoPlaceOrder":
+    elif env == "VideoPlaceOrder":
         target_color_name = self.target_color_name
         which_in_subset = self.which_in_subset
         num = num2words_2.get(which_in_subset, str(which_in_subset))
         language_goal = f"watch the video carefully, then place the {target_color_name} cube on the {num} target it was previously placed on"
         language_goal_2 = f"watch the video carefully and place the {target_color_name} cube on the {num} target where it was placed"
 
-    elif robomme_env == 'PickHighlight':
+    elif env == 'PickHighlight':
         language_goal = f'first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
         language_goal_2 = "first press the button, then pick up all highlighted cubes, finally press the button again to stop"
 
-    elif robomme_env == "VideoRepick":
+    elif env == "VideoRepick":
         num_repeats = self.num_repeats
         if num_repeats > 1:
             word = num2words.get(num_repeats, str(num_repeats))
@@ -167,25 +167,25 @@ def get_language_goal(self, robomme_env):
             language_goal = f'watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop'
             language_goal_2 = "watch the video carefully, then pick up the same cube that was previously picked up again, finally press the button to stop"
 
-    elif robomme_env == "StopCube":
+    elif env == "StopCube":
         repeats = getattr(self.env.unwrapped, "stop_time", 1)
         word = num2words_2.get(repeats, str(repeats))
         language_goal = f"press the button to stop the cube just as it reaches the target for the {word} time"
         language_goal_2 = f"press the button to stop the cube exactly at the target on its {word} visit"
 
-    elif robomme_env == "InsertPeg":
+    elif env == "InsertPeg":
         language_goal = f"watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box"
         language_goal_2 = "watch the video carefully, then grasp the same peg at the same end and insert it into the same side of the box as in the video"
 
-    elif robomme_env == "MoveCube":
+    elif env == "MoveCube":
         language_goal = "watch the video carefully, then move the cube to the target in the same manner as before"
         language_goal_2 = "watch the video carefully, then move the cube to the target in the same manner shown in the video"
 
-    elif robomme_env == "PatternLock":
+    elif env == "PatternLock":
         language_goal = "Watch the video carefully, then use the stick attached to the robot to retrace the same pattern"
         language_goal_2 = "watch the video carefully, then use the stick attached to the robot to retrace the same pattern shown in the video"
 
-    elif robomme_env == "RouteStick":
+    elif env == "RouteStick":
         language_goal = "Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path"
         language_goal_2 = "watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path shown in the video"
 

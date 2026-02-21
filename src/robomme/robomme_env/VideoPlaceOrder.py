@@ -349,24 +349,6 @@ class VideoPlaceOrder(BaseEnv):
             else:
                 self.button_task_index = 0
 
-            def _actor_to_name(actor):
-                if actor is None:
-                    return None
-                if hasattr(actor, "name"):
-                    return actor.name
-                return str(actor)
-
-            target_debug_payload = {
-                "robomme_seed": self.seed,
-                "which_in_subset": self.which_in_subset,
-                "num_targets_to_pick": num_targets_to_pick,
-                "which_targets_to_pick": [_actor_to_name(target) for target in self.which_targets_to_pick],
-                "target_target": _actor_to_name(self.target_target),
-                "button_task_index": self.button_task_index,
-            }
-
-
-
         except SceneGenerationError:
             raise
         except Exception as exc:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 
-VALID_ROBOMME_DIFFICULTIES = {"easy", "medium", "hard"}
+VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
 
 def normalize_robomme_difficulty(value: Optional[str]) -> Optional[str]:
@@ -20,10 +20,10 @@ def normalize_robomme_difficulty(value: Optional[str]) -> Optional[str]:
         )
 
     normalized = value.strip().lower()
-    if normalized not in VALID_ROBOMME_DIFFICULTIES:
+    if normalized not in VALID_DIFFICULTIES:
         raise ValueError(
             "Unsupported difficulty level. Available options: "
-            f"{sorted(VALID_ROBOMME_DIFFICULTIES)}."
+            f"{sorted(VALID_DIFFICULTIES)}."
         )
 
     return normalized

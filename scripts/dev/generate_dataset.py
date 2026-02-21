@@ -200,9 +200,9 @@ def _run_episode_attempt(
         # 2. Wrap environment to record data
         env = RobommeRecordWrapper(
             env,
-            Robomme_dataset=str(temp_dataset_path), # Data save path
-            Robomme_env=env_id,
-            Robomme_episode=episode,
+            dataset=str(temp_dataset_path), # Data save path
+            env_id=env_id,
+            episode=episode,
             seed=seed,
             save_video=save_video,
 

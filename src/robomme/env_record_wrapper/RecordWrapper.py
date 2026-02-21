@@ -58,7 +58,7 @@ class RobommeRecordWrapper(gym.Wrapper):
     3. Handle segmentation logic, including object recognition and center calculation.
     """
     def __init__(self, env,
-     Robomme_dataset=None,Robomme_env=None,Robomme_episode=None,seed=None,save_video=False):
+     dataset=None,env_id=None,episode=None,seed=None,save_video=False):
         # Initialize parent first to ensure self.env exists
         super().__init__(env)
         self.unwrapped.use_demonstrationwrapper=False
@@ -66,9 +66,9 @@ class RobommeRecordWrapper(gym.Wrapper):
 
         # Save config as attribute to avoid triggering __getattr__
 
-        self.Robomme_dataset = Robomme_dataset
-        self.Robomme_episode = Robomme_episode
-        self.Robomme_env = Robomme_env
+        self.dataset = dataset
+        self.episode = episode
+        self.env_id = env_id
         self.seed = seed
         self.save_video = save_video
 
@@ -106,11 +106,11 @@ class RobommeRecordWrapper(gym.Wrapper):
 
         self.h5_file = None
 
-        if not self.Robomme_dataset:
-            raise ValueError("RobommeRecord=True requires Robomme_dataset path")
+        if not self.dataset:
+            raise ValueError("RobommeRecord=True requires dataset path")
 
         # Create HDF5 folder; allow user to pass single h5 file or parent directory, automatically deduce output path
-        base_path = Path(self.Robomme_dataset).resolve()
+        base_path = Path(self.dataset).resolve()
         if base_path.suffix == '.h5' or base_path.suffix == '.hdf5':
             # If file path provided, use its parent directory
             self.output_root = base_path.parent
@@ -125,7 +125,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         self.hdf5_dir.mkdir(parents=True, exist_ok=True)
 
         # HDF5 file saved in new created folder
-        h5_filename = f"{self.Robomme_env}_ep{self.Robomme_episode}_seed{self.seed}.h5"
+        h5_filename = f"{self.env_id}_ep{self.episode}_seed{self.seed}.h5"
         self.dataset_path = self.hdf5_dir / h5_filename
 
         # Generate unique filename by env/episode/seed convention for batch analysis
@@ -470,11 +470,11 @@ class RobommeRecordWrapper(gym.Wrapper):
             except Exception as e:
                 if success:
                     print(
-                        f"Warning: Failed to save combined video for episode {self.Robomme_episode}: {e}"
+                        f"Warning: Failed to save combined video for episode {self.episode}: {e}"
                     )
                 else:
                     print(
-                        f"Warning: Failed to save failed episode video for episode {self.Robomme_episode}: {e}"
+                        f"Warning: Failed to save failed episode video for episode {self.episode}: {e}"
                     )
 
         if len(self.no_object_video_frames) > 0:
@@ -501,11 +501,11 @@ class RobommeRecordWrapper(gym.Wrapper):
             except Exception as e:
                 if success:
                     print(
-                        f"Warning: Failed to save no-object video for episode {self.Robomme_episode}: {e}"
+                        f"Warning: Failed to save no-object video for episode {self.episode}: {e}"
                     )
                 else:
                     print(
-                        f"Warning: Failed to save failed no-object video for episode {self.Robomme_episode}: {e}"
+                        f"Warning: Failed to save failed no-object video for episode {self.episode}: {e}"
                     )
 
     def _init_fk_planner(self):
@@ -517,7 +517,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         """
         try:
             _STICK_IDS = ("PatternLock", "RouteStick")
-            env_id = getattr(getattr(self.unwrapped, "spec", None), "id", None) or self.Robomme_env
+            env_id = getattr(getattr(self.unwrapped, "spec", None), "id", None) or self.env_id
             use_stick = env_id in _STICK_IDS
 
             solver_cls = PandaStickMotionPlanningSolver if use_stick else PandaArmMotionPlanningSolver
@@ -638,7 +638,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             "selection_mode": None,
             "used_random_fallback": False,
         }
-        env_id = getattr(getattr(self.unwrapped, "spec", None), "id", None) or self.Robomme_env
+        env_id = getattr(getattr(self.unwrapped, "spec", None), "id", None) or self.env_id
 
         try:
             solve_options = get_vqa_options(
@@ -890,7 +890,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             subgoal_text = getattr(self, 'current_task_name', 'Unknown')
             subgoal_online_text = getattr(self, 'current_task_name_online', 'Unknown')
 
-            language_goal = task_goal.get_language_goal(self.env, self.Robomme_env)
+            language_goal = task_goal.get_language_goal(self.env, self.env_id)
             prepared = self._video_prepare_step_frames(
                 base_camera_frame,
                 wrist_camera_frame,
@@ -1076,7 +1076,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         difficulty = getattr(self.env.unwrapped, 'difficulty', None)
        
         # language_goal mainly used for video naming and HDF5 metadata, needed for both failure/success
-        language_goal_list = task_goal.get_language_goal(self.env, self.Robomme_env)
+        language_goal_list = task_goal.get_language_goal(self.env, self.env_id)
         language_goal_list = self._normalize_language_goal_list(language_goal_list)
         filename_parts = self._video_build_filename_parts(language_goal_list, difficulty)
         filename_suffix = filename_parts["filename_suffix"]
@@ -1089,7 +1089,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 fail_recover_suffix = "_FailRecoverZ"
             else:
                 fail_recover_suffix = "_FailRecover"
-        video_prefix = f"{self.Robomme_env}_ep{self.Robomme_episode}_seed{self.seed}{fail_recover_suffix}"
+        video_prefix = f"{self.env_id}_ep{self.episode}_seed{self.seed}{fail_recover_suffix}"
 
         # Write data to HDF5 only when episode successful
         if self.episode_success:
@@ -1111,9 +1111,9 @@ class RobommeRecordWrapper(gym.Wrapper):
             self._backfill_keypoint_actions_in_buffer()
 
             # HDF5 hierarchy: episode_xxx / timestep_xxx, convenient for retrieval by environment and round
-            # env_group_name = f"env_{self.Robomme_env}"
+            # env_group_name = f"env_{self.env_id}"
             # env_group = self.h5_file.require_group(env_group_name)
-            episode_group_name = f"episode_{self.Robomme_episode}"
+            episode_group_name = f"episode_{self.episode}"
             # if episode_group_name in env_group:
             #     del env_group[episode_group_name]
             if episode_group_name in self.h5_file:
@@ -1259,7 +1259,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                     "used_random_fallback": False,
                 }
                 
-                env_id = getattr(getattr(self.unwrapped, "spec", None), "id", None) or self.Robomme_env
+                env_id = getattr(getattr(self.unwrapped, "spec", None), "id", None) or self.env_id
                 solve_options = get_vqa_options(self.env, getattr(self, "planner", None), selected_target, env_id)
                 available_options = [
                     {"label": opt.get("label"), "action": opt.get("action", "Unknown"), "need_parameter": bool(opt.get("available"))}
@@ -1340,9 +1340,9 @@ class RobommeRecordWrapper(gym.Wrapper):
                 filename_suffix=filename_suffix,
             )
 
-            print(f"Successfully saved episode {self.Robomme_episode}")
+            print(f"Successfully saved episode {self.episode}")
         else:
-            print(f"Episode {self.Robomme_episode} failed, discarding {len(self.buffer)} records")
+            print(f"Episode {self.episode} failed, discarding {len(self.buffer)} records")
 
             # Save failure video (if enabled), but do not write HDF5
             # Note: Video save failure should not throw exception
@@ -1353,7 +1353,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             )
 
             # If episode failed, delete created group (if any)
-            episode_group_name = f"episode_{self.Robomme_episode}"
+            episode_group_name = f"episode_{self.episode}"
             if episode_group_name in self.h5_file:
                 del self.h5_file[episode_group_name]
                 print(f"Deleted episode group: {episode_group_name}")
