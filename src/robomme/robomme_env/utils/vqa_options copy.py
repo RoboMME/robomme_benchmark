@@ -13,7 +13,7 @@ if __name__ == "__main__":
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
-from robomme.robomme_env.utils.planner import (
+from robomme.robomme_env.utils.subgoal_planner_func import (
     grasp_and_lift_peg_side,
     insert_peg,
     solve_button,

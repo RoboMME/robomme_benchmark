@@ -50,7 +50,7 @@ DEFAULT_ENVS =[
 # "PickXtimes",
 # "StopCube",
 # "SwingXtimes",
-# "BinFill",
+ "BinFill",
 
 #  "VideoUnmaskSwap",
 #  "VideoUnmask",
@@ -64,7 +64,7 @@ DEFAULT_ENVS =[
 
 # "InsertPeg",
 # 'MoveCube',
- "PatternLock",
+# "PatternLock",
 # "RouteStick"
     ]
 

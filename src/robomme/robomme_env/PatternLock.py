@@ -26,7 +26,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
 
 # NOTE: keep wildcard import for legacy helpers that the environment relies on.
 from .utils import *
-from .utils.evaluate import *
+from .utils.subgoal_evaluate_func import *
 from .utils.object_generation import *
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty

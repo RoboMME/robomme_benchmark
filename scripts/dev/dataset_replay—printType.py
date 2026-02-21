@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Script function: Unified dataset replay entry point, supporting 5 action spaces: joint_angle / ee_pose / ee_quat / keypoint / oracle_planner.
-# Consistent with evaluate.py main loop; difference is actions come from EpisodeDatasetResolver.
+# Consistent with subgoal_evaluate_func.py main loop; difference is actions come from EpisodeDatasetResolver.
 
 import os
 from typing import Any, Optional

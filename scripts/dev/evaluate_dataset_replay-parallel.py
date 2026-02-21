@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Script function: Unified dataset replay entry point, supports four action_spaces: joint_angle / ee_pose / keypoint / oracle_planner.
-# Consistent with evaluate.py's main loop and debug fields; the difference is that actions come from EpisodeDatasetResolver.
+# Consistent with subgoal_evaluate_func.py's main loop and debug fields; the difference is that actions come from EpisodeDatasetResolver.
 
 import os
 import sys
@@ -101,7 +101,7 @@ def main():
             # obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.reset()
             obs_batch, info_batch = env.reset()
 
-            # Maintain debug variable semantics from evaluate.py
+            # Maintain debug variable semantics from subgoal_evaluate_func.py
             maniskill_obs = obs_batch["maniskill_obs"]
             front_camera = obs_batch["front_camera"]
             wrist_camera = obs_batch["wrist_camera"]
@@ -150,7 +150,7 @@ def main():
 
                 obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.step(action)
 
-                # Maintain debug variable semantics from evaluate.py
+                # Maintain debug variable semantics from subgoal_evaluate_func.py
                 maniskill_obs = obs_batch["maniskill_obs"]
                 front_camera = obs_batch["front_camera"]
                 wrist_camera = obs_batch["wrist_camera"]

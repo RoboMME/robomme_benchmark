@@ -239,9 +239,7 @@ def main(
 
     # Print task information
     task_goal = info["task_goal"]
-    primary_task_goal = task_goal[0] if isinstance(task_goal, list) and task_goal else task_goal
     print(f"Task goal list: {task_goal}")
-    print(f"Primary task goal: {primary_task_goal}")
     print(f"Oracle simple subgoal: {info['simple_subgoal_online']}")
     print(f"Oracle grounded subgoal: {info['grounded_subgoal_online']}")
 

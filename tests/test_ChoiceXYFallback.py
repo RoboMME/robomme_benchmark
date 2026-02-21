@@ -22,7 +22,7 @@ except ImportError:
 import importlib.util
 
 _src_root = Path(__file__).resolve().parents[1]
-_matcher_path = _src_root / "src" / "robomme" / "env_record_wrapper" / "oracle_action_matcher.py"
+_matcher_path = _src_root / "src" / "robomme" / "robomme_env" / "utils" / "oracle_action_matcher.py"
 _spec = importlib.util.spec_from_file_location("oracle_action_matcher", _matcher_path)
 _matcher = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_matcher)

@@ -10,7 +10,7 @@ from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
     PandaStickMotionPlanningSolver,
 )
 from ..robomme_env.utils import planner_denseStep
-from .oracle_action_matcher import (
+from ..robomme_env.utils.oracle_action_matcher import (
     find_exact_label_option_index,
     normalize_and_clip_point_xy,
     select_target_with_point,

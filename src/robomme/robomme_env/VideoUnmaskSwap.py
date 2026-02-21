@@ -25,7 +25,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
 )
 
 from .utils import *
-from .utils.evaluate import static_check
+from .utils.subgoal_evaluate_func import static_check
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty

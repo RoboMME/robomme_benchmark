@@ -27,11 +27,11 @@ from mani_skill.utils.geometry.rotation_conversions import (
 )
 
 from .utils import *
-from .utils.evaluate import *
+from .utils.subgoal_evaluate_func import *
 from .utils.object_generation import *
 from .utils import reset_panda
 from .utils.route import *
-from .utils.planner import *
+from .utils.subgoal_planner_func import *
 from .utils.difficulty import normalize_robomme_difficulty
 
 PICK_CUBE_DOC_STRING = """**Task Description:**

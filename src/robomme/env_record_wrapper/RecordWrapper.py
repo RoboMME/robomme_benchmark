@@ -39,7 +39,7 @@ from ..robomme_env.utils.segmentation_utils import (
     create_segmentation_visuals,
 )
 from ..robomme_env.utils.rpy_util import build_endeffector_pose_dict
-from .oracle_action_matcher import map_action_text_to_option_label
+from ..robomme_env.utils.oracle_action_matcher import map_action_text_to_option_label
 
 class FailsafeTimeout(RuntimeError):
     """Exception raised when Robomme failsafe terminates episode early."""

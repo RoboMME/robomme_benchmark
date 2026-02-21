@@ -1,7 +1,7 @@
 """Utilities for picking out pickup tasks for failure recovery."""
 from typing import Any, Iterable, List, Tuple, Union
 
-from .planner import solve_pickup, solve_pickup_bin
+from .subgoal_planner_func import solve_pickup, solve_pickup_bin
 import torch
 
 TaskEntry = Union[dict, tuple, list]

@@ -17,7 +17,7 @@ def _load_module(module_name: str, relative_path: str):
 
 matcher_mod = _load_module(
     "oracle_action_matcher_under_test",
-    "src/robomme/env_record_wrapper/oracle_action_matcher.py",
+    "src/robomme/robomme_env/utils/oracle_action_matcher.py",
 )
 resolver_mod = _load_module(
     "episode_dataset_resolver_under_test",

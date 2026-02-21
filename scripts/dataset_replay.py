@@ -198,7 +198,6 @@ def process_episode(
     episode_key = f"episode_{episode_idx}"
     episode_data = env_data[episode_key]
     task_goal_list = _read_task_goal_list(episode_data["setup"])
-    primary_task_goal = task_goal_list[0] if task_goal_list else ""
 
     # Count total timesteps
     total_steps = sum(
@@ -225,7 +224,7 @@ def process_episode(
     )
     print(
         f"task_name: {task_id}, episode_idx: {episode_idx}, "
-        f"task_goal_list: {task_goal_list}, primary_task_goal: {primary_task_goal}"
+        f"task_goal_list: {task_goal_list}"
     )
 
     # Reset environment and capture initial frames

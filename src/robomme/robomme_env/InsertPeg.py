@@ -25,11 +25,11 @@ from mani_skill.utils.geometry.rotation_conversions import (
 
 from .utils import *
 from .utils.difficulty import normalize_robomme_difficulty
-from .utils.evaluate import static_check
+from .utils.subgoal_evaluate_func import static_check
 from .utils import subgoal_language
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
-from .utils import evaluate
+from .utils import subgoal_evaluate_func
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
