@@ -1,3 +1,5 @@
+from ...logging_utils import logger
+
 
 def get_subgoal_with_index(idx, template, **kwargs):
     if idx == 0:
@@ -27,4 +29,4 @@ def get_subgoal_with_index(idx, template, **kwargs):
 
 
 if __name__ == "__main__":
-    print(get_subgoal_with_index(0, "pick up the {idx} {color} cube", color="red"))
+    logger.debug(get_subgoal_with_index(0, "pick up the {idx} {color} cube", color="red"))

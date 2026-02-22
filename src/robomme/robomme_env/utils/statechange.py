@@ -23,6 +23,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
     euler_angles_to_matrix,
     matrix_to_quaternion,
 )
+from ...logging_utils import logger
 
 TARGET_GRAY = (np.array([128, 128, 128, 255]) / 255).tolist()
 
@@ -181,7 +182,7 @@ def swap_flat_two_lane(
                     q=pose_data["q"]
                 ))
             except Exception as e:
-                print(f"Failed to set pose for locked bin: {e}")
+                logger.debug(f"Failed to set pose for locked bin: {e}")
 
     # Check if end time reached
     if int(cur_step) >= int(end_step):
@@ -279,13 +280,13 @@ def highlight_obj(self, obj, start_step: int, end_step: int, cur_step: int,
                     obj_pos = obj_pos.numpy()
                 obj_pos = np.asarray(obj_pos, dtype=np.float32).flatten()
                 if len(obj_pos) < 3:
-                    print(f"Warning: Object position has insufficient coordinates: {obj_pos}")
+                    logger.debug(f"Warning: Object position has insufficient coordinates: {obj_pos}")
                     return None
                 disk_pos = [float(obj_pos[0]), float(obj_pos[1]), float(obj_pos[2]) - 0.01]
                 disk_actor.set_pose(sapien.Pose(p=disk_pos))
                 return disk_pos
             except Exception as e:
-                print(f"Failed to update highlight disk position: {e}")
+                logger.debug(f"Failed to update highlight disk position: {e}")
                 return None
 
         def _rgba_from_spec(color_spec):
@@ -467,7 +468,7 @@ def highlight_obj(self, obj, start_step: int, end_step: int, cur_step: int,
                     cache_entry['highlight_disk'] = disk
                     cache_entry['highlight_color_key'] = color_key
                 except Exception as e:
-                    print(f"Failed to create highlight disk: {e}")
+                    logger.debug(f"Failed to create highlight disk: {e}")
                     cache_entry['highlight_disk'] = None
                     return
             else:
@@ -938,7 +939,7 @@ def lift_and_drop_objects_back_to_original(
             except Exception:
                 pass
         except Exception as exc:
-            print(f"Failed to teleport object: {exc}")
+            logger.debug(f"Failed to teleport object: {exc}")
 
     drop_step = cache["drop_step"]
 
@@ -1030,7 +1031,7 @@ def lift_and_drop_objectA_onto_objectB(
             except Exception:
                 pass
         except Exception as exc:
-            print(f"Failed to teleport object: {exc}")
+            logger.debug(f"Failed to teleport object: {exc}")
 
     # During window (before end_step): teleport away
     if cur_step < end_step:
@@ -1177,7 +1178,7 @@ def move_straight_line(self, cube, start_step, end_step, cur_step, start_pos, en
         try:
             cube.set_pose(sapien.Pose(p=current_pos.tolist(), q=quat))
         except Exception as e:
-            print(f"Failed to set cube pose in move_straight_line: {e}")
+            logger.debug(f"Failed to set cube pose in move_straight_line: {e}")
 
         # Clean up cache if we've reached the end and should stop
         if cur_step >= end_step:

@@ -25,7 +25,7 @@ def _get_current_joint_action(env) -> np.ndarray:
     state = env.unwrapped.agent.robot.qpos
     state_flat = state.cpu().numpy().flatten() if hasattr(state, 'cpu') else np.asarray(state).flatten()
     joint_state = state_flat[:7]  # 7 arm joints
-    gripper_state = state_flat[-1]  # gripper open/close
+    gripper_state = 1
     return np.concatenate([joint_state, [gripper_state]]).astype(np.float32)
 
 
@@ -36,9 +36,8 @@ def _get_current_ee_action(env) -> np.ndarray:
     from robomme.robomme_env.utils.rpy_util import build_endeffector_pose_dict
     ee_dict, _, _ = build_endeffector_pose_dict(tcp_pose.p, tcp_pose.q, None, None)
     rpy = ee_dict['rpy'].cpu().numpy().flatten() if hasattr(ee_dict['rpy'], 'cpu') else np.asarray(ee_dict['rpy']).flatten()
-    gripper_state = env.unwrapped.agent.robot.qpos
-    gripper_val = gripper_state.cpu().numpy().flatten()[-1] if hasattr(gripper_state, 'cpu') else np.asarray(gripper_state).flatten()[-1]
-    return np.concatenate([pos[:3], rpy[:3], [gripper_val]]).astype(np.float32)
+    gripper_state = 1
+    return np.concatenate([pos[:3], rpy[:3], [gripper_state]]).astype(np.float32)
 
 
 def generate_sample_actions(

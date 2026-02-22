@@ -46,6 +46,7 @@ from ..robomme_env.utils import planner_denseStep
 # Pose continuousness and RPY statistics logic unified in shared util to avoid divergent implementations.
 from ..robomme_env.utils.rpy_util import build_endeffector_pose_dict
 
+from ..logging_utils import logger
 
 class DemonstrationWrapper(gym.Wrapper):
     """
@@ -581,10 +582,10 @@ class DemonstrationWrapper(gym.Wrapper):
         if terminated.any():
             if info.get("success") == torch.tensor([True]) or (isinstance(info.get("success"), torch.Tensor) and info.get("success").item()):
                 self.episode_success = True
-                print("Episode success detected, data will be saved")
+                # print("Episode success detected, data will be saved")
             else:
                 self.episode_success = False
-                print("Episode failed, data will be discarded")
+                # print("Episode failed, data will be discarded")
 
         # ---------- Execute extra step at termination, so last frame is also recorded (action same as previous step) ----------
         if terminated.any() and not self._doing_extra_step:
@@ -653,7 +654,7 @@ class DemonstrationWrapper(gym.Wrapper):
                 ScrewPlanFailure,
             )
         except Exception as exc:
-            print(f"[DemonstrationWrapper] Warning: failed to import planner_fail_safe, fallback to base planners: {exc}")
+            logger.debug(f"[DemonstrationWrapper] Warning: failed to import planner_fail_safe, fallback to base planners: {exc}")
             FailAwarePandaArmMotionPlanningSolver = PandaArmMotionPlanningSolver
             FailAwarePandaStickMotionPlanningSolver = PandaStickMotionPlanningSolver
             ScrewPlanFailure = RuntimeError
@@ -688,7 +689,7 @@ class DemonstrationWrapper(gym.Wrapper):
                 try:
                     result = original_move_to_pose_with_screw(*args, **kwargs)
                 except ScrewPlanFailure as exc:
-                    print(
+                    logger.debug(
                         f"[DemonstrationWrapper] screw planning failed "
                         f"(attempt {attempt}/{self._demo_screw_max_attempts}): {exc}"
                     )
@@ -696,7 +697,7 @@ class DemonstrationWrapper(gym.Wrapper):
 
                 # Compatible with non-FailAware fallback scenario: Original planner may return -1 directly
                 if isinstance(result, int) and result == -1:
-                    print(
+                    logger.debug(
                         f"[DemonstrationWrapper] screw planning returned -1 "
                         f"(attempt {attempt}/{self._demo_screw_max_attempts})"
                     )
@@ -704,7 +705,7 @@ class DemonstrationWrapper(gym.Wrapper):
 
                 return result
 
-            print(
+            logger.debug(
                 "[DemonstrationWrapper] screw planning exhausted; "
                 f"fallback to RRT* (max {self._demo_rrt_max_attempts} attempts)"
             )
@@ -713,14 +714,14 @@ class DemonstrationWrapper(gym.Wrapper):
                 try:
                     result = original_move_to_pose_with_rrt(*args, **kwargs)
                 except Exception as exc:
-                    print(
+                    logger.debug(
                         f"[DemonstrationWrapper] RRT* planning failed "
                         f"(attempt {attempt}/{self._demo_rrt_max_attempts}): {exc}"
                     )
                     continue
 
                 if isinstance(result, int) and result == -1:
-                    print(
+                    logger.debug(
                         f"[DemonstrationWrapper] RRT* planning returned -1 "
                         f"(attempt {attempt}/{self._demo_rrt_max_attempts})"
                     )
@@ -729,17 +730,17 @@ class DemonstrationWrapper(gym.Wrapper):
                 return result
 
             self._current_demo_task_screw_failed = True
-            print("[DemonstrationWrapper] screw->RRT* planning exhausted; return -1")
+            logger.debug("[DemonstrationWrapper] screw->RRT* planning exhausted; return -1")
             return -1
 
         planner.move_to_pose_with_screw = _move_to_pose_with_screw_then_rrt_retry
         tasks = getattr(self, 'task_list', [])
         self.task_list_length = len(tasks)
-        print(f"Task list length: {self.task_list_length}")
+        logger.debug(f"Task list length: {self.task_list_length}")
 
         demonstration_tasks = [task for task in tasks if task.get("demonstration", False)]
         self.non_demonstration_task_length = len(tasks) - len(demonstration_tasks)
-        print(f"Non-demonstration task length: {self.non_demonstration_task_length}")
+        logger.debug(f"Non-demonstration task length: {self.non_demonstration_task_length}")
 
         all_collected_steps = []
 
@@ -750,7 +751,7 @@ class DemonstrationWrapper(gym.Wrapper):
             self.unwrapped.demonstration_record_traj = True
             self._current_demo_task_screw_failed = False
             task_name = task_entry.get("name", f"Task {idx}")
-            print(f"Executing task {idx+1}/{len(demonstration_tasks)}: {task_name}")
+            logger.debug(f"Executing task {idx+1}/{len(demonstration_tasks)}: {task_name}")
 
             solve_callable = task_entry.get("solve")
             if not callable(solve_callable):
@@ -764,11 +765,11 @@ class DemonstrationWrapper(gym.Wrapper):
                     solve_result = solve_callable(self, planner)
                 except ScrewPlanFailure as exc:
                     self._current_demo_task_screw_failed = True
-                    print(f"[DemonstrationWrapper] task '{task_name}' screw failure: {exc}")
+                    logger.debug(f"[DemonstrationWrapper] task '{task_name}' screw failure: {exc}")
                     return None
                 if isinstance(solve_result, int) and solve_result == -1:
                     self._current_demo_task_screw_failed = True
-                    print(f"[DemonstrationWrapper] task '{task_name}' returned -1 after screw->RRT* retries")
+                    logger.debug(f"[DemonstrationWrapper] task '{task_name}' returned -1 after screw->RRT* retries")
                     return None
                 return solve_result
 
@@ -778,12 +779,12 @@ class DemonstrationWrapper(gym.Wrapper):
             )
             if task_steps == -1:
                 # Theoretically should not hit (_solve_task_without_hard_fail has swallowed -1)
-                print(f"[DemonstrationWrapper] task '{task_name}' returned -1 from collector; continuing")
+                logger.debug(f"[DemonstrationWrapper] task '{task_name}' returned -1 from collector; continuing")
             else:
                 all_collected_steps.extend(task_steps)
 
             if self._current_demo_task_screw_failed:
-                print(f"[DemonstrationWrapper] task '{task_name}' marked failed after screw->RRT* retries; continuing")
+                logger.debug(f"[DemonstrationWrapper] task '{task_name}' marked failed after screw->RRT* retries; continuing")
             self.evaluate(solve_complete_eval=True)
 
         self.unwrapped.demonstration_record_traj = False  # Demonstration ends, subsequent steps perform subgoal judgment normally

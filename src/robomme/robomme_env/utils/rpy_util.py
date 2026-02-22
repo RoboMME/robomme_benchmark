@@ -206,7 +206,7 @@ def summarize_and_print_rpy_sequence(rpy_sequence: Any, label: str = "") -> dict
             "axis_max_abs_delta_transition": [None, None, None],
         }
         prefix = f"{label} " if label else ""
-        print(f"{prefix}RPY summary: no RPY samples.")
+        logger.debug(f"{prefix}RPY summary: no RPY samples.")
         return summary
 
     if rpy.ndim == 1:
@@ -244,15 +244,15 @@ def summarize_and_print_rpy_sequence(rpy_sequence: Any, label: str = "") -> dict
     }
 
     prefix = f"{label} " if label else ""
-    print(f"{prefix}RPY summary (rad):")
-    print(f"  count={count}")
-    print(
+    logger.debug(f"{prefix}RPY summary (rad):")
+    logger.debug(f"  count={count}")
+    logger.debug(
         "  axis_max_abs_delta_rad (roll,pitch,yaw)="
         f"[{axis_max_abs_delta_rad[0]:.6f}, {axis_max_abs_delta_rad[1]:.6f}, {axis_max_abs_delta_rad[2]:.6f}]"
     )
-    print(f"  transitions={axis_max_abs_delta_transition}")
-    print(f"{prefix}RPY summary (deg):")
-    print(
+    logger.debug(f"  transitions={axis_max_abs_delta_transition}")
+    logger.debug(f"{prefix}RPY summary (deg):")
+    logger.debug(
         "  axis_max_abs_delta_deg (roll,pitch,yaw)="
         f"[{axis_max_abs_delta_deg[0]:.6f}, {axis_max_abs_delta_deg[1]:.6f}, {axis_max_abs_delta_deg[2]:.6f}]"
     )

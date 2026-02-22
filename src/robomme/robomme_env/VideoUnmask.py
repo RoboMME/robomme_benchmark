@@ -30,6 +30,8 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 
+from ..logging_utils import logger
+
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -181,7 +183,7 @@ class VideoUnmask(BaseEnv):
                     max_trials=256,
                     generator=generator
                 )
-                print(f"Spawned bin_{i} at position {bin_actor.pose.p}")
+                logger.debug(f"Spawned bin_{i} at position {bin_actor.pose.p}")
             except RuntimeError as e:
                 break
 
@@ -332,7 +334,7 @@ class VideoUnmask(BaseEnv):
         # If task failed, mark as failed immediately
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:

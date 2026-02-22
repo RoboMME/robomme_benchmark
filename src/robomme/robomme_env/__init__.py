@@ -19,13 +19,14 @@ from .RouteStick import *
 
 import warnings
 import logging
+import os
 
 def suppress_warnings():
     # Suppress specific warnings
     warnings.filterwarnings("ignore", category=UserWarning, module="gymnasium")
     warnings.filterwarnings("ignore", message=".*env.task_list.*")
     warnings.filterwarnings("ignore", message=".*env.elapsed_steps.*")
-    warnings.filterwarnings("ignore", message=".*panda_wristcam is not in the task's list of supported robots.*")
+    warnings.filterwarnings("ignore", message=".*not in the task's list of supported robots.*")
     warnings.filterwarnings("ignore", message=".*No initial pose set for actor builder.*")
 
     warnings.filterwarnings("ignore", category=UserWarning, module="mani_skill")

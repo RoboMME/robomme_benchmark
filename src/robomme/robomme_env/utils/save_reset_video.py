@@ -9,6 +9,8 @@ import cv2
 import imageio
 import torch
 
+from ...logging_utils import logger
+
 TEXT_AREA_HEIGHT = 60
 
 # Tasks without subgoal demonstration: do not add red border when saving video (no demonstration phase to highlight)
@@ -195,7 +197,7 @@ def save_robomme_video(
     merged_subgoal_grounded = reset_subgoal_grounded + rollout_subgoal_grounded
 
     if not (merged_base_frames or merged_wrist_frames):
-        print(f"Skipped video (no frames): {out_video_path}")
+        logger.debug(f"Skipped video (no frames): {out_video_path}")
         return False
 
     draw_highlight_border = env_id not in NO_HIGHLIGHT_BORDER_ENV_IDS
@@ -233,7 +235,7 @@ def save_robomme_video(
 
     n_frames = len(image)
     if n_frames == 0:
-        print(f"Skipped video (no frames): {out_video_path}")
+        logger.debug(f"Skipped video (no frames): {out_video_path}")
         return False
     reset_frame_count = max(0, min(reset_frame_count, n_frames))
     rollout_frame_count = max(0, n_frames - reset_frame_count)
@@ -267,5 +269,5 @@ def save_robomme_video(
                 )
             writer.append_data(combined)
 
-    print(f"Saved video: {out_video_path}")
+    logger.debug(f"Saved video: {out_video_path}")
     return True

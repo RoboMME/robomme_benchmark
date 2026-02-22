@@ -16,7 +16,7 @@ dependencies = [
 dev = ["opencv-python", "pytest"]
 
 [tool.uv.sources]
-mani-skill = { git = "https://github.com/YinpeiDai/ManiSkill.git", rev = "dev" }
+mani-skill = { git = "https://github.com/YinpeiDai/ManiSkill.git", rev = "07be6fbc66350ddca200abfb0a11b692f078f7fd" }
 
 [build-system]
 requires = ["hatchling"]

@@ -29,6 +29,7 @@ from .utils import reset_panda
 from .utils import subgoal_language
 from .utils.difficulty import normalize_robomme_difficulty
 
+from ..logging_utils import logger
 
 
 @register_env("BinFill")
@@ -289,9 +290,8 @@ class BinFill(BaseEnv):
         self.blue_cubes_spawn_number = spawn_numbers[1]
         self.green_cubes_spawn_number = spawn_numbers[2]
 
-        print(f"Target numbers - Red: {self.red_cubes_target_number}, Blue: {self.blue_cubes_target_number}, Green: {self.green_cubes_target_number}")
-        print(f"Spawn numbers - Red: {self.red_cubes_spawn_number}, Blue: {self.blue_cubes_spawn_number}, Green: {self.green_cubes_spawn_number}")
-
+        logger.debug(f"Target numbers - Red: {self.red_cubes_target_number}, Blue: {self.blue_cubes_target_number}, Green: {self.green_cubes_target_number}")
+        logger.debug(f"Spawn numbers - Red: {self.red_cubes_spawn_number}, Blue: {self.blue_cubes_spawn_number}, Green: {self.green_cubes_spawn_number}")
 
         ###
         ###
@@ -332,9 +332,9 @@ class BinFill(BaseEnv):
                 task["list"].append(cube)
                 avoid.append(cube)
             except RuntimeError as e:
-                print(f"Failed to spawn {task['name']} cube {task['idx']}: {e}")
+                logger.debug(f"Failed to spawn {task['name']} cube {task['idx']}: {e}")
 
-        print(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
+        logger.debug(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
 
 
 
@@ -446,7 +446,7 @@ class BinFill(BaseEnv):
         if task_failed or previous_failure:
             self.failureflag = torch.tensor([True])
             if task_failed:
-                print(f"Task failed: {current_task_name}")
+                logger.debug(f"Task failed: {current_task_name}")
             elif previous_failure:
                 # If marked failed due to previous_failure, ensure current_task_failure is also set
                 self.current_task_failure = True

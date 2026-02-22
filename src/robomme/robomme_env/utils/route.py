@@ -2,6 +2,8 @@ import torch
 import numpy as np  # Used for plotting and data structures
 import matplotlib.pyplot as plt
 
+from ...logging_utils import logger
+
 
 def generate_dynamic_walk(indices, steps=50, start_idx=None, allow_backtracking=True,
                           generator=None, plot=False):
@@ -24,7 +26,7 @@ def generate_dynamic_walk(indices, steps=50, start_idx=None, allow_backtracking=
         start_idx = torch.randint(0, len(indices), (1,), generator=generator).item()
 
     start_val = indices[start_idx]
-    print(f"   -> Random start index: {start_idx} (Value: {start_val})")
+    logger.debug(f"   -> Random start index: {start_idx} (Value: {start_val})")
 
     history_idxs = [start_idx]
 

@@ -30,6 +30,7 @@ from .utils.subgoal_evaluate_func import *
 from .utils.object_generation import *
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
+from ..logging_utils import logger
 
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
@@ -221,7 +222,7 @@ class PatternLock(BaseEnv):
                 self.buttons_grid.append(target)
                 # Note: purple_white_target doesn't have joints, so we append None
                 self.button_joints_grid.append(None)
-                print(f"Generated target {button_index} at position ({x_pos:.3f}, {y_pos:.3f})")
+                logger.debug(f"Generated target {button_index} at position ({x_pos:.3f}, {y_pos:.3f})")
                 button_index += 1
 
         self.targets_grid = self.buttons_grid
@@ -281,7 +282,7 @@ class PatternLock(BaseEnv):
                 break
         else:
             # If we couldn't find a path < 5 after max_attempts, use the last one
-            print(f"Warning: Could not find path after {max_attempts} attempts")
+            logger.debug(f"Warning: Could not find path after {max_attempts} attempts")
 
         self.selected_buttons = [self.buttons_grid[i] for i in path_nodes]
         current_target=self.selected_buttons[0]
@@ -381,7 +382,7 @@ class PatternLock(BaseEnv):
         if selected_labels:
             recent_achieved = achieved_labels[-len(selected_labels):]
             if len(recent_achieved) == len(selected_labels) and recent_achieved == selected_labels:
-                print("match success")
+                logger.debug("match success")
                 self.match=True
         # print(f"achieved_list: {achieved_labels}")
         # print(f"selected_buttons: {selected_labels}")
@@ -405,13 +406,13 @@ class PatternLock(BaseEnv):
         all_tasks_completed, current_task_name, task_failed,self.current_task_specialflag = sequential_task_check(self, self.task_list,allow_subgoal_change_this_timestep=allow_subgoal_change_this_timestep)
 
         if all_tasks_completed and self.match==False:# Manually set to fail if string match fails
-            print("match failure")
+            logger.debug("match failure")
             task_failed=True
 
         # If task failed, mark as failed immediately
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:

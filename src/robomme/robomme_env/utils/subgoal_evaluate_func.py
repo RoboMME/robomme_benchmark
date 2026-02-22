@@ -4,6 +4,8 @@ import numpy as np
 import sapien
 import torch
 
+from ...logging_utils import logger
+
 import mani_skill.envs.utils.randomization as randomization
 from mani_skill.agents.robots import SO100, Fetch, Panda
 from mani_skill.envs.sapien_env import BaseEnv
@@ -192,7 +194,7 @@ def sequential_task_check(self, tasks,allow_subgoal_change_this_timestep):
                 failure_result = current_failure_func()
             except Exception as exc:  # pragma: no cover - defensive
                 display_index = self.timestep + 1
-                print(f"Task {display_index} failure check raised exception: {exc}")
+                logger.debug(f"Task {display_index} failure check raised exception: {exc}")
                 failure_triggered = True
             else:
                 failure_triggered = _coerce_failure_result(failure_result)
@@ -203,13 +205,13 @@ def sequential_task_check(self, tasks,allow_subgoal_change_this_timestep):
         self.current_task_failure = True
         _clear_timelimit_deadline(self, task_idx)
         display_index = self.timestep + 1
-        print(f"Task {display_index} failed: {current_task_name}")
+        logger.debug(f"Task {display_index} failed: {current_task_name}")
         return False, current_task_name, True,current_task_specialflag
 
     # Execute current task check
     if current_task_func():
         display_index = self.timestep + 1
-        print(f"Task {display_index} completed: {current_task_name}")
+        logger.debug(f"Task {display_index} completed: {current_task_name}")
         _clear_timelimit_deadline(self, task_idx)
 
         # Check if it is the last task
@@ -219,7 +221,7 @@ def sequential_task_check(self, tasks,allow_subgoal_change_this_timestep):
             self.current_task_index = num_tasks
             self.current_task_name = "All tasks completed"
             self.current_task_demonstration = False
-            print(f"All {num_tasks} tasks completed successfully!")
+            logger.debug(f"All {num_tasks} tasks completed successfully!")
             return True, "All tasks completed", False,None
         else:
             # Enter next timestep
@@ -282,7 +284,7 @@ def timewindow(self, func, timewindow_timer,min_steps=300, max_steps=500):
     # If timer does not exist, start counting
     if timewindow_timer not in self._timewindow_timers:
         self._timewindow_timers[timewindow_timer] = current_step
-        print(f"Timewindow timer {timewindow_timer} started at step {current_step}")
+        logger.debug(f"Timewindow timer {timewindow_timer} started at step {current_step}")
 
     # Get start step (continue previous count)
     start_step = self._timewindow_timers[timewindow_timer]
@@ -351,7 +353,7 @@ def is_any_obj_pickup_flag_currentpickup(self, objects):
     for obj in objects:
         if is_obj_pickup(self,obj):
             self.currentpickup=obj
-            print(f"currentpickup={obj}")
+            logger.debug(f"currentpickup={obj}")
             return True
     return False
 
@@ -469,7 +471,7 @@ def is_A_insert_notB(self, A, B,box,direction=None,mark_end_flag=False,threashol
 
     success = bool(is_obj_insert and is_A_closer and direction_ok)
     if success and mark_end_flag:
-        print("marked end step!",self.elapsed_steps+3)
+        logger.debug("marked end step!",self.elapsed_steps+3)
         self.end_steps=int(getattr(self, "elapsed_steps", 0))
     return success
 
@@ -624,12 +626,12 @@ def gripper_direction_correct(self,target,direction):
     if direction==-1:
         gripper_pos = self.agent.tcp.pose.p[0]
         target_pos = target.pose.p[0]
-        print(gripper_pos[1]>target_pos[1])#y>y on the right side
+        logger.debug(gripper_pos[1]>target_pos[1])#y>y on the right side
         return gripper_pos[1]>target_pos[1]
     else:
         gripper_pos = self.agent.tcp.pose.p[0]
         target_pos = target.pose.p[0]
-        print(gripper_pos[1]<target_pos[1])#y<y on the left side
+        logger.debug(gripper_pos[1]<target_pos[1])#y<y on the left side
         return gripper_pos[1]<target_pos[1]
     
     
@@ -682,7 +684,7 @@ def is_obj_swing_onto_any(self, obj, targets):
     """Check if object swings onto any of the targets in the list."""
     for target in targets:
         if is_obj_swing_onto(self, obj=obj, target=target):
-            print(f"failure:swing onto {target}") 
+            logger.debug(f"failure:swing onto {target}") 
             return True
     return False
 
@@ -699,7 +701,7 @@ def is_any_obj_dropped_onto_delete(self, objects, target):
                 self.blue_cubes_in_bin+=1
             elif obj in self.green_cubes:
                 self.green_cubes_in_bin+=1
-            print(f"red_cubes_in_bin={self.red_cubes_in_bin},blue_cubes_in_bin={self.blue_cubes_in_bin},green_cubes_in_bin={self.green_cubes_in_bin}")
+            logger.debug(f"red_cubes_in_bin={self.red_cubes_in_bin},blue_cubes_in_bin={self.blue_cubes_in_bin},green_cubes_in_bin={self.green_cubes_in_bin}")
             return True
 
 
@@ -784,7 +786,7 @@ def static_check(self, timestep, static_steps=10):
     # Initialize first_timestep (if not exists)
     if not hasattr(self, 'first_timestep'):
         self.first_timestep = timestep
-        print(f"Static check initialized at timestep: {timestep}")
+        logger.debug(f"Static check initialized at timestep: {timestep}")
 
     # Check if target timestep reached (start timestep + static_steps)
     target_timestep = self.first_timestep + static_steps
@@ -854,7 +856,7 @@ def check_in_bin_number(self, in_bin_list, total_number_list):
     # Check if each element corresponds and is equal
     for in_bin, target in zip(in_bin_list, total_number_list):
         if in_bin != target:
-            print(f"in_bin={in_bin},target={target}")
+            logger.debug(f"in_bin={in_bin},target={target}")
             return False
 
     return True

@@ -29,6 +29,7 @@ from .utils.subgoal_evaluate_func import static_check
 from .utils.object_generation import *
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
+from ..logging_utils import logger
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -357,7 +358,7 @@ class StopCube(BaseEnv):
         if task_failed:
             self._task_failed_persistent = True
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:

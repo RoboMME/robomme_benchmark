@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 
+from ..logging_utils import logger
+
 DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
 
 _ALLOWED_DATASETS = {"train", "test"}
@@ -44,14 +46,14 @@ def load_episode_metadata(metadata_path: Union[str, Path, None]) -> Dict[Tuple[s
 
     path = Path(metadata_path)
     if not path.exists():
-        print(f"Metadata file not found, skipping: {path}")
+        logger.debug(f"Metadata file not found, skipping: {path}")
         return metadata_index
 
     try:
         with path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
     except Exception as exc:  # pragma: no cover - informational logging only
-        print(f"Failed to read metadata {path}: {exc}")
+        logger.debug(f"Failed to read metadata {path}: {exc}")
         return metadata_index
 
     default_task = str(payload.get("env_id") or "").strip()
@@ -67,9 +69,9 @@ def load_episode_metadata(metadata_path: Union[str, Path, None]) -> Dict[Tuple[s
         metadata_index[(task_name, episode_idx)] = record
 
     if metadata_index:
-        print(f"Loaded {len(metadata_index)} metadata records from {path}")
+        logger.debug(f"Loaded {len(metadata_index)} metadata records from {path}")
     else:
-        print(f"No valid metadata entries found in {path}")
+        logger.debug(f"No valid metadata entries found in {path}")
     return metadata_index
 
 
@@ -152,7 +154,7 @@ class BenchmarkEnvBuilder:
                 try:
                     seed = int(metadata_seed)
                 except (TypeError, ValueError):
-                    print(f"[{self.env_id}] Invalid metadata seed for episode {episode}: {metadata_seed}")
+                    logger.debug(f"[{self.env_id}] Invalid metadata seed for episode {episode}: {metadata_seed}")
             difficulty_hint = metadata.get("difficulty")
 
         return seed, difficulty_hint
@@ -188,7 +190,7 @@ class BenchmarkEnvBuilder:
             env_kwargs["difficulty"] = difficulty_hint
         seed_desc = seed if seed is not None else "default"
         difficulty_str = f", difficulty={difficulty_hint}" if difficulty_hint else ""
-        print(f"[{self.env_id}] Episode {episode_idx}: seed={seed_desc}{difficulty_str}")
+        logger.debug(f"[{self.env_id}] Episode {episode_idx}: seed={seed_desc}{difficulty_str}")
 
         env = gym.make(self.env_id, **env_kwargs)
         env = DemonstrationWrapper(

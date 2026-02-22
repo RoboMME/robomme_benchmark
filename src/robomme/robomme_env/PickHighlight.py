@@ -30,6 +30,7 @@ from .utils import subgoal_language
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
+from ..logging_utils import logger
 
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
@@ -220,10 +221,10 @@ class PickHighlight(BaseEnv):
                 avoid.append(cube)
 
             except RuntimeError as e:
-                print(f"Failed to spawn cube {cube_idx} ({chosen_color['name']}): {e}")
+                logger.debug(f"Failed to spawn cube {cube_idx} ({chosen_color['name']}): {e}")
                 break
 
-        print(f"Generated {len(self.all_cubes)} cubes total")
+        logger.debug(f"Generated {len(self.all_cubes)} cubes total")
 
 
 
@@ -359,7 +360,7 @@ class PickHighlight(BaseEnv):
 
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
         
         # If previously failed, keep failed state
         if previous_failure:
@@ -408,7 +409,7 @@ class PickHighlight(BaseEnv):
        # Fail if planner finished but not successful
         if all_tasks_completed and not counts_satisfied:
             self.failureflag = torch.tensor([True])
-            print(f"Pickup counts not satisfied: {pickup_counts}")
+            logger.debug(f"Pickup counts not satisfied: {pickup_counts}")
 
         if self.failureflag == torch.tensor([True]):
             pass

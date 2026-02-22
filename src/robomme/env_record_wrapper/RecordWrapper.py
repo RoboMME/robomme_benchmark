@@ -43,6 +43,8 @@ from ..robomme_env.utils.segmentation_utils import (
 from ..robomme_env.utils.rpy_util import build_endeffector_pose_dict
 from ..robomme_env.utils.oracle_action_matcher import map_action_text_to_option_label
 
+from ..logging_utils import logger
+
 class FailsafeTimeout(RuntimeError):
     """Exception raised when Robomme failsafe terminates episode early."""
     pass
@@ -135,13 +137,13 @@ class RobommeRecordWrapper(gym.Wrapper):
         except OSError as exc:
             if self.dataset_path.exists():
                 # Delete truncated/corrupted file and recreate a clean one
-                print(f"Failed to open existing dataset ({exc}); recreating file.")
+                logger.debug(f"Failed to open existing dataset ({exc}); recreating file.")
                 self.dataset_path.unlink()
                 self.h5_file = h5py.File(self.dataset_path, "w")
             else:
                 raise
-        print(f"Recording data to {self.dataset_path}")
-        print(f"HDF5 files will be saved in folder: {self.hdf5_dir}")
+        logger.debug(f"Recording data to {self.dataset_path}")
+        logger.debug(f"HDF5 files will be saved in folder: {self.hdf5_dir}")
 
         # Color lookup table generated once at initialization, avoid repeated construction in step
         # Used to assign fixed color to different segmentation IDs
@@ -460,20 +462,20 @@ class RobommeRecordWrapper(gym.Wrapper):
                 if success:
                     combined_video_path = videos_dir / f"{video_prefix}_{filename_suffix}.mp4"
                     self._video_write_mp4(self.video_frames, combined_video_path)
-                    print(f"Saved combined video to {combined_video_path}")
+                    logger.debug(f"Saved combined video to {combined_video_path}")
                 else:
                     combined_video_path = (
                         videos_dir / f"FAILED_{video_prefix}_{filename_suffix}.mp4"
                     )
                     self._video_write_mp4(self.video_frames, combined_video_path)
-                    print(f"Saved failed episode video to {combined_video_path}")
+                    logger.debug(f"Saved failed episode video to {combined_video_path}")
             except Exception as e:
                 if success:
-                    print(
+                    logger.debug(
                         f"Warning: Failed to save combined video for episode {self.episode}: {e}"
                     )
                 else:
-                    print(
+                    logger.debug(
                         f"Warning: Failed to save failed episode video for episode {self.episode}: {e}"
                     )
 
@@ -488,7 +490,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                     self._video_write_mp4(
                         self.no_object_video_frames, no_object_video_path
                     )
-                    print(f"Saved no-object video to {no_object_video_path}")
+                    logger.debug(f"Saved no-object video to {no_object_video_path}")
                 else:
                     no_object_video_path = (
                         videos_dir
@@ -497,14 +499,14 @@ class RobommeRecordWrapper(gym.Wrapper):
                     self._video_write_mp4(
                         self.no_object_video_frames, no_object_video_path
                     )
-                    print(f"Saved failed no-object video to {no_object_video_path}")
+                    logger.debug(f"Saved failed no-object video to {no_object_video_path}")
             except Exception as e:
                 if success:
-                    print(
+                    logger.debug(
                         f"Warning: Failed to save no-object video for episode {self.episode}: {e}"
                     )
                 else:
-                    print(
+                    logger.debug(
                         f"Warning: Failed to save failed no-object video for episode {self.episode}: {e}"
                     )
 
@@ -540,7 +542,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             self._fk_qpos_size = len(self._mplib_planner.user_joint_names)
             self._fk_available = True
         except Exception as exc:
-            print(f"[RecordWrapper] FK planner init failed, eef_action_raw/eef_action "
+            logger.debug(f"[RecordWrapper] FK planner init failed, eef_action_raw/eef_action "
                   f"will be zeros: {exc}")
             self.planner = None
             self._mplib_planner = None
@@ -604,7 +606,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             )
             return pose_dict
         except Exception as exc:
-            print(f"[RecordWrapper] FK computation failed: {exc}")
+            logger.debug(f"[RecordWrapper] FK computation failed: {exc}")
             return None
 
     def reset(self, **kwargs):
@@ -648,7 +650,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 env_id,
             )
         except Exception as exc:
-            print(
+            logger.debug(
                 "[RecordWrapper] Failed to build VQA options for label mapping: "
                 f"env={env_id}, task_index={task_index}, source_action='{choice_action_text}', error={exc}"
             )
@@ -656,7 +658,7 @@ class RobommeRecordWrapper(gym.Wrapper):
 
         matched_label = map_action_text_to_option_label(choice_action_text, solve_options)
         if matched_label is None:
-            print(
+            logger.debug(
                 "[RecordWrapper] Choice label mapping missing, writing empty label: "
                 f"env={env_id}, task_index={task_index}, source_action='{choice_action_text}'"
             )
@@ -733,19 +735,19 @@ class RobommeRecordWrapper(gym.Wrapper):
             kf_action = self.buffer[kf_idx].get("action", {})
             kp = kf_action.get("keypoint_action", None)
             if kp is None:
-                print(
+                logger.debug(
                     f"Warning: keyframe {kf_idx} has None keypoint_action, skip backfill"
                 )
                 return None
             target_kp = np.asarray(kp).flatten()
             if target_kp.size != 7:
-                print(
+                logger.debug(
                     f"Warning: keyframe {kf_idx} keypoint_action shape invalid {target_kp.shape}, "
                     f"skip backfill"
                 )
                 return None
             if not np.isfinite(target_kp).all():
-                print(
+                logger.debug(
                     f"Warning: keyframe {kf_idx} keypoint_action has non-finite values, "
                     f"skip backfill"
                 )
@@ -1031,10 +1033,10 @@ class RobommeRecordWrapper(gym.Wrapper):
         if terminated.any():
             if info.get("success") == torch.tensor([True]) or (isinstance(info.get("success"), torch.Tensor) and info.get("success").item()):
                 self.episode_success = True
-                print("Episode success detected, data will be saved")
+                # print("Episode success detected, data will be saved")
             else:
                 self.episode_success = False
-                print("Episode failed, data will be discarded")
+                # print("Episode failed, data will be discarded")
 
         # Failsafe: enforce a hard cap on episode length so planners can't run forever
         # Keep English comment to retain original meaning: Force truncate when planner stuck, protect recording process
@@ -1063,7 +1065,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             info["TimeLimit.truncated"] = True
             info["failsafe_elapsed_steps"] = env_steps
             self.episode_success = False
-            print(f"Failsafe triggered at {env_steps} steps; terminating episode early.")
+            logger.debug(f"Failsafe triggered at {env_steps} steps; terminating episode early.")
             if not self._failsafe_triggered:
                 self._failsafe_triggered = True
                 raise FailsafeTimeout(f"Episode exceeded failsafe limit ({env_steps} >= {fail_safe_limit})")
@@ -1093,7 +1095,7 @@ class RobommeRecordWrapper(gym.Wrapper):
 
         # Write data to HDF5 only when episode successful
         if self.episode_success:
-            print(f"Writing {len(self.buffer)} records to HDF5...")
+            logger.debug(f"Writing {len(self.buffer)} records to HDF5...")
 
             # Consume any unconsumed _pending_keypoint left by the last planner action.
             # This fixes the case where _record_keypoint() is the final action in a planner
@@ -1104,7 +1106,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                     self._current_keypoint_action.copy()
                 )
                 last_record.setdefault("info", {})["is_keyframe"] = True
-                print("Consumed trailing _pending_keypoint in close(), "
+                logger.debug("Consumed trailing _pending_keypoint in close(), "
                       f"marked buffer[-1] (timestep {len(self.buffer) - 1}) as keyframe.")
 
             # keypoint_action backfill handled uniformly before writing to disk, avoiding changing real-time logic during step().
@@ -1267,7 +1269,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 ]
                 available_multi_choices_str = json.dumps(available_options)
             except Exception as e:
-                print(f"[RecordWrapper] Failed to compute available_multi_choices: {e}")
+                logger.debug(f"[RecordWrapper] Failed to compute available_multi_choices: {e}")
                 available_multi_choices_str = ""
 
             setup_group.create_dataset(
@@ -1300,7 +1302,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 if xy_signs_np.size == 2:
                     setup_group.create_dataset("fail_recover_xy_signs", data=xy_signs_np)
                 else:
-                    print(
+                    logger.debug(
                         "Warning: skip writing fail_recover_xy_signs due to invalid size "
                         f"{xy_signs_np.size}"
                     )
@@ -1312,7 +1314,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                         "fail_recover_xy_signed_offset", data=xy_signed_offset_np
                     )
                 else:
-                    print(
+                    logger.debug(
                         "Warning: skip writing fail_recover_xy_signed_offset due to invalid size "
                         f"{xy_signed_offset_np.size}"
                     )
@@ -1340,9 +1342,9 @@ class RobommeRecordWrapper(gym.Wrapper):
                 filename_suffix=filename_suffix,
             )
 
-            print(f"Successfully saved episode {self.episode}")
+            logger.debug(f"Successfully saved episode {self.episode}")
         else:
-            print(f"Episode {self.episode} failed, discarding {len(self.buffer)} records")
+            logger.debug(f"Episode {self.episode} failed, discarding {len(self.buffer)} records")
 
             # Save failure video (if enabled), but do not write HDF5
             # Note: Video save failure should not throw exception
@@ -1356,7 +1358,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             episode_group_name = f"episode_{self.episode}"
             if episode_group_name in self.h5_file:
                 del self.h5_file[episode_group_name]
-                print(f"Deleted episode group: {episode_group_name}")
+                logger.debug(f"Deleted episode group: {episode_group_name}")
 
         # Clear buffer to prevent repeated writing if close called multiple times
         self.buffer.clear()

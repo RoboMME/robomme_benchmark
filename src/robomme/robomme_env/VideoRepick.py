@@ -31,6 +31,8 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 
+from ..logging_utils import logger
+
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -138,10 +140,10 @@ class VideoRepick(BaseEnv):
         self.generator = torch.Generator()
         self.generator.manual_seed(seed)
         self.num_repeats = torch.randint(1, 4, (1,), generator=self.generator).item()
-        print(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
+        logger.debug(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
 
         self.swap_times = torch.randint(self.configs[self.difficulty]['swap_min'], self.configs[self.difficulty]['swap_max']+1, (1,), generator=self.generator).item()
-        print(f"Task will swap {self.swap_times} times")
+        logger.debug(f"Task will swap {self.swap_times} times")
 
 
         self.static_flag=False
@@ -231,7 +233,7 @@ class VideoRepick(BaseEnv):
                     raise SceneGenerationError("Failed to generate any cube")
 
                 target_idx = torch.randint(0, len(self.spawned_cubes), (1,), generator=self.generator).item()
-                print("target index", target_idx)
+                logger.debug("target index", target_idx)
                 self.target_cube_1 = self.spawned_cubes[target_idx]
 
             else:
@@ -463,7 +465,7 @@ class VideoRepick(BaseEnv):
         # If task failed, mark as failed immediately
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:
@@ -602,7 +604,7 @@ class VideoRepick(BaseEnv):
                 self.static_flag=True
                 self.start_step=int(self.elapsed_steps.item())
                 self._refresh_swap_schedule(self.start_step)
-                print("tag!")
+                logger.debug("tag!")
              
         if self.static_flag==True:
             for i in range(len(self.swap_schedule)):

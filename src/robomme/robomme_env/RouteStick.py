@@ -34,6 +34,8 @@ from .utils.route import *
 from .utils.subgoal_planner_func import *
 from .utils.difficulty import normalize_robomme_difficulty
 
+from ..logging_utils import logger
+
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
 capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
@@ -241,7 +243,7 @@ class RouteStick(BaseEnv):
                 self.buttons_grid.append(target)
                 # Note: purple_white_target doesn't have joints, so we append None
                 self.button_joints_grid.append(None)
-                print(f"Generated target {button_index} at position ({x_pos:.3f}, {y_pos:.3f})")
+                logger.debug(f"Generated target {button_index} at position ({x_pos:.3f}, {y_pos:.3f})")
                 button_index += 1
 
         self.targets_grid = self.buttons_grid
@@ -254,7 +256,7 @@ class RouteStick(BaseEnv):
 
         for target_idx in target_cube_indices:
             if target_idx >= len(self.targets_grid):
-                print(f"[SwingAvoid] Skip cube spawn for target {target_idx}: index out of range.")
+                logger.debug(f"[SwingAvoid] Skip cube spawn for target {target_idx}: index out of range.")
                 continue
 
             target_actor = self.targets_grid[target_idx]
@@ -362,7 +364,7 @@ class RouteStick(BaseEnv):
         for _ in self.selected_buttons[1:]:
             dir_flag = "clockwise" if torch.rand(1, generator=generator).item() < 0.5 else "counterclockwise"
             self.swing_directions.append(dir_flag)
-        print(f"[RouteStick] swing direction list: {self.swing_directions}")
+        logger.debug(f"[RouteStick] swing direction list: {self.swing_directions}")
 
         current_target=self.selected_buttons[0]
         tasks.append({
@@ -486,7 +488,7 @@ class RouteStick(BaseEnv):
         if task_failed:
             self.failureflag = torch.tensor([True])
             if not had_latched_fail:
-                print(f"Task failed: {current_task_name}")
+                logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:
@@ -596,7 +598,7 @@ class RouteStick(BaseEnv):
 
         expected_dir = str(expected_dir).lower()
         if side != expected_dir:
-            print(f"direction mistake: expected {expected_dir}, got {side}")
+            logger.debug(f"direction mistake: expected {expected_dir}, got {side}")
             self.failureflag = torch.tensor([True])
             return False
 

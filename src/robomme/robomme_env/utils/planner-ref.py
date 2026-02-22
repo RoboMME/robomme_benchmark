@@ -21,6 +21,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
 from historybench.HistoryBench_env.util import *
  
 import random
+from ...logging_utils import logger
 
 # Probability for deliberately triggering a failed hover before pickup.
 FAILED_HOVER_PROB = 0.03
@@ -270,7 +271,7 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
             n_step = result["position"].shape[0]
             for i in range(n_step):
                 if end_steps is not None and int(getattr(env, "elapsed_steps", 0)) > end_steps + 3:
-                    print("break early")
+                    logger.debug("break early")
                     return True  # legacy comment
                 qpos = result["position"][i]
                 if planner.control_mode == "pd_joint_pos_vel":
@@ -296,7 +297,7 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
         if cut_retreat!=True:
             _move_with_offset([-0.05 , 0, 0])
         else:
-            print(f"cut_retreat mode (obj=-1): elapsed_steps={int(getattr(env, 'elapsed_steps', 0))}, end_steps={env.end_steps}")
+            logger.debug(f"cut_retreat mode (obj=-1): elapsed_steps={int(getattr(env, 'elapsed_steps', 0))}, end_steps={env.end_steps}")
             _move_with_offset_with_break([-0.05, 0, 0])
 
 
@@ -312,7 +313,7 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
         if cut_retreat!=True:
             _move_with_offset([-0.05 , 0, 0])
         else:
-            print(f"cut_retreat mode (obj=1): elapsed_steps={int(getattr(env, 'elapsed_steps', 0))}, end_steps={env.end_steps}")
+            logger.debug(f"cut_retreat mode (obj=1): elapsed_steps={int(getattr(env, 'elapsed_steps', 0))}, end_steps={env.end_steps}")
             _move_with_offset_with_break([-0.05, 0, 0])
 
 
@@ -1098,7 +1099,7 @@ def solve_swingonto_withDirection(env, planner, target=None, radius=0.1, directi
         last_q = np.asarray(waypoints[-1].q, dtype=np.float32).reshape(-1).tolist()
         for _ in range(5):
             waypoints.append(sapien.Pose(last_p, last_q))
-    print(" get waypoint")
+    logger.debug(" get waypoint")
     # Directly connect each waypoint IK solution into a discrete path without extra interpolation/planning
     positions = []
     last_res = None
@@ -1116,7 +1117,7 @@ def solve_swingonto_withDirection(env, planner, target=None, radius=0.1, directi
             plan_start_qpos_full.copy(),
         )
         if ik_status != "Success" or len(ik_solutions) == 0:
-            print(f"IK failed at waypoint {idx}: {ik_status}")
+            logger.debug(f"IK failed at waypoint {idx}: {ik_status}")
             continue
 
         # Take the first IK solution and append directly; do not call plan_qpos_to_qpos for interpolation
@@ -1128,7 +1129,7 @@ def solve_swingonto_withDirection(env, planner, target=None, radius=0.1, directi
         plan_start_qpos_full = padded_qpos
 
     if len(positions) == 0:
-        print("No IK solutions found for waypoints, aborting follow_path.")
+        logger.debug("No IK solutions found for waypoints, aborting follow_path.")
         return None
 
     traj_res = {
@@ -1244,7 +1245,7 @@ def solve_strong_reset(env, planner,timestep=30,gripper=None,action=None):
         action=reset_panda.get_reset_panda_param("action",gripper=gripper)
     for i in range(timestep):
         env.step(action)
-        print("strong reset!!")
+        logger.debug("strong reset!!")
         env.unwrapped.reset_in_proecess=True
         env.unwrapped.after_demo=True
     env.unwrapped.reset_in_proecess=False
@@ -1374,7 +1375,7 @@ def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=Fals
         planner.move_to_pose_with_screw(sapien.Pose(p=ready_position,q=rotate))
     planner.close_gripper()
     steps=env.elapsed_steps.item()
-    print("press button at step",steps)
+    logger.debug(f"press button at step {steps}")
     planner.move_to_pose_with_screw(sapien.Pose(p=position,q=rotate))
 
     planner.move_to_pose_with_screw(sapien.Pose(p=ready_position, q=rotate))

@@ -3,19 +3,19 @@
 A key difference from traditional Gym-like envs is that every observation value is a **list** rather than a single item. This is because some RoboMME tasks use conditioning video input, and for discrete action types (e.g. keypoint or multi_choice) we also return intermediate observations for potential use.
 
 
-## Action Space Type
+## Env Input Format
 
 We support four `ACTION_SPACE` types:
 
 - `joint_angle`: 7 joint angles + gripper open/close
 - `ee_pose`: 3 position (xyz) + 3 rotation (rpy) + gripper open/close
 - `keypoint`: Same format as ee_pose, but executed in discrete keyframe steps
-- `multi_choice`: Command dict, e.g. `{"choice": "A", "point": [x, y]}`; intended for human studies or Video-QA research
+- `multi_choice`: Command dict, e.g. `{"label": "a", "point": [y, x]}`; the label is the choice from `info["available_multi_choices"]`, point is the pixel location on the front image. this action is designed for human studies or Video-QA research
 
 Note: Gripper closed is -1, gripper open is 1.
 
 
-## Step output
+## Env Output Format
 
 When calling `step`:
 
@@ -56,7 +56,7 @@ To use only the current (latest) observation, use `obs[key][-1]`.
 | `task_goal` | Task goal list | `list[str]` with fixed length 2: `[primary_goal, "test"]` |
 | `simple_subgoal_online` | Oracle online simple subgoal | Description of the current subgoal |
 | `grounded_subgoal_online` | Oracle online grounded subgoal | Subgoal with object grounding |
-| `available_multi_choices` | Current available options for multi-choice action | List of e.g. `{"choice: "A/B/...", "action": str, "need_grounding": bool}` |
+| `available_multi_choices` | Current available options for multi-choice action | List of e.g. `{"label: "a/b/...", "action": str, "need_parameter": bool}`, need_parameter means this action needs grounding info like [y, x] |
 | `front_camera_intrinsic` | Front camera intrinsic | Camera intrinsic matrix |
 | `wrist_camera_intrinsic` | Wrist camera intrinsic | Camera intrinsic matrix |
 | `status` | Status flag | One of `success`, `fail`, `timeout` |

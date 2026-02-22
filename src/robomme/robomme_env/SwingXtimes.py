@@ -31,6 +31,8 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 
+from ..logging_utils import logger
+
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -138,7 +140,7 @@ class SwingXtimes(BaseEnv):
         generator = torch.Generator()
         generator.manual_seed(seed)
         self.num_repeats = torch.randint(self.configs[self.difficulty]['number_min'], self.configs[self.difficulty]['number_max']+1, (1,), generator=generator).item()
-        print(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
+        logger.debug(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
 
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -205,7 +207,7 @@ class SwingXtimes(BaseEnv):
             # Randomly select target color using generator
             target_color_idx = torch.randint(0, len(color_groups), (1,), generator=generator).item()
             self.target_color_name = color_groups[target_color_idx]["name"]
-            print(f"Target color selected: {self.target_color_name}")
+            logger.debug(f"Target color selected: {self.target_color_name}")
 
             # Generate cubes for each color group
             for idx, group in enumerate(color_groups):
@@ -238,9 +240,9 @@ class SwingXtimes(BaseEnv):
                         setattr(self, cube_name, cube)
                         avoid.append(cube)
 
-                print(f"Generated {len(group['list'])} {group['name']} cubes")
+                logger.debug(f"Generated {len(group['list'])} {group['name']} cubes")
 
-            print(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
+            logger.debug(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
 
             # Generate first target
             try:
@@ -259,7 +261,7 @@ class SwingXtimes(BaseEnv):
                     target_style="gray"
                 )
                 avoid.append(temp_target_0)
-                print(f"Generated first target")
+                logger.debug(f"Generated first target")
             except RuntimeError as e:
                 raise SceneGenerationError("First target sampling failed") from e
 
@@ -280,7 +282,7 @@ class SwingXtimes(BaseEnv):
                     target_style="gray"
                 )
                 avoid.append(temp_target_1)
-                print(f"Generated second target")
+                logger.debug(f"Generated second target")
             except RuntimeError as e:
                 raise SceneGenerationError("Second target sampling failed") from e
 
@@ -292,12 +294,12 @@ class SwingXtimes(BaseEnv):
                 # No swap needed
                 self.target_right = temp_target_0
                 self.target_left = temp_target_1
-                print(f"target_0 y={temp_0_y:.3f}, target_1 y={temp_1_y:.3f} (no swap needed)")
+                logger.debug(f"target_0 y={temp_0_y:.3f}, target_1 y={temp_1_y:.3f} (no swap needed)")
             else:
                 # Swap the assignments
                 self.target_right = temp_target_1
                 self.target_left = temp_target_0
-                print(f"Swapped: target_0 y={temp_1_y:.3f}, target_1 y={temp_0_y:.3f} (swapped to ensure target_0.y < target_1.y)")
+                logger.debug(f"Swapped: target_0 y={temp_1_y:.3f}, target_1 y={temp_0_y:.3f} (swapped to ensure target_0.y < target_1.y)")
 
             # Randomly select one cube from all available cubes as the target
             if len(self.all_cubes) > 0:
@@ -312,15 +314,15 @@ class SwingXtimes(BaseEnv):
                 elif self.target_cube in self.green_cubes:
                     self.target_color_name = "green"
 
-                print(f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)")
+                logger.debug(f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)")
             else:
                 self.target_cube = None
                 self.target_color_name = None
-                print("No cubes generated, no target cube selected")
+                logger.debug("No cubes generated, no target cube selected")
 
             # Create list of non-target cubes for failure checking
             self.non_target_cubes = [cube for cube in self.all_cubes if cube != self.target_cube]
-            print(f"Non-target cubes: {len(self.non_target_cubes)}")
+            logger.debug(f"Non-target cubes: {len(self.non_target_cubes)}")
 
 
 
@@ -467,7 +469,7 @@ class SwingXtimes(BaseEnv):
         # If task failed, mark as failed immediately
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:
@@ -560,7 +562,7 @@ class SwingXtimes(BaseEnv):
         if self.swing_count > self.max_swings:
             if not self.swing_over_limit:
                 # Print only once, warn swing count exceeded limit
-                print(f"Swing count exceeded: {self.swing_count}>{self.max_swings}")
+                logger.debug(f"Swing count exceeded: {self.swing_count}>{self.max_swings}")
             self.swing_over_limit = True
              
         if self.highlight_right_start is not None:

@@ -11,6 +11,7 @@ from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
     PandaStickMotionPlanningSolver,
 )
 from ..robomme_env.utils import planner_denseStep
+from ..logging_utils import logger
 
 
 # -----------------------------------------------------------------------------
@@ -40,9 +41,9 @@ def _find_best_semantic_match(user_query, options):
         else:
             return -1, 0.0
     except Exception as exc:
-        print(f"  [NLP] Edit distance match failed ({exc}), fallback to option 1.")
+        logger.debug(f"  [NLP] Edit distance match failed ({exc}), fallback to option 1.")
         return 0, 0.0
-    print(f"  [NLP] Nearest semantic match (edit distance): '{query_text}' -> '{labels[best_idx]}' (Score: {best_score:.4f})")
+    logger.debug(f"  [NLP] Nearest semantic match (edit distance): '{query_text}' -> '{labels[best_idx]}' (Score: {best_score:.4f})")
     return best_idx, best_score
 
 
@@ -68,10 +69,10 @@ def step_after(env, planner, env_id, seg_raw, command_dict):
             break
     # If not hit and is string and not digit, try semantic match
     if found_idx == -1 and isinstance(target_action, str) and not target_action.isdigit():
-        print(f"Attempting semantic match for '{target_action}'...")
+        logger.debug(f"Attempting semantic match for '{target_action}'...")
         found_idx, score = _find_best_semantic_match(target_action, solve_options)
     if found_idx == -1:
-        print(f"Error: Action '{target_action}' not found in current options.")
+        logger.debug(f"Error: Action '{target_action}' not found in current options.")
         return planner_denseStep.empty_step_batch()
     # If click coordinates provided and segmentation map exists, parse nearest object and fill selected_target
     if target_param is not None and seg_raw is not None:
@@ -124,7 +125,7 @@ def step_after(env, planner, env_id, seg_raw, command_dict):
                 selected_target["click_point"] = (int(cx), int(cy))
         else:
             selected_target["click_point"] = (int(cx), int(cy))
-    print(f"Executing option: {found_idx + 1} - {solve_options[found_idx].get('label')}")
+    logger.debug(f"Executing option: {found_idx + 1} - {solve_options[found_idx].get('label')}")
 
     # Wrap solve() with dense collection, collecting results of all intermediate env.step calls
     result = planner_denseStep._run_with_dense_collection(
@@ -133,12 +134,12 @@ def step_after(env, planner, env_id, seg_raw, command_dict):
     )
 
     if result == -1:
-        print("Warning: solve() failed (returned -1)")
+        logger.debug("Warning: solve() failed (returned -1)")
         return planner_denseStep.empty_step_batch()
 
     env.unwrapped.evaluate()
     evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
-    print(f"Evaluation result: {evaluation}")
+    logger.debug(f"Evaluation result: {evaluation}")
     return result
 
 

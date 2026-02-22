@@ -4,6 +4,8 @@ import sys
 import os
 import inspect
 
+from ...logging_utils import logger
+
 # If run as script directly, add project root to sys.path
 if __name__ == "__main__":
     # Get current file directory
@@ -428,7 +430,7 @@ def _options_patternlock(env, planner, require_target, base) -> List[dict]:
                 best = cand
 
         if best is None:
-            print(f"[PatternLock] No candidate in direction '{dir_label}', using nearest target.")
+            logger.debug(f"[PatternLock] No candidate in direction '{dir_label}', using nearest target.")
             best = ref_target
         return best
 
@@ -436,7 +438,7 @@ def _options_patternlock(env, planner, require_target, base) -> List[dict]:
         try:
             target = _target_for_direction(chosen_dir)
         except ValueError as e:
-            print(f"[PatternLock] {e}")
+            logger.debug(f"[PatternLock] {e}")
             return
 
         record_flag = getattr(base, "swing_qpos", None) is None
@@ -549,7 +551,7 @@ def _options_routestick(env, planner, require_target, base) -> List[dict]:
                 else:
                     raise ValueError("RouteStick: failed to determine a target for the selected side.")
 
-            print(f"RouteStick: failed to determine a target for side '{side_l}'. Fallback to nearest target.")
+            logger.debug(f"RouteStick: failed to determine a target for side '{side_l}'. Fallback to nearest target.")
             return solve_swingonto(env, planner, target=fallback_target)
 
         # Pick the closest candidate by index in the requested direction (no distance check).
@@ -1016,16 +1018,16 @@ if __name__ == "__main__":
     def _require_target():
         return None
     
-    print("=" * 80)
-    print("Options Labels for all tasks:")
-    print("=" * 80)
+    logger.debug("=" * 80)
+    logger.debug("Options Labels for all tasks:")
+    logger.debug("=" * 80)
     
     for task_name, builder_func in OPTION_BUILDERS.items():
         try:
             options = builder_func(env, planner, _require_target, base)
-            print(f"\nTask: {task_name}")
+            logger.debug(f"\nTask: {task_name}")
             valid_options = [opt for opt in options if isinstance(opt, dict)]
-            print(f"  Options Labels ({len(valid_options)} items):")
+            logger.debug(f"  Options Labels ({len(valid_options)} items):")
             
             for i, opt in enumerate(valid_options, 1):
                 label = opt.get("label", "No label")
@@ -1042,12 +1044,12 @@ if __name__ == "__main__":
                 
                 target_str = " [Need click target]" if needs_target else ""
                 action_str = f" - {action}" if action else ""
-                print(f"    {i}. {label}{action_str}{target_str}")
+                logger.debug(f"    {i}. {label}{action_str}{target_str}")
         except Exception as e:
-            print(f"\nTask: {task_name}")
-            print(f"  Error: Failed to get options - {type(e).__name__}: {e}")
+            logger.debug(f"\nTask: {task_name}")
+            logger.debug(f"  Error: Failed to get options - {type(e).__name__}: {e}")
     
-    print("\n" + "=" * 80)
+    logger.debug("\n" + "=" * 80)
 
 
 # You need to add the environment library path to LD_LIBRARY_PATH environment variable to force program to load libraries within environment first.

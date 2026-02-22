@@ -15,6 +15,7 @@ from ..robomme_env.utils.oracle_action_matcher import (
     normalize_and_clip_point_xy,
     select_target_with_point,
 )
+from ..logging_utils import logger
 
 
 # -----------------------------------------------------------------------------
@@ -62,14 +63,14 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
                 try:
                     result = original_move_to_pose_with_screw(*args, **kwargs)
                 except screw_failure_exc as exc:
-                    print(
+                    logger.debug(
                         f"[OraclePlannerWrapper] screw planning failed "
                         f"(attempt {attempt}/{self._oracle_screw_max_attempts}): {exc}"
                     )
                     continue
 
                 if isinstance(result, int) and result == -1:
-                    print(
+                    logger.debug(
                         f"[OraclePlannerWrapper] screw planning returned -1 "
                         f"(attempt {attempt}/{self._oracle_screw_max_attempts})"
                     )
@@ -77,7 +78,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
 
                 return result
 
-            print(
+            logger.debug(
                 "[OraclePlannerWrapper] screw planning exhausted; "
                 f"fallback to RRT* (max {self._oracle_rrt_max_attempts} attempts)"
             )
@@ -85,14 +86,14 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
                 try:
                     result = original_move_to_pose_with_rrt(*args, **kwargs)
                 except Exception as exc:
-                    print(
+                    logger.debug(
                         f"[OraclePlannerWrapper] RRT* planning failed "
                         f"(attempt {attempt}/{self._oracle_rrt_max_attempts}): {exc}"
                     )
                     continue
 
                 if isinstance(result, int) and result == -1:
-                    print(
+                    logger.debug(
                         f"[OraclePlannerWrapper] RRT* planning returned -1 "
                         f"(attempt {attempt}/{self._oracle_rrt_max_attempts})"
                     )
@@ -118,7 +119,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
                 ScrewPlanFailure,
             )
         except Exception as exc:
-            print(
+            logger.debug(
                 "[OraclePlannerWrapper] Warning: failed to import planner_fail_safe, "
                 f"fallback to base planners: {exc}"
             )
@@ -220,7 +221,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
 
         found_idx = find_exact_label_option_index(target_label, solve_options)
         if found_idx == -1:
-            print(
+            logger.debug(
                 f"Error: Label '{target_label}' not found in current options by exact label match."
             )
             return None, None
@@ -249,7 +250,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
 
     def _execute_selected_option(self, option_idx, solve_options):
         option = solve_options[option_idx]
-        print(f"Executing option: {option_idx + 1} - {option.get('action')}")
+        logger.debug(f"Executing option: {option_idx + 1} - {option.get('action')}")
 
         result = planner_denseStep._run_with_dense_collection(
             self.planner,
@@ -266,7 +267,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
     def _post_eval(self):
         self.env.unwrapped.evaluate()
         evaluation = self.env.unwrapped.evaluate(solve_complete_eval=True)
-        print(f"Evaluation result: {evaluation}")
+        logger.debug(f"Evaluation result: {evaluation}")
 
     @staticmethod
     def _frame_count_from_obs_batch(obs_batch) -> int:

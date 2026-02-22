@@ -31,6 +31,8 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 
+from ..logging_utils import logger
+
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
 capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
@@ -136,7 +138,7 @@ class PickXtimes(BaseEnv):
         generator = torch.Generator()
         generator.manual_seed(seed)
         self.num_repeats = torch.randint(self.configs[self.difficulty]['number_min'], self.configs[self.difficulty]['number_max']+1, (1,), generator=generator).item()
-        print(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
+        logger.debug(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
@@ -208,7 +210,7 @@ class PickXtimes(BaseEnv):
         # Randomly select target color using generator
         target_color_idx = torch.randint(0, len(color_groups), (1,), generator=generator).item()
         self.target_color_name = color_groups[target_color_idx]["name"]
-        print(f"Target color selected: {self.target_color_name}")
+        logger.debug(f"Target color selected: {self.target_color_name}")
 
         # Generate 5 cubes for each color group
         for idx, group in enumerate(color_groups):
@@ -230,7 +232,7 @@ class PickXtimes(BaseEnv):
                             generator=generator,
                         )
                     except RuntimeError as e:
-                        print(f"Failed to generate {group['name']} cube {idx}: {e}")
+                        logger.debug(f"Failed to generate {group['name']} cube {idx}: {e}")
                         break
 
                     self.all_cubes.append(cube)
@@ -240,9 +242,9 @@ class PickXtimes(BaseEnv):
                     setattr(self, cube_name, cube)
                     avoid.append(cube)
 
-            print(f"Generated {len(group['list'])} {group['name']} cubes")
+            logger.debug(f"Generated {len(group['list'])} {group['name']} cubes")
 
-        print(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
+        logger.debug(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
 
         try:
             target = spawn_random_target(
@@ -259,7 +261,7 @@ class PickXtimes(BaseEnv):
                 generator=generator
             )
         except RuntimeError as e:
-            print(f"Target sampling failed: {e}")
+            logger.debug(f"Target sampling failed: {e}")
 
 
         # Assign target to self.target_0, self.target_1 etc. attributes
@@ -282,15 +284,15 @@ class PickXtimes(BaseEnv):
                 self.target_color_name = "green"
 
 
-            print(f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)")
+            logger.debug(f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)")
         else:
             self.target_cube = None
             self.target_color_name = None
-            print("No cubes generated, no target cube selected")
+            logger.debug("No cubes generated, no target cube selected")
 
         # Create list of non-target cubes for failure checking
         self.non_target_cubes = [cube for cube in self.all_cubes if cube != self.target_cube]
-        print(f"Non-target cubes: {len(self.non_target_cubes)}")
+        logger.debug(f"Non-target cubes: {len(self.non_target_cubes)}")
 
                 # Dynamically generate task list for N pickup-drop cycles
         tasks = []
@@ -351,7 +353,7 @@ class PickXtimes(BaseEnv):
             self.table_scene.initialize(env_idx)
             qpos=reset_panda.get_reset_panda_param("qpos")
             self.agent.reset(qpos)
-            print(self.agent.robot.qpos)
+            logger.debug(self.agent.robot.qpos)
 
     def _get_obs_extra(self, info: Dict):
         return dict()
@@ -386,7 +388,7 @@ class PickXtimes(BaseEnv):
         # If task failed, mark as failed immediately
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:

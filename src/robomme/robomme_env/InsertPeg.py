@@ -30,6 +30,7 @@ from .utils import subgoal_language
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils import subgoal_evaluate_func
+from ..logging_utils import logger
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -333,11 +334,11 @@ class InsertPeg(BaseEnv):
             agent_x = self.agent.robot.pose.p.tolist()[0][0]
             head_x = float(self.peg_head.pose.p.tolist()[0][0])
             tail_x = float(self.peg_tail.pose.p.tolist()[0][0])
-            print(f"agent_x: {agent_x}, head_x: {head_x}, tail_x: {tail_x}")
+            logger.debug(f"agent_x: {agent_x}, head_x: {head_x}, tail_x: {tail_x}")
             near_link = self.peg_head if abs(head_x - agent_x) <= abs(tail_x - agent_x) else self.peg_tail
 
             self.grasp_target_distance = "near" if self.grasp_target is near_link else "far"
-            print(f"grasp_target_distance: {self.grasp_target_distance}")
+            logger.debug(f"grasp_target_distance: {self.grasp_target_distance}")
 
             self.insert_way="left" if self.direction == -1 else "right"
             tasks = [
@@ -440,13 +441,13 @@ class InsertPeg(BaseEnv):
 
 
         if self.end_steps!=None:# truncate tail, also truncate tail in planner
-            print(self.elapsed_steps,self.end_steps)
+            logger.debug(self.elapsed_steps,self.end_steps)
             if int(getattr(self, "elapsed_steps", 0))>=self.end_steps+3:
                  self.successflag = torch.tensor([True])
 
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:
@@ -487,7 +488,7 @@ class InsertPeg(BaseEnv):
                     peg.set_qpos(zero)
                     peg.set_qvel(zero)
               
-            print("reset peg!")
+            logger.debug("reset peg!")
 
 
 

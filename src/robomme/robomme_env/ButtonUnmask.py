@@ -29,6 +29,7 @@ from .utils.subgoal_evaluate_func import static_check
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
+from ..logging_utils import logger
 
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
@@ -134,7 +135,7 @@ class ButtonUnmask(BaseEnv):
         generator = torch.Generator()
         generator.manual_seed(seed)
         self.num_repeats = torch.randint(1, 6, (1,), generator=generator).item()
-        print(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
+        logger.debug(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
         self.generator = generator  
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -346,7 +347,7 @@ class ButtonUnmask(BaseEnv):
         # If task failed, mark as failed immediately
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:

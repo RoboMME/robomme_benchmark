@@ -32,6 +32,8 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 
+from ..logging_utils import logger
+
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -231,7 +233,7 @@ class VideoPlaceOrder(BaseEnv):
             color_groups = [color_groups[i] for i in shuffle_indices]
 
             self.target_color_name = color_groups[0]["name"]
-            print(f"Target color selected: {self.target_color_name}")
+            logger.debug(f"Target color selected: {self.target_color_name}")
 
             for idx, group in enumerate(color_groups):
                 if idx < self.configs[self.difficulty]['color']:
@@ -263,9 +265,9 @@ class VideoPlaceOrder(BaseEnv):
                         setattr(self, cube_name, cube)
                         avoid.append(cube)
 
-                print(f"Generated {len(group['list'])} {group['name']} cubes")
+                logger.debug(f"Generated {len(group['list'])} {group['name']} cubes")
 
-            print(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
+            logger.debug(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
 
             self.targets = []
             for i in range(4):
@@ -302,14 +304,14 @@ class VideoPlaceOrder(BaseEnv):
                 elif self.target_cube in self.green_cubes:
                     self.target_color_name = "green"
 
-                print(f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)")
+                logger.debug(f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)")
             else:
                 self.target_cube = None
                 self.target_color_name = None
-                print("No cubes generated, no target cube selected")
+                logger.debug("No cubes generated, no target cube selected")
 
             self.non_target_cubes = [cube for cube in self.all_cubes if cube != self.target_cube]
-            print(f"Non-target cubes: {len(self.non_target_cubes)}")
+            logger.debug(f"Non-target cubes: {len(self.non_target_cubes)}")
 
             self.swap_target_a = None
             self.swap_target_b = None
@@ -327,7 +329,7 @@ class VideoPlaceOrder(BaseEnv):
                         for idx, target in enumerate(self.targets)
                         if idx not in (swap_idx_a, swap_idx_b)
                     ]
-                    print(
+                    logger.debug(
                         f"Swap targets selected: target_{swap_idx_a} <-> target_{swap_idx_b}"
                     )
             num_targets_to_pick = torch.randint(2, len(self.targets) + 1, (1,), generator=self.generator).item()
@@ -338,7 +340,7 @@ class VideoPlaceOrder(BaseEnv):
 
             self.which_in_subset=torch.randint(1,len(self.which_targets_to_pick)+1,(1,),generator=self.generator).item()
 
-            print("self.which_in_subset:",self.which_in_subset)
+            logger.debug("self.which_in_subset:",self.which_in_subset)
             self.target_target=self.which_targets_to_pick[self.which_in_subset-1]
 
             self.targets_not_true = [t for i, t in enumerate(self.targets) if self.targets[i]!=self.target_target]
@@ -539,7 +541,7 @@ class VideoPlaceOrder(BaseEnv):
         # If task failed, mark as failed immediately
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
 
         # If static_check succeeds or all tasks completed, set success flag

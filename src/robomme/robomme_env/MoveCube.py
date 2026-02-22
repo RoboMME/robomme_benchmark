@@ -29,6 +29,7 @@ from .utils.subgoal_evaluate_func import static_check
 from .utils import subgoal_language
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
+from ..logging_utils import logger
 
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
@@ -597,7 +598,7 @@ class MoveCube(BaseEnv):
 
         if task_failed:
             self.failureflag = torch.tensor([True])
-            print(f"Task failed: {current_task_name}")
+            logger.debug(f"Task failed: {current_task_name}")
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:
