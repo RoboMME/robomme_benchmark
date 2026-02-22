@@ -77,7 +77,7 @@ The environment input/output format is provided in [doc/env_format.md](doc/env_f
 ### 🔧 Data Generation
 
 You can also re-generate your own HDF5 data via parallel processing using
-
+@hongze
 ```bash
 uv run scripts/dev/xxxx
 ```
@@ -87,18 +87,21 @@ uv run scripts/dev/xxxx
 
 ### MME-VLA-Suite
 
-The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo provides MME-VLA model training and evaluation used in our paper. It contains different memory-aguemnetd VLA models built on [pi05]() and our implementation of [MemER](https://jen-pan.github.io/memer/). 
+The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo provides MME-VLA model training and evaluation used in our paper. It contains a family of  memory-aguemnetd VLA models built on [pi05](https://github.com/Physical-Intelligence/openpi) backbone and our implementation of [MemER](https://jen-pan.github.io/memer/). 
 
-### Other Prior Methods
+### Prior Methods
+
+### MemER
+The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo also provides our implementation of the [MemER](https://jen-pan.github.io/memer/), using the same GroundSG policy model as in MME-VLA.
+
+#### SAM2Act+
+The [RoboMME_SAM2Act](https://github.com/RoboMME/SAM2Act) repo provides our implementation adapt from the [SAM2Act](https://github.com/sam2act/sam2act) repo.
+
 #### MemoryVLA
 The [RoboMME_MemoryVLA](https://github.com/RoboMME/MemoryVLA) repo provides our implementation adapt from the [MemoryVLA](https://github.com/shihao1895/MemoryVLA) repo.
 
-#### SAM2Act+
-The [RoboMME_SAM2Act+](https://github.com/RoboMME/SAM2Act) repo provides our implementation adapt from the [SAM2Act](https://github.com/sam2act/sam2act) repo.
-
 #### Diffusion Policy
-The [RoboMME_SAM2Act+](https://github.com/RoboMME/DiffusionPolicy) repo provides our implementation adapt from the [diffusion_policy](https://github.com/real-stanford/diffusion_policy) repo.
-
+The [RoboMME_DP](https://github.com/RoboMME/DiffusionPolicy) repo provides our implementation adapt from the [diffusion_policy](https://github.com/real-stanford/diffusion_policy) repo.
 
 
 ## TODO List
