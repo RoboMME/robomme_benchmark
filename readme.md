@@ -91,17 +91,13 @@ The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) re
 
 ### Prior Methods
 
-#### MemER
-The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo also provides our implementation of the [MemER](https://jen-pan.github.io/memer/), using the same GroundSG policy model as in MME-VLA.
+**MemER**: The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo also provides our implementation of the [MemER](https://jen-pan.github.io/memer/), using the same GroundSG policy model as in MME-VLA.
 
-#### SAM2Act+
-The [RoboMME_SAM2Act](https://github.com/RoboMME/SAM2Act) repo provides our implementation adapt from the [SAM2Act](https://github.com/sam2act/sam2act) repo.
+**SAM2Act+**: The [RoboMME_SAM2Act](https://github.com/RoboMME/SAM2Act) repo provides our implementation adapt from the [SAM2Act](https://github.com/sam2act/sam2act) repo.
 
-#### MemoryVLA
-The [RoboMME_MemoryVLA](https://github.com/RoboMME/MemoryVLA) repo provides our implementation adapt from the [MemoryVLA](https://github.com/shihao1895/MemoryVLA) repo.
-
-#### Diffusion Policy
-The [RoboMME_DP](https://github.com/RoboMME/DiffusionPolicy) repo provides our implementation adapt from the [diffusion_policy](https://github.com/real-stanford/diffusion_policy) repo.
+**MemoryVLA**: The [RoboMME_MemoryVLA](https://github.com/RoboMME/MemoryVLA) repo provides our implementation adapt from the [MemoryVLA](https://github.com/shihao1895/MemoryVLA) repo.
+ 
+**Diffusion Policy**: The [RoboMME_DP](https://github.com/RoboMME/DiffusionPolicy) repo provides our implementation adapt from the [diffusion_policy](https://github.com/real-stanford/diffusion_policy) repo.
 
 
 <!-- ## TODO List
