@@ -40,7 +40,7 @@ We have four task suites, each with 4 tasks:
 | Reference  | Object memory     | PickHighlight, VideoRepick, VideoPlaceButton, VideoPlaceOrder         |
 | Imitation  | Procedural memory | MoveCube, InsertPeg, PatternLock, RouteStick                          |
 
-All tasks are defined in `src/robomme/robomme_env`. 
+All tasks are defined in `src/robomme/robomme_env`. Detailed description can be found in our paper appendix. 
 
 ### 📥 Training Data
 
@@ -54,20 +54,29 @@ uv run scripts/dataset_replay.py --h5-data-dir <your_downloaded_data_dir>
 
 ### 📊 Evaluation
 
-To evaluate on the val or test set, set the `dataset` argument of `BenchmarkEnvBuilder`:
+To evaluate on test set, set the `dataset` argument of `BenchmarkEnvBuilder`:
 
 ```python
+task_id = "PickXtimes"
+episode_idx = 0
 env_builder = BenchmarkEnvBuilder(
     env_id=task_id,
-    dataset="test",  # or "val"
+    dataset="test",
     ...
 )
+
+env = env_builder.make_env_for_episode(episode_idx)
+obs, info = env.reset() # inital step
+...
+obs, _, terminated, truncated, info = env.step(action) # each step
 ```
-Each split has 50 episodes.  The environment input/output format is provided in [doc/env_format.md](doc/env_format.md)
+Train split has 100 episodes. Val/test split has 50 episodes. All seeds are fixed for benchmarking.
+
+The environment input/output format is provided in [doc/env_format.md](doc/env_format.md)
 
 ### 🔧 Data Generation
 
-You can also re-generate your own HDF5 data using scripts in `scripts/dev/`. Details on parallel generation TBD (@hongze).
+You can also re-generate your own HDF5 data via parallel processing using
 
 ```bash
 uv run scripts/dev/xxxx
@@ -76,16 +85,26 @@ uv run scripts/dev/xxxx
 
 ## 🧠 Model Training
 
-The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo provides MME-VLA-Suite model training and evaluation. Please check it out.
+### MME-VLA-Suite
 
-> **Note:** Currently, environment spawning is set up only for imitation learning. We are working on extending it to support more general parallel environments for reinforcement learning in the future.
+The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo provides MME-VLA model training and evaluation used in our paper. It contains different memory-aguemnetd VLA models built on [pi05]() and our implementation of [MemER](https://jen-pan.github.io/memer/). 
+
+### Other Prior Methods
+#### MemoryVLA
+The [RoboMME_MemoryVLA](https://github.com/RoboMME/MemoryVLA) repo provides our implementation adapt from the [MemoryVLA](https://github.com/shihao1895/MemoryVLA) repo.
+
+#### SAM2Act+
+The [RoboMME_SAM2Act+](https://github.com/RoboMME/SAM2Act) repo provides our implementation adapt from the [SAM2Act](https://github.com/sam2act/sam2act) repo.
+
+#### Diffusion Policy
+The [RoboMME_SAM2Act+](https://github.com/RoboMME/DiffusionPolicy) repo provides our implementation adapt from the [diffusion_policy](https://github.com/real-stanford/diffusion_policy) repo.
 
 
 
 ## TODO List
-[] Release data generation scripts
-[] Release point clound reconstruciton script
-[] 
+[] Release data generation scripts.  
+[] Release point clound reconstruciton script.  
+[] Currently, environment spawning is set up only for imitation learning. We are working on extending it to support more general parallel environments for reinforcement learning in the future.
 
 ## 🔧 Troubleshooting
 
