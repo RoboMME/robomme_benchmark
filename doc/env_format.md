@@ -1,6 +1,6 @@
 # Environment Input/Output
 
-A key difference from traditional Gym-like envs is that every observation value is a **list** rather than a single item. This is because some RoboMME tasks use conditioning video input, and for discrete action types (e.g. keypoint or multi_choice) we also return intermediate observations for potential use.
+A key difference from traditional Gym-like envs is that every observation value is a **list** rather than a single item. This is because some RoboMME tasks use conditioning video input, and for discrete action types (e.g. waypoint or multi_choice) we also return intermediate observations for potential use.
 
 
 ## Env Input Format
@@ -9,7 +9,7 @@ We support four `ACTION_SPACE` types:
 
 - `joint_angle`: 7 joint angles + gripper open/close
 - `ee_pose`: 3 position (xyz) + 3 rotation (rpy) + gripper open/close
-- `keypoint`: Same format as ee_pose, but executed in discrete keyframe steps
+- `waypoint`: Same format as ee_pose, but executed in discrete keyframe steps
 - `multi_choice`: Command dict, e.g. `{"label": "a", "point": [y, x]}`; the label is the choice from `info["available_multi_choices"]`, point is the pixel location on the front image. this action is designed for human studies or Video-QA research
 
 Note: Gripper closed is -1, gripper open is 1.

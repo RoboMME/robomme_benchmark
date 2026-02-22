@@ -1,7 +1,5 @@
 # RoboMME: A Robotic Benchmark for Memory-Augmented Manipulation
 
-Here
-
 ![Robomme bench](assets/robomme_bench.jpg)
 
 ## 📢 Announcements
@@ -29,7 +27,9 @@ This generates a rollout video in the `sample_run_videos` directory.
 
 We provide four action types: `joint_action`, `ee_pose`, `waypoint`, and `multi_choice`, e.g. predict continuous actions with `joint_action` or `ee_pose`, discrete waypoint actions with `waypoint`, or use `multi_choice` for VideoQA-style problems.
 
-## Tasks
+## 📁 Benchmark
+
+### 🤖 Tasks
 
 We have four task suites, each with 4 tasks:
 
@@ -40,9 +40,7 @@ We have four task suites, each with 4 tasks:
 | Reference  | Object memory     | PickHighlight, VideoRepick, VideoPlaceButton, VideoPlaceOrder         |
 | Imitation  | Procedural memory | MoveCube, InsertPeg, PatternLock, RouteStick                          |
 
-All tasks are defined in `src/robomme/robomme_env`. You can play those tasks via an online interactive demo [here](). (@hongze)
-
-## 📁 Benchmark
+All tasks are defined in `src/robomme/robomme_env`. 
 
 ### 📥 Training Data
 
