@@ -20,7 +20,7 @@ uv pip install -e .
 Start an environment with a specified setup:
 
 ```bash
-uv run scripts/run_example.py --action-space-type joint_angle --task-id PickXtimes
+uv run scripts/run_example.py
 ```
 
 This generates a rollout video in the `sample_run_videos` directory.

@@ -103,7 +103,7 @@ for task in TASKS:
             try:
                 obs, reward, terminated, truncated, info = env.step(dummy_action)
             except Exception as e:
-                print(f"Error") # most likely IK error when using ee_pose action space
+                print(f"Error: {e}") # most likely IK error when using ee_pose action space
                 total_success.append(False) # we assume the episode failed if an IK error occurs
                 break
             if terminated or truncated:

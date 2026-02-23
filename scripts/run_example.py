@@ -92,9 +92,9 @@ def _extract_frames(obs: dict, is_video_demo_fn=None) -> list[np.ndarray]:
 # Main
 # ---------------------------------------------------------------------------
 def main(
-    action_space_type: ActionSpaceType = "joint_angle",
     dataset: DatasetType = "test",
     task_id: TaskID = "PickXtimes",
+    action_space_type: ActionSpaceType = "joint_angle",
     episode_idx: int = 0,
 ) -> None:
     """
