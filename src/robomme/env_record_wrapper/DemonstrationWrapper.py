@@ -258,7 +258,13 @@ class DemonstrationWrapper(gym.Wrapper):
 
         # Extract gripper state from the last 2 dims of joint positions
         state_flat = state.cpu().numpy().flatten() if hasattr(state, 'cpu') else np.asarray(state).flatten()
-        gripper_state = state_flat[-2:]
+        
+        is_stick_env = self.unwrapped.spec.id in ("PatternLock", "RouteStick")
+        if is_stick_env:
+            gripper_state = np.zeros(2)
+        else:
+            gripper_state = state_flat[7:9] if len(state_flat) >= 9 else np.zeros(2)
+        
         # Only keep first 7 joint dims for joint_state_list
         joint_state = state_flat[:7]
 
