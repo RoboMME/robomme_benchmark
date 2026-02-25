@@ -34,25 +34,68 @@ def print_hdf5_structure(name, obj, indent=0):
     # But we can implement a custom recursive function instead
     pass
 
+def _format_value(obj, max_elems=20, max_str_len=200, max_array_size=10000):
+    """Read dataset and format for display; handle scalars and arrays."""
+    try:
+        shape = obj.shape
+        size = int(np.prod(shape)) if shape else 0
+        if size > max_array_size:
+            # 大数组：只读前 max_elems 个元素（按 C-order 展平）
+            take = min(max_elems, size)
+            if take == 0:
+                return "[]"
+            idx = np.unravel_index(take - 1, shape)
+            slice_tuple = tuple(slice(0, int(i) + 1) for i in idx)
+            raw = obj[slice_tuple]
+            flat = np.asarray(raw).reshape(-1)[:take]
+            n = len(flat)
+            total = size
+        else:
+            raw = obj[()]
+            if raw is None:
+                return "None"
+            if obj.shape == () or np.isscalar(raw):
+                out = _decode_h5_object(raw)
+                if out is None:
+                    out = str(raw)
+                if isinstance(out, str) and len(out) > max_str_len:
+                    out = out[:max_str_len] + "..."
+                return out
+            arr = np.asarray(raw)
+            flat = np.reshape(arr, -1)
+            n = min(flat.size, max_elems)
+            total = flat.size
+    except Exception as e:
+        return f"(read error: {e})"
+
+    if n == 0:
+        return "[]"
+    parts = []
+    for i in range(n):
+        v = flat.flat[i]
+        if isinstance(v, (bytes, np.bytes_)):
+            try:
+                v = v.decode("utf-8")
+            except Exception:
+                v = repr(v)
+        parts.append(str(v))
+    s = "[" + ", ".join(parts) + "]"
+    if total > max_elems:
+        s += f" ... ({total} total)"
+    return s
+
+
 def print_recursive(obj, indent=0):
     tab = "  " * indent
     if isinstance(obj, h5py.Dataset):
-        name = obj.name.split('/')[-1]
+        name = (obj.name or "").split("/")[-1]
         print(f"{tab}- [Dataset] {name}: shape={obj.shape}, dtype={obj.dtype}")
-        if obj.shape == () and obj.dtype == object:
-            try:
-                raw = obj[()]
-                content = _decode_h5_object(raw)
-                if content is not None:
-                    # Truncate very long content for readability
-                    max_len = 200
-                    if len(content) > max_len:
-                        content = content[:max_len] + "..."
-                    print(f"{tab}    -> {content}")
-            except Exception as e:
-                print(f"{tab}    -> (read error: {e})")
+        # 打印值：标量、小数组或数组摘要
+        value_str = _format_value(obj)
+        if value_str:
+            print(f"{tab}    -> {value_str}")
     elif isinstance(obj, h5py.Group):
-        print(f"{tab}+ [Group] {obj.name.split('/')[-1]}")
+        print(f"{tab}+ [Group] {(obj.name or '').split('/')[-1]}")
         
         # Sort items: groups first, then datasets? Or just as is.
         # Filter items to only show one episode_* or timestep_*

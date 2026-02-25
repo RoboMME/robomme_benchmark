@@ -15,7 +15,7 @@ test_record_stick.py
 
 运行方式（需要 display / headless GPU）：
     cd /data/hongzefu/robomme_benchmark
-    uv run python scripts/dev/test_record_stick.py
+    uv run python tests/test_record_stick.py
 """
 
 import os
@@ -31,7 +31,7 @@ import torch
 import gymnasium as gym
 
 # ── 确保 robomme 包可被找到 ──────────────────────────────────────────────────
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]  # robomme_benchmark/
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]  # robomme_benchmark/ when under tests/
 sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 
 from robomme.env_record_wrapper import RobommeRecordWrapper, FailsafeTimeout
