@@ -624,6 +624,9 @@ class RobommeRecordWrapper(gym.Wrapper):
         self._prev_task_index = -1
         result = super().reset(**kwargs)
         self._init_fk_planner()
+        # Stick 环境（推杆末端，无夹爪）标识：pinocchio model 只有 7 个用户关节
+        # _fk_available=False 时 _fk_qpos_size 未定义，默认视为非 Stick
+        self.is_stick_env = getattr(self, '_fk_qpos_size', 9) == 7
         return result
 
     def _resolve_choice_label(self, choice_action_text, task_index) -> str:
@@ -699,8 +702,12 @@ class RobommeRecordWrapper(gym.Wrapper):
             self._prev_ee_quat_wxyz,
             self._prev_ee_rpy_xyz,
         )
-        kp_type = current_waypoint.get('waypoint_type', 'unknown')
-        gripper_val = 1.0 if kp_type == 'open' else -1.0
+        if getattr(self, 'is_stick_env', False):
+            # Stick 环境无夹爪，waypoint 意图固定为 -1.0
+            gripper_val = -1.0
+        else:
+            kp_type = current_waypoint.get('waypoint_type', 'unknown')
+            gripper_val = 1.0 if kp_type == 'open' else -1.0
         self._current_waypoint_action = np.concatenate([
             kp_pose_dict['pose'].detach().cpu().numpy().flatten()[:3],
             kp_pose_dict['rpy'].detach().cpu().numpy().flatten()[:3],
@@ -942,15 +949,21 @@ class RobommeRecordWrapper(gym.Wrapper):
 
             joint_state = self.agent.robot.qpos.cpu().numpy() if hasattr(self.agent.robot.qpos, 'cpu') else self.agent.robot.qpos
             joint_state = np.asarray(joint_state).flatten()
-            # gripper is at indices 7-8; joint_state stored as first 7 dims
-            gripper_state = joint_state[7:9] if joint_state.size >= 9 else np.zeros(2)
+            # Stick 环境无夹爪关节：gripper_state 硬编码为 [0.0, 0.0]
+            # 标准 Panda：夹爪关节在 indices 7-8
+            if getattr(self, 'is_stick_env', False):
+                gripper_state = np.zeros(2)
+            else:
+                gripper_state = joint_state[7:9] if joint_state.size >= 9 else np.zeros(2)
             gripper_close = bool(np.any(gripper_state < 0.03))
             joint_state = joint_state[:7]
 
             eef_action = np.concatenate([
                 _to_numpy(eef_pose_dict['pose']).flatten()[:3],
                 _to_numpy(eef_pose_dict['rpy']).flatten()[:3],
-                _to_numpy(action).flatten()[-1:] if action is not None else np.array([-1.0]),
+                # Stick 环境：action 末尾是第 7 个关节角度而非夹爪指令，强制用 -1.0
+                np.array([-1.0]) if getattr(self, 'is_stick_env', False)
+                else (_to_numpy(action).flatten()[-1:] if action is not None else np.array([-1.0])),
             ])
 
 
@@ -1179,13 +1192,14 @@ class RobommeRecordWrapper(gym.Wrapper):
                     if isinstance(action_data, list):
                         action_data = np.array(action_data)
                     
-                    # joint_action ensure 8 dims, fill one -1 if 7 dims
+                    # joint_action ensure 8 dims, fill -1.0 (float) if 7 dims
+                    # Stick 环境 action 为 7 维，补齐夹爪占位符 -1.0 使其对齐为标准 8 维
                     if isinstance(action_data, np.ndarray):
                         if action_data.shape == (7,):
-                            action_data = np.concatenate([action_data, [-1]])
+                            action_data = np.concatenate([action_data, [-1.0]])
                         elif action_data.shape == (1, 7):
                             action_data = action_data.flatten()
-                            action_data = np.concatenate([action_data, [-1]])
+                            action_data = np.concatenate([action_data, [-1.0]])
                             action_data = action_data.reshape(1, 8)
                     action_group.create_dataset("joint_action", data=action_data)
 
