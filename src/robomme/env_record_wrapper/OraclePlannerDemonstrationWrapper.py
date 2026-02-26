@@ -12,7 +12,7 @@ from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
 from ..robomme_env.utils import planner_denseStep
 from ..robomme_env.utils.oracle_action_matcher import (
     find_exact_label_option_index,
-    normalize_and_clip_point_xy,
+    normalize_and_clip_point_yx,
     select_target_with_point,
 )
 from ..logging_utils import logger
@@ -244,7 +244,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
             selected_target.update(best_cand)
             return
 
-        click_point = normalize_and_clip_point_xy(target_point, width=w, height=h)
+        click_point = normalize_and_clip_point_yx(target_point, height=h, width=w)
         if click_point is not None:
             selected_target["click_point"] = click_point
 

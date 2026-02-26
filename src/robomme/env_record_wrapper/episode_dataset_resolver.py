@@ -215,8 +215,8 @@ class EpisodeDatasetResolver:
             return None
         if not np.isfinite(y) or not np.isfinite(x):
             return None
-        # Stored format is [y, x]; normalize to execution format [x, y].
-        return [int(x), int(y)]
+        # Stored format is [y, x]; keep execution format as [y, x].
+        return [int(y), int(x)]
 
     def _extract_choice_action(self, timestep_group: h5py.Group) -> Optional[Dict[str, Any]]:
         action_grp = timestep_group.get("action")

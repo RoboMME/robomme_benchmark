@@ -27,24 +27,24 @@ def map_action_text_to_option_label(action_text: Any, options: List[dict]) -> Op
     return None
 
 
-def normalize_and_clip_point_xy(
+def normalize_and_clip_point_yx(
     point_like: Any,
-    width: int,
     height: int,
+    width: int,
 ) -> Optional[Tuple[int, int]]:
-    """Normalize arbitrary point-like input into clipped (x, y)."""
+    """Normalize arbitrary point-like input into clipped (y, x)."""
     if point_like is None:
         return None
     if not isinstance(point_like, (list, tuple, np.ndarray)) or len(point_like) < 2:
         return None
     try:
-        x = int(float(point_like[0]))
-        y = int(float(point_like[1]))
+        y = int(float(point_like[0]))
+        x = int(float(point_like[1]))
     except (TypeError, ValueError):
         return None
-    x = max(0, min(x, int(width) - 1))
     y = max(0, min(y, int(height) - 1))
-    return x, y
+    x = max(0, min(x, int(width) - 1))
+    return y, x
 
 
 def _collect_candidates(item: Any, out: List[Any]) -> None:
@@ -75,14 +75,14 @@ def _scan_actor_masks(
     seg_raw: np.ndarray,
     seg_id_map: Dict[int, Any],
     actor: Any,
-    click_xy: Tuple[int, int],
+    click_yx: Tuple[int, int],
 ) -> Tuple[Optional[Tuple[int, Tuple[int, int]]], Optional[Tuple[int, Tuple[int, int]]]]:
     """
     Return (hit, observed):
     - hit: clicked (seg_id, centroid) for this actor if click is inside mask.
     - observed: first visible (seg_id, centroid) for this actor.
     """
-    cx, cy = click_xy
+    cy, cx = click_yx
     observed: Optional[Tuple[int, Tuple[int, int]]] = None
 
     for target_id in _target_ids_for_actor(seg_id_map, actor):
@@ -91,7 +91,7 @@ def _scan_actor_masks(
             continue
 
         ys, xs = np.nonzero(mask)
-        centroid_point = (int(xs.mean()), int(ys.mean()))
+        centroid_point = (int(ys.mean()), int(xs.mean()))
         if observed is None:
             observed = (target_id, centroid_point)
 
@@ -116,15 +116,15 @@ def select_target_with_point(
         return None
 
     h, w = seg_raw.shape[:2]
-    point_xy = normalize_and_clip_point_xy(point_like, width=w, height=h)
-    if point_xy is None:
+    point_yx = normalize_and_clip_point_yx(point_like, height=h, width=w)
+    if point_yx is None:
         return None
 
     unique_candidates = _unique_candidates(available)
     if not unique_candidates:
         return None
 
-    cx, cy = point_xy
+    cy, cx = point_yx
     observed_info: Dict[Any, Tuple[int, Tuple[int, int]]] = {}
 
     for actor in unique_candidates:
@@ -132,7 +132,7 @@ def select_target_with_point(
             seg_raw=seg_raw,
             seg_id_map=seg_id_map,
             actor=actor,
-            click_xy=point_xy,
+            click_yx=point_yx,
         )
         if observed is not None and actor not in observed_info:
             observed_info[actor] = observed
@@ -143,7 +143,7 @@ def select_target_with_point(
                 "obj": actor,
                 "name": getattr(actor, "name", f"id_{target_id}"),
                 "seg_id": target_id,
-                "click_point": (int(cx), int(cy)),
+                "click_point": (int(cy), int(cx)),
                 "centroid_point": centroid_point,
                 "selection_mode": "hit",
                 "used_random_fallback": False,
@@ -159,7 +159,7 @@ def select_target_with_point(
         "obj": fallback_actor,
         "name": getattr(fallback_actor, "name", "unknown"),
         "seg_id": fallback_seg_id,
-        "click_point": (int(cx), int(cy)),
+        "click_point": (int(cy), int(cx)),
         "centroid_point": fallback_centroid,
         "selection_mode": "fallback_random",
         "used_random_fallback": True,

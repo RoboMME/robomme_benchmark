@@ -97,7 +97,7 @@ def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label
     )
     try:
         command0 = resolver.get_step("multi_choice", 0)
-        assert command0 == {"label": "b", "point": [34, 12]}
+        assert command0 == {"label": "b", "point": [12, 34]}
 
         command1 = resolver.get_step("multi_choice", 1)
         assert command1 is None
