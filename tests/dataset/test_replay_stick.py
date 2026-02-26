@@ -96,9 +96,9 @@ def _verify_replay(env_id: str, dataset_dir: Path, h5_path: Path, is_stick: bool
             if action is None:
                 break
 
-            eef_action = dataset_resolver.get_step("eef_action", step_id)
-            waypoint_action = dataset_resolver.get_step("waypoint_action", step_id)
-            joint_action = dataset_resolver.get_step("joint_action", step_id)
+            eef_action = dataset_resolver.get_step("ee_pose", step_id)
+            waypoint_action = dataset_resolver.get_step("waypoint", step_id)
+            joint_action = dataset_resolver.get_step("joint_angle", step_id)
 
             if is_stick:
                 assert float(joint_action[-1]) == -1.0, f"[{env_id}] joint_action[-1]={joint_action[-1]} expected -1.0"
@@ -114,13 +114,15 @@ def _verify_replay(env_id: str, dataset_dir: Path, h5_path: Path, is_stick: bool
             obs, reward, terminated, truncated, info = env.step(action)
 
             # ======= 断言 DemonstrationWrapper 返回的 obs 状态 =======
-            gripper_state = obs["gripper_state_list"]
+            gripper_state_list = obs["gripper_state_list"]
 
             if is_stick:
-                assert len(gripper_state) == 2, f"[{env_id}] gripper_state shape expected 2"
-                assert np.allclose(gripper_state, 0.0), f"[{env_id}] gripper_state expected [0.0, 0.0] but got {gripper_state}"
+                for gs in gripper_state_list:
+                    assert gs.shape == (2,), f"[{env_id}] gripper_state shape expected (2,)"
+                    assert np.allclose(gs, 0.0), f"[{env_id}] gripper_state expected [0.0, 0.0] but got {gs}"
             else:
-                assert len(gripper_state) == 2, f"[{env_id}] gripper_state shape expected 2"
+                for gs in gripper_state_list:
+                    assert gs.shape == (2,), f"[{env_id}] gripper_state shape expected (2,)"
 
             step_id += 1
             if truncated.item() or terminated.item():

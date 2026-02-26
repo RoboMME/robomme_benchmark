@@ -845,8 +845,8 @@ def _options_stopcube(env, planner, require_target, base) -> List[dict]:
                 if index < 0:
                     index = 0
                 
-                while index >= len(checkpoints):
-                    checkpoints.append(checkpoints[-1] + 100)
+                if index >= len(checkpoints):
+                    index = len(checkpoints) - 1
 
             target = checkpoints[index]
             solve_hold_obj_absTimestep(env, planner, absTimestep=target)

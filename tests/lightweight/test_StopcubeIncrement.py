@@ -40,7 +40,7 @@ def _load_vqa_options_module():
     """Inject a stub planner module and load vqa_options, returning (module, hold_calls list)."""
     hold_calls = []
 
-    planner_stub = types.ModuleType("robomme.robomme_env.utils.planner")
+    planner_stub = types.ModuleType("robomme.robomme_env.utils.subgoal_planner_func")
 
     def _noop(*args, **kwargs):
         return None
@@ -62,15 +62,21 @@ def _load_vqa_options_module():
     utils_pkg = types.ModuleType("robomme.robomme_env.utils")
     utils_pkg.__path__ = []
 
+    logging_utils_pkg = types.ModuleType("robomme.logging_utils")
+    import logging
+    logging_utils_pkg.logger = logging.getLogger("dummy")
+
     robomme_pkg.robomme_env = robomme_env_pkg
+    robomme_pkg.logging_utils = logging_utils_pkg
     robomme_env_pkg.utils = utils_pkg
-    utils_pkg.planner = planner_stub
+    utils_pkg.subgoal_planner_func = planner_stub
 
     injected = {
         "robomme": robomme_pkg,
         "robomme.robomme_env": robomme_env_pkg,
         "robomme.robomme_env.utils": utils_pkg,
-        "robomme.robomme_env.utils.planner": planner_stub,
+        "robomme.robomme_env.utils.subgoal_planner_func": planner_stub,
+        "robomme.logging_utils": logging_utils_pkg,
     }
     previous = {key: sys.modules.get(key) for key in injected}
     sys.modules.update(injected)
@@ -78,7 +84,7 @@ def _load_vqa_options_module():
     try:
         repo_root = find_repo_root(__file__)
         module_path = repo_root / "src" / "robomme" / "robomme_env" / "utils" / "vqa_options.py"
-        spec = importlib.util.spec_from_file_location("vqa_options_under_test", module_path)
+        spec = importlib.util.spec_from_file_location("robomme.robomme_env.utils.vqa_options", module_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     finally:
@@ -108,7 +114,7 @@ class _DummyBase:
 def _get_remain_static_solver(options):
     """Get the solve function whose label is 'remain static' from StopCube options."""
     for option in options:
-        if option.get("label") == "remain static":
+        if option.get("action") == "remain static":
             return option["solve"]
     raise AssertionError("Missing 'remain static' option")
 
@@ -165,8 +171,8 @@ def test_stopcube_option_label_order_stays_stable():
     base = _DummyBase(steps_press=270, interval=30)
     options = module._options_stopcube(env, planner=None, require_target=lambda: None, base=base)
 
-    labels = [option.get("label") for option in options]
-    assert labels == [
+    actions = [option.get("action") for option in options]
+    assert actions == [
         "move to the top of the button to prepare",
         "remain static",
         "press button to stop the cube",
