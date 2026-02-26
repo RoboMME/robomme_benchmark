@@ -51,6 +51,23 @@ class FailsafeTimeout(RuntimeError):
     pass
 
 
+def _is_online_subgoal_completed(current_task_index, task_list) -> bool:
+    """Return True when online subgoal progression has finished all tasks."""
+    if task_list is None:
+        return False
+    try:
+        num_tasks = len(task_list)
+    except Exception:
+        return False
+    if num_tasks <= 0:
+        return False
+    try:
+        current_task_index = int(current_task_index)
+    except (TypeError, ValueError):
+        return False
+    return current_task_index >= num_tasks
+
+
 class RobommeRecordWrapper(gym.Wrapper):
     """
     Robomme record wrapper.
@@ -944,6 +961,10 @@ class RobommeRecordWrapper(gym.Wrapper):
                     'simple_subgoal_online': subgoal_online_text,
                     'grounded_subgoal': self.current_subgoal_segment_filled,
                     'grounded_subgoal_online': self.current_subgoal_segment_online_filled,
+                    'is_completed': _is_online_subgoal_completed(
+                        _cur_task_index,
+                        getattr(self.unwrapped, 'task_list', None),
+                    ),
                     'is_video_demo': self.current_task_demonstration if hasattr(self, 'current_task_demonstration') else False,
                     'is_keyframe': choice_action_keyframe,
                 },
@@ -1170,6 +1191,10 @@ class RobommeRecordWrapper(gym.Wrapper):
                     task_name_encoded = task_name_online
                 info_group.create_dataset("grounded_subgoal_online", data=task_name_encoded)
 
+                info_group.create_dataset(
+                    "is_completed",
+                    data=bool(info_data.get("is_completed", False)),
+                )
                 info_group.create_dataset("is_video_demo", data=info_data['is_video_demo'])
                 info_group.create_dataset("is_keyframe", data=info_data['is_keyframe'])
 
