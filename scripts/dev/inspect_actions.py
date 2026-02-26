@@ -1,3 +1,4 @@
+import argparse
 import h5py
 import sys
 import numpy as np
@@ -16,7 +17,7 @@ def _is_equal(a, b):
     except:
         return False
 
-def inspect_actions(filepath):
+def inspect_actions(filepath, target_timestep=None, window=10):
     print(f"Inspecting HDF5 file: {filepath}")
     
     try:
@@ -36,6 +37,7 @@ def inspect_actions(filepath):
                 last_choice_action = None
                 last_is_keyframe = None
                 last_waypoint_action = None
+                last_is_video_demo = None
                 skip_count = 0
                 
                 for ts_name in timesteps:
@@ -73,14 +75,23 @@ def inspect_actions(filepath):
                     if waypoint_action is None and 'waypoint_action' in ts_group:
                         waypoint_action = np.array(ts_group['waypoint_action'])
 
+                    should_skip = False
                     if last_choice_action is not None:
                         same_choice = _is_equal(choice_action, last_choice_action)
                         same_kf = _is_equal(is_keyframe, last_is_keyframe)
                         same_vd = _is_equal(is_video_demo, last_is_video_demo)
                         same_wp = _is_equal(waypoint_action, last_waypoint_action)
-                        if same_choice and same_kf and same_vd and same_wp:
-                            skip_count += 1
-                            continue
+                        
+                        should_skip = same_choice and same_kf and same_vd and same_wp
+                        
+                        if target_timestep is not None:
+                            ts_idx = int(ts_name.split('_')[1])
+                            if abs(ts_idx - target_timestep) <= window:
+                                should_skip = False
+                        
+                    if should_skip:
+                        skip_count += 1
+                        continue
 
                     if skip_count > 0:
                         print(f"  ... ({skip_count} identical timesteps skipped) ...")
@@ -91,7 +102,7 @@ def inspect_actions(filepath):
                     print(f"    is_keyframe:     {is_keyframe}")
                     print(f"    is_video_demo:   {is_video_demo}")
                     print(f"    waypoint_action: {waypoint_action}")
-                    
+
                     last_choice_action = choice_action
                     last_is_keyframe = is_keyframe
                     last_is_video_demo = is_video_demo
@@ -100,10 +111,18 @@ def inspect_actions(filepath):
                 if skip_count > 0:
                     print(f"  ... ({skip_count} identical timesteps skipped) ...")
                     skip_count = 0
-                    
+
     except Exception as e:
         print(f"Error reading HDF5 file: {e}")
 
 if __name__ == "__main__":
-    filepath = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_PATH
-    inspect_actions(filepath)
+    parser = argparse.ArgumentParser(description="Inspect HDF5 dataset actions.")
+    parser.add_argument("filepath", type=str, nargs="?", default=DEFAULT_PATH,
+                        help="Path to the HDF5 file.")
+    parser.add_argument("-t", "--timestep", type=int, default=168,
+                        help="Specific timestep to not omit even if identical.")
+    parser.add_argument("-w", "--window", type=int, default=10,
+                        help="Window around specified timestep to not omit (default: 10).")
+    args = parser.parse_args()
+
+    inspect_actions(args.filepath, target_timestep=args.timestep, window=args.window)
