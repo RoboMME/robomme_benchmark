@@ -73,11 +73,28 @@ class DemonstrationWrapper(gym.Wrapper):
     1. Automatically generate demonstration Trajectory after environment reset, using Motion Planner.
     2. Record data such as frames, actions, states, subgoals during demonstration for downstream tasks.
     """
-    def __init__(self, env, max_steps_without_demonstration, gui_render, **kwargs):
+    def __init__(self, env, max_steps_without_demonstration, gui_render,
+                 include_maniskill_obs=True,
+                 include_front_depth=True,
+                 include_wrist_depth=True,
+                 include_front_camera_extrinsic=True,
+                 include_wrist_camera_extrinsic=True,
+                 include_available_multi_choices=True,
+                 include_front_camera_intrinsic=True,
+                 include_wrist_camera_intrinsic=True,
+                 **kwargs):
         # **kwargs for compatibility with old calls (e.g. save_video=..., action_space=...), no longer used
         # Max steps without demonstration: truncate episode if demonstration task not executed exceeding this
         self.max_steps_without_demonstration = max_steps_without_demonstration
         self.gui_render = gui_render
+        self.include_maniskill_obs = include_maniskill_obs
+        self.include_front_depth = include_front_depth
+        self.include_wrist_depth = include_wrist_depth
+        self.include_front_camera_extrinsic = include_front_camera_extrinsic
+        self.include_wrist_camera_extrinsic = include_wrist_camera_extrinsic
+        self.include_available_multi_choices = include_available_multi_choices
+        self.include_front_camera_intrinsic = include_front_camera_intrinsic
+        self.include_wrist_camera_intrinsic = include_wrist_camera_intrinsic
 
         super().__init__(env)
         self.unwrapped.use_demonstrationwrapper = True
@@ -240,30 +257,15 @@ class DemonstrationWrapper(gym.Wrapper):
 
         base_obs = obs if isinstance(obs, dict) else {}
         env_id = self.unwrapped.spec.id
-        dummy_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
-        raw_options = get_vqa_options(self, None, dummy_target, env_id)
-        available_options = [
-            {"label": opt.get("label"), "action": opt.get("action", "Unknown"), "need_parameter": bool(opt.get("available"))}
-            for opt in raw_options
-        ]
+        subgoal_text = getattr(self, 'current_task_name', 'Unknown')
+        grounded_subgoal = self.current_subgoal_segment_filled
 
         # Extract frames, state, velocity etc directly from obs (no longer read from self.frames etc list)
         image = obs['sensor_data']['base_camera']['rgb'][0]
         wrist_image = obs['sensor_data']['hand_camera']['rgb'][0]
         state = self.agent.robot.qpos
         # end_effector_velocity = self.agent.robot.links[9].get_linear_velocity()[0], self.agent.robot.links[9].get_angular_velocity()[0]
-        subgoal_text = getattr(self, 'current_task_name', 'Unknown')
-        grounded_subgoal = self.current_subgoal_segment_filled
 
-        base_camera_depth = obs["sensor_data"]["base_camera"]["depth"][0]
-        base_camera_segmentation = obs["sensor_data"]["base_camera"]["segmentation"][0]
-        wrist_camera_depth = obs["sensor_data"]["hand_camera"]["depth"][0]
-        base_camera_extrinsic_opencv = obs["sensor_param"]["base_camera"]["extrinsic_cv"]
-        base_camera_intrinsic_opencv = obs["sensor_param"]["base_camera"]["intrinsic_cv"]
-        base_camera_cam2world_opengl = obs["sensor_param"]["base_camera"]["cam2world_gl"]
-        wrist_camera_extrinsic_opencv = obs["sensor_param"]["hand_camera"]["extrinsic_cv"]
-        wrist_camera_intrinsic_opencv = obs["sensor_param"]["hand_camera"]["intrinsic_cv"]
-        wrist_camera_cam2world_opengl = obs["sensor_param"]["hand_camera"]["cam2world_gl"]
         # Output end-effector pose as dict, containing pose/quat/rpy representations; also update continuousness cache.
         # squeeze out batch dim: (1, 3) -> (3,), (1, 4) -> (4,)
         _tcp_p = self.agent.tcp.pose.p
@@ -283,21 +285,6 @@ class DemonstrationWrapper(gym.Wrapper):
         # ───────── Apply internal inline numpy conversion ─────────
         image_np = _tensor_to_numpy(image, np.uint8)
         wrist_image_np = _tensor_to_numpy(wrist_image, np.uint8)
-        base_camera_depth_np = _tensor_to_numpy(base_camera_depth, np.int16)
-        wrist_camera_depth_np = _tensor_to_numpy(wrist_camera_depth, np.int16)
-        
-        base_camera_extrinsic_np = _tensor_to_numpy(base_camera_extrinsic_opencv, np.float32)
-        if base_camera_extrinsic_np.ndim == 3:   # (1, 3, 4) -> (3, 4)
-            base_camera_extrinsic_np = base_camera_extrinsic_np.squeeze(0)
-        wrist_camera_extrinsic_np = _tensor_to_numpy(wrist_camera_extrinsic_opencv, np.float32)
-        if wrist_camera_extrinsic_np.ndim == 3:  # (1, 3, 4) -> (3, 4)
-            wrist_camera_extrinsic_np = wrist_camera_extrinsic_np.squeeze(0)
-        base_camera_intrinsic_np = _tensor_to_numpy(base_camera_intrinsic_opencv, np.float32)
-        if base_camera_intrinsic_np.ndim == 3:   # (1, 3, 3) -> (3, 3)
-            base_camera_intrinsic_np = base_camera_intrinsic_np.squeeze(0)
-        wrist_camera_intrinsic_np = _tensor_to_numpy(wrist_camera_intrinsic_opencv, np.float32)
-        if wrist_camera_intrinsic_np.ndim == 3:  # (1, 3, 3) -> (3, 3)
-            wrist_camera_intrinsic_np = wrist_camera_intrinsic_np.squeeze(0)
 
         robot_endeffector_pose_np = {
             "pose": _tensor_to_numpy(robot_endeffector_pose['pose'], np.float32),
@@ -312,38 +299,68 @@ class DemonstrationWrapper(gym.Wrapper):
 
         # Extract gripper state from the last 2 dims of joint positions
         state_flat = state.detach().cpu().numpy().flatten() if hasattr(state, 'cpu') else np.asarray(state).flatten()
-        
+
         is_stick_env = self.unwrapped.spec.id in ("PatternLock", "RouteStick")
         if is_stick_env:
             gripper_state = np.zeros(2, dtype=np.float64)
         else:
             gripper_state = state_flat[7:9] if len(state_flat) >= 9 else np.zeros(2, dtype=np.float64)
-        
+
         # Only keep first 7 joint dims for joint_state_list
         joint_state = state_flat[:7]
 
+        # ───────── Build new_obs (always-present fields first) ─────────
         new_obs = {
-            'maniskill_obs': base_obs,
             'front_rgb_list': image_np,
             'wrist_rgb_list': wrist_image_np,
             'joint_state_list': joint_state,
-            'front_depth_list': base_camera_depth_np,
-            'wrist_depth_list': wrist_camera_depth_np,
             'end_effector_pose_raw': robot_endeffector_pose_np,
             'eef_state_list': eef_state_list_f64,
             'gripper_state_list': gripper_state,
-            'front_camera_extrinsic_list': base_camera_extrinsic_np,
-            'wrist_camera_extrinsic_list': wrist_camera_extrinsic_np,
         }
+        if self.include_maniskill_obs:
+            new_obs['maniskill_obs'] = base_obs
+        if self.include_front_depth:
+            new_obs['front_depth_list'] = _tensor_to_numpy(obs["sensor_data"]["base_camera"]["depth"][0], np.int16)
+        if self.include_wrist_depth:
+            new_obs['wrist_depth_list'] = _tensor_to_numpy(obs["sensor_data"]["hand_camera"]["depth"][0], np.int16)
+        if self.include_front_camera_extrinsic:
+            _ext = _tensor_to_numpy(obs["sensor_param"]["base_camera"]["extrinsic_cv"], np.float32)
+            if _ext.ndim == 3:
+                _ext = _ext.squeeze(0)
+            new_obs['front_camera_extrinsic_list'] = _ext
+        if self.include_wrist_camera_extrinsic:
+            _ext = _tensor_to_numpy(obs["sensor_param"]["hand_camera"]["extrinsic_cv"], np.float32)
+            if _ext.ndim == 3:
+                _ext = _ext.squeeze(0)
+            new_obs['wrist_camera_extrinsic_list'] = _ext
+
+        # ───────── Build new_info (always-present fields first) ─────────
         new_info = {
             **info,
             'simple_subgoal_online': subgoal_text,
             'grounded_subgoal_online': grounded_subgoal,
-            'available_options': available_options,
             'task_goal': language_goal,
-            'front_camera_intrinsic': base_camera_intrinsic_np,
-            'wrist_camera_intrinsic': wrist_camera_intrinsic_np,
         }
+        if self.include_available_multi_choices:
+            dummy_target = {"obj": None, "name": None, "seg_id": None, "click_point": None, "centroid_point": None}
+            raw_options = get_vqa_options(self, None, dummy_target, env_id)
+            available_options = [
+                {"label": opt.get("label"), "action": opt.get("action", "Unknown"), "need_parameter": bool(opt.get("available"))}
+                for opt in raw_options
+            ]
+            new_info['available_multi_choices'] = available_options
+        if self.include_front_camera_intrinsic:
+            _intr = _tensor_to_numpy(obs["sensor_param"]["base_camera"]["intrinsic_cv"], np.float32)
+            if _intr.ndim == 3:
+                _intr = _intr.squeeze(0)
+            new_info['front_camera_intrinsic'] = _intr
+        if self.include_wrist_camera_intrinsic:
+            _intr = _tensor_to_numpy(obs["sensor_param"]["hand_camera"]["intrinsic_cv"], np.float32)
+            if _intr.ndim == 3:
+                _intr = _intr.squeeze(0)
+            new_info['wrist_camera_intrinsic'] = _intr
+
         return new_obs, new_info
 
     def _add_red_border(self, frame, border_width=5):

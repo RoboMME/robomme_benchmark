@@ -169,7 +169,19 @@ class BenchmarkEnvBuilder:
         episode_set = {episode for (task, episode) in self.metadata_index if task == self.env_id}
         return len(episode_set)
 
-    def make_env_for_episode(self, episode_idx: int, max_steps: Optional[int] = None):
+    def make_env_for_episode(
+        self,
+        episode_idx: int,
+        max_steps: Optional[int] = None,
+        include_maniskill_obs: bool = True,
+        include_front_depth: bool = True,
+        include_wrist_depth: bool = True,
+        include_front_camera_extrinsic: bool = True,
+        include_wrist_camera_extrinsic: bool = True,
+        include_available_multi_choices: bool = True,
+        include_front_camera_intrinsic: bool = True,
+        include_wrist_camera_intrinsic: bool = True,
+    ):
         """Create and configure environment for specific episode. Wrap EndeffectorDemonstrationWrapper for action_space=ee_pose/ee_quat, MultiStepDemonstrationWrapper for waypoint, OraclePlannerDemonstrationWrapper for multi_choice."""
         from .DemonstrationWrapper import DemonstrationWrapper
 
@@ -197,6 +209,14 @@ class BenchmarkEnvBuilder:
             env,
             max_steps_without_demonstration=max_steps_without_demo,
             gui_render=self.gui_render,
+            include_maniskill_obs=include_maniskill_obs,
+            include_front_depth=include_front_depth,
+            include_wrist_depth=include_wrist_depth,
+            include_front_camera_extrinsic=include_front_camera_extrinsic,
+            include_wrist_camera_extrinsic=include_wrist_camera_extrinsic,
+            include_available_multi_choices=include_available_multi_choices,
+            include_front_camera_intrinsic=include_front_camera_intrinsic,
+            include_wrist_camera_intrinsic=include_wrist_camera_intrinsic,
         )
         if self.action_space == "joint_angle":
             pass
