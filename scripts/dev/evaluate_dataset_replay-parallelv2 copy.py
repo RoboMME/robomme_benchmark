@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Script function: Unified dataset replay entry point, supports four action_spaces: joint_angle / ee_pose / waypoint / oracle_planner.
+# Script function: Unified dataset replay entry point, supports four action_spaces: joint_angle / ee_pose / waypoint / multi_choice.
 # Consistent with subgoal_evaluate_func.py's main loop and debug fields; the difference is that actions come from EpisodeDatasetResolver.
 # [New] Support parallel multi-process replay and alternate task assignment between two GPUs.
 
@@ -26,7 +26,7 @@ from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 #ACTION_SPACE = "ee_pose"
 
 #ACTION_SPACE = "waypoint"
-ACTION_SPACE = "oracle_planner"
+ACTION_SPACE = "multi_choice"
 
 GUI_RENDER = False
 
@@ -140,7 +140,7 @@ def evaluate_episode(
         while True:
             replay_key = action_space
             action = dataset_resolver.get_step(replay_key, step)
-            if action_space == "oracle_planner":
+            if action_space == "multi_choice":
                 action = _parse_oracle_command(action)
             if action is None:
                 break

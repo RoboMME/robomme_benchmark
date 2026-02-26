@@ -136,7 +136,7 @@ class EpisodeDatasetResolver:
         self._timestep_group_cache: Dict[int, h5py.Group] = {}
         self._non_demo_steps: List[int] = []
         self._waypoint_steps: List[int] = []
-        # oracle_planner: indexed by serial_number and request order (step = request index)
+        # multi_choice: indexed by serial_number and request order (step = request index)
         self._oracle_serials: List[int] = []
         self._oracle_commands_by_serial: Dict[int, Dict[str, Any]] = {}
         self._build_indexes()
@@ -318,13 +318,13 @@ class EpisodeDatasetResolver:
 
     def get_step(
         self,
-        mode: Literal["joint_angle", "ee_pose", "ee_quat", "waypoint", "oracle_planner"],
+        mode: Literal["joint_angle", "ee_pose", "ee_quat", "waypoint", "multi_choice"],
         step: int,
     ) -> Optional[Union[np.ndarray, Dict[str, Any]]]:
         if step < 0:
             return None
 
-        if mode == "oracle_planner":
+        if mode == "multi_choice":
             # step = request index (0-based); each request maps to an increasing serial_number
             if step >= len(self._oracle_serials):
                 return None

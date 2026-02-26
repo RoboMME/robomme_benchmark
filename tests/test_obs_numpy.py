@@ -7,7 +7,7 @@ test_obs_numpy.py
 在四种 ActionSpace 下对 obs / info 字段的输出类型和形状是否正确。
 
 覆盖的 ActionSpace：
-    joint_angle / ee_pose / waypoint / oracle_planner
+    joint_angle / ee_pose / waypoint / multi_choice
 
 断言内容：
   1. 返回的 dtype 符合规范 (如 uint8, int16, float32, float64 等)
@@ -44,7 +44,7 @@ TEST_EPISODE = 0
 MAX_STEPS_PER_ACTION_SPACE = 3   # 每种 ActionSpace 最多验证的 step 数
 MAX_STEPS_ENV = 1000
 
-ActionSpaceType = Literal["joint_angle", "ee_pose", "waypoint", "oracle_planner"]
+ActionSpaceType = Literal["joint_angle", "ee_pose", "waypoint", "multi_choice"]
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 断言辅助
@@ -161,14 +161,13 @@ def run_one_action_space(action_space: ActionSpaceType) -> None:
     print(f"[TEST] ActionSpace = {action_space}")
     print(f"{'='*60}")
 
-    # oracle_planner 使用 OraclePlannerDemonstrationWrapper，
-    # BenchmarkEnvBuilder 的 action_space 参数对应 "multi_choice"
-    builder_action_space = "multi_choice" if action_space == "oracle_planner" else action_space
+    # multi_choice 使用 OraclePlannerDemonstrationWrapper，
+    # BenchmarkEnvBuilder 直接使用统一后的 action_space 命名。
 
     env_builder = BenchmarkEnvBuilder(
         env_id=TEST_ENV_ID,
         dataset="train",
-        action_space=builder_action_space,
+        action_space=action_space,
         gui_render=False,
     )
     env = env_builder.make_env_for_episode(TEST_EPISODE, max_steps=MAX_STEPS_ENV)
@@ -192,7 +191,7 @@ def run_one_action_space(action_space: ActionSpaceType) -> None:
     while step < MAX_STEPS_PER_ACTION_SPACE:
         replay_key = action_space
         action = dataset_resolver.get_step(replay_key, step)
-        if action_space == "oracle_planner":
+        if action_space == "multi_choice":
             action = _parse_oracle_command(action)
         if action is None:
             print(f"  step {step}: action=None（数据集结束），跳出")
@@ -224,7 +223,7 @@ ACTION_SPACES: list[ActionSpaceType] = [
     "joint_angle",
     "ee_pose",
     "waypoint",
-    "oracle_planner",
+    "multi_choice",
 ]
 
 

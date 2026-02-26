@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Script function: Unified dataset replay entry point, supporting 5 action spaces: joint_angle / ee_pose / ee_quat / waypoint / oracle_planner.
+# Script function: Unified dataset replay entry point, supporting 5 action spaces: joint_angle / ee_pose / ee_quat / waypoint / multi_choice.
 # Consistent with subgoal_evaluate_func.py main loop; difference is actions come from EpisodeDatasetResolver.
 
 import os
@@ -200,7 +200,7 @@ def main():
             while True:
                 replay_key = ACTION_SPACE
                 action = dataset_resolver.get_step(replay_key, step)
-                if ACTION_SPACE == "oracle_planner":
+                if ACTION_SPACE == "multi_choice":
                     action = _parse_oracle_command(action)
                 if action is None:
                     break

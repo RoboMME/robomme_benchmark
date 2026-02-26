@@ -96,10 +96,10 @@ def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label
         dataset_directory=h5_path,
     )
     try:
-        command0 = resolver.get_step("oracle_planner", 0)
+        command0 = resolver.get_step("multi_choice", 0)
         assert command0 == {"label": "b", "point": [34, 12], "serial_number": 0}
 
-        command1 = resolver.get_step("oracle_planner", 1)
+        command1 = resolver.get_step("multi_choice", 1)
         assert command1 is None
     finally:
         resolver.close()
