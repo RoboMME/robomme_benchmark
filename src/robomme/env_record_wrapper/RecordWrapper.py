@@ -42,7 +42,6 @@ from ..robomme_env.utils.segmentation_utils import (
 )
 from ..robomme_env.utils.rpy_util import build_endeffector_pose_dict
 from ..robomme_env.utils.oracle_action_matcher import map_action_text_to_option_label
-from ..robomme_env.utils.waypoint_backfill import backfill_waypoint_actions_in_buffer
 
 from ..logging_utils import logger
 
@@ -705,14 +704,14 @@ class RobommeRecordWrapper(gym.Wrapper):
             return ""
         return matched_label
 
-    def _consume_pending_waypoint(self) -> bool:
+    def _refresh_pending_waypoint(self) -> bool:
         """
-        Check and consume env._pending_waypoint if it exists.
+        Refresh self._current_waypoint_action from env._pending_waypoint if it exists.
         Converts waypoint_p/waypoint_q into a 7D waypoint_action
         [position(3), rpy(3), gripper(1)] and stores it in
         self._current_waypoint_action.
 
-        Returns True if a waypoint was consumed (i.e. this step is a keyframe).
+        Returns True if a pending waypoint exists and current cache was refreshed.
         """
         env_unwrapped = getattr(self.env, 'unwrapped', self.env)
         if not (hasattr(env_unwrapped, '_pending_waypoint') and env_unwrapped._pending_waypoint is not None):
@@ -751,11 +750,12 @@ class RobommeRecordWrapper(gym.Wrapper):
             [gripper_val],
         ])
 
-        env_unwrapped._pending_waypoint = None
         return True
 
     def step(self, action):
         self.no_object_flag=False
+        # waypoint is now recorded before planner execution, so refresh cache before env.step()
+        self._refresh_pending_waypoint()
         obs, reward, terminated, truncated, info = super().step(action)
 
 
@@ -886,10 +886,8 @@ class RobommeRecordWrapper(gym.Wrapper):
             #print(f"End-effector linear velocity: {self.agent.robot.links[9].get_linear_velocity().tolist()[0]}, angular velocity: {self.agent.robot.links[9].get_angular_velocity().tolist()[0]}")
             # end_effector_velocity = self.agent.robot.links[9].get_linear_velocity().tolist()[0] + self.agent.robot.links[9].get_angular_velocity().tolist()[0]
 
-            # Process waypoint info: Read pending waypoint from env (refresh cache if exists)
-            # Convert to 7D waypoint_action: [position(3), rpy(3), gripper(1)]
-            # Cache by "current latest waypoint" here; finally do backward fill post-processing before close().
-            self._consume_pending_waypoint()
+            # waypoint_action is now a forward-propagated cache: update happens before step(),
+            # and each recorded frame writes the latest value directly.
 
             eef_pose_dict, self._prev_ee_quat_wxyz, self._prev_ee_rpy_xyz = build_endeffector_pose_dict(
                 self.agent.tcp.pose.p,
@@ -968,7 +966,11 @@ class RobommeRecordWrapper(gym.Wrapper):
                 },
                 'action': {
                     'joint_action': action,
-                    'waypoint_action': self._current_waypoint_action,  # 7D ndarray or None (backward fill done before close())
+                    'waypoint_action': (
+                        self._current_waypoint_action.copy()
+                        if self._current_waypoint_action is not None
+                        else None
+                    ),
                     'eef_action_raw': {
                         'pose': fk_pose,
                         'quat': fk_quat,
@@ -1066,22 +1068,6 @@ class RobommeRecordWrapper(gym.Wrapper):
         if self.episode_success:
             logger.debug(f"Writing {len(self.buffer)} records to HDF5...")
 
-            # Consume any unconsumed _pending_waypoint left by the last planner action.
-            # This fixes the case where _record_waypoint() is the final action in a planner
-            # function with no subsequent step() call to consume it.
-            if self.buffer and self._consume_pending_waypoint():
-                last_record = self.buffer[-1]
-                last_record.setdefault("action", {})["waypoint_action"] = (
-                    self._current_waypoint_action.copy()
-                )
-                logger.debug(
-                    "Consumed trailing _pending_waypoint in close(), "
-                    f"updated buffer[-1] waypoint_action (timestep {len(self.buffer) - 1})."
-                )
-
-            # waypoint_action backfill handled uniformly before writing to disk, avoiding changing real-time logic during step().
-            backfill_waypoint_actions_in_buffer(self.buffer)
-
             # HDF5 hierarchy: episode_xxx / timestep_xxx, convenient for retrieval by environment and round
             # env_group_name = f"env_{self.env_id}"
             # env_group = self.h5_file.require_group(env_group_name)
@@ -1169,7 +1155,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                 # eef_action: 7-dim [pose(3), rpy(3), gripper(1)]
                 action_group.create_dataset("eef_action", data=action_data_dict['eef_action'])
 
-                # Write waypoint_action (7D: pos(3)+rpy(3)+gripper(1), value backfilled before close())
+                # Write waypoint_action (7D: pos(3)+rpy(3)+gripper(1), latest cached value from step flow)
                 kp_action = action_data_dict.get('waypoint_action', None)
                 if kp_action is None:
                     kp_action = np.zeros(7)

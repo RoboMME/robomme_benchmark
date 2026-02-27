@@ -95,7 +95,6 @@ def grasp_and_lift_peg_side(env, planner,obj):
     lifted_pose_p[2] = lift_height
 
 
-    planner.move_to_pose_with_screw(sapien.Pose(p=lifted_pose_p, q=grasp_pose_q))
     _record_waypoint(
         env,
         "grasp_and_lift_peg_side",
@@ -103,9 +102,8 @@ def grasp_and_lift_peg_side(env, planner,obj):
         waypoint_p=lifted_pose_p,
         waypoint_q=grasp_pose_q,
     )
+    planner.move_to_pose_with_screw(sapien.Pose(p=lifted_pose_p, q=grasp_pose_q))
 
-    planner.move_to_pose_with_screw(sapien.Pose(p=grasp_pose_p, q=grasp_pose_q))
-    planner.close_gripper()
     _record_waypoint(
         env,
         "grasp_and_lift_peg_side",
@@ -113,12 +111,11 @@ def grasp_and_lift_peg_side(env, planner,obj):
         waypoint_p=grasp_pose_p,
         waypoint_q=grasp_pose_q,
     )
+    planner.move_to_pose_with_screw(sapien.Pose(p=grasp_pose_p, q=grasp_pose_q))
+    planner.close_gripper()
 
     lifted_pose_p = grasp_pose_p.copy()
     lifted_pose_p[2] = lift_height
-    planner.move_to_pose_with_screw(sapien.Pose(p=lifted_pose_p, q=grasp_pose_q))
-
-    planner.close_gripper()
     _record_waypoint(
         env,
         "grasp_and_lift_peg_side",
@@ -126,6 +123,9 @@ def grasp_and_lift_peg_side(env, planner,obj):
         waypoint_p=lifted_pose_p,
         waypoint_q=grasp_pose_q,
     )
+
+    planner.move_to_pose_with_screw(sapien.Pose(p=lifted_pose_p, q=grasp_pose_q))
+    planner.close_gripper()
 
     current_grasp_pose=sapien.Pose(p=grasp_pose_p, q=grasp_pose_q)
     env.current_grasp_pose = current_grasp_pose
@@ -346,7 +346,6 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
         _, insert_pose_p, insert_pose_q = _pose_components()
 
 
-        _move_with_offset([0.2 , 0, -0.15])
         _record_waypoint(
             env,
             "insert_peg",
@@ -354,8 +353,8 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
             waypoint_p=(insert_pose_p + np.array([0.2, 0.0, -0.15], dtype=np.float32)),
             waypoint_q=insert_pose_q,
         )
+        _move_with_offset([0.2 , 0, -0.15])
 
-        _move_with_offset([0.2 , 0, 0])
         _record_waypoint(
             env,
             "insert_peg",
@@ -363,6 +362,7 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
             waypoint_p=(insert_pose_p + np.array([0.2, 0.0, 0.0], dtype=np.float32)),
             waypoint_q=insert_pose_q,
         )
+        _move_with_offset([0.2 , 0, 0])
 
         _move_with_offset([0.15 , 0, 0])
         #_record_waypoint(env, 'insert_peg', 'close')
@@ -371,7 +371,6 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
         # for i in range(5):
         #     _move_with_offset([0.05 , 0, 0])
         if cut_retreat!=True:
-            _move_with_offset([-0.05 , 0, 0])
             _record_waypoint(
                 env,
                 "insert_peg",
@@ -379,12 +378,12 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
                 waypoint_p=(insert_pose_p + np.array([-0.05, 0.0, 0.0], dtype=np.float32)),
                 waypoint_q=insert_pose_q,
             )
+            _move_with_offset([-0.05 , 0, 0])
 
 
 
         else:
             logger.debug(f"cut_retreat mode (obj=-1): elapsed_steps={int(getattr(env, 'elapsed_steps', 0))}, end_steps={env.end_steps}")
-            _move_with_offset_with_break([-0.05, 0, 0])
             _record_waypoint(
                 env,
                 "insert_peg",
@@ -392,6 +391,7 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
                 waypoint_p=(insert_pose_p + np.array([-0.05, 0.0, 0.0], dtype=np.float32)),
                 waypoint_q=insert_pose_q,
             )
+            _move_with_offset_with_break([-0.05, 0, 0])
 
 
 
@@ -400,7 +400,6 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
         
         _, insert_pose_p, insert_pose_q = _pose_components()
 
-        _move_with_offset([-0.2 , 0, -0.15])
         _record_waypoint(
             env,
             "insert_peg",
@@ -408,8 +407,8 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
             waypoint_p=(insert_pose_p + np.array([-0.2, 0.0, -0.15], dtype=np.float32)),
             waypoint_q=insert_pose_q,
         )
+        _move_with_offset([-0.2 , 0, -0.15])
 
-        _move_with_offset([-0.2 , 0, 0])
         _record_waypoint(
             env,
             "insert_peg",
@@ -417,6 +416,7 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
             waypoint_p=(insert_pose_p + np.array([-0.2, 0.0, 0.0], dtype=np.float32)),
             waypoint_q=insert_pose_q,
         )
+        _move_with_offset([-0.2 , 0, 0])
 
         _move_with_offset([-0.15 , 0, 0])
         #_record_waypoint(env, 'insert_peg', 'close')
@@ -425,7 +425,6 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
         # for i in range(5):
         #     _move_with_offset([-0.05 , 0, 0])
         if cut_retreat!=True:
-            _move_with_offset([-0.05 , 0, 0])
             _record_waypoint(
                 env,
                 "insert_peg",
@@ -433,11 +432,11 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
                 waypoint_p=(insert_pose_p + np.array([-0.05, 0.0, 0.0], dtype=np.float32)),
                 waypoint_q=insert_pose_q,
             )
+            _move_with_offset([-0.05 , 0, 0])
 
 
         else:
             logger.debug(f"cut_retreat mode (obj=1): elapsed_steps={int(getattr(env, 'elapsed_steps', 0))}, end_steps={env.end_steps}")
-            _move_with_offset_with_break([-0.05, 0, 0])
             _record_waypoint(
                 env,
                 "insert_peg",
@@ -445,6 +444,7 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
                 waypoint_p=(insert_pose_p + np.array([-0.05, 0.0, 0.0], dtype=np.float32)),
                 waypoint_q=insert_pose_q,
             )
+            _move_with_offset_with_break([-0.05, 0, 0])
 
 
 
@@ -639,10 +639,6 @@ def solve_push_to_target(env, planner, obj=None, target=None):
     
     # Move to start position
     #planner.move_to_pose_with_screw(sapien.Pose(p=[0,0,0.1], q=reach_pose_q))
-    planner.move_to_pose_with_screw(sapien.Pose(p=start_pos.tolist(), q=reach_pose_q))
-    
-    # Close gripper to prepare for push
-    planner.close_gripper()
     _record_waypoint(
         env,
         "solve_push_to_target",
@@ -650,6 +646,10 @@ def solve_push_to_target(env, planner, obj=None, target=None):
         waypoint_p=start_pos,
         waypoint_q=reach_pose_q,
     )
+    
+    # Close gripper to prepare for push
+    planner.move_to_pose_with_screw(sapien.Pose(p=start_pos.tolist(), q=reach_pose_q))
+    planner.close_gripper()
     # -------------------------------------------------------------------------- #
     # Push to target position
     # -------------------------------------------------------------------------- #
@@ -658,7 +658,6 @@ def solve_push_to_target(env, planner, obj=None, target=None):
     end_pos[2] = start_pos[2]  # Keep z height unchanged, ensuring cube stays directly above target
     
         
-    planner.move_to_pose_with_screw(sapien.Pose(p=end_pos.tolist(), q=reach_pose_q))
     _record_waypoint(
         env,
         "solve_push_to_target",
@@ -666,6 +665,7 @@ def solve_push_to_target(env, planner, obj=None, target=None):
         waypoint_p=end_pos,
         waypoint_q=reach_pose_q,
     )
+    planner.move_to_pose_with_screw(sapien.Pose(p=end_pos.tolist(), q=reach_pose_q))
 
     # Open gripper after push completion
     planner.open_gripper()
@@ -855,14 +855,6 @@ def solve_push_to_target_with_peg(env, planner, obj=None, target=None, direction
   
     # First reach upper preparation position, then descend to real start point
     planner.move_to_pose_with_screw(sapien.Pose(p=start_ready_pos.tolist(), q=reach_pose_q))
-    planner.move_to_pose_with_screw(sapien.Pose(p=start_pos.tolist(), q=reach_pose_q))
-   
-
-    # -------------------------------------------------------------------------- #
-    # 8. Close gripper to make peg/finger tight against object, ready for real pushing
-    # -------------------------------------------------------------------------- #
-    planner.close_gripper()
-
     _record_waypoint(
         env,
         "solve_push_to_target_with_peg",
@@ -870,6 +862,14 @@ def solve_push_to_target_with_peg(env, planner, obj=None, target=None, direction
         waypoint_p=start_pos,
         waypoint_q=reach_pose_q,
     )
+   
+
+    # -------------------------------------------------------------------------- #
+    # 8. Close gripper to make peg/finger tight against object, ready for real pushing
+    # -------------------------------------------------------------------------- #
+    planner.move_to_pose_with_screw(sapien.Pose(p=start_pos.tolist(), q=reach_pose_q))
+
+    planner.close_gripper()
 
         # -------------------------------------------------------------------------- #
     # Push to target position
@@ -878,7 +878,6 @@ def solve_push_to_target_with_peg(env, planner, obj=None, target=None, direction
     end_pos = target_pos - push_direction_3d * 0.03 # Move back to ensure cube is above
     end_pos[2] = start_pos[2]  # Keep z axis height unchanged
     end_pos = end_pos -  lateral_unit * lateral_distance
-    planner.move_to_pose_with_screw(sapien.Pose(p=end_pos.tolist(), q=reach_pose_q))
     _record_waypoint(
         env,
         "solve_push_to_target_with_peg",
@@ -886,6 +885,7 @@ def solve_push_to_target_with_peg(env, planner, obj=None, target=None, direction
         waypoint_p=end_pos,
         waypoint_q=reach_pose_q,
     )
+    planner.move_to_pose_with_screw(sapien.Pose(p=end_pos.tolist(), q=reach_pose_q))
 
     # Open gripper after push completion
     planner.open_gripper()
@@ -959,7 +959,6 @@ def solve_pickup_fail(env, planner, obj=None,z_offset=None,xy_offset=None,obj_ty
     if obj_type=="bin":
         ready_pose_p[2] = 0.2
     ready_pose = sapien.Pose(p=ready_pose_p, q=fail_pose_q)
-    planner.move_to_pose_with_screw(ready_pose)
     _record_waypoint(
         env,
         "solve_pickup_fail",
@@ -967,10 +966,9 @@ def solve_pickup_fail(env, planner, obj=None,z_offset=None,xy_offset=None,obj_ty
         waypoint_p=ready_pose_p,
         waypoint_q=fail_pose_q,
     )
+    planner.move_to_pose_with_screw(ready_pose)
 
     fail_pose = sapien.Pose(p=fail_pose_p, q=fail_pose_q)
-    planner.move_to_pose_with_screw(fail_pose)
-    planner.close_gripper()
     _record_waypoint(
         env,
         "solve_pickup_fail",
@@ -978,9 +976,9 @@ def solve_pickup_fail(env, planner, obj=None,z_offset=None,xy_offset=None,obj_ty
         waypoint_p=fail_pose_p,
         waypoint_q=fail_pose_q,
     )
+    planner.move_to_pose_with_screw(fail_pose)
+    planner.close_gripper()
 
-    planner.move_to_pose_with_screw(ready_pose)
-    planner.open_gripper()
     _record_waypoint(
         env,
         "solve_pickup_fail",
@@ -988,6 +986,8 @@ def solve_pickup_fail(env, planner, obj=None,z_offset=None,xy_offset=None,obj_ty
         waypoint_p=ready_pose_p,
         waypoint_q=fail_pose_q,
     )
+    planner.move_to_pose_with_screw(ready_pose)
+    planner.open_gripper()
 
     env.use_fail_planner=True
 
@@ -1064,10 +1064,6 @@ def solve_pickup(env, planner, obj=None,fail_grasp=False,mode=None):
     reach_pose_p = grasp_pose.p.tolist() if hasattr(grasp_pose.p, 'tolist') else list(grasp_pose.p)
     reach_pose_q = grasp_pose.q.tolist() if hasattr(grasp_pose.q, 'tolist') else list(grasp_pose.q)
     reach_pose_p[2]=0.15
-    planner.move_to_pose_with_screw(sapien.Pose(p=reach_pose_p,q=reach_pose_q))
-    
-    planner.open_gripper()
-
     _record_waypoint(
         env,
         "solve_pickup",
@@ -1075,14 +1071,16 @@ def solve_pickup(env, planner, obj=None,fail_grasp=False,mode=None):
         waypoint_p=reach_pose_p,
         waypoint_q=reach_pose_q,
     )
+    
+    planner.move_to_pose_with_screw(sapien.Pose(p=reach_pose_p,q=reach_pose_q))
+
+    planner.open_gripper()
     # -------------------------------------------------------------------------- #
     # Grasp
     # -------------------------------------------------------------------------- #
     planner.move_to_pose_with_screw(grasp_pose)
     grasp_pose_p = grasp_pose.p.tolist() if hasattr(grasp_pose.p, 'tolist') else list(grasp_pose.p)
     grasp_pose_q = grasp_pose.q.tolist() if hasattr(grasp_pose.q, 'tolist') else list(grasp_pose.q)
-
-    planner.close_gripper()
 
     _record_waypoint(
         env,
@@ -1092,14 +1090,14 @@ def solve_pickup(env, planner, obj=None,fail_grasp=False,mode=None):
         waypoint_q=grasp_pose_q,
     )
 
+    planner.close_gripper()
+
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
     goal_pose_P=obj.pose.p.tolist()[0]
     goal_pose_P[2]=0.15
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
-    res = planner.move_to_pose_with_screw(goal_pose)
-
     _record_waypoint(
         env,
         "solve_pickup",
@@ -1107,6 +1105,8 @@ def solve_pickup(env, planner, obj=None,fail_grasp=False,mode=None):
         waypoint_p=goal_pose_P,
         waypoint_q=grasp_pose_q,
     )
+
+    res = planner.move_to_pose_with_screw(goal_pose)
 
     #planner.close_gripper()
 
@@ -1147,9 +1147,6 @@ def solve_pickup_bin(env, planner, obj=None, fail_grasp=False, mode=None):
     reach_pose_p[2]=0.2
     reach_pose_q=reach_pose.q.tolist()
     reach_pose_fix=sapien.Pose(reach_pose_p,reach_pose_q)
-    planner.move_to_pose_with_screw(reach_pose_fix)
-    planner.open_gripper()
-
     _record_waypoint(
         env,
         "solve_pickup_bin",
@@ -1157,16 +1154,14 @@ def solve_pickup_bin(env, planner, obj=None, fail_grasp=False, mode=None):
         waypoint_p=reach_pose_p,
         waypoint_q=reach_pose_q,
     )
+    planner.move_to_pose_with_screw(reach_pose_fix)
+
+    planner.open_gripper()
 
     # -------------------------------------------------------------------------- #
     # Grasp
     # -------------------------------------------------------------------------- #
     grasp_pose_up=grasp_pose * sapien.Pose([0, 0, -0.01])
-    planner.move_to_pose_with_screw(grasp_pose_up)
-    planner.close_gripper()
-    # grasp_pose_up=grasp_pose * sapien.Pose([0, 0.1,0])#test
-    # planner.move_to_pose_with_screw(grasp_pose_up)#test
-
     _record_waypoint(
         env,
         "solve_pickup_bin",
@@ -1174,14 +1169,17 @@ def solve_pickup_bin(env, planner, obj=None, fail_grasp=False, mode=None):
         waypoint_p=np.asarray(grasp_pose_up.p, dtype=np.float32).reshape(-1),
         waypoint_q=np.asarray(grasp_pose_up.q, dtype=np.float32).reshape(-1),
     )
+    planner.move_to_pose_with_screw(grasp_pose_up)
+    # grasp_pose_up=grasp_pose * sapien.Pose([0, 0.1,0])#test
+    # planner.move_to_pose_with_screw(grasp_pose_up)#test
+
+    planner.close_gripper()
     # -------------------------------------------------------------------------- #
     # Move to goal pose
     # -------------------------------------------------------------------------- #
     goal_pose_P=obj.pose.p.tolist()[0]
     goal_pose_P[2]=0.2
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose.q)
-    res = planner.move_to_pose_with_screw(goal_pose)
-
     _record_waypoint(
         env,
         "solve_pickup_bin",
@@ -1189,6 +1187,8 @@ def solve_pickup_bin(env, planner, obj=None, fail_grasp=False, mode=None):
         waypoint_p=goal_pose_P,
         waypoint_q=np.asarray(grasp_pose.q, dtype=np.float32).reshape(-1),
     )
+
+    res = planner.move_to_pose_with_screw(goal_pose)
     #planner.close_gripper()
 
     planner.close()
@@ -1273,7 +1273,6 @@ def solve_putonto_whenhold(env, planner,target=None,height=None):
     goal_pose_P_prepare=target.pose.p.tolist()[0]
     goal_pose_P_prepare[2]=0.15
     goal_pose = sapien.Pose(goal_pose_P_prepare, grasp_pose_q)
-    res = planner.move_to_pose_with_screw(goal_pose)
     _record_waypoint(
         env,
         "solve_putonto_whenhold",
@@ -1281,6 +1280,7 @@ def solve_putonto_whenhold(env, planner,target=None,height=None):
         waypoint_p=goal_pose_P_prepare,
         waypoint_q=grasp_pose_q,
     )
+    res = planner.move_to_pose_with_screw(goal_pose)
 
     goal_pose_P=target.pose.p.tolist()[0]
     #modify 0211
@@ -1288,9 +1288,6 @@ def solve_putonto_whenhold(env, planner,target=None,height=None):
         goal_pose_P[2]=height
 
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
-    res = planner.move_to_pose_with_screw(goal_pose)
-
-    planner.open_gripper()
     _record_waypoint(
         env,
         "solve_putonto_whenhold",
@@ -1298,11 +1295,13 @@ def solve_putonto_whenhold(env, planner,target=None,height=None):
         waypoint_p=goal_pose_P,
         waypoint_q=grasp_pose_q,
     )
+
+    res = planner.move_to_pose_with_screw(goal_pose)
+    planner.open_gripper()
 
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[2]=0.15
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
-    res = planner.move_to_pose_with_screw(goal_pose)
     _record_waypoint(
         env,
         "solve_putonto_whenhold",
@@ -1310,6 +1309,7 @@ def solve_putonto_whenhold(env, planner,target=None,height=None):
         waypoint_p=goal_pose_P,
         waypoint_q=grasp_pose_q,
     )
+    res = planner.move_to_pose_with_screw(goal_pose)
     #planner.open_gripper()
     planner.close()
     return res
@@ -1337,7 +1337,6 @@ def solve_swingonto_whenhold(env, planner,target=None,height=0.05):
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[2]=height
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
-    res = planner.move_to_pose_with_screw(goal_pose)
     _record_waypoint(
         env,
         "solve_swingonto_whenhold",
@@ -1345,6 +1344,7 @@ def solve_swingonto_whenhold(env, planner,target=None,height=0.05):
         waypoint_p=goal_pose_P,
         waypoint_q=grasp_pose_q,
     )
+    res = planner.move_to_pose_with_screw(goal_pose)
     planner.close()
     return res
 def solve_swingonto_withDirection(env, planner, target=None, radius=0.1, direction="counterclockwise"):
@@ -1527,7 +1527,6 @@ def solve_swingonto(env, planner,target=None,record_swing_qpos=False):
     goal_pose_P[2]=0.07
     goal_pose = sapien.Pose(goal_pose_P, current_qpos)
     for i in range(2):
-        res = planner.move_to_pose_with_screw(goal_pose)
         if i == 1 :
             _record_waypoint(
                 env,
@@ -1536,6 +1535,7 @@ def solve_swingonto(env, planner,target=None,record_swing_qpos=False):
                 waypoint_p=goal_pose_P,
                 waypoint_q=current_qpos,
             )
+        res = planner.move_to_pose_with_screw(goal_pose)
     try:
         planner.close_gripper()
     except:
@@ -1594,8 +1594,6 @@ def solve_putdown_whenhold(env, planner,release_z=0.07):
     goal_pose_P[2]=release_z
     #goal_pose_P[0]+=0.1#test
     goal_pose = sapien.Pose(goal_pose_P,grasp_pose_q)
-    res = planner.move_to_pose_with_screw(goal_pose)
-    planner.open_gripper()
     _record_waypoint(
         env,
         "solve_putdown_whenhold",
@@ -1603,6 +1601,8 @@ def solve_putdown_whenhold(env, planner,release_z=0.07):
         waypoint_p=goal_pose_P,
         waypoint_q=grasp_pose_q,
     )
+    res = planner.move_to_pose_with_screw(goal_pose)
+    planner.open_gripper()
 
     goal_pose_P=env.agent.tcp.pose.p.tolist()[0]
     goal_pose_P[2]=0.15
@@ -1642,8 +1642,6 @@ def solve_putonto_whenhold_binspecial(env, planner,target=None):
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[2]=0.2
     goal_pose = sapien.Pose(goal_pose_P, grasp_pose_q)
-    res = planner.move_to_pose_with_screw(goal_pose)
-   
     _record_waypoint(
         env,
         "solve_putonto_whenhold_binspecial",
@@ -1651,7 +1649,7 @@ def solve_putonto_whenhold_binspecial(env, planner,target=None):
         waypoint_p=goal_pose_P,
         waypoint_q=grasp_pose_q,
     )
-    planner.open_gripper()
+    res = planner.move_to_pose_with_screw(goal_pose)
     _record_waypoint(
         env,
         "solve_putonto_whenhold_binspecial",
@@ -1659,6 +1657,7 @@ def solve_putonto_whenhold_binspecial(env, planner,target=None):
         waypoint_p=goal_pose_P,
         waypoint_q=grasp_pose_q,
     )
+    planner.open_gripper()
 
     goal_pose_P=target.pose.p.tolist()[0]
     goal_pose_P[0]=goal_pose_P[0]-0.1
@@ -1719,9 +1718,6 @@ def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=Fals
     rotate = matrix_to_quaternion(
         euler_angles_to_matrix(angles, convention="XYZ")
     )
-    if without_hold==False:
-        planner.move_to_pose_with_screw(sapien.Pose(p=ready_position,q=rotate))
-        
     _record_waypoint(
         env,
         "solve_button",
@@ -1729,7 +1725,8 @@ def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=Fals
         waypoint_p=ready_position,
         waypoint_q=rotate,
     )
-    planner.close_gripper()
+    if without_hold==False:
+        planner.move_to_pose_with_screw(sapien.Pose(p=ready_position,q=rotate))
 
     _record_waypoint(
         env,
@@ -1738,10 +1735,10 @@ def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=Fals
         waypoint_p=ready_position,
         waypoint_q=rotate,
     )
+    planner.close_gripper()
 
     steps=env.elapsed_steps.item()
     logger.debug("press button at step %s", steps)
-    planner.move_to_pose_with_screw(sapien.Pose(p=position,q=rotate))
     # Convert rotate to list/numpy for recording
     rotate_list = rotate.tolist() if hasattr(rotate, 'tolist') else rotate
 
@@ -1752,8 +1749,7 @@ def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=Fals
         waypoint_p=position,
         waypoint_q=rotate,
     )
-
-    planner.move_to_pose_with_screw(sapien.Pose(p=ready_position, q=rotate))
+    planner.move_to_pose_with_screw(sapien.Pose(p=position,q=rotate))
 
     _record_waypoint(
         env,
@@ -1762,6 +1758,8 @@ def solve_button(env, planner,obj,steps_press=None,interval=20,without_hold=Fals
         waypoint_p=ready_position,
         waypoint_q=rotate,
     )
+
+    planner.move_to_pose_with_screw(sapien.Pose(p=ready_position, q=rotate))
     #planner.open_gripper()
 
 def solve_button_ready(env, planner,obj):
@@ -1776,8 +1774,6 @@ def solve_button_ready(env, planner,obj):
         euler_angles_to_matrix(angles, convention="XYZ")
     )
     
-    planner.move_to_pose_with_screw(sapien.Pose(p=ready_position,q=rotate))
-    planner.close_gripper()
     _record_waypoint(
         env,
         "solve_button_ready",
@@ -1785,3 +1781,5 @@ def solve_button_ready(env, planner,obj):
         waypoint_p=ready_position,
         waypoint_q=rotate,
     )
+    planner.move_to_pose_with_screw(sapien.Pose(p=ready_position,q=rotate))
+    planner.close_gripper()

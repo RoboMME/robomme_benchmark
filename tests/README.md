@@ -30,7 +30,7 @@
 *   **`test_StopcubeIncrement.py`**: 针对特有任务 `StopCube` 的时序功能验证。验证其选项中的 "remain static (保持静止)" 触发时，内部调度器的绝对时间步长 (`absTimestep`) 增量是不是按预期递增并最终触及上限阶段（Saturation）。包含模拟时间步后退是否可以正确重置计数器的情况。
 *   **`test_TaskGoal.py` / `test_TaskGoalI_isList.py`**: 对 `task_goal.py` 内部生成自然语言描述 (`get_language_goal`) 的逻辑进行分支覆盖率测试。检验包括 `MoveCube`、`BinFill`（涉及不同着色数量）、`VideoUnmask` 等多达十几个子任务能够为特定场景组装出准确数量的双语目标描述（List格式验证）。
 *   **`test_choice_action_is_keyframe_flow.py`**: 针对于以离散项和空间点击 (`choice_action`) 为特征提取的工作流测试。判定它记录是否如实满足设定的关键帧（Keyframe）准入条件。
-*   **`test_waypoint_backfill_record.py` / `test_waypoint_dense_dedup.py`**: 测试基于示教航点（Waypoint）动作空间的优化逻辑。其中一部分测试记录时的后向插补/补写（Backfill）行为，另一部分测试密集冗余轨迹如何做正确的筛选去重（Dedup）。
+*   **`test_waypoint_dense_dedup.py`**: 测试基于示教航点（Waypoint）动作空间的密集轨迹筛选与相邻去重（Dedup）逻辑。
 
 ## 3. 公共设置与辅助脚本 (`conftest.py` 与 `_shared/`)
 
