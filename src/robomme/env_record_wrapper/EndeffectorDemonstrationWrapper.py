@@ -99,16 +99,22 @@ class EndeffectorDemonstrationWrapper(gym.Wrapper):
         current_qpos = planner.robot.get_qpos().cpu().numpy()[0]
         ik_status, ik_solutions = planner.planner.IK(goal_base, current_qpos)
         if ik_status != "Success" or len(ik_solutions) == 0:
-            raise RuntimeError(
-                f"ee step ({self.action_repr}): IK failed (status={ik_status}, num_solutions={len(ik_solutions)}), "
-                f"goal_base={goal_base.tolist()}, current_qpos={current_qpos.tolist()}"
-            )
+            error_msg = f"ee step ({self.action_repr}): IK failed (status={ik_status}, num_solutions={len(ik_solutions)})"
+            return ({}, 0.0, True, False, {"status": "error", "error_message": error_msg})
         qpos = np.asarray(ik_solutions[0][:7], dtype=np.float64)
         if no_gripper_env:
             joint_action = qpos
         else:
             joint_action = np.hstack([qpos, gripper])
-        return self.env.step(joint_action)
+        
+        try:
+            return self.env.step(joint_action)
+        except Exception as exc:
+            error_info = {
+                "status": "error",
+                "error_message": f"{type(exc).__name__}: {exc}",
+            }
+            return ({}, 0.0, True, False, error_info)
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
