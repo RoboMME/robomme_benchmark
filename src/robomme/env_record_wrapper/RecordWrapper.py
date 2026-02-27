@@ -113,6 +113,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         self._current_choice_action_text = ""  # Source choice action text from env task entry
         self._current_choice_label = ""        # Resolved option label (a/b/c/d/...)
         self._prev_task_index = -1           # Task index from previous step, used to detect subgoal switch
+        self._prev_is_video_demo = False     # Track demonstration->non-demonstration boundary
 
         # Video buffer
         self.video_frames = []  # Store combined video frames
@@ -659,6 +660,9 @@ class RobommeRecordWrapper(gym.Wrapper):
         self._current_choice_label = ""
         self._prev_task_index = -1
         result = super().reset(**kwargs)
+        self._prev_is_video_demo = bool(
+            getattr(self.unwrapped, "current_task_demonstration", False)
+        )
         self._init_fk_planner()
         # Stick 环境（推杆末端，无夹爪）标识：pinocchio model 只有 7 个用户关节
         # _fk_available=False 时 _fk_qpos_size 未定义，默认视为非 Stick
@@ -752,11 +756,26 @@ class RobommeRecordWrapper(gym.Wrapper):
 
         return True
 
+    def _clear_waypoint_caches_on_demo_end(self) -> None:
+        """Clear waypoint caches when video demonstration phase ends."""
+        self._current_waypoint_action = None
+        env_unwrapped = getattr(self.env, "unwrapped", self.env)
+        if hasattr(env_unwrapped, "_pending_waypoint"):
+            env_unwrapped._pending_waypoint = None
+        logger.debug("Cleared waypoint caches at demo->non-demo transition.")
+
     def step(self, action):
         self.no_object_flag=False
         # waypoint is now recorded before planner execution, so refresh cache before env.step()
         self._refresh_pending_waypoint()
         obs, reward, terminated, truncated, info = super().step(action)
+
+        current_is_demo = bool(
+            getattr(self.unwrapped, "current_task_demonstration", False)
+        )
+        if self._prev_is_video_demo and not current_is_demo:
+            self._clear_waypoint_caches_on_demo_end()
+        self._prev_is_video_demo = current_is_demo
 
 
         # Parse raw observation: RGB, Segmentation Mask all keep data after torch->numpy, ensure direct write to HDF5

@@ -37,9 +37,9 @@ DEFAULT_ENV_IDS = [
 # "VideoPlaceButton",
 # "VideoPlaceOrder",
 # "PickHighlight",
-# "InsertPeg",
+"InsertPeg",
 # "MoveCube",
- "PatternLock",
+ #"PatternLock",
 # "RouteStick",
 ]
 
