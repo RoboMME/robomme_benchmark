@@ -2,6 +2,7 @@
 from .RecordWrapper import *
 from .DemonstrationWrapper import *
 from .EndeffectorDemonstrationWrapper import EndeffectorDemonstrationWrapper
+from .FailAwareWrapper import FailAwareWrapper
 from .MultiStepDemonstrationWrapper import MultiStepDemonstrationWrapper, RRTPlanFailure
 from .episode_config_resolver import (
     BenchmarkEnvBuilder,

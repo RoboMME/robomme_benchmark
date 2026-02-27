@@ -233,4 +233,8 @@ class BenchmarkEnvBuilder:
             from .OraclePlannerDemonstrationWrapper import OraclePlannerDemonstrationWrapper
             env = OraclePlannerDemonstrationWrapper(env, env_id=self.env_id, gui_render=self.gui_render)
 
+        # ====== 在全部 Wrapper 包装完成后，兜底套上一层 Try...Except ErrorWrapper =====
+        from .FailAwareWrapper import FailAwareWrapper
+        env = FailAwareWrapper(env)
+
         return env

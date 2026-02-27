@@ -699,17 +699,10 @@ class DemonstrationWrapper(gym.Wrapper):
         info["error_message"] = "<ExceptionType>: <message>", instead of propagating.
         Callers should check ``info.get("status") == "error"`` to detect step failures.
         """
-        try:
-            batch = self._step_batch(action)
-            obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = batch
-            info_flat = self._flatten_info_batch(info_batch)
-            return (obs_batch, reward_batch[-1], terminated_batch[-1], truncated_batch[-1], info_flat)
-        except Exception as exc:
-            error_info = {
-                "status": "error",
-                "error_message": f"{type(exc).__name__}: {exc}",
-            }
-            return ({}, 0.0, True, False, error_info)
+        batch = self._step_batch(action)
+        obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = batch
+        info_flat = self._flatten_info_batch(info_batch)
+        return (obs_batch, reward_batch[-1], terminated_batch[-1], truncated_batch[-1], info_flat)
 
     def close(self):
         """Close environment, release resources (this wrapper no longer saves video)."""

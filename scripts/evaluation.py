@@ -110,11 +110,10 @@ for task in TASKS:
 
         while True:
             dummy_action = dummy_model.predict(current_front_rgb, current_wrist_rgb, task_goal)
-            try:
-                obs, reward, terminated, truncated, info = env.step(dummy_action)
-            except Exception as e:
-                print(f"Error: {e}") # most likely IK error when using ee_pose action space
-                total_success.append(False) # we assume the episode failed if an IK error occurs
+            obs, reward, terminated, truncated, info = env.step(dummy_action)
+            if info is not None and info.get("status") == "error":
+                print(f"Error: {info.get('error_message')}")
+                total_success.append(False)
                 break
             if terminated or truncated:
                 outcome = info.get("status", "unknown")

@@ -107,14 +107,7 @@ class EndeffectorDemonstrationWrapper(gym.Wrapper):
         else:
             joint_action = np.hstack([qpos, gripper])
         
-        try:
-            return self.env.step(joint_action)
-        except Exception as exc:
-            error_info = {
-                "status": "error",
-                "error_message": f"{type(exc).__name__}: {exc}",
-            }
-            return ({}, 0.0, True, False, error_info)
+        return self.env.step(joint_action)
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
