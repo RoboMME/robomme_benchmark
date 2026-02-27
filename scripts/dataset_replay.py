@@ -3,9 +3,9 @@ Replay episodes from HDF5 datasets and save rollout videos.
 Loads recorded actions from record_dataset_<Task>.h5, steps the environment
 """
 
-from robomme.env_record_wrapper.episode_dataset_resolver import EpisodeDatasetResolver
+import json
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Dict, Literal, Union
 
 import cv2
 import h5py
@@ -22,23 +22,24 @@ VIDEO_BORDER_COLOR = (255, 0, 0)
 VIDEO_BORDER_THICKNESS = 10
 
 TaskID = Literal[
-    "BinFill",
-    "PickXtimes",
-    "SwingXtimes",
-    "StopCube",
-    "VideoUnmask",
+    # "BinFill",
+    # "PickXtimes",
+    # "SwingXtimes",
+    # "StopCube",
+    # "VideoUnmask",
     "VideoUnmaskSwap",
-    "ButtonUnmask",
-    "ButtonUnmaskSwap",
-    "PickHighlight",
-    "VideoRepick",
-    "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "MoveCube",
-    "InsertPeg",
-    "PatternLock",
-    "RouteStick",
+    # "ButtonUnmask",
+    # "ButtonUnmaskSwap",
+    # "PickHighlight",
+    # "VideoRepick",
+    # "VideoPlaceButton",
+    # "VideoPlaceOrder",
+    # "MoveCube",
+    # "InsertPeg",
+    # "PatternLock",
+    # "RouteStick",
 ]
+
 
 ActionSpaceType = Literal["joint_angle", "ee_pose", "waypoint", "multi_choice"]
 
@@ -71,12 +72,89 @@ def _extract_frames(obs: dict, is_video_demo_fn=None) -> list[np.ndarray]:
     ]
 
 
+def _is_video_demo(ts: h5py.Group) -> bool:
+    info = ts.get("info")
+    if info is None or "is_video_demo" not in info:
+        return False
+    return bool(np.reshape(np.asarray(info["is_video_demo"][()]), -1)[0])
 
-def _load_action_from_timestep(
-    resolver: EpisodeDatasetResolver, step_idx: int, action_space_type: str
-) -> Optional[Union[np.ndarray, Dict[str, Any]]]:
-    """Load action at logical step_idx (0-based filtered index) via EpisodeDatasetResolver."""
-    return resolver.get_step(action_space_type, step_idx)
+
+def _is_keyframe(ts: h5py.Group) -> bool:
+    info = ts.get("info")
+    if info is None or "is_keyframe" not in info:
+        return False
+    return bool(np.reshape(np.asarray(info["is_keyframe"][()]), -1)[0])
+
+
+def _decode_h5_str(raw) -> str:
+    """将 HDF5 中的 bytes / numpy bytes / str 统一解码为 str。"""
+    if isinstance(raw, np.ndarray):
+        raw = raw.flatten()[0]
+    if isinstance(raw, (bytes, np.bytes_)):
+        raw = raw.decode("utf-8")
+    return raw
+
+
+def _build_action_sequence(
+    episode_data: h5py.Group, action_space_type: str
+) -> list[Union[np.ndarray, Dict[str, Any]]]:
+    """
+    扫描整个 episode，返回去重后的 action 序列：
+    - joint_angle / ee_pose：所有非 video-demo 步的 action（顺序，不去重）
+    - waypoint：去除相邻重复的 waypoint_action（同 EpisodeDatasetResolver）
+    - multi_choice：仅 is_keyframe=True 的步的 choice_action（JSON dict）
+    """
+    timestep_keys = sorted(
+        (k for k in episode_data.keys() if k.startswith("timestep_")),
+        key=lambda k: int(k.split("_")[1]),
+    )
+
+    actions: list[Union[np.ndarray, Dict[str, Any]]] = []
+    prev_waypoint: np.ndarray | None = None
+
+    for key in timestep_keys:
+        ts = episode_data[key]
+        if _is_video_demo(ts):
+            continue
+
+        action_grp = ts.get("action")
+        if action_grp is None:
+            continue
+
+        if action_space_type == "joint_angle":
+            if "joint_action" not in action_grp:
+                continue
+            actions.append(np.asarray(action_grp["joint_action"][()], dtype=np.float32))
+
+        elif action_space_type == "ee_pose":
+            if "eef_action" not in action_grp:
+                continue
+            actions.append(np.asarray(action_grp["eef_action"][()], dtype=np.float32))
+
+        elif action_space_type == "waypoint":
+            if "waypoint_action" not in action_grp:
+                continue
+            wa = np.asarray(action_grp["waypoint_action"][()], dtype=np.float32).flatten()
+            # 去除相邻重复
+            if prev_waypoint is None or not np.array_equal(wa, prev_waypoint):
+                actions.append(wa)
+                prev_waypoint = wa.copy()
+
+        elif action_space_type == "multi_choice":
+            if not _is_keyframe(ts):
+                continue
+            if "choice_action" not in action_grp:
+                continue
+            raw = _decode_h5_str(action_grp["choice_action"][()])
+            try:
+                actions.append(json.loads(raw))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                continue
+
+        else:
+            raise ValueError(f"Unknown action space type: {action_space_type}")
+
+    return actions
 
 
 def _save_video(
@@ -108,32 +186,23 @@ def process_episode(
     episode_idx: int,
     task_id: str,
     action_space_type: ActionSpaceType,
-    dataset_dir: str,
 ) -> None:
     """Replay one episode from HDF5 data, record frames, and save a video."""
     episode_data = env_data[f"episode_{episode_idx}"]
     task_goal = episode_data["setup"]["task_goal"][()][0].decode()
+    action_sequence = _build_action_sequence(episode_data, action_space_type)
 
     env = BenchmarkEnvBuilder(
         env_id=task_id,
         dataset="train",
         action_space=action_space_type,
         gui_render=GUI_RENDER,
-    ).make_env_for_episode(
-        episode_idx,
-        include_maniskill_obs=True,
-        include_front_depth=True,
-        include_wrist_depth=True,
-        include_front_camera_extrinsic=True,
-        include_wrist_camera_extrinsic=True,
-        include_available_multi_choices=True,
-        include_front_camera_intrinsic=True,
-        include_wrist_camera_intrinsic=True,
-    )
+    ).make_env_for_episode(episode_idx)
 
     print(f"\nTask: {task_id}, Episode: {episode_idx}, ",
           f"Seed: {env.unwrapped.seed}, Difficulty: {env.unwrapped.difficulty}")
     print(f"Task goal: {task_goal}")
+    print(f"Total actions after dedup: {len(action_sequence)}")
 
     obs, _ = env.reset()
     frames = _extract_frames(
@@ -141,29 +210,20 @@ def process_episode(
     )
 
     outcome = "unknown"
-    resolver = EpisodeDatasetResolver(task_id, episode_idx, dataset_dir)
-    try:
-        step_idx = 0
-        while True:
-            action = _load_action_from_timestep(resolver, step_idx, action_space_type)
-            if action is None:
-                break
+    for seq_idx, action in enumerate(action_sequence):
+        try:
             obs, _, terminated, truncated, info = env.step(action)
-            status = info.get("status", "unknown")
-            if status == "error":
-                print(f"Error at step {step_idx}: {info.get('error_message', 'unknown error')}")
-                break
             frames.extend(_extract_frames(obs))
+        except Exception as e:
+            print(f"Error at seq_idx {seq_idx}: {e}")
+            break
 
-            if GUI_RENDER:
-                env.render()
-            if terminated or truncated:
-                outcome = status
-                print(f"Outcome: {outcome}")
-                break
-            step_idx += 1
-    finally:
-        resolver.close()
+        if GUI_RENDER:
+            env.render()
+        if terminated or truncated:
+            outcome = info.get("status", "unknown")
+            print(f"Outcome: {outcome}")
+            break
 
     env.close()
     path = _save_video(frames, task_id, episode_idx, task_goal, outcome, action_space_type)
@@ -187,7 +247,7 @@ def replay(
         with h5py.File(file_path, "r") as data:
             episode_indices = _get_episode_indices(data)
             for episode_idx in episode_indices[:min(replay_number, len(episode_indices))]:
-                process_episode(data, episode_idx, task_id, action_space_type, h5_data_dir)
+                process_episode(data, episode_idx, task_id, action_space_type)
 
 
 if __name__ == "__main__":
