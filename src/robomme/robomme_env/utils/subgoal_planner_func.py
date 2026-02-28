@@ -983,6 +983,9 @@ def _record_waypoint(env, solve_function, waypoint_type, *, waypoint_p, waypoint
         'waypoint_type': waypoint_type,
         'waypoint_p': waypoint_p_np,
         'waypoint_q': waypoint_q_np,
+        # Tag waypoint with the phase when it is produced. RecordWrapper consumes
+        # only same-phase waypoints to avoid demo->non-demo leakage.
+        'waypoint_phase_is_demo': bool(getattr(env, "current_task_demonstration", False)),
     }
     
     env._pending_waypoint = waypoint_info

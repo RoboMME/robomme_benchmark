@@ -38,9 +38,9 @@ DEFAULT_ENV_IDS = [
 # "VideoPlaceOrder",
 # "PickHighlight",
 #"InsertPeg",
-# "MoveCube",
+"MoveCube",
  #"PatternLock",
- "RouteStick",
+ #"RouteStick",
 ]
 
 OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay"
@@ -69,7 +69,7 @@ def main():
 
         env = None
         for episode in range(episode_count):
-            if episode !=1:
+            if episode !=7:
                 continue
 
             env = env_builder.make_env_for_episode(

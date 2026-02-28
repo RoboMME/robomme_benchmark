@@ -708,12 +708,15 @@ class RobommeRecordWrapper(gym.Wrapper):
             return ""
         return matched_label
 
-    def _refresh_pending_waypoint(self) -> bool:
+    def _refresh_pending_waypoint(self, expected_is_demo: bool) -> bool:
         """
         Refresh self._current_waypoint_action from env._pending_waypoint if it exists.
         Converts waypoint_p/waypoint_q into a 7D waypoint_action
         [position(3), rpy(3), gripper(1)] and stores it in
         self._current_waypoint_action.
+
+        Only waypoints tagged with the same demo phase are consumed. Cross-phase
+        stale waypoint will be dropped.
 
         Returns True if a pending waypoint exists and current cache was refreshed.
         """
@@ -722,6 +725,16 @@ class RobommeRecordWrapper(gym.Wrapper):
             return False
 
         current_waypoint = env_unwrapped._pending_waypoint
+        waypoint_phase_is_demo = current_waypoint.get("waypoint_phase_is_demo")
+        if waypoint_phase_is_demo is not None:
+            if bool(waypoint_phase_is_demo) != bool(expected_is_demo):
+                env_unwrapped._pending_waypoint = None
+                logger.debug(
+                    "Dropped cross-phase pending waypoint: "
+                    f"tagged_is_demo={bool(waypoint_phase_is_demo)}, "
+                    f"expected_is_demo={bool(expected_is_demo)}"
+                )
+                return False
 
         if 'waypoint_p' not in current_waypoint or 'waypoint_q' not in current_waypoint:
             raise ValueError(
@@ -767,17 +780,15 @@ class RobommeRecordWrapper(gym.Wrapper):
 
     def step(self, action):
         self.no_object_flag=False
-        # Detect demo->non-demo boundary before this step starts:
-        # clear stale demo cache first, then refresh pending waypoint for current step.
+        # Detect phase transition before this step starts:
+        # clear stale cache first, then refresh pending waypoint for current step.
         pre_step_is_demo = bool(
             getattr(self.unwrapped, "current_task_demonstration", False)
         )
-        if self._prev_is_video_demo and not pre_step_is_demo:
-            # Keep env._pending_waypoint for this step so first non-demo waypoint
-            # (often RouteStick midpoint) is not accidentally dropped.
+        if self._prev_is_video_demo != pre_step_is_demo:
             self._clear_waypoint_caches_on_demo_end(clear_pending_waypoint=False)
         # waypoint is recorded before planner execution, so refresh cache before env.step()
-        self._refresh_pending_waypoint()
+        self._refresh_pending_waypoint(expected_is_demo=pre_step_is_demo)
         obs, reward, terminated, truncated, info = super().step(action)
 
         post_step_is_demo = bool(
