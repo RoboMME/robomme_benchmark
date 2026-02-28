@@ -30,7 +30,7 @@ from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 ACTION_SPACE = "multi_choice"
 
 
-GUI_RENDER = False
+GUI_RENDER = True
 
 DATASET_ROOT = "/data/hongzefu/data_0226-test"
 
@@ -258,7 +258,7 @@ def main():
 
         env = None
         for episode in range(episode_count):
-            if episode !=0:
+            if episode !=15:
                 continue
 
             env = env_builder.make_env_for_episode(

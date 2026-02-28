@@ -370,7 +370,7 @@ def is_obj_dropped(self, obj):
 
     if in_demonstration(self):
         # Return True only when object is near target and not grasped
-        if obj_pos[2] <=0.035 and not is_grasping:
+        if obj_pos[2] <=0.2 and not is_grasping:
             return True
     else:
         if obj_pos[2] <= 0.2 and not is_grasping and gripper_pos[2] > 0.05:

@@ -50,22 +50,22 @@ OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-0226-test"
 MAX_STEPS = 1000
 
 DEFAULT_ENV_IDS = [
-# "PickXtimes",
-# "StopCube",
-# "SwingXtimes",
- "BinFill",
-# "VideoUnmaskSwap",
-# "VideoUnmask",
-# "ButtonUnmaskSwap",
-# "ButtonUnmask",
-# "VideoRepick",
-# "VideoPlaceButton",
-# "VideoPlaceOrder",
-# "PickHighlight",
-# "InsertPeg",
-# "MoveCube",
-# "PatternLock",
-# "RouteStick",
+"PickXtimes",
+"StopCube",
+"SwingXtimes",
+"BinFill",
+"VideoUnmaskSwap",
+"VideoUnmask",
+"ButtonUnmaskSwap",
+"ButtonUnmask",
+"VideoRepick",
+"VideoPlaceButton",
+"VideoPlaceOrder",
+"PickHighlight",
+"InsertPeg",
+"MoveCube",
+"PatternLock",
+"RouteStick",
  ]
 
 def _parse_oracle_command(choice_action: Optional[Any]) -> Optional[dict[str, Any]]:
