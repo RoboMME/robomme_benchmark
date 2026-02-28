@@ -47,7 +47,7 @@ OVERRIDE_METADATA_PATH = "/data/hongzefu/data_0226-test"
 # Video output directory: Independently hardcoded, not aligned with h5 path or env_id
 OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-0226-test"
 # ######## Video saving variables (output directory) end ########
-MAX_STEPS = 1000
+MAX_STEPS = 2000
 
 DEFAULT_ENV_IDS = [
 "PickXtimes",
