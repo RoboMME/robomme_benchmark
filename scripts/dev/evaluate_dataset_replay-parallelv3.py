@@ -30,32 +30,32 @@ AVAILABLE_ACTION_SPACES = [
 
 GUI_RENDER = False
 
-DATASET_ROOT = "/data/hongzefu/data_0225"
-OVERRIDE_METADATA_PATH = "/data/hongzefu/data_0225"
+DATASET_ROOT = "/data/hongzefu/data_0226-test"
+OVERRIDE_METADATA_PATH = "/data/hongzefu/data_0226-test"
 
 # ######## Video saving variables (output directory) start ########
 # Video output directory: Independently hardcoded, not aligned with h5 path or env_id
-OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-0225"
+OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-0226-test"
 # ######## Video saving variables (output directory) end ########
 MAX_STEPS = 1000
 
 DEFAULT_ENV_IDS = [
-"PickXtimes",
-"StopCube",
+# "PickXtimes",
+# "StopCube",
 "SwingXtimes",
 "BinFill",
-"VideoUnmaskSwap",
-"VideoUnmask",
-"ButtonUnmaskSwap",
-"ButtonUnmask",
-"VideoRepick",
-"VideoPlaceButton",
-"VideoPlaceOrder",
-"PickHighlight",
-"InsertPeg",
-"MoveCube",
-"PatternLock",
-"RouteStick",
+# "VideoUnmaskSwap",
+# "VideoUnmask",
+# "ButtonUnmaskSwap",
+# "ButtonUnmask",
+# "VideoRepick",
+# "VideoPlaceButton",
+# "VideoPlaceOrder",
+# "PickHighlight",
+# "InsertPeg",
+# "MoveCube",
+# "PatternLock",
+# "RouteStick",
  ]
 
 def _parse_oracle_command(choice_action: Optional[Any]) -> Optional[dict[str, Any]]:

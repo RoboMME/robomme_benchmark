@@ -42,6 +42,10 @@ from ..robomme_env.utils.segmentation_utils import (
 )
 from ..robomme_env.utils.rpy_util import build_endeffector_pose_dict
 from ..robomme_env.utils.oracle_action_matcher import map_action_text_to_option_label
+from ..robomme_env.utils.choice_action_mapping import (
+    extract_actor_position_xyz,
+    project_world_to_pixel,
+)
 
 from ..logging_utils import logger
 
@@ -342,21 +346,14 @@ class RobommeRecordWrapper(gym.Wrapper):
         grounded_text,
         subgoal_online_text,
         grounded_online_text,
-        choice_action_label,
-        choice_action_position,
+        choice_action_payload,
         task_index,
         is_completed,
     ):
         """Stitch and overlay planner / online text rows."""
         combined = prepared["combined"]
         combined_online = prepared["combined_online"]
-        choice_action_json = json.dumps(
-            {
-                "label": choice_action_label,
-                "position": choice_action_position,
-            },
-            ensure_ascii=False,
-        )
+        choice_action_json = json.dumps(choice_action_payload, ensure_ascii=False)
 
         # Add planner-side schema fields to first row for direct video inspection.
         combined = self._add_text_to_frame(
@@ -717,45 +714,37 @@ class RobommeRecordWrapper(gym.Wrapper):
         if item is not None:
             out.append(item)
 
-    @staticmethod
-    def _extract_actor_position_xyz(actor: Any) -> Optional[List[float]]:
-        pose = getattr(actor, "pose", None)
-        if pose is None and hasattr(actor, "get_pose"):
-            try:
-                pose = actor.get_pose()
-            except Exception:
-                return None
-        if pose is None:
-            return None
-
-        pos = getattr(pose, "p", None)
-        if pos is None:
-            return None
-        if hasattr(pos, "detach"):
-            pos = pos.detach()
-        if hasattr(pos, "cpu"):
-            pos = pos.cpu()
-        try:
-            pos_np = np.asarray(pos, dtype=np.float64).reshape(-1)
-        except (TypeError, ValueError):
-            return None
-        if pos_np.size < 3:
-            return None
-
-        xyz = pos_np[:3]
-        if not np.all(np.isfinite(xyz)):
-            return None
-        return xyz.tolist()
-
-    def _get_choice_action_position(self) -> List[float]:
+    def _get_choice_action_position_3d(self) -> List[float]:
         current_segment = getattr(self, "current_segment", None)
         candidates: List[Any] = []
         self._collect_choice_segment_candidates(current_segment, candidates)
         for candidate in candidates:
-            pos = self._extract_actor_position_xyz(candidate)
+            pos = extract_actor_position_xyz(candidate)
             if pos is not None:
-                return pos
+                return pos.astype(np.float64).tolist()
         return []
+
+    def _build_choice_action_payload(
+        self,
+        *,
+        label: str,
+        position_3d: List[float],
+        front_camera_intrinsic: Any,
+        front_camera_extrinsic: Any,
+        front_rgb_frame: Any,
+    ) -> dict:
+        image_shape = np.asarray(front_rgb_frame).shape
+        position_2d = project_world_to_pixel(
+            world_xyz=position_3d,
+            intrinsic_cv=front_camera_intrinsic,
+            extrinsic_cv=front_camera_extrinsic,
+            image_shape=image_shape,
+        )
+        return {
+            "label": label,
+            "position": position_2d if position_2d is not None else [],
+            "position_3d": position_3d,
+        }
 
     def _refresh_pending_waypoint(self, expected_is_demo: bool) -> bool:
         """
@@ -949,15 +938,21 @@ class RobommeRecordWrapper(gym.Wrapper):
                 segmentation_result,
                 segmentation_result_online,
             )
-            choice_action_position = self._get_choice_action_position()
+            choice_action_position_3d = self._get_choice_action_position_3d()
+            choice_action_payload = self._build_choice_action_payload(
+                label=self._current_choice_label,
+                position_3d=choice_action_position_3d,
+                front_camera_intrinsic=base_camera_intrinsic,
+                front_camera_extrinsic=base_camera_extrinsic,
+                front_rgb_frame=base_camera_frame,
+            )
             combined = self._video_compose_planner_online_rows(
                 prepared,
                 subgoal_text,
                 self.current_subgoal_segment_filled,
                 subgoal_online_text,
                 self.current_subgoal_segment_online_filled,
-                choice_action_label=self._current_choice_label,
-                choice_action_position=choice_action_position,
+                choice_action_payload=choice_action_payload,
                 task_index=_cur_task_index,
                 is_completed=is_completed,
             )
@@ -1065,10 +1060,7 @@ class RobommeRecordWrapper(gym.Wrapper):
                         'rpy': fk_rpy,
                     },
                     'eef_action': fk_eef_action,
-                    'choice_action': json.dumps({
-                        "label": self._current_choice_label,
-                        "position": choice_action_position,
-                    }),
+                    'choice_action': json.dumps(choice_action_payload),
                 },
                 'info': {
                     'simple_subgoal': subgoal_text,

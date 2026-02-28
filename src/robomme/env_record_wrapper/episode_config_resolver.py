@@ -205,6 +205,13 @@ class BenchmarkEnvBuilder:
         logger.debug(f"[{self.env_id}] Episode {episode_idx}: seed={seed_desc}{difficulty_str}")
 
         env = gym.make(self.env_id, **env_kwargs)
+        force_front_camera_params = self.action_space == "multi_choice"
+        include_front_camera_extrinsic_effective = (
+            include_front_camera_extrinsic or force_front_camera_params
+        )
+        include_front_camera_intrinsic_effective = (
+            include_front_camera_intrinsic or force_front_camera_params
+        )
         env = DemonstrationWrapper(
             env,
             max_steps_without_demonstration=max_steps_without_demo,
@@ -212,10 +219,10 @@ class BenchmarkEnvBuilder:
             include_maniskill_obs=include_maniskill_obs,
             include_front_depth=include_front_depth,
             include_wrist_depth=include_wrist_depth,
-            include_front_camera_extrinsic=include_front_camera_extrinsic,
+            include_front_camera_extrinsic=include_front_camera_extrinsic_effective,
             include_wrist_camera_extrinsic=include_wrist_camera_extrinsic,
             include_available_multi_choices=include_available_multi_choices,
-            include_front_camera_intrinsic=include_front_camera_intrinsic,
+            include_front_camera_intrinsic=include_front_camera_intrinsic_effective,
             include_wrist_camera_intrinsic=include_wrist_camera_intrinsic,
         )
         if self.action_space == "joint_angle":

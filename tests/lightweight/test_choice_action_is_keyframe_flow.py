@@ -14,8 +14,11 @@ import tempfile
 from pathlib import Path
 
 import h5py
+import pytest
 
 from tests._shared.repo_paths import find_repo_root
+
+pytestmark = [pytest.mark.lightweight, pytest.mark.gpu]
 
 
 def _load_module(module_name: str, relative_path: str):
@@ -64,28 +67,44 @@ def _build_h5(h5_path: Path) -> None:
         _make_timestep(
             ep,
             0,
-            choice_action={"label": "a", "position": [0.1, 0.2, 0.3]},
+            choice_action={
+                "label": "a",
+                "position": [10, 20],
+                "position_3d": [0.1, 0.2, 0.3],
+            },
             is_keyframe=False,
         )
         # 有效 keyframe: 应被读取
         _make_timestep(
             ep,
             1,
-            choice_action={"label": "b", "position": [1.2, 3.4, 5.6]},
+            choice_action={
+                "label": "b",
+                "position": [12, 34],
+                "position_3d": [1.2, 3.4, 5.6],
+            },
             is_keyframe=True,
         )
         # keyframe 但空标签: 跳过
         _make_timestep(
             ep,
             2,
-            choice_action={"label": "", "position": [2.0, 3.0, 4.0]},
+            choice_action={
+                "label": "",
+                "position": [20, 30],
+                "position_3d": [2.0, 3.0, 4.0],
+            },
             is_keyframe=True,
         )
         # video demo keyframe: 跳过
         _make_timestep(
             ep,
             3,
-            choice_action={"label": "c", "position": [7.0, 8.0, 9.0]},
+            choice_action={
+                "label": "c",
+                "position": [70, 80],
+                "position_3d": [7.0, 8.0, 9.0],
+            },
             is_video_demo=True,
             is_keyframe=True,
         )
@@ -93,7 +112,11 @@ def _build_h5(h5_path: Path) -> None:
         _make_timestep(
             ep,
             4,
-            choice_action={"label": "d", "position": [9.0, 1.1, 2.2]},
+            choice_action={
+                "label": "d",
+                "position": [90, 11],
+                "position_3d": [9.0, 1.1, 2.2],
+            },
             is_keyframe=True,
         )
 
@@ -107,7 +130,8 @@ def _assert_record_schema_contract(h5_path: Path) -> None:
         payload = json.loads(raw)
         assert "serial_number" not in payload, "choice_action should not store serial_number"
         assert payload["label"] == "b"
-        assert payload["position"] == [1.2, 3.4, 5.6]
+        assert payload["position"] == [12, 34]
+        assert payload["position_3d"] == [1.2, 3.4, 5.6]
         assert bool(ts1["info"]["is_keyframe"][()]) is True
 
 
@@ -121,16 +145,25 @@ def _assert_resolver_reads_by_is_keyframe(h5_path: Path) -> None:
         assert resolver.get_step("multi_choice", -1) is None
 
         command0 = resolver.get_step("multi_choice", 0)
-        assert command0 == {"label": "b", "position": [1.2, 3.4, 5.6]}
+        assert command0 == {"label": "b", "position": [12.0, 34.0]}
+        assert "position_3d" not in command0
         assert "serial_number" not in command0
 
         command1 = resolver.get_step("multi_choice", 1)
-        assert command1 == {"label": "d", "position": [9.0, 1.1, 2.2]}
+        assert command1 == {"label": "d", "position": [90.0, 11.0]}
+        assert "position_3d" not in command1
         assert "serial_number" not in command1
 
         assert resolver.get_step("multi_choice", 2) is None
     finally:
         resolver.close()
+
+
+def test_choice_action_is_keyframe_flow_pytest(tmp_path: Path) -> None:
+    h5_path = tmp_path / "choice_action_flow.h5"
+    _build_h5(h5_path)
+    _assert_record_schema_contract(h5_path)
+    _assert_resolver_reads_by_is_keyframe(h5_path)
 
 
 def main() -> None:

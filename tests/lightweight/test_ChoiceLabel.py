@@ -3,8 +3,11 @@ import json
 from pathlib import Path
 
 import h5py
+import pytest
 
 from tests._shared.repo_paths import find_repo_root
+
+pytestmark = [pytest.mark.lightweight, pytest.mark.gpu]
 
 
 def _load_module(module_name: str, relative_path: str):
@@ -65,7 +68,8 @@ def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label
             data=json.dumps(
                 {
                     "label": "b",
-                    "position": [0.12, 0.34, 0.56],
+                    "position": [12, 34],
+                    "position_3d": [0.12, 0.34, 0.56],
                 }
             ),
             dtype=h5py.string_dtype(encoding="utf-8"),
@@ -81,7 +85,8 @@ def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label
             data=json.dumps(
                 {
                     "label": "",
-                    "position": [0.2, 0.3, 0.4],
+                    "position": [20, 30],
+                    "position_3d": [0.2, 0.3, 0.4],
                 }
             ),
             dtype=h5py.string_dtype(encoding="utf-8"),
@@ -97,7 +102,8 @@ def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label
     )
     try:
         command0 = resolver.get_step("multi_choice", 0)
-        assert command0 == {"label": "b", "position": [0.12, 0.34, 0.56]}
+        assert command0 == {"label": "b", "position": [12.0, 34.0]}
+        assert "position_3d" not in command0
 
         command1 = resolver.get_step("multi_choice", 1)
         assert command1 is None

@@ -215,17 +215,17 @@ class EpisodeDatasetResolver:
 
     @staticmethod
     def _normalize_choice_position(position_like: Any) -> Optional[List[float]]:
-        if not isinstance(position_like, (list, tuple, np.ndarray)) or len(position_like) < 3:
+        # New schema: choice_action.position stores front_rgb pixel [x, y].
+        if not isinstance(position_like, (list, tuple, np.ndarray)) or len(position_like) != 2:
             return None
         try:
             x = float(position_like[0])
             y = float(position_like[1])
-            z = float(position_like[2])
         except (TypeError, ValueError):
             return None
-        if not np.isfinite(x) or not np.isfinite(y) or not np.isfinite(z):
+        if not np.isfinite(x) or not np.isfinite(y):
             return None
-        return [x, y, z]
+        return [x, y]
 
     def _extract_choice_action(self, timestep_group: h5py.Group) -> Optional[Dict[str, Any]]:
         action_grp = timestep_group.get("action")

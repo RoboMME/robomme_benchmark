@@ -12,8 +12,8 @@ from mani_skill.examples.motionplanning.panda.motionplanner_stick import (
 from ..robomme_env.utils import planner_denseStep
 from ..robomme_env.utils.oracle_action_matcher import (
     find_exact_label_option_index,
-    select_target_with_position,
 )
+from ..robomme_env.utils.choice_action_mapping import select_target_with_pixel
 from ..logging_utils import logger
 
 
@@ -28,7 +28,7 @@ from ..logging_utils import logger
 class OraclePlannerDemonstrationWrapper(gym.Wrapper):
     """
     Wrap Robomme environment with Oracle planning logic into Gym Wrapper for demonstration/evaluation;
-    Input to step is command_dict (containing label and optional position).
+    Input to step is command_dict (containing label and optional pixel position).
     step returns obs as dict-of-lists and reward/terminated/truncated as last-step values.
     """
 
@@ -44,6 +44,9 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
         self.available_options = []
         self._oracle_screw_max_attempts = 3
         self._oracle_rrt_max_attempts = 3
+        self._front_camera_intrinsic_cv = None
+        self._front_camera_extrinsic_cv = None
+        self._front_rgb_shape = None
 
         # Action/Observation space (Empty Dict here, agreed externally)
         self.action_space = gym.spaces.Dict({})
@@ -153,6 +156,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
             obs, info = ret
         else:
             obs, info = ret, {}
+        self._update_front_camera_cache(obs_like=obs, info_like=info)
         self._build_step_options()
         if isinstance(info, dict):
             info["available_multi_choices"] = self.available_options
@@ -175,6 +179,67 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
         if isinstance(value, (list, tuple)):
             return value[-1] if value else value
         return value
+
+    @staticmethod
+    def _to_numpy(value):
+        if value is None:
+            return None
+        if isinstance(value, torch.Tensor):
+            value = value.detach().cpu().numpy()
+        return np.asarray(value)
+
+    @staticmethod
+    def _take_last_columnar(value):
+        if isinstance(value, list):
+            return value[-1] if value else None
+        return value
+
+    @classmethod
+    def _normalize_intrinsic_cv(cls, intrinsic_like):
+        intrinsic = cls._to_numpy(intrinsic_like)
+        if intrinsic is None:
+            return None
+        intrinsic = intrinsic.reshape(-1)
+        if intrinsic.size < 9:
+            return None
+        intrinsic = intrinsic[:9].reshape(3, 3)
+        if not np.all(np.isfinite(intrinsic)):
+            return None
+        return intrinsic.astype(np.float64, copy=False)
+
+    @classmethod
+    def _normalize_extrinsic_cv(cls, extrinsic_like):
+        extrinsic = cls._to_numpy(extrinsic_like)
+        if extrinsic is None:
+            return None
+        extrinsic = extrinsic.reshape(-1)
+        if extrinsic.size < 12:
+            return None
+        extrinsic = extrinsic[:12].reshape(3, 4)
+        if not np.all(np.isfinite(extrinsic)):
+            return None
+        return extrinsic.astype(np.float64, copy=False)
+
+    def _update_front_camera_cache(self, obs_like=None, info_like=None):
+        obs_dict = obs_like if isinstance(obs_like, dict) else {}
+        info_dict = info_like if isinstance(info_like, dict) else {}
+
+        front_rgb = self._take_last_columnar(obs_dict.get("front_rgb_list"))
+        front_rgb_np = self._to_numpy(front_rgb)
+        if front_rgb_np is not None and front_rgb_np.ndim >= 2:
+            self._front_rgb_shape = tuple(front_rgb_np.shape[:2])
+
+        front_extrinsic = self._take_last_columnar(
+            obs_dict.get("front_camera_extrinsic_list")
+        )
+        front_extrinsic_np = self._normalize_extrinsic_cv(front_extrinsic)
+        if front_extrinsic_np is not None:
+            self._front_camera_extrinsic_cv = front_extrinsic_np
+
+        front_intrinsic = self._take_last_columnar(info_dict.get("front_camera_intrinsic"))
+        front_intrinsic_np = self._normalize_intrinsic_cv(front_intrinsic)
+        if front_intrinsic_np is not None:
+            self._front_camera_intrinsic_cv = front_intrinsic_np
 
     @staticmethod
     def _empty_target():
@@ -215,13 +280,16 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
 
         return found_idx, command_dict.get("position")
 
-    def _apply_position_target(self, selected_target, option, target_position):
-        if target_position is None:
+    def _apply_position_target(self, selected_target, option, target_pixel):
+        if target_pixel is None:
             return
 
-        best_cand = select_target_with_position(
+        best_cand = select_target_with_pixel(
             available=option.get("available"),
-            position_like=target_position,
+            pixel_like=target_pixel,
+            intrinsic_cv=self._front_camera_intrinsic_cv,
+            extrinsic_cv=self._front_camera_extrinsic_cv,
+            image_shape=self._front_rgb_shape,
         )
         if best_cand is not None:
             selected_target.update(best_cand)
@@ -249,6 +317,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
 
     def _format_step_output(self, batch):
         obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = batch
+        self._update_front_camera_cache(obs_like=obs_batch, info_like=info_batch)
         info_flat = self._flatten_info_batch(info_batch)
         info_flat["available_multi_choices"] = getattr(self, "available_options", [])
         return (
@@ -261,13 +330,14 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
 
     def step(self, action):
         """
-        Execute one step: action is command_dict, must contain "label", optional "position".
+        Execute one step: action is command_dict, must contain "label", optional
+        pixel `position=[x, y]` in front_rgb.
         Return last-step signals for reward/terminated/truncated while keeping obs as dict-of-lists.
         """
         # 1) Build solver options once and prepare a mutable selected_target holder for solve() closures.
         selected_target, solve_options = self._build_step_options()
         # 2) Validate/resolve the incoming command into (option index, optional target position).
-        found_idx, target_position = self._resolve_command(action, solve_options)
+        found_idx, target_pixel = self._resolve_command(action, solve_options)
 
         # 3) For invalid command or unmatched label, keep legacy behavior: return an empty dense batch.
         if found_idx is None:
@@ -278,20 +348,20 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
         self._apply_position_target(
             selected_target=selected_target,
             option=option,
-            target_position=target_position,
+            target_pixel=target_pixel,
         )
 
         requires_target = "available" in option
         if requires_target:
-            if target_position is None:
+            if target_pixel is None:
                 raise ValueError(
                     f"Multi-choice action '{option.get('action', 'Unknown')}' requires "
-                    "a target position=[x, y, z], but command did not provide it."
+                    "a target pixel position=[x, y], but command did not provide it."
                 )
             if selected_target.get("obj") is None:
                 raise ValueError(
                     f"Multi-choice action '{option.get('action', 'Unknown')}' could not match "
-                    f"any available candidate from position={target_position}."
+                    f"any available candidate from position={target_pixel}."
                 )
 
         # 5) Execute selected solve() with dense step collection; raise on solve == -1.
