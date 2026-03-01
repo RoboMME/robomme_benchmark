@@ -61,7 +61,6 @@ OBS_ALWAYS_FIELDS = [
     "front_rgb_list",
     "wrist_rgb_list",
     "joint_state_list",
-    "end_effector_pose_raw",
     "eef_state_list",
     "gripper_state_list",
 ]

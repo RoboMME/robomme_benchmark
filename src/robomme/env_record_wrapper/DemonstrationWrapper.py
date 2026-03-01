@@ -314,7 +314,6 @@ class DemonstrationWrapper(gym.Wrapper):
             'front_rgb_list': image_np,
             'wrist_rgb_list': wrist_image_np,
             'joint_state_list': joint_state,
-            'end_effector_pose_raw': robot_endeffector_pose_np,
             'eef_state_list': eef_state_list_f64,
             'gripper_state_list': gripper_state,
         }

@@ -87,22 +87,6 @@ def assert_obs(obs: dict, tag: str) -> None:
         for key, dtype in (("front_depth_list", np.int16), ("wrist_depth_list", np.int16)):
             _assert_ndarray(obs[key][i], dtype, f"{pfx} {key}")
 
-        # ── end_effector_pose_raw → dict 内各键 float32，且 shape 无 batch 维 ──
-        eef_raw = obs["end_effector_pose_raw"][i]
-        assert isinstance(eef_raw, dict), f"[{pfx} end_effector_pose_raw] expected dict"
-        for key in ("pose", "quat", "rpy"):
-            assert key in eef_raw, f"[{pfx} end_effector_pose_raw] missing key '{key}'"
-            _assert_ndarray(eef_raw[key], np.float32, f"{pfx} end_effector_pose_raw['{key}']")
-        assert eef_raw["pose"].shape == (3,), (
-            f"[{pfx} end_effector_pose_raw['pose']] expected (3,), got {eef_raw['pose'].shape}"
-        )
-        assert eef_raw["quat"].shape == (4,), (
-            f"[{pfx} end_effector_pose_raw['quat']] expected (4,), got {eef_raw['quat'].shape}"
-        )
-        assert eef_raw["rpy"].shape == (3,), (
-            f"[{pfx} end_effector_pose_raw['rpy']] expected (3,), got {eef_raw['rpy'].shape}"
-        )
-
         # ── eef_state_list → float64, shape (6,) ─────────────────────────
         eef_state = obs["eef_state_list"][i]
         _assert_ndarray(eef_state, np.float64, f"{pfx} eef_state_list")
