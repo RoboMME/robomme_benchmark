@@ -44,7 +44,7 @@ DEFAULT_ENVS =[
 # "PickXtimes",
 # "StopCube",
 # "SwingXtimes",
-"BinFill",
+# "BinFill",
 
 # "VideoUnmaskSwap",
 # "VideoUnmask",
@@ -58,7 +58,7 @@ DEFAULT_ENVS =[
 
 # "InsertPeg",
 # 'MoveCube',
-# "PatternLock",
+"PatternLock",
 # "RouteStick"
     ]
 
@@ -674,7 +674,7 @@ def parse_args() -> argparse.Namespace:
         "--episodes",
         "-n",
         type=int,
-        default=60,
+        default=1,
         help="Number of episodes generated per environment (Default: 100)",
     )
     parser.add_argument(

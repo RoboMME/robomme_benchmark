@@ -153,8 +153,11 @@ def _print_step_extras(reward, terminated, truncated, tag: str):
 def _parse_oracle_command(choice_action: Optional[Any]) -> Optional[dict[str, Any]]:
     if not isinstance(choice_action, dict):
         return None
-    label = choice_action.get("label")
-    if not isinstance(label, str) or not label:
+    choice = choice_action.get("choice")
+    if not isinstance(choice, str) or not choice.strip():
+        return None
+    point = choice_action.get("point")
+    if not isinstance(point, (list, tuple, np.ndarray)) or len(point) != 2:
         return None
     return choice_action
 

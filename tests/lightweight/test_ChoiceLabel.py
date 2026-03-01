@@ -55,8 +55,8 @@ def test_map_action_text_to_option_label_strict_exact():
     assert matcher_mod.map_action_text_to_option_label(None, options) is None
 
 
-def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label(tmp_path):
-    h5_path = tmp_path / "label_oracle_commands.h5"
+def test_episode_dataset_resolver_extracts_choice_command_and_ignores_empty_choice(tmp_path):
+    h5_path = tmp_path / "choice_oracle_commands.h5"
 
     with h5py.File(h5_path, "w") as h5:
         episode_group = h5.create_group("episode_0")
@@ -67,7 +67,7 @@ def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label
             "choice_action",
             data=json.dumps(
                 {
-                    "label": "b",
+                    "choice": "B",
                     "point": [34, 12],
                 }
             ),
@@ -83,7 +83,7 @@ def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label
             "choice_action",
             data=json.dumps(
                 {
-                    "label": "",
+                    "choice": "",
                     "point": [30, 20],
                 }
             ),
@@ -100,7 +100,7 @@ def test_episode_dataset_resolver_extracts_label_command_and_ignores_empty_label
     )
     try:
         command0 = resolver.get_step("multi_choice", 0)
-        assert command0 == {"label": "b", "point": [34.0, 12.0]}
+        assert command0 == {"choice": "B", "point": [34.0, 12.0]}
         assert "position_3d" not in command0
 
         command1 = resolver.get_step("multi_choice", 1)

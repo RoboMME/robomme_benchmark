@@ -744,8 +744,9 @@ class RobommeRecordWrapper(gym.Wrapper):
         if position_2d is not None and len(position_2d) >= 2:
             # project_world_to_pixel returns [x, y]; schema stores [y, x].
             point_yx = [int(position_2d[1]), int(position_2d[0])]
+        choice = label.strip().upper() if isinstance(label, str) else ""
         return {
-            "label": label,
+            "choice": choice,
             "point": point_yx,
         }
 

@@ -63,12 +63,12 @@ def _build_h5(h5_path: Path) -> None:
     with h5py.File(h5_path, "w") as h5:
         ep = h5.create_group("episode_0")
 
-        # 非 subgoal boundary: 有效 label 也必须忽略
+        # 非 subgoal boundary: 有效 choice 也必须忽略
         _make_timestep(
             ep,
             0,
             choice_action={
-                "label": "a",
+                "choice": "A",
                 "point": [20, 10],
             },
             is_subgoal_boundary=False,
@@ -78,17 +78,17 @@ def _build_h5(h5_path: Path) -> None:
             ep,
             1,
             choice_action={
-                "label": "b",
+                "choice": "B",
                 "point": [34, 12],
             },
             is_subgoal_boundary=True,
         )
-        # subgoal boundary 但空标签: 跳过
+        # subgoal boundary 但空 choice: 跳过
         _make_timestep(
             ep,
             2,
             choice_action={
-                "label": "",
+                "choice": "",
                 "point": [30, 20],
             },
             is_subgoal_boundary=True,
@@ -98,7 +98,7 @@ def _build_h5(h5_path: Path) -> None:
             ep,
             3,
             choice_action={
-                "label": "c",
+                "choice": "C",
                 "point": [80, 70],
             },
             is_video_demo=True,
@@ -109,7 +109,7 @@ def _build_h5(h5_path: Path) -> None:
             ep,
             4,
             choice_action={
-                "label": "d",
+                "choice": "D",
                 "point": [11, 90],
             },
             is_subgoal_boundary=True,
@@ -132,7 +132,7 @@ def _build_h5(h5_path: Path) -> None:
         _make_timestep(
             ep,
             6,
-            choice_action={"label": "missing_point"},
+            choice_action={"choice": "MISSING_POINT"},
             is_subgoal_boundary=True,
         )
 
@@ -145,7 +145,7 @@ def _assert_record_schema_contract(h5_path: Path) -> None:
             raw = raw.decode("utf-8")
         payload = json.loads(raw)
         assert "serial_number" not in payload, "choice_action should not store serial_number"
-        assert payload["label"] == "b"
+        assert payload["choice"] == "B"
         assert payload["point"] == [34, 12]
         assert "position_3d" not in payload
         assert bool(ts1["info"]["is_subgoal_boundary"][()]) is True
@@ -161,12 +161,12 @@ def _assert_resolver_reads_by_is_subgoal_boundary(h5_path: Path) -> None:
         assert resolver.get_step("multi_choice", -1) is None
 
         command0 = resolver.get_step("multi_choice", 0)
-        assert command0 == {"label": "b", "point": [34.0, 12.0]}
+        assert command0 == {"choice": "B", "point": [34.0, 12.0]}
         assert "position_3d" not in command0
         assert "serial_number" not in command0
 
         command1 = resolver.get_step("multi_choice", 1)
-        assert command1 == {"label": "d", "point": [11.0, 90.0]}
+        assert command1 == {"choice": "D", "point": [11.0, 90.0]}
         assert "position_3d" not in command1
         assert "serial_number" not in command1
 

@@ -64,11 +64,11 @@ def generate_sample_actions(
 
     elif action_space == MULTI_CHOICE_ACTION_SPACE:
         # Sample multi-choice actions for demonstration.
-        # Format follows dataset convention: lowercase "label" + optional [x, y] pixel position.
+        # Format follows dataset convention: uppercase "choice" + optional [y, x] pixel position.
         choices = [
-            {"label": "a", "position": [320, 240]},
-            {"label": "b", "position": [420, 260]},
-            {"label": "c"},
+            {"choice": "A", "point": [240, 320]},
+            {"choice": "B", "point": [260, 420]},
+            {"choice": "C"},
         ]
         for choice in choices:
             yield choice

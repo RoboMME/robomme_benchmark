@@ -152,8 +152,11 @@ def _parse_oracle_command(choice_action: Optional[Any]) -> Optional[dict]:
     """与 dataset_replay—printType.py 中保持一致的 oracle 命令解析。"""
     if not isinstance(choice_action, dict):
         return None
-    label = choice_action.get("label")
-    if not isinstance(label, str) or not label:
+    choice = choice_action.get("choice")
+    if not isinstance(choice, str) or not choice.strip():
+        return None
+    point = choice_action.get("point")
+    if not isinstance(point, (list, tuple, np.ndarray)) or len(point) != 2:
         return None
     return choice_action
 

@@ -28,7 +28,7 @@ from ..logging_utils import logger
 class OraclePlannerDemonstrationWrapper(gym.Wrapper):
     """
     Wrap Robomme environment with Oracle planning logic into Gym Wrapper for demonstration/evaluation;
-    Input to step is command_dict (containing label and optional pixel point).
+    Input to step is command_dict (containing choice and optional pixel point).
     step returns obs as dict-of-lists and reward/terminated/truncated as last-step values.
     """
 
@@ -264,17 +264,21 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
     def _resolve_command(self, command_dict, solve_options):
         if not isinstance(command_dict, dict):
             return None, None
-        if "label" not in command_dict:
+        if "choice" not in command_dict:
             return None, None
 
-        target_label = command_dict.get("label")
-        if not isinstance(target_label, str) or not target_label:
+        target_choice = command_dict.get("choice")
+        if not isinstance(target_choice, str):
             return None, None
+        target_choice = target_choice.strip()
+        if not target_choice:
+            return None, None
+        target_label = target_choice.lower()
 
         found_idx = find_exact_label_option_index(target_label, solve_options)
         if found_idx == -1:
             logger.debug(
-                f"Error: Label '{target_label}' not found in current options by exact label match."
+                f"Error: Choice '{target_choice}' not found in current options by exact label match."
             )
             return None, None
 
@@ -343,7 +347,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
 
     def step(self, action):
         """
-        Execute one step: action is command_dict, must contain "label", optional
+        Execute one step: action is command_dict, must contain "choice", optional
         pixel `point=[y, x]` in front_rgb.
         Return last-step signals for reward/terminated/truncated while keeping obs as dict-of-lists.
         """
@@ -352,7 +356,7 @@ class OraclePlannerDemonstrationWrapper(gym.Wrapper):
         # 2) Validate/resolve the incoming command into (option index, optional target position).
         found_idx, target_pixel = self._resolve_command(action, solve_options)
 
-        # 3) For invalid command or unmatched label, keep legacy behavior: return an empty dense batch.
+        # 3) For invalid command or unmatched choice, keep legacy behavior: return an empty dense batch.
         if found_idx is None:
             return self._format_step_output(planner_denseStep.empty_step_batch())
 

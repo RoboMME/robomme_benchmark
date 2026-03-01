@@ -10,7 +10,7 @@ We support four `ACTION_SPACE` types:
 - `joint_angle`: 7 joint angles + gripper open/close
 - `ee_pose`: 3 position (xyz) + 3 rotation (rpy) + gripper open/close
 - `waypoint`: Same format as ee_pose, but executed in discrete keyframe steps
-- `multi_choice`: Command dict, e.g. `{"label": "a", "point": [y, x]}`; the total choices can be found in `info["available_multi_choices"]`, where the `point` is the pixel location on the front image. this action is designed for Video-QA research.
+- `multi_choice`: Command dict, e.g. `{"choice": "A", "point": [y, x]}`; the total choices can be found in `info["available_multi_choices"]`, where the `point` is the pixel location on the front image. this action is designed for Video-QA research.
 
 Note: Gripper closed is -1, gripper open is 1.
 

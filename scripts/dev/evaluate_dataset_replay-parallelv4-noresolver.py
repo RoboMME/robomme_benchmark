@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Script function: Unified dataset replay entry point, supports four action_spaces: joint_angle / ee_pose / waypoint / multi_choice.
-# Consistent with subgoal_evaluate_func.py's main loop and debug fields; the difference is that actions come from EpisodeDatasetResolver.
+# Consistent with subgoal_evaluate_func.py's main loop and debug fields; actions are read directly from HDF5 dataset files.
 # [New] Support parallel multi-process replay and alternate task assignment between two GPUs.
 
 import os
@@ -8,17 +8,24 @@ import sys
 import argparse
 import concurrent.futures
 import multiprocessing as mp
+from pathlib import Path
 from typing import Any, Optional
 
 import cv2
+import h5py
 import numpy as np
 import torch
 
+# Support running this file directly: python scripts/dev/<script>.py
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.dataset_replay import _build_action_sequence
 from robomme.robomme_env import *
 from robomme.robomme_env.utils import *
 from robomme.env_record_wrapper import (
     BenchmarkEnvBuilder,
-    EpisodeDatasetResolver,
 )
 from robomme.env_record_wrapper.OraclePlannerDemonstrationWrapper import (
     OraclePlannerDemonstrationWrapper,
@@ -50,22 +57,22 @@ OUT_VIDEO_DIR = "/data/hongzefu/dataset_replay-0226-test"
 MAX_STEPS = 2000
 
 DEFAULT_ENV_IDS = [
-# "PickXtimes",
-# "StopCube",
-# "SwingXtimes",
-# "BinFill",
-# "VideoUnmaskSwap",
-# "VideoUnmask",
-# "ButtonUnmaskSwap",
-# "ButtonUnmask",
-# "VideoRepick",
-# "VideoPlaceButton",
-# "VideoPlaceOrder",
-# "PickHighlight",
-# "InsertPeg",
-# "MoveCube",
+"PickXtimes",
+"StopCube",
+"SwingXtimes",
+"BinFill",
+"VideoUnmaskSwap",
+"VideoUnmask",
+"ButtonUnmaskSwap",
+"ButtonUnmask",
+"VideoRepick",
+"VideoPlaceButton",
+"VideoPlaceOrder",
+"PickHighlight",
+"InsertPeg",
+"MoveCube",
 "PatternLock",
-# "RouteStick",
+"RouteStick",
  ]
 
 def _parse_oracle_command(choice_action: Optional[Any]) -> Optional[dict[str, Any]]:
@@ -286,7 +293,7 @@ def evaluate_episode(
     """
     Evaluation logic for a single Episode.
     """
-    # Reconstruct Envs and Resolver (avoid passing complex objects across processes)
+    # Reconstruct envs in worker process (avoid passing complex objects across processes)
     env_builder = BenchmarkEnvBuilder(
         env_id=env_id,
         dataset="train",
@@ -296,7 +303,6 @@ def evaluate_episode(
     )
 
     env = None
-    dataset_resolver = None
     
     try:
         env = env_builder.make_env_for_episode(
@@ -311,10 +317,19 @@ def evaluate_episode(
             include_front_camera_intrinsic=True,
             include_wrist_camera_intrinsic=True,
         )
-        dataset_resolver = EpisodeDatasetResolver(
-            env_id=env_id,
-            episode=episode,
-            dataset_directory=dataset_root,
+
+        file_path = Path(dataset_root) / f"record_dataset_{env_id}.h5"
+        if not file_path.exists():
+            raise FileNotFoundError(f"dataset file not found: {file_path}")
+        episode_key = f"episode_{episode}"
+        with h5py.File(file_path, "r") as data:
+            if episode_key not in data:
+                raise KeyError(f"missing key '{episode_key}' in {file_path}")
+            action_sequence = _build_action_sequence(data[episode_key], action_space)
+        print(
+            f"[{env_id}] episode={episode} h5={file_path} "
+            f"episode_key={episode_key} action_space={action_space} "
+            f"action_count={len(action_sequence)}"
         )
 
         # obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = env.reset()
@@ -361,13 +376,11 @@ def evaluate_episode(
         rollout_subgoal_grounded: list[Any] = []
         # ######## Video saving variable initialization end ########
 
-        while True:
-            replay_key = action_space
-            action = dataset_resolver.get_step(replay_key, step)
+        for _, action in enumerate(action_sequence):
             if action_space == "multi_choice":
                 action = _parse_oracle_command(action)
             if action is None:
-                break
+                continue
 
             candidate_pixels: list[list[int]] = []
             clicked_pixel: Optional[list[int]] = None
@@ -468,8 +481,6 @@ def evaluate_episode(
         # traceback.print_exc()
         return f"[{env_id}] episode {episode} replay exception, skip. {exc}"
     finally:
-        if dataset_resolver is not None:
-            dataset_resolver.close()
         if env is not None:
             env.close()
 
@@ -542,8 +553,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--action_spaces",
         type=_parse_action_spaces,
-        #default=AVAILABLE_ACTION_SPACES.copy(),
-        default=["multi_choice",],
+        default=AVAILABLE_ACTION_SPACES.copy(),
+        #default=["multi_choice",],
         help=(
             "Comma-separated action spaces to replay in order. "
             "Available: joint_angle,ee_pose,waypoint,multi_choice. "
