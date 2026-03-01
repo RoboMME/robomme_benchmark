@@ -5,6 +5,13 @@
 import os
 from typing import Any, Optional
 
+
+
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+
+
 import cv2
 import numpy as np
 import torch
@@ -27,12 +34,12 @@ from robomme.robomme_env.utils.choice_action_mapping import (
 from robomme.robomme_env.utils.save_reset_video import save_robomme_video
 
 # Only enable one ACTION_SPACE; others are commented out for manual switching
-ACTION_SPACE = "multi_choice"
+ACTION_SPACE = "joint_angle"
 
 
-GUI_RENDER = True
+GUI_RENDER = False
 
-DATASET_ROOT = "/data/hongzefu/data_0226-test"
+DATASET_ROOT = "/data/hongzefu/data_0226"
 
 DEFAULT_ENV_IDS = [
 #"PickXtimes",
@@ -376,8 +383,7 @@ def main():
                 #               terminated (scalar tensor), truncated (scalar tensor), info (flat dict)
                 obs, reward, terminated, truncated, info = env.step(action)
 
-                # --- Explicitly read all obs fields (dict-of-lists, typically 1 element per list) ---
-                maniskill_obs = obs["maniskill_obs"]
+                # --- Explicitly read all obs fields (dict-of-lists, typically 1 element per list) --                maniskill_obs = obs["maniskill_obs"]
                 front_rgb_list = _to_frame_list(obs["front_rgb_list"])
                 wrist_rgb_list = _to_frame_list(obs["wrist_rgb_list"])
                 front_depth_list = obs["front_depth_list"]

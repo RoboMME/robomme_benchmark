@@ -63,7 +63,7 @@ DEFAULT_ENVS =[
     ]
 
 # Reference dataset metadata root directory: used to read difficulty and seed
-SOURCE_METADATA_ROOT = Path("/data/hongzefu/data_1206")
+SOURCE_METADATA_ROOT = Path("/data/hongzefu/robomme_benchmark/src/robomme/env_metadata/1206")
 VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
 DATASET_SCREW_MAX_ATTEMPTS = 3
 DATASET_RRT_MAX_ATTEMPTS = 3
@@ -757,8 +757,8 @@ def main() -> None:
         )
 
         # Create shared temporary folder for all episodes
-        temp_folder =  Path(f"/data/hongzefu/data_0226-test/temp_{env_id}_episodes")
-        final_dataset_path =  Path(f"/data/hongzefu/data_0226-test/record_dataset_{env_id}.h5")
+        temp_folder =  Path(f"/data/hongzefu/data_0226/temp_{env_id}_episodes")
+        final_dataset_path =  Path(f"/data/hongzefu/data_0226/record_dataset_{env_id}.h5")
         #final_dataset_path =  Path(f"/data/hongzefu/dataset_generate/record_dataset_{env_id}.h5")
 
         print(f"\n{'='*80}")

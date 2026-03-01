@@ -3,6 +3,9 @@ Replay episodes from HDF5 datasets and save rollout videos.
 Loads recorded actions from record_dataset_<Task>.h5, steps the environment
 """
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import json
 from pathlib import Path
 from typing import Any, Dict, Literal, Union
@@ -241,9 +244,9 @@ def process_episode(
 
 
 def replay(
-    h5_data_dir: str = "/data/hongzefu/data_0225",
-    action_space_type: ActionSpaceType = "multi_choice",
-    replay_number: int = 1,
+    h5_data_dir: str = "/data/hongzefu/data_0226",
+    action_space_type: ActionSpaceType = "ee_pose",
+    replay_number: int = 10,
 ) -> None:
     """Replay episodes from HDF5 dataset files and save rollout videos."""
     #for task_id in BenchmarkEnvBuilder.get_task_list():
