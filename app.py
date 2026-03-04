@@ -1,6 +1,8 @@
 """Dummy Gradio entrypoint with layout similar to original RoboMME UI."""
 
+import logging
 import os
+import sys
 
 # Disable SSR for HF Spaces compatibility (avoids gradio_api heartbeat 404).
 os.environ["GRADIO_SSR_MODE"] = "false"
@@ -35,6 +37,31 @@ CSS = """
     justify-content: center;
 }
 """
+
+
+def _setup_logging() -> logging.Logger:
+    """Configure terminal logging for runtime debugging."""
+    level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except Exception:
+        pass
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        stream=sys.stdout,
+        force=True,
+    )
+    # Keep noisy dependency logs down unless explicitly requested.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.access").setLevel(logging.INFO)
+    logger = logging.getLogger("robomme.app")
+    logger.info("Logging initialized with LOG_LEVEL=%s", level_name)
+    return logger
+
+
+LOGGER = _setup_logging()
 
 
 def _task_goal(task_name: str) -> str:
@@ -96,15 +123,18 @@ def create_dummy_demo() -> gr.Blocks:
     """Build a dummy app that mimics original layout without ManiSkill."""
 
     def on_task_change(task_name: str):
+        LOGGER.debug("on_task_change(task_name=%s)", task_name)
         task = task_name if task_name in DUMMY_TASKS else DUMMY_TASKS[0]
         step = 0
         return (step,) + _build_task_updates(task, step, PHASE_DEMO_VIDEO)
 
     def skip_video(task_name: str, step: int):
+        LOGGER.debug("skip_video(task_name=%s, step=%s)", task_name, step)
         task = task_name if task_name in DUMMY_TASKS else DUMMY_TASKS[0]
         return _build_task_updates(task, step, PHASE_ACTION_KEYPOINT)
 
     def on_reference_action(task_name: str):
+        LOGGER.debug("on_reference_action(task_name=%s)", task_name)
         actions = _task_actions(task_name)
         return (
             gr.update(value=actions[0]),
@@ -113,11 +143,20 @@ def create_dummy_demo() -> gr.Blocks:
 
     def on_map_click(evt: gr.SelectData):
         if evt is None or evt.index is None:
+            LOGGER.debug("on_map_click received empty event")
             return ""
         x, y = evt.index
+        LOGGER.debug("on_map_click(x=%s, y=%s)", x, y)
         return f"({x}, {y})"
 
     def execute_step(task_name: str, action_name: str, coords_text: str, step: int):
+        LOGGER.info(
+            "execute_step(task_name=%s, action=%s, coords=%s, step=%s)",
+            task_name,
+            action_name,
+            coords_text,
+            step,
+        )
         task = task_name if task_name in DUMMY_TASKS else DUMMY_TASKS[0]
         next_step = min(step + 1, 5)
         action = action_name or "No action selected"
@@ -132,11 +171,13 @@ def create_dummy_demo() -> gr.Blocks:
         return next_step, _dummy_frame(task, next_step), log, progress
 
     def restart_episode(task_name: str):
+        LOGGER.info("restart_episode(task_name=%s)", task_name)
         task = task_name if task_name in DUMMY_TASKS else DUMMY_TASKS[0]
         step = 0
         return (step,) + _build_task_updates(task, step, PHASE_DEMO_VIDEO)
 
     def next_task(current_task: str):
+        LOGGER.info("next_task(current_task=%s)", current_task)
         try:
             idx = DUMMY_TASKS.index(current_task)
         except ValueError:
@@ -411,6 +452,9 @@ _original_launch = demo.launch
 def _patched_launch(**kwargs):
     kwargs.setdefault("ssr_mode", False)
     kwargs.setdefault("show_error", True)
+    kwargs.setdefault("debug", True)
+    kwargs.setdefault("quiet", False)
+    LOGGER.info("Launching app with kwargs=%s", kwargs)
     return _original_launch(**kwargs)
 
 
@@ -418,9 +462,12 @@ demo.launch = _patched_launch
 
 
 if __name__ == "__main__":
+    LOGGER.info("Starting app.py entrypoint")
     demo.launch(
         server_name="0.0.0.0",
         server_port=int(os.getenv("PORT", "7860")),
         ssr_mode=False,
         show_error=True,
+        debug=True,
+        quiet=False,
     )
