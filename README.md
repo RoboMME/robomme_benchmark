@@ -1,7 +1,7 @@
 ---
 title: RoboMME Oracle Planner
 sdk: gradio
-app_file: app.py
+app_file: gradio-web/main.py
 python_version: "3.11"
 ---
 

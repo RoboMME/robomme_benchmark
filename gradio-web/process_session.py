@@ -10,12 +10,11 @@
 3. 进程间通信：通过 multiprocessing.Queue 进行命令和结果的传递
 4. 视频帧同步：工作进程产生的新帧通过 stream_queue 推送到主进程，由后台线程同步到代理的本地缓存
 """
+import logging
 import multiprocessing
 import queue
 import threading
 import time
-import traceback
-import numpy as np
 import sys
 import os
 
@@ -46,6 +45,35 @@ CMD_GET_PIL_IMAGE = "get_pil_image"
 CMD_EXECUTE_ACTION = "execute_action"
 CMD_GET_REFERENCE_ACTION = "get_reference_action"
 CMD_CLOSE = "close"
+LOGGER = logging.getLogger("robomme.process_session")
+
+
+def _setup_worker_logging():
+    level_name = os.getenv("LOG_LEVEL", "DEBUG").upper()
+    level = getattr(logging, level_name, logging.DEBUG)
+    logging.basicConfig(
+        level=level,
+        format=(
+            "%(asctime)s | %(levelname)s | %(name)s | "
+            "pid=%(process)d tid=%(threadName)s | %(message)s"
+        ),
+        stream=sys.stdout,
+        force=True,
+    )
+    for noisy_logger in [
+        "asyncio",
+        "httpx",
+        "httpcore",
+        "urllib3",
+        "matplotlib",
+        "PIL",
+        "h5py",
+        "trimesh",
+        "toppra",
+    ]:
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+    logging.getLogger("robomme").setLevel(logging.DEBUG)
+    LOGGER.debug("worker logging initialized level=%s", level_name)
 
 def _sanitize_options(options):
     """
@@ -92,10 +120,17 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
         dataset_root: 数据集根目录路径
         gui_render: 是否使用GUI渲染模式
     """
+    _setup_worker_logging()
     session = None
     try:
+        LOGGER.info(
+            "worker loop starting dataset_root=%s gui_render=%s",
+            dataset_root,
+            gui_render,
+        )
         session = OracleSession(dataset_root=dataset_root, gui_render=gui_render)
         session.stream_frame_callback = lambda frames: stream_queue.put({"base": frames, "wrist": []})
+        LOGGER.info("worker OracleSession initialized")
         
         while True:
             try:
@@ -107,15 +142,23 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
             cmd = cmd_data["cmd"]
             args = cmd_data.get("args", [])
             kwargs = cmd_data.get("kwargs", {})
+            LOGGER.debug("worker received cmd=%s args=%s kwargs_keys=%s", cmd, len(args), list(kwargs.keys()))
             
             if cmd == CMD_CLOSE:
                 if session:
                     session.close()
+                LOGGER.info("worker received close command, exiting")
                 break
             
             elif cmd == CMD_LOAD_EPISODE:
                 # 加载环境episode
                 res = session.load_episode(*args, **kwargs)
+                LOGGER.info(
+                    "worker load_episode env=%s episode=%s result_msg=%s",
+                    getattr(session, "env_id", None),
+                    getattr(session, "episode_idx", None),
+                    res[1] if isinstance(res, tuple) and len(res) > 1 else None,
+                )
                 
                 # 更新帧索引跟踪（用于增量同步）
                 session.last_base_frame_idx = len(session.base_frames)
@@ -148,12 +191,20 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
                 # 执行动作（重计算任务）
                 try:
                     res = session.execute_action(*args, **kwargs)
+                    LOGGER.info(
+                        "worker execute_action done env=%s episode=%s done=%s",
+                        getattr(session, "env_id", None),
+                        getattr(session, "episode_idx", None),
+                        res[2] if isinstance(res, tuple) and len(res) > 2 else None,
+                    )
                 except ScrewPlanFailure as e:
                     # 捕获 ScrewPlanFailure 并作为特殊状态传递到主进程，用于显示弹窗
+                    LOGGER.warning("worker screw_plan_failure: %s", e)
                     result_queue.put({"status": "screw_plan_failure", "message": str(e)})
                     continue
                 except Exception as e:
                     # 捕获所有其他异常并传递到主进程，用于显示弹窗
+                    LOGGER.exception("worker execution_error")
                     result_queue.put({"status": "execution_error", "message": str(e)})
                     continue
                 
@@ -175,6 +226,11 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
                 # 如果有新帧，推送到流队列
                 if new_base or new_wrist:
                     stream_queue.put({"base": new_base, "wrist": new_wrist})
+                LOGGER.debug(
+                    "worker execute_action streamed frames base=%s wrist=%s",
+                    len(new_base),
+                    len(new_wrist),
+                )
 
                 # 获取演示状态（从 DemonstrationWrapper 获取）
                 is_demonstration = False
@@ -209,6 +265,11 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
                 # 如果有新帧，推送到流队列
                 if new_base or new_wrist:
                     stream_queue.put({"base": new_base, "wrist": new_wrist})
+                LOGGER.debug(
+                    "worker update_observation streamed frames base=%s wrist=%s",
+                    len(new_base),
+                    len(new_wrist),
+                )
                 
                 # 获取演示状态（从 DemonstrationWrapper 获取）
                 is_demonstration = False
@@ -226,13 +287,15 @@ def session_worker_loop(cmd_queue, result_queue, stream_queue, dataset_root, gui
 
             elif cmd == CMD_GET_REFERENCE_ACTION:
                 res = session.get_reference_action(*args, **kwargs)
+                LOGGER.debug("worker get_reference_action ok=%s", bool(res.get("ok")) if isinstance(res, dict) else None)
                 result_queue.put({"status": "success", "result": res})
                 
             else:
+                LOGGER.error("worker unknown command=%s", cmd)
                 result_queue.put({"status": "error", "message": f"Unknown command: {cmd}"})
                 
     except Exception as e:
-        traceback.print_exc()
+        LOGGER.exception("worker fatal error")
         result_queue.put({"status": "fatal", "message": str(e)})
 
 
@@ -273,6 +336,12 @@ class ProcessSessionProxy:
             daemon=True
         )
         self.process.start()
+        LOGGER.info(
+            "ProcessSessionProxy started worker pid=%s dataset_root=%s gui_render=%s",
+            self.process.pid,
+            dataset_root,
+            gui_render,
+        )
         
         # 本地状态缓存（从工作进程同步）
         self.env_id = None
@@ -317,6 +386,7 @@ class ProcessSessionProxy:
             except queue.Empty:
                 continue
             except Exception:
+                LOGGER.exception("ProcessSessionProxy sync loop crashed")
                 break
     
     def _send_cmd(self, cmd, *args, **kwargs):
@@ -336,10 +406,26 @@ class ProcessSessionProxy:
             TimeoutError: 工作进程超时（600秒）
         """
         # 发送命令到工作进程
+        start_ts = time.time()
+        LOGGER.debug(
+            "proxy send cmd=%s pid=%s args=%s kwargs_keys=%s",
+            cmd,
+            self.process.pid,
+            len(args),
+            list(kwargs.keys()),
+        )
         self.cmd_queue.put({"cmd": cmd, "args": args, "kwargs": kwargs})
         try:
             # 等待结果（重任务如加载/执行可能需要较长时间，设置600秒超时）
             res = self.result_queue.get(timeout=600) 
+            elapsed_ms = int((time.time() - start_ts) * 1000)
+            LOGGER.debug(
+                "proxy recv cmd=%s pid=%s status=%s elapsed_ms=%s",
+                cmd,
+                self.process.pid,
+                res.get("status"),
+                elapsed_ms,
+            )
             
             # 检查错误状态并转换为异常，以便在 gradio_callbacks 中捕获并显示弹窗
             if res.get("status") == "screw_plan_failure":
@@ -366,6 +452,7 @@ class ProcessSessionProxy:
                         
             return res.get("result")
         except queue.Empty:
+            LOGGER.error("proxy command timeout cmd=%s pid=%s", cmd, self.process.pid)
             raise TimeoutError("工作进程超时")
 
     def load_episode(self, env_id, episode_idx):
@@ -440,9 +527,13 @@ class ProcessSessionProxy:
         self.stop_sync = True
         try:
             self.cmd_queue.put({"cmd": CMD_CLOSE})
-        except:
+            LOGGER.debug("proxy close command sent pid=%s", self.process.pid)
+        except Exception:
+            LOGGER.exception("proxy failed to send close command pid=%s", self.process.pid)
             pass
         # 等待工作进程优雅退出
         self.process.join(timeout=1)
         if self.process.is_alive():
+            LOGGER.warning("proxy worker still alive after join; terminating pid=%s", self.process.pid)
             self.process.terminate()
+        LOGGER.info("ProcessSessionProxy closed pid=%s", self.process.pid)

@@ -12,11 +12,12 @@
 实际的 OracleSession 运行在独立的工作进程中，通过代理对象进行通信。
 当同一用户第二次登录时，系统会自动清理旧会话的所有资源（进程、RAM、VRAM、状态数据等）。
 """
+import logging
 import uuid
 import threading
-import traceback
 import time
 from process_session import ProcessSessionProxy
+LOGGER = logging.getLogger("robomme.state_manager")
 
 # --- 全局会话存储 ---
 # 存储所有用户的 ProcessSessionProxy 实例
@@ -88,6 +89,7 @@ def create_session():
     with _state_lock:
         GLOBAL_SESSIONS[uid] = session
         SESSION_LAST_ACTIVITY[uid] = time.time()
+    LOGGER.info("create_session uid=%s total_sessions=%s", uid, len(GLOBAL_SESSIONS))
     return uid
 
 
@@ -289,22 +291,21 @@ def cleanup_session(uid):
         session = GLOBAL_SESSIONS.get(uid)
         if session:
             try:
-                print(f"Cleaning up session {uid}: closing ProcessSessionProxy...")
+                LOGGER.info("cleanup_session uid=%s closing ProcessSessionProxy", uid)
                 session.close()
-                print(f"Session {uid}: ProcessSessionProxy closed successfully")
+                LOGGER.info("cleanup_session uid=%s proxy closed", uid)
             except Exception as e:
-                print(f"Error closing ProcessSessionProxy for {uid}: {e}")
-                traceback.print_exc()
+                LOGGER.exception("cleanup_session uid=%s proxy close failed: %s", uid, e)
         
         # 2. 从 GLOBAL_SESSIONS 中移除
         if uid in GLOBAL_SESSIONS:
             del GLOBAL_SESSIONS[uid]
-            print(f"Session {uid}: removed from GLOBAL_SESSIONS")
+            LOGGER.debug("cleanup_session uid=%s removed from GLOBAL_SESSIONS", uid)
         
         # 3. 清理任务索引
         if uid in TASK_INDEX_MAP:
             del TASK_INDEX_MAP[uid]
-            print(f"Session {uid}: task index cleaned up")
+            LOGGER.debug("cleanup_session uid=%s task index cleaned", uid)
 
         # 4. 清理UI阶段
         if uid in UI_PHASE_MAP:
@@ -313,22 +314,22 @@ def cleanup_session(uid):
         # 清理播放按钮状态
         if uid in PLAY_BUTTON_CLICKED:
             del PLAY_BUTTON_CLICKED[uid]
-            print(f"Session {uid}: UI phase cleaned up")
+            LOGGER.debug("cleanup_session uid=%s play button state cleaned", uid)
         
         # 5. 清理活动时间跟踪
         if uid in SESSION_LAST_ACTIVITY:
             del SESSION_LAST_ACTIVITY[uid]
-            print(f"Session {uid}: last activity time cleaned up")
+            LOGGER.debug("cleanup_session uid=%s last activity cleaned", uid)
         
         # 6. 清理超时警告标志
         if uid in SESSION_TIMEOUT_WARNED:
             del SESSION_TIMEOUT_WARNED[uid]
-            print(f"Session {uid}: timeout warning flag cleaned up")
+            LOGGER.debug("cleanup_session uid=%s timeout warning flag cleaned", uid)
         
         # 注意：不清理 EXECUTE_COUNTS，因为它是按任务跟踪的，不是按 session 跟踪的
         # 如果需要清理，应该在任务切换时调用 reset_execute_count
     
-    print(f"Session {uid}: all resources cleaned up successfully")
+    LOGGER.info("cleanup_session uid=%s done", uid)
 
 
 def update_session_activity(uid):
@@ -343,6 +344,7 @@ def update_session_activity(uid):
         # 如果之前被警告过，清除警告标志
         if uid in SESSION_TIMEOUT_WARNED:
             del SESSION_TIMEOUT_WARNED[uid]
+            LOGGER.debug("update_session_activity uid=%s cleared timeout warning", uid)
 
 
 def get_session_activity(uid):
@@ -396,14 +398,18 @@ def check_and_cleanup_timeout_sessions():
                 with _state_lock:
                     SESSION_TIMEOUT_WARNED[uid] = True
                 timeout_sessions.append(uid)
-                print(f"Session {uid}: 超时警告 - 已超过 {SESSION_TIMEOUT} 秒未活动")
+                LOGGER.warning("session timeout warning uid=%s elapsed=%.2fs limit=%ss", uid, elapsed, SESSION_TIMEOUT)
             elif elapsed > SESSION_TIMEOUT + 5:
                 # 已警告且再等5秒仍未活动，标记为需要清理
                 warned_sessions_to_cleanup.append(uid)
     
     # 清理超时的session
     for uid in warned_sessions_to_cleanup:
-        print(f"Session {uid}: 超时清理 - 已超过 {SESSION_TIMEOUT + 5} 秒未活动，开始清理资源")
+        LOGGER.warning(
+            "session timeout cleanup uid=%s elapsed_limit=%ss",
+            uid,
+            SESSION_TIMEOUT + 5,
+        )
         cleanup_session(uid)
         # cleanup_session内部会清理SESSION_LAST_ACTIVITY和SESSION_TIMEOUT_WARNED
 
@@ -424,8 +430,7 @@ def _timeout_monitor_loop():
         try:
             check_and_cleanup_timeout_sessions()
         except Exception as e:
-            print(f"Error in timeout monitor loop: {e}")
-            traceback.print_exc()
+            LOGGER.exception("timeout monitor loop error: %s", e)
         
         # 每5秒检查一次
         for _ in range(50):  # 5秒 = 50 * 0.1秒
@@ -443,7 +448,7 @@ def start_timeout_monitor():
     
     with _timeout_monitor_lock:
         if _timeout_monitor_running:
-            print("Timeout monitor is already running")
+            LOGGER.info("timeout monitor already running")
             return
         
         _timeout_monitor_running = True
@@ -453,7 +458,7 @@ def start_timeout_monitor():
             name="SessionTimeoutMonitor"
         )
         _timeout_monitor_thread.start()
-        print("Session timeout monitor started")
+        LOGGER.info("session timeout monitor started")
 
 
 def stop_timeout_monitor():
@@ -470,4 +475,4 @@ def stop_timeout_monitor():
         _timeout_monitor_running = False
         if _timeout_monitor_thread:
             _timeout_monitor_thread.join(timeout=2.0)
-            print("Session timeout monitor stopped")
+            LOGGER.info("session timeout monitor stopped")

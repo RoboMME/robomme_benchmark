@@ -2,6 +2,7 @@
 Gradio回调函数模块
 响应UI事件，调用业务逻辑，返回UI更新
 """
+import logging
 import gradio as gr
 import numpy as np
 import time
@@ -39,6 +40,14 @@ from note_content import get_task_hint
 # Each uid keeps its own FIFO queue and sampling cursor.
 _LIVE_OBS_REFRESH = {}
 _LIVE_OBS_REFRESH_LOCK = threading.Lock()
+LOGGER = logging.getLogger("robomme.callbacks")
+
+
+def _uid_for_log(uid):
+    if not uid:
+        return "<none>"
+    text = str(uid)
+    return text if len(text) <= 12 else f"{text[:8]}..."
 
 
 def capitalize_first_letter(text: str) -> str:
@@ -164,6 +173,7 @@ def show_loading_info():
     Returns:
         gr.update: 显示 loading overlay group
     """
+    LOGGER.debug("show_loading_info: displaying loading overlay")
     return gr.update(visible=True)
 
 
@@ -180,6 +190,11 @@ def switch_to_execute_phase(uid):
     if uid:
         session = get_session(uid)
         base_count = len(getattr(session, "base_frames", []) or []) if session else 0
+        LOGGER.debug(
+            "switch_to_execute_phase uid=%s base_frames=%s",
+            _uid_for_log(uid),
+            base_count,
+        )
         with _LIVE_OBS_REFRESH_LOCK:
             _LIVE_OBS_REFRESH[uid] = {
                 "frame_queue": queue.Queue(),
@@ -199,6 +214,7 @@ def switch_to_execute_phase(uid):
 def switch_to_action_phase(uid=None):
     """Switch display to action phase and restore control panel interactions."""
     if uid:
+        LOGGER.debug("switch_to_action_phase uid=%s", _uid_for_log(uid))
         with _LIVE_OBS_REFRESH_LOCK:
             _LIVE_OBS_REFRESH.pop(uid, None)
     return (
@@ -355,6 +371,7 @@ def on_video_end_transition(uid):
 
 
 def _task_load_failed_response(uid, message):
+    LOGGER.warning("task_load_failed uid=%s message=%s", _uid_for_log(uid), message)
     return (
         uid,
         gr.update(visible=True),  # main_interface
@@ -394,17 +411,24 @@ def _load_status_task(uid, status):
     except (TypeError, ValueError):
         completed_count = 0
     progress_text = f"Completed: {completed_count}"
+    LOGGER.info(
+        "load_status_task uid=%s env=%s episode=%s completed=%s",
+        _uid_for_log(uid),
+        env_id,
+        ep_num,
+        completed_count,
+    )
 
     session = get_session(uid)
     if session is None:
-        print(f"Session {uid} not found, creating new session")
+        LOGGER.warning("session missing for uid=%s, creating ProcessSessionProxy", _uid_for_log(uid))
         session = ProcessSessionProxy()
         with _state_lock:
             GLOBAL_SESSIONS[uid] = session
             SESSION_LAST_ACTIVITY[uid] = time.time()
-        print(f"New session created for {uid}")
+        LOGGER.info("created replacement session for uid=%s", _uid_for_log(uid))
 
-    print(f"Loading {env_id} Ep {ep_num} for {uid}")
+    LOGGER.debug("loading episode env=%s episode=%s uid=%s", env_id, ep_num, _uid_for_log(uid))
 
     with _LIVE_OBS_REFRESH_LOCK:
         _LIVE_OBS_REFRESH.pop(uid, None)
@@ -413,6 +437,14 @@ def _load_status_task(uid, status):
 
     img, load_msg = session.load_episode(env_id, int(ep_num))
     actual_env_id = getattr(session, "env_id", None) or env_id
+    LOGGER.debug(
+        "load_episode result uid=%s env=%s episode=%s img_none=%s message=%s",
+        _uid_for_log(uid),
+        actual_env_id,
+        ep_num,
+        img is None,
+        load_msg,
+    )
 
     if img is not None:
         start_time = datetime.now().isoformat()
@@ -460,6 +492,12 @@ def _load_status_task(uid, status):
         else:
             opt_label_with_hint = opt_label
         radio_choices.append((opt_label_with_hint, opt_idx))
+    LOGGER.debug(
+        "options prepared uid=%s env=%s count=%s",
+        _uid_for_log(uid),
+        actual_env_id,
+        len(radio_choices),
+    )
 
     demo_video_path = None
     has_demo_video = False
@@ -479,6 +517,13 @@ def _load_status_task(uid, status):
                         demo_video_path = None
             except Exception:
                 demo_video_path = None
+        LOGGER.debug(
+            "demo video decision uid=%s env=%s should_show=%s has_path=%s",
+            _uid_for_log(uid),
+            actual_env_id,
+            should_show,
+            bool(demo_video_path),
+        )
 
     img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
 
@@ -537,17 +582,22 @@ def init_session_and_load_task(uid):
     if not uid:
         uid = create_session()
 
-    print(f"[DEBUG init_session_and_load_task] Calling user_manager.init_session({uid})")
+    LOGGER.debug("init_session_and_load_task: init_session uid=%s", _uid_for_log(uid))
     success, msg, status = user_manager.init_session(uid)
-    print(f"[DEBUG init_session_and_load_task] init_session result: success={success}, msg={msg}")
+    LOGGER.debug(
+        "init_session_and_load_task result uid=%s success=%s msg=%s",
+        _uid_for_log(uid),
+        success,
+        msg,
+    )
 
     if uid:
         update_session_activity(uid)
 
     if not success:
-        print(f"[DEBUG init_session_and_load_task] Failed, returning error response")
+        LOGGER.warning("init_session_and_load_task failed uid=%s msg=%s", _uid_for_log(uid), msg)
         return _task_load_failed_response(uid, msg)
-    print(f"[DEBUG init_session_and_load_task] Success, loading task...")
+    LOGGER.debug("init_session_and_load_task success uid=%s -> load_status_task", _uid_for_log(uid))
     return _load_status_task(uid, status)
 
 
@@ -556,10 +606,12 @@ def load_next_task_wrapper(uid):
 
     if not uid:
         uid = create_session()
+        LOGGER.debug("load_next_task_wrapper created uid=%s", _uid_for_log(uid))
 
     if uid:
         update_session_activity(uid)
 
+    LOGGER.info("load_next_task_wrapper uid=%s", _uid_for_log(uid))
     status = user_manager.next_episode_same_env(uid)
     if not status:
         return _task_load_failed_response(uid, "Failed to load next task")
@@ -570,10 +622,12 @@ def restart_episode_wrapper(uid):
     """Reload the current env + episode."""
     if not uid:
         uid = create_session()
+        LOGGER.debug("restart_episode_wrapper created uid=%s", _uid_for_log(uid))
 
     if uid:
         update_session_activity(uid)
 
+    LOGGER.info("restart_episode_wrapper uid=%s", _uid_for_log(uid))
     status = user_manager.get_session_status(uid)
     current_task = status.get("current_task") if isinstance(status, dict) else None
     if not current_task:
@@ -591,10 +645,16 @@ def switch_env_wrapper(uid, selected_env):
     """Switch env from Current Task dropdown and randomly assign an episode."""
     if not uid:
         uid = create_session()
+        LOGGER.debug("switch_env_wrapper created uid=%s", _uid_for_log(uid))
 
     if uid:
         update_session_activity(uid)
 
+    LOGGER.info(
+        "switch_env_wrapper uid=%s selected_env=%s",
+        _uid_for_log(uid),
+        selected_env,
+    )
     if selected_env:
         status = user_manager.switch_env_and_random_episode(uid, selected_env)
     else:
@@ -616,6 +676,7 @@ def on_map_click(uid, option_value, evt: gr.SelectData):
     
     session = get_session(uid)
     if not session:
+        LOGGER.warning("on_map_click: missing session uid=%s", _uid_for_log(uid))
         return None, "Session Error"
         
     # Check if current option actually needs coordinates
@@ -634,12 +695,25 @@ def on_map_click(uid, option_value, evt: gr.SelectData):
                  needs_coords = True
     
     if not needs_coords:
+        LOGGER.debug(
+            "on_map_click ignored uid=%s option=%s needs_coords=%s",
+            _uid_for_log(uid),
+            option_value,
+            needs_coords,
+        )
         # Return current state without changes (or reset to default message if needed, but it should already be there)
         # We return the clean image and the "No need" message to enforce state
         base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
         return base_img, "No need for coordinates"
 
     x, y = evt.index[0], evt.index[1]
+    LOGGER.debug(
+        "on_map_click uid=%s option=%s coords=(%s,%s)",
+        _uid_for_log(uid),
+        option_value,
+        x,
+        y,
+    )
     
     # Get clean image from session
     base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
@@ -676,6 +750,7 @@ def on_option_select(uid, option_value, coords_str=None):
     default_msg = "No need for coordinates"
     
     if option_value is None:
+        LOGGER.debug("on_option_select uid=%s option=None", _uid_for_log(uid))
         return default_msg, gr.update(interactive=False)
     
     # 更新session活动时间（选择选项操作）
@@ -684,6 +759,7 @@ def on_option_select(uid, option_value, coords_str=None):
     
     session = get_session(uid)
     if not session:
+        LOGGER.warning("on_option_select: missing session uid=%s", _uid_for_log(uid))
         return default_msg, gr.update(interactive=False)
     
     # option_value 是 (label, idx) 元组或直接是 idx
@@ -696,10 +772,17 @@ def on_option_select(uid, option_value, coords_str=None):
     if 0 <= option_idx < len(session.raw_solve_options):
         opt = session.raw_solve_options[option_idx]
         if opt.get("available"):
+             LOGGER.debug(
+                 "on_option_select uid=%s option=%s requires_coords=True valid_coords=%s",
+                 _uid_for_log(uid),
+                 option_idx,
+                 _is_valid_coords_text(coords_str),
+             )
              if _is_valid_coords_text(coords_str):
                  return coords_str, gr.update(interactive=True)
              return "please click the keypoint selection image", gr.update(interactive=True)
     
+    LOGGER.debug("on_option_select uid=%s option=%s requires_coords=False", _uid_for_log(uid), option_idx)
     return default_msg, gr.update(interactive=False)
 
 
@@ -712,6 +795,7 @@ def on_reference_action(uid):
 
     session = get_session(uid)
     if not session:
+        LOGGER.warning("on_reference_action: missing session uid=%s", _uid_for_log(uid))
         return (
             None,
             gr.update(),
@@ -719,11 +803,13 @@ def on_reference_action(uid):
             format_log_markdown("Session Error"),
         )
 
+    LOGGER.info("on_reference_action uid=%s env=%s", _uid_for_log(uid), getattr(session, "env_id", None))
     current_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
 
     try:
         reference = session.get_reference_action()
     except Exception as exc:
+        LOGGER.exception("on_reference_action failed uid=%s", _uid_for_log(uid))
         return (
             current_img,
             gr.update(),
@@ -758,6 +844,13 @@ def on_reference_action(uid):
         updated_img = draw_marker(current_img, x, y)
         coords_text = f"{x}, {y}"
         log_text = f"Ground Truth Action: {option_label}. {option_action} | coords: {coords_text}"
+    LOGGER.debug(
+        "on_reference_action resolved uid=%s option_idx=%s need_coords=%s coords=%s",
+        _uid_for_log(uid),
+        option_idx,
+        need_coords,
+        coords_xy,
+    )
 
     return (
         updated_img,
@@ -777,18 +870,16 @@ def init_app(request: gr.Request):
     Returns:
         初始化后的UI状态
     """
-    import traceback
     _ = request  # Query params are intentionally ignored in session-based mode.
     try:
-        print(f"[DEBUG init_app] Creating session...")
+        LOGGER.info("init_app: creating session")
         uid = create_session()
-        print(f"[DEBUG init_app] Session created: {uid}")
+        LOGGER.info("init_app: created uid=%s", _uid_for_log(uid))
         result = init_session_and_load_task(uid)
-        print(f"[DEBUG init_app] init_session_and_load_task returned {len(result)} elements")
+        LOGGER.debug("init_app: init_session_and_load_task returned %s outputs", len(result))
         return result
     except Exception as e:
-        print(f"[ERROR init_app] Exception: {e}")
-        traceback.print_exc()
+        LOGGER.exception("init_app exception")
         # Return a safe fallback that hides the loading overlay and shows error
         return _task_load_failed_response("", f"Initialization error: {e}")
 
@@ -803,6 +894,7 @@ def precheck_execute_inputs(uid, option_idx, coords_str):
 
     session = get_session(uid)
     if not session:
+        LOGGER.error("precheck_execute_inputs: missing session uid=%s", _uid_for_log(uid))
         raise gr.Error("Session Error")
 
     parsed_option_idx = option_idx
@@ -810,6 +902,7 @@ def precheck_execute_inputs(uid, option_idx, coords_str):
         _, parsed_option_idx = option_idx
 
     if parsed_option_idx is None:
+        LOGGER.debug("precheck_execute_inputs uid=%s missing option", _uid_for_log(uid))
         raise gr.Error("Error: No action selected")
 
     needs_coords = False
@@ -821,15 +914,39 @@ def precheck_execute_inputs(uid, option_idx, coords_str):
         needs_coords = bool(opt.get("available"))
 
     if needs_coords and not _is_valid_coords_text(coords_str):
+        LOGGER.debug(
+            "precheck_execute_inputs uid=%s option=%s requires_coords but coords invalid: %s",
+            _uid_for_log(uid),
+            parsed_option_idx,
+            coords_str,
+        )
         raise gr.Error("please click the keypoint selection image before execute!")
+    LOGGER.debug(
+        "precheck_execute_inputs passed uid=%s option=%s needs_coords=%s",
+        _uid_for_log(uid),
+        parsed_option_idx,
+        needs_coords,
+    )
 
 
 def execute_step(uid, option_idx, coords_str):
+    LOGGER.info(
+        "execute_step start uid=%s option=%s coords=%s",
+        _uid_for_log(uid),
+        option_idx,
+        coords_str,
+    )
     # 检查session是否超时（在更新活动时间之前检查）
     last_activity = get_session_activity(uid)
     if last_activity is not None:
         elapsed = time.time() - last_activity
         if elapsed > SESSION_TIMEOUT:
+            LOGGER.warning(
+                "execute_step timeout uid=%s elapsed=%.2fs timeout=%ss",
+                _uid_for_log(uid),
+                elapsed,
+                SESSION_TIMEOUT,
+            )
             raise gr.Error(f"Session已超时：超过 {SESSION_TIMEOUT} 秒未活动。请刷新页面重新登录。")
     
     # 更新session的最后活动时间
@@ -837,6 +954,7 @@ def execute_step(uid, option_idx, coords_str):
     
     session = get_session(uid)
     if not session:
+        LOGGER.error("execute_step missing session uid=%s", _uid_for_log(uid))
         return None, format_log_markdown("Session Error"), gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=False)
     
     # 检查 execute 次数限制（在执行前检查，如果达到限制则模拟失败状态）
@@ -851,12 +969,23 @@ def execute_step(uid, option_idx, coords_str):
             current_count = get_execute_count(uid, session.env_id, session.episode_idx)
             if current_count >= max_execute:
                 execute_limit_reached = True
+            LOGGER.debug(
+                "execute limit check uid=%s env=%s ep=%s current=%s max=%s reached=%s",
+                _uid_for_log(uid),
+                session.env_id,
+                session.episode_idx,
+                current_count,
+                max_execute,
+                execute_limit_reached,
+            )
     
     # Ensure at least one cached frame exists for timer-based refresh.
     if not session.base_frames:
+        LOGGER.debug("execute_step uid=%s base_frames empty; triggering update_observation", _uid_for_log(uid))
         session.update_observation(use_segmentation=USE_SEGMENTED_VIEW)
     
     if option_idx is None:
+        LOGGER.debug("execute_step uid=%s aborted: option_idx is None", _uid_for_log(uid))
         return session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW), format_log_markdown("Error: No action selected"), gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True)
 
     # 检查当前选项是否需要坐标
@@ -883,6 +1012,12 @@ def execute_step(uid, option_idx, coords_str):
         
         # 如果需要坐标但没有有效坐标，返回错误提示
         if not is_valid_coords:
+            LOGGER.debug(
+                "execute_step uid=%s option=%s missing valid coords, coords_str=%s",
+                _uid_for_log(uid),
+                option_idx,
+                coords_str,
+            )
             current_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
             error_msg = "please click the keypoint selection image before execute!"
             return current_img, format_log_markdown(error_msg), gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True)
@@ -918,11 +1053,24 @@ def execute_step(uid, option_idx, coords_str):
         # 增加 execute 计数（因为这也算一次尝试）
         if uid and session.env_id is not None and session.episode_idx is not None:
             new_count = increment_execute_count(uid, session.env_id, session.episode_idx)
-            print(f"Execute limit reached for {uid}:{session.env_id}:{session.episode_idx} (count: {new_count})")
+            LOGGER.warning(
+                "execute limit reached uid=%s env=%s ep=%s count=%s",
+                _uid_for_log(uid),
+                session.env_id,
+                session.episode_idx,
+                new_count,
+            )
     else:
         # 正常执行
         # 异常处理：所有异常（ScrewPlanFailure 和其他执行错误）都会显示弹窗通知
-        print(f"Executing step: Opt {option_idx}, Coords {click_coords}")
+        LOGGER.info(
+            "executing action uid=%s env=%s ep=%s option=%s coords=%s",
+            _uid_for_log(uid),
+            getattr(session, "env_id", None),
+            getattr(session, "episode_idx", None),
+            option_idx,
+            click_coords,
+        )
         try:
             img, status, done = session.execute_action(option_idx, click_coords)
         except ScrewPlanFailureError as e:
@@ -935,6 +1083,7 @@ def execute_step(uid, option_idx, coords_str):
             done = False
             # 继续正常返回流程
             img = current_img
+            LOGGER.warning("execute_step screw_plan_failure uid=%s error=%s", _uid_for_log(uid), error_message)
         except RuntimeError as e:
             # 捕获所有其他执行错误，显示弹窗通知
             error_message = str(e)
@@ -945,16 +1094,24 @@ def execute_step(uid, option_idx, coords_str):
             done = False
             # 继续正常返回流程
             img = current_img
+            LOGGER.warning("execute_step runtime_error uid=%s error=%s", _uid_for_log(uid), error_message)
         
         # 增加 execute 计数（无论成功或失败都计数，因为用户已经执行了一次操作）
         if uid and session.env_id is not None and session.episode_idx is not None:
             new_count = increment_execute_count(uid, session.env_id, session.episode_idx)
-            print(f"Execute count for {uid}:{session.env_id}:{session.episode_idx} = {new_count}")
+            LOGGER.debug(
+                "execute count incremented uid=%s env=%s ep=%s count=%s",
+                _uid_for_log(uid),
+                session.env_id,
+                session.episode_idx,
+                new_count,
+            )
 
     # Execute frames are produced in batch when execute_action returns from worker process.
     # Enqueue them now, then wait briefly for the 0.1s timer to drain FIFO playback.
     _enqueue_live_obs_frames(uid, getattr(session, "base_frames", None))
     _wait_for_live_obs_queue_drain(uid)
+    LOGGER.debug("execute_step playback drain complete uid=%s", _uid_for_log(uid))
     
     # 注意：执行阶段画面由 live_obs 的 0.1s 轮询刷新。
     
@@ -990,6 +1147,14 @@ def execute_step(uid, option_idx, coords_str):
                 completed_count = user_status.get("completed_count", 0)
                 task_update = f"{session.env_id} (Episode {session.episode_idx})"
                 progress_update = f"Completed: {completed_count}"
+                LOGGER.info(
+                    "task complete uid=%s env=%s ep=%s final=%s completed_count=%s",
+                    _uid_for_log(uid),
+                    session.env_id,
+                    session.episode_idx,
+                    final_log_status,
+                    completed_count,
+                )
     
     # 根据视图模式重新获取图片
     img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
@@ -1000,6 +1165,14 @@ def execute_step(uid, option_idx, coords_str):
     
     # 格式化日志消息为 HTML 格式（支持颜色显示）
     formatted_status = format_log_markdown(status)
+    LOGGER.debug(
+        "execute_step done uid=%s env=%s ep=%s done=%s exec_btn_interactive=%s",
+        _uid_for_log(uid),
+        getattr(session, "env_id", None),
+        getattr(session, "episode_idx", None),
+        done,
+        not done,
+    )
     
     return (
         img,
