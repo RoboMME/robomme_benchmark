@@ -52,7 +52,6 @@ def build_allowed_paths() -> list[str]:
 
 
 _APP_BOOTSTRAPPED = False
-_DEMO_QUEUED = False
 
 
 def bootstrap_runtime() -> None:
@@ -71,11 +70,7 @@ demo = create_ui_blocks()
 
 
 def main() -> None:
-    global _DEMO_QUEUED
     bootstrap_runtime()
-    if not _DEMO_QUEUED:
-        demo.queue(default_concurrency_limit=2)
-        _DEMO_QUEUED = True
     allowed_paths = build_allowed_paths()
     demo.launch(
         server_name="0.0.0.0",

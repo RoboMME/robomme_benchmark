@@ -49,7 +49,6 @@ def main():
     allowed_paths = build_allowed_paths()
 
     demo = create_ui_blocks()
-    demo.queue(default_concurrency_limit=2)
     demo.launch(
         server_name="0.0.0.0",
         server_port=int(os.getenv("PORT", "7860")),
