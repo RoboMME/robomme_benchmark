@@ -2,6 +2,9 @@
 
 import os
 
+# Disable SSR for HF Spaces compatibility (avoids gradio_api heartbeat 404).
+os.environ["GRADIO_SSR_MODE"] = "false"
+
 import gradio as gr
 import numpy as np
 
@@ -401,9 +404,23 @@ def create_dummy_demo() -> gr.Blocks:
 
 demo = create_dummy_demo()
 
+# Ensure external launch() callers (e.g., Spaces runtime) also keep SSR disabled.
+_original_launch = demo.launch
+
+
+def _patched_launch(**kwargs):
+    kwargs.setdefault("ssr_mode", False)
+    kwargs.setdefault("show_error", True)
+    return _original_launch(**kwargs)
+
+
+demo.launch = _patched_launch
+
 
 if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=int(os.getenv("PORT", "7860")),
+        ssr_mode=False,
+        show_error=True,
     )
