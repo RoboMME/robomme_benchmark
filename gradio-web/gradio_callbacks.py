@@ -537,13 +537,17 @@ def init_session_and_load_task(uid):
     if not uid:
         uid = create_session()
 
+    print(f"[DEBUG init_session_and_load_task] Calling user_manager.init_session({uid})")
     success, msg, status = user_manager.init_session(uid)
+    print(f"[DEBUG init_session_and_load_task] init_session result: success={success}, msg={msg}")
 
     if uid:
         update_session_activity(uid)
 
     if not success:
+        print(f"[DEBUG init_session_and_load_task] Failed, returning error response")
         return _task_load_failed_response(uid, msg)
+    print(f"[DEBUG init_session_and_load_task] Success, loading task...")
     return _load_status_task(uid, status)
 
 
@@ -766,16 +770,27 @@ def on_reference_action(uid):
 def init_app(request: gr.Request):
     """
     处理初始页面加载，直接初始化会话并加载首个任务。
-    
+
     Args:
         request: Gradio Request 对象，包含查询参数 / Gradio Request object containing query parameters
-    
+
     Returns:
         初始化后的UI状态
     """
+    import traceback
     _ = request  # Query params are intentionally ignored in session-based mode.
-    uid = create_session()
-    return init_session_and_load_task(uid)
+    try:
+        print(f"[DEBUG init_app] Creating session...")
+        uid = create_session()
+        print(f"[DEBUG init_app] Session created: {uid}")
+        result = init_session_and_load_task(uid)
+        print(f"[DEBUG init_app] init_session_and_load_task returned {len(result)} elements")
+        return result
+    except Exception as e:
+        print(f"[ERROR init_app] Exception: {e}")
+        traceback.print_exc()
+        # Return a safe fallback that hides the loading overlay and shows error
+        return _task_load_failed_response("", f"Initialization error: {e}")
 
 
 def precheck_execute_inputs(uid, option_idx, coords_str):
