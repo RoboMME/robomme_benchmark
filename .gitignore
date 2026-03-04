@@ -209,3 +209,4 @@ __marimo__/
 # Agent
 .agent/
 .cursor/
+.agents/
