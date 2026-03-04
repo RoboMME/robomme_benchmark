@@ -66,12 +66,27 @@ def bootstrap_runtime() -> None:
     _APP_BOOTSTRAPPED = True
 
 
+# Force SSR off before Gradio reads the setting (env var is the only
+# reliable way — attribute assignment on Blocks is ignored by launch()).
+os.environ["GRADIO_SSR_MODE"] = "false"
+
 bootstrap_runtime()
 
 demo = create_ui_blocks()
-demo.ssr_mode = False
-demo.allowed_paths = build_allowed_paths()
-demo.show_error = True
+
+_allowed_paths = build_allowed_paths()
+
+# Wrap launch() so that HF Spaces (which calls demo.launch() directly)
+# always gets our required kwargs.
+_original_launch = demo.launch
+
+def _patched_launch(**kwargs):
+    kwargs.setdefault("ssr_mode", False)
+    kwargs.setdefault("allowed_paths", _allowed_paths)
+    kwargs.setdefault("show_error", True)
+    return _original_launch(**kwargs)
+
+demo.launch = _patched_launch
 
 
 if __name__ == "__main__":
