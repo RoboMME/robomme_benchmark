@@ -81,6 +81,7 @@ def main() -> None:
         server_name="0.0.0.0",
         server_port=int(os.getenv("PORT", "7860")),
         allowed_paths=allowed_paths,
+        show_error=True,
         ssr_mode=False,
     )
 
