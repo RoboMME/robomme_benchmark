@@ -51,20 +51,33 @@ def build_allowed_paths() -> list[str]:
     return deduped
 
 
-def main() -> None:
+_APP_BOOTSTRAPPED = False
+
+
+def bootstrap_runtime() -> None:
+    """Initialize runtime side effects once per process."""
+    global _APP_BOOTSTRAPPED
+    if _APP_BOOTSTRAPPED:
+        return
+
     ensure_media_dirs()
     start_timeout_monitor()
-
     os.environ.setdefault("ROBOMME_TEMP_DEMOS_DIR", str(TEMP_DEMOS_DIR))
-    allowed_paths = build_allowed_paths()
+    _APP_BOOTSTRAPPED = True
 
-    demo = create_ui_blocks()
-    demo.queue(default_concurrency_limit=2)
+
+bootstrap_runtime()
+demo = create_ui_blocks()
+demo.queue(default_concurrency_limit=2)
+
+
+def main() -> None:
+    allowed_paths = build_allowed_paths()
     demo.launch(
         server_name="0.0.0.0",
         server_port=int(os.getenv("PORT", "7860")),
         allowed_paths=allowed_paths,
-        
+        ssr_mode=False,
     )
 
 
