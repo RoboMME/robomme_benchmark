@@ -15,6 +15,39 @@ uv sync
 uv pip install -e .
 ```
 
+## 🐳 Gradio Docker Deployment (HF Space + GPU)
+
+This repository also supports Docker deployment for the Gradio app entrypoint:
+
+```bash
+python3 gradio-web/main.py
+```
+
+Build image:
+
+```bash
+docker build -t robomme-gradio:gpu .
+```
+
+Run container (GPU):
+
+```bash
+docker run --rm --gpus all -p 7860:7860 robomme-gradio:gpu
+```
+
+Optional metadata override:
+
+```bash
+docker run --rm --gpus all -p 7860:7860 \
+  -e ROBOMME_METADATA_ROOT=/home/user/app/src/robomme/env_metadata/train \
+  robomme-gradio:gpu
+```
+
+Notes:
+- Docker deployment is focused on `gradio-web/main.py`.
+- Existing `uv` workflow for training/testing remains unchanged.
+- Space metadata is configured via root `README.md` with `sdk: docker` and `app_port: 7860`.
+
 ## 🚀 Quick Start
 
 Start an environment with a specified setup:

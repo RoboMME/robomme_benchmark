@@ -1,8 +1,7 @@
 ---
 title: RoboMME Oracle Planner
-sdk: gradio
-app_file: gradio-web/main.py
-python_version: "3.11"
+sdk: docker
+app_port: 7860
 ---
 
 This Space runs the RoboMME Gradio interface in single-instance session mode.
