@@ -44,7 +44,7 @@ All tasks are defined in `src/robomme/robomme_env`. A detailed description can b
 
 ### 📥 Training Data
 
-Training data can be downloaded [here](https://huggingface.co/datasets/Yinpei/robomme_data). There are 1,600 demonstrations in total (100 per task). The HDF5 format is described in [doc/h5_data_format.md](doc/h5_data_format.md).
+Training data can be downloaded [here](https://huggingface.co/Yinpei/robomme_data_h5). There are 1,600 demonstrations in total (100 per task). The HDF5 format is described in [doc/h5_data_format.md](doc/h5_data_format.md).
 
 After downloading, replay the dataset for a sanity check:
 
