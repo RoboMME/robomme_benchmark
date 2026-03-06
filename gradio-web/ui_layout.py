@@ -40,8 +40,157 @@ PHASE_ACTION_KEYPOINT = "action_keypoint"
 PHASE_EXECUTION_PLAYBACK = "execution_playback"
 
 
-# Deprecated: no runtime JS logic in native Gradio mode.
+# Deprecated: no legacy runtime JS logic in native Gradio mode.
 SYNC_JS = ""
+
+
+LIVE_OBS_CLIENT_RESIZE_JS = r"""
+() => {
+    if (window.__robommeLiveObsResizerInstalled) {
+        if (typeof window.__robommeLiveObsSchedule === "function") {
+            window.__robommeLiveObsSchedule();
+        }
+        return;
+    }
+
+    const state = {
+        rafId: null,
+        intervalId: null,
+        lastAppliedWidth: null,
+        lastWrapperNode: null,
+        lastFrameNode: null,
+        lastImageNode: null,
+        rootObserver: null,
+        layoutObserver: null,
+        phaseObserver: null,
+        bodyObserver: null,
+    };
+
+    const getTargets = () => {
+        const root = document.getElementById("live_obs");
+        if (!root) {
+            return null;
+        }
+        return {
+            root,
+            container: root.querySelector(".image-container"),
+            frame: root.querySelector(".image-frame"),
+            image: root.querySelector("img"),
+            mediaCard: document.getElementById("media_card"),
+            actionPhaseGroup: document.getElementById("action_phase_group"),
+        };
+    };
+
+    const applyResize = () => {
+        state.rafId = null;
+        const targets = getTargets();
+        const wrapper = targets?.root?.querySelector(".upload-container") || targets?.frame?.parentElement;
+        if (!targets || !targets.container || !wrapper || !targets.frame || !targets.image) {
+            return;
+        }
+
+        const containerWidth = Math.floor(targets.container.getBoundingClientRect().width);
+        if (!Number.isFinite(containerWidth) || containerWidth < 2) {
+            return;
+        }
+
+        if (
+            state.lastAppliedWidth === containerWidth &&
+            state.lastWrapperNode === wrapper &&
+            state.lastFrameNode === targets.frame &&
+            state.lastImageNode === targets.image
+        ) {
+            return;
+        }
+
+        wrapper.style.width = `${containerWidth}px`;
+        wrapper.style.maxWidth = "none";
+        wrapper.style.display = "block";
+
+        targets.frame.style.width = `${containerWidth}px`;
+        targets.frame.style.maxWidth = "none";
+        targets.frame.style.display = "block";
+
+        targets.image.style.width = `${containerWidth}px`;
+        targets.image.style.maxWidth = "none";
+        targets.image.style.height = "auto";
+        targets.image.style.display = "block";
+        targets.image.style.objectFit = "contain";
+        targets.image.style.objectPosition = "center center";
+
+        state.lastAppliedWidth = containerWidth;
+        state.lastWrapperNode = wrapper;
+        state.lastFrameNode = targets.frame;
+        state.lastImageNode = targets.image;
+    };
+
+    const scheduleResize = () => {
+        if (state.rafId !== null) {
+            return;
+        }
+        state.rafId = window.requestAnimationFrame(applyResize);
+    };
+
+    const observeLiveObs = () => {
+        const targets = getTargets();
+        if (!targets) {
+            return false;
+        }
+
+        state.rootObserver?.disconnect();
+        state.rootObserver = new MutationObserver(scheduleResize);
+        state.rootObserver.observe(targets.root, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+        });
+
+        state.layoutObserver?.disconnect();
+        if (window.ResizeObserver) {
+            state.layoutObserver = new ResizeObserver(scheduleResize);
+            [targets.root, targets.container, targets.mediaCard, targets.actionPhaseGroup]
+                .filter(Boolean)
+                .forEach((node) => state.layoutObserver.observe(node));
+        }
+
+        state.phaseObserver?.disconnect();
+        state.phaseObserver = new MutationObserver(scheduleResize);
+        [targets.root, targets.actionPhaseGroup, targets.root.parentElement, targets.root.parentElement?.parentElement]
+            .filter(Boolean)
+            .forEach((node) =>
+                state.phaseObserver.observe(node, {
+                    attributes: true,
+                    attributeFilter: ["class", "style", "hidden"],
+                })
+            );
+
+        scheduleResize();
+        return true;
+    };
+
+    window.__robommeLiveObsSchedule = scheduleResize;
+    window.addEventListener("resize", scheduleResize, { passive: true });
+    document.addEventListener("visibilitychange", scheduleResize);
+
+    if (!observeLiveObs()) {
+        state.bodyObserver = new MutationObserver(() => {
+            if (observeLiveObs()) {
+                state.bodyObserver?.disconnect();
+                state.bodyObserver = null;
+            }
+            scheduleResize();
+        });
+        state.bodyObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+
+    state.intervalId = window.setInterval(scheduleResize, 250);
+
+    window.__robommeLiveObsResizerInstalled = true;
+}
+"""
 
 
 CSS = f"""
@@ -80,6 +229,14 @@ button#reference_action_btn:not(:disabled):hover,
 #reference_action_btn button:not(:disabled):hover {{
     background: #19713d !important;
     border-color: #19713d !important;
+}}
+
+#live_obs.live-obs-resizable .image-container {{
+    width: 100%;
+}}
+
+#live_obs.live-obs-resizable .upload-container {{
+    width: 100%;
 }}
 """
 
@@ -186,6 +343,7 @@ def create_ui_blocks():
                                 interactive=False,
                                 type="pil",
                                 elem_id="live_obs",
+                                elem_classes=["live-obs-resizable"],
                                 show_label=True,
                                 buttons=[],
                                 sources=[],
@@ -512,6 +670,12 @@ def create_ui_blocks():
             outputs=[img_display],
             queue=False,
             show_progress="hidden",
+        )
+
+        demo.load(
+            fn=None,
+            js=LIVE_OBS_CLIENT_RESIZE_JS,
+            queue=False,
         )
 
         demo.load(

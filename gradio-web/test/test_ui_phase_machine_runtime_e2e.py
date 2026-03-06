@@ -61,6 +61,43 @@ def _read_header_task_value(page) -> str | None:
     )
 
 
+def _read_coords_box_value(page) -> str | None:
+    return page.evaluate(
+        """() => {
+            const root = document.getElementById('coords_box');
+            if (!root) return null;
+            const field = root.querySelector('textarea, input');
+            if (!field) return null;
+            const value = typeof field.value === 'string' ? field.value.trim() : '';
+            return value || null;
+        }"""
+    )
+
+
+def _read_live_obs_geometry(page) -> dict[str, dict[str, float] | None]:
+    return page.evaluate(
+        """() => {
+            const root = document.getElementById('live_obs');
+            const container = root?.querySelector('.image-container');
+            const uploadContainer = root?.querySelector('.upload-container');
+            const frame = root?.querySelector('.image-frame');
+            const img = root?.querySelector('img');
+            const measure = (node) => {
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                return { width: rect.width, height: rect.height };
+            };
+            return {
+                root: measure(root),
+                container: measure(container),
+                uploadContainer: measure(uploadContainer),
+                frame: measure(frame),
+                img: measure(img),
+            };
+        }"""
+    )
+
+
 @pytest.fixture
 def phase_machine_ui_url():
     state = {"precheck_calls": 0}
@@ -453,6 +490,245 @@ def test_unified_loading_overlay_init_flow(monkeypatch):
         demo.close()
 
     assert calls["init"] >= 1
+
+
+def test_live_obs_client_resize_fills_width_and_keeps_click_mapping(monkeypatch):
+    callbacks = importlib.reload(importlib.import_module("gradio_callbacks"))
+    ui_layout = importlib.reload(importlib.import_module("ui_layout"))
+
+    fake_obs = np.zeros((24, 48, 3), dtype=np.uint8)
+    fake_obs_img = Image.fromarray(fake_obs)
+
+    class FakeSession:
+        raw_solve_options = [{"available": True}]
+
+        def get_pil_image(self, use_segmented=False):
+            _ = use_segmented
+            return fake_obs_img.copy()
+
+    def fake_init_app(_request=None):
+        return (
+            "uid-live-obs-resize",
+            gr.update(visible=True),  # main_interface
+            gr.update(value=fake_obs_img.copy(), interactive=False),  # img_display
+            "ready",  # log_output
+            gr.update(choices=[("pick", 0)], value=0),  # options_radio
+            "goal",  # goal_box
+            gr.update(
+                value="please click the keypoint selection image",
+                visible=True,
+                interactive=False,
+            ),  # coords_box
+            gr.update(value=None, visible=False),  # video_display
+            "ResizeEnv (Episode 1)",  # task_info_box
+            "Completed: 0",  # progress_info_box
+            gr.update(interactive=True),  # restart_episode_btn
+            gr.update(interactive=True),  # next_task_btn
+            gr.update(interactive=True),  # exec_btn
+            gr.update(visible=False),  # video_phase_group
+            gr.update(visible=True),  # action_phase_group
+            gr.update(visible=True),  # control_panel_group
+            gr.update(value="hint"),  # task_hint_display
+            gr.update(visible=False),  # loading_overlay
+            gr.update(interactive=True),  # reference_action_btn
+        )
+
+    monkeypatch.setattr(ui_layout, "init_app", fake_init_app)
+    monkeypatch.setattr(callbacks, "get_session", lambda uid: FakeSession())
+    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
+
+    demo = ui_layout.create_ui_blocks()
+
+    port = _free_port()
+    host = "127.0.0.1"
+    root_url = f"http://{host}:{port}/"
+
+    app = FastAPI(title="live-obs-client-resize-test")
+    app = gr.mount_gradio_app(app, demo, path="/")
+
+    config = uvicorn.Config(app, host=host, port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    _wait_http_ready(root_url)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page.goto(root_url, wait_until="domcontentloaded")
+            page.wait_for_selector("#main_interface_root", state="visible", timeout=15000)
+            page.wait_for_selector("#live_obs img", timeout=15000)
+            page.wait_for_selector("#coords_box textarea, #coords_box input", timeout=15000)
+            page.wait_for_function(
+                """() => {
+                    const container = document.querySelector('#live_obs .image-container');
+                    const img = document.querySelector('#live_obs img');
+                    if (!container || !img) return false;
+                    const containerRect = container.getBoundingClientRect();
+                    const imgRect = img.getBoundingClientRect();
+                    return imgRect.width > 200 && Math.abs(containerRect.width - imgRect.width) <= 2;
+                }""",
+                timeout=10000,
+            )
+
+            initial_geometry = _read_live_obs_geometry(page)
+            assert initial_geometry["container"] is not None
+            assert initial_geometry["img"] is not None
+            assert initial_geometry["uploadContainer"] is not None
+            assert initial_geometry["frame"] is not None
+            assert initial_geometry["img"]["width"] > 200
+            assert abs(initial_geometry["container"]["width"] - initial_geometry["img"]["width"]) <= 2
+            assert abs(initial_geometry["uploadContainer"]["width"] - initial_geometry["img"]["width"]) <= 2
+            assert abs(initial_geometry["frame"]["width"] - initial_geometry["img"]["width"]) <= 2
+            assert initial_geometry["img"]["width"] / initial_geometry["img"]["height"] == pytest.approx(2.0, rel=0.02)
+
+            page.set_viewport_size({"width": 1024, "height": 900})
+            page.wait_for_function(
+                """(prevWidth) => {
+                    const container = document.querySelector('#live_obs .image-container');
+                    const img = document.querySelector('#live_obs img');
+                    if (!container || !img) return false;
+                    const containerRect = container.getBoundingClientRect();
+                    const imgRect = img.getBoundingClientRect();
+                    return imgRect.width < prevWidth - 20 && Math.abs(containerRect.width - imgRect.width) <= 2;
+                }""",
+                arg=initial_geometry["img"]["width"],
+                timeout=10000,
+            )
+
+            resized_geometry = _read_live_obs_geometry(page)
+            assert resized_geometry["img"] is not None
+            assert resized_geometry["container"] is not None
+            assert resized_geometry["img"]["width"] < initial_geometry["img"]["width"] - 20
+            assert abs(resized_geometry["container"]["width"] - resized_geometry["img"]["width"]) <= 2
+            assert resized_geometry["img"]["width"] / resized_geometry["img"]["height"] == pytest.approx(2.0, rel=0.02)
+
+            box = page.locator("#live_obs img").bounding_box()
+            assert box is not None
+            target_x = box["x"] + ((36.5) / 48.0) * box["width"]
+            target_y = box["y"] + ((12.5) / 24.0) * box["height"]
+            page.mouse.click(target_x, target_y)
+            page.wait_for_function(
+                """() => {
+                    const root = document.getElementById('coords_box');
+                    const field = root?.querySelector('textarea, input');
+                    return !!field && /^\\d+\\s*,\\s*\\d+$/.test(field.value.trim());
+                }""",
+                timeout=5000,
+            )
+            coords_value = _read_coords_box_value(page)
+            assert coords_value is not None
+            coord_x, coord_y = [int(part.strip()) for part in coords_value.split(",", 1)]
+            assert abs(coord_x - 36) <= 1
+            assert abs(coord_y - 12) <= 1
+
+            browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        demo.close()
+
+
+def test_live_obs_client_resize_after_hidden_phase_becomes_visible(tmp_path):
+    ui_layout = importlib.reload(importlib.import_module("ui_layout"))
+
+    full_red = np.zeros((256, 256, 3), dtype=np.uint8)
+    full_red[:, :] = [255, 0, 0]
+
+    with gr.Blocks() as demo:
+        demo.css = ui_layout.CSS
+
+        show_btn = gr.Button("Show", elem_id="show_btn")
+
+        with gr.Column(visible=False, elem_id="action_phase_group") as action_phase_group:
+            gr.Image(
+                value=full_red,
+                elem_id="live_obs",
+                elem_classes=["live-obs-resizable"],
+                buttons=[],
+                sources=[],
+            )
+
+        demo.load(
+            fn=None,
+            js=ui_layout.LIVE_OBS_CLIENT_RESIZE_JS,
+            queue=False,
+        )
+
+        show_btn.click(
+            fn=lambda: gr.update(visible=True),
+            outputs=[action_phase_group],
+            queue=False,
+        )
+
+    port = _free_port()
+    host = "127.0.0.1"
+    root_url = f"http://{host}:{port}/"
+
+    app = FastAPI(title="live-obs-hidden-phase-resize-test")
+    app = gr.mount_gradio_app(app, demo, path="/")
+
+    config = uvicorn.Config(app, host=host, port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    _wait_http_ready(root_url)
+    screenshot_path = tmp_path / "live_obs_hidden_phase.png"
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.goto(root_url, wait_until="domcontentloaded")
+            page.wait_for_function(
+                "() => !!window.__robommeLiveObsResizerInstalled",
+                timeout=5000,
+            )
+
+            page.click("#show_btn")
+            page.wait_for_selector("#live_obs img", timeout=10000)
+            page.wait_for_function(
+                """() => {
+                    const container = document.querySelector('#live_obs .image-container');
+                    const img = document.querySelector('#live_obs img');
+                    if (!container || !img) return false;
+                    const containerRect = container.getBoundingClientRect();
+                    const imgRect = img.getBoundingClientRect();
+                    return imgRect.width > 300 && Math.abs(containerRect.width - imgRect.width) <= 2;
+                }""",
+                timeout=10000,
+            )
+
+            geometry = _read_live_obs_geometry(page)
+            assert geometry["container"] is not None
+            assert geometry["img"] is not None
+            assert geometry["img"]["width"] > 300
+            assert abs(geometry["container"]["width"] - geometry["img"]["width"]) <= 2
+            object_fit = page.evaluate(
+                """() => getComputedStyle(document.querySelector('#live_obs img')).objectFit"""
+            )
+            assert object_fit == "contain"
+
+            page.locator("#live_obs img").screenshot(path=str(screenshot_path))
+
+            browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        demo.close()
+
+    screenshot = Image.open(screenshot_path).convert("RGB")
+    width, height = screenshot.size
+    samples = [
+        screenshot.getpixel((width // 2, height // 2)),
+        screenshot.getpixel((max(1, width // 10), height // 2)),
+        screenshot.getpixel((min(width - 2, (width * 9) // 10), height // 2)),
+    ]
+    for pixel in samples:
+        assert pixel[0] > 200
+        assert pixel[1] < 30
+        assert pixel[2] < 30
 
 
 def test_header_task_shows_env_after_init(monkeypatch):

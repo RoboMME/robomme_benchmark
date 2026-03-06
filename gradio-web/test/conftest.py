@@ -18,7 +18,9 @@ def _find_repo_root(start_file: str | Path) -> Path:
 
 REPO_ROOT = _find_repo_root(__file__)
 SRC_ROOT = REPO_ROOT / "src"
-GRADIO_ROOT = REPO_ROOT / "gradio"
+GRADIO_ROOT = REPO_ROOT / "gradio-web"
+if not GRADIO_ROOT.exists():
+    GRADIO_ROOT = REPO_ROOT / "gradio"
 
 for p in (str(REPO_ROOT), str(SRC_ROOT), str(GRADIO_ROOT)):
     if p not in sys.path:
