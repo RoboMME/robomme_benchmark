@@ -241,8 +241,8 @@ button#reference_action_btn:not(:disabled):hover,
 """
 
 
-def extract_first_goal(goal_text):
-    """Extract first goal from goal text that may be a list representation."""
+def extract_last_goal(goal_text):
+    """Extract last goal from goal text that may be a list representation."""
     if not goal_text:
         return ""
     text = goal_text.strip()
@@ -250,7 +250,10 @@ def extract_first_goal(goal_text):
         try:
             goals = ast.literal_eval(text)
             if isinstance(goals, list) and goals:
-                return str(goals[0]).strip()
+                for goal in reversed(goals):
+                    goal_text = str(goal).strip()
+                    if goal_text:
+                        return goal_text
         except Exception:
             pass
     return text.split("\n")[0].strip()
@@ -284,8 +287,8 @@ def create_ui_blocks():
         return " ".join(clean_task.splitlines()).strip() or None
 
     def render_header_goal(goal_text):
-        first_goal = extract_first_goal(goal_text or "")
-        return first_goal if first_goal else "—"
+        last_goal = extract_last_goal(goal_text or "")
+        return last_goal if last_goal else "—"
 
     with gr.Blocks(title="Oracle Planner Interface") as demo:
         demo.theme = gr.themes.Soft()

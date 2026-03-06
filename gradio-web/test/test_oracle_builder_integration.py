@@ -180,5 +180,5 @@ def test_load_episode_supports_tuple_demonstration_data(monkeypatch, reload_modu
 
     assert img == "IMG"
     assert msg == "Ready"
-    assert session.language_goal == "tuple goal"
+    assert session.language_goal == "backup goal"
     assert session.demonstration_frames == ["tuple_f1", "tuple_f2"]

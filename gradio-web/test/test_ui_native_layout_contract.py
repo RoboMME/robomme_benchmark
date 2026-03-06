@@ -23,6 +23,12 @@ def test_native_ui_has_no_legacy_runtime_js_or_card_shell_tokens(reload_module):
         assert token not in css
 
 
+def test_extract_last_goal_prefers_last_list_item(reload_module):
+    ui_layout = reload_module("ui_layout")
+
+    assert ui_layout.extract_last_goal("['goal a', 'goal b']") == "goal b"
+
+
 def test_native_ui_config_contains_phase_machine_and_precheck_chain(reload_module):
     ui_layout = reload_module("ui_layout")
     demo = ui_layout.create_ui_blocks()

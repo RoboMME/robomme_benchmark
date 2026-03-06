@@ -143,12 +143,12 @@ def _fetch_segmentation(env):
 def _build_solve_options(env, planner, selected_target, env_id):
     return get_vqa_options(env, planner, selected_target, env_id)
 
-def _extract_first_text(value, default="Unknown Goal"):
+def _extract_last_text(value, default="Unknown Goal"):
     if isinstance(value, str):
         text = value.strip()
         return text or default
     if isinstance(value, (list, tuple)):
-        for item in value:
+        for item in reversed(value):
             if item is None:
                 continue
             text = str(item).strip()
@@ -301,7 +301,7 @@ def _extract_demonstration_payload(demonstration_data):
         frames_candidate = demonstration_data.get("frames")
         if frames_candidate is None:
             frames_candidate = demonstration_data.get("front_rgb_list")
-        return _extract_first_text(goal_candidate, default_goal), _ensure_list(frames_candidate)
+        return _extract_last_text(goal_candidate, default_goal), _ensure_list(frames_candidate)
 
     if isinstance(demonstration_data, (tuple, list)):
         obs_batch = demonstration_data[0] if len(demonstration_data) >= 1 else None
@@ -322,7 +322,7 @@ def _extract_demonstration_payload(demonstration_data):
             if goal_candidate is None:
                 goal_candidate = info_batch.get("language_goal")
 
-        return _extract_first_text(goal_candidate, default_goal), _ensure_list(frames_candidate)
+        return _extract_last_text(goal_candidate, default_goal), _ensure_list(frames_candidate)
 
     return default_goal, default_frames
 
