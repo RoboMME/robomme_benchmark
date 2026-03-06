@@ -176,7 +176,7 @@ class ButtonUnmaskSwap(BaseEnv):
         pose = sapien_utils.look_at(
             eye=camera_eye, target=camera_target
         )
-        return [CameraConfig("base_camera", pose, 512, 512, np.pi / 2, 0.01, 100)]
+        return [CameraConfig("base_camera", pose, 256, 256, np.pi / 2, 0.01, 100)]
 
     @property
     def _default_human_render_camera_configs(self):

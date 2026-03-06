@@ -70,6 +70,8 @@ INFO_ALWAYS_FIELDS = [
     "task_goal",
 ]
 
+EXPECTED_FRONT_CAMERA_HW = (256, 256)
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
@@ -137,6 +139,26 @@ def _check_optional_absent(obs, info, tag):
         assert field not in info, f"[{tag}] optional info field '{field}' should be absent but is present"
 
 
+def _check_front_camera_shapes(obs, tag):
+    """Assert wrapped front camera outputs stay at the env-configured base resolution."""
+    front_rgb = obs["front_rgb_list"][-1]
+    assert isinstance(front_rgb, np.ndarray), (
+        f"[{tag}] front_rgb_list item should be ndarray, got {type(front_rgb)}"
+    )
+    assert front_rgb.shape[:2] == EXPECTED_FRONT_CAMERA_HW, (
+        f"[{tag}] front_rgb_list shape={front_rgb.shape[:2]}, expected {EXPECTED_FRONT_CAMERA_HW}"
+    )
+
+    if "front_depth_list" in obs:
+        front_depth = obs["front_depth_list"][-1]
+        assert isinstance(front_depth, np.ndarray), (
+            f"[{tag}] front_depth_list item should be ndarray, got {type(front_depth)}"
+        )
+        assert front_depth.shape[:2] == EXPECTED_FRONT_CAMERA_HW, (
+            f"[{tag}] front_depth_list shape={front_depth.shape[:2]}, expected {EXPECTED_FRONT_CAMERA_HW}"
+        )
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Test cases
 # ──────────────────────────────────────────────────────────────────────────────
@@ -154,6 +176,7 @@ def test_all_included(video_unmaskswap_train_ep0_dataset):
         obs, info = env.reset()
         _check_always_present(obs, info, "reset/all-included")
         _check_optional_present(obs, info, "reset/all-included")
+        _check_front_camera_shapes(obs, "reset/all-included")
         print("  RESET: all optional fields present ✓")
 
         action = resolver.get_step("joint_angle", 0)
@@ -161,6 +184,7 @@ def test_all_included(video_unmaskswap_train_ep0_dataset):
             obs, reward, terminated, truncated, info = env.step(action)
             _check_always_present(obs, info, "step/all-included")
             _check_optional_present(obs, info, "step/all-included")
+            _check_front_camera_shapes(obs, "step/all-included")
             print("  STEP: all optional fields present ✓")
 
         # Spot-check dtypes of optional fields from last obs/info
@@ -231,6 +255,7 @@ def test_all_excluded(video_unmaskswap_train_ep0_dataset):
         obs, info = env.reset()
         _check_always_present(obs, info, "reset/all-excluded")
         _check_optional_absent(obs, info, "reset/all-excluded")
+        _check_front_camera_shapes(obs, "reset/all-excluded")
         print("  RESET: all optional fields absent, always-present fields ok ✓")
 
         action = resolver.get_step("joint_angle", 0)
@@ -238,6 +263,7 @@ def test_all_excluded(video_unmaskswap_train_ep0_dataset):
             obs, reward, terminated, truncated, info = env.step(action)
             _check_always_present(obs, info, "step/all-excluded")
             _check_optional_absent(obs, info, "step/all-excluded")
+            _check_front_camera_shapes(obs, "step/all-excluded")
             print("  STEP: all optional fields absent, always-present fields ok ✓")
     finally:
         env.close()
@@ -265,6 +291,7 @@ def test_selective_front_depth_only(video_unmaskswap_train_ep0_dataset):
     try:
         obs, info = env.reset()
         _check_always_present(obs, info, "reset/selective")
+        _check_front_camera_shapes(obs, "reset/selective")
         # front_depth should be present
         assert "front_depth_list" in obs, "front_depth_list should be present"
         item = obs["front_depth_list"][-1]
@@ -282,6 +309,7 @@ def test_selective_front_depth_only(video_unmaskswap_train_ep0_dataset):
         if action is not None:
             obs, reward, terminated, truncated, info = env.step(action)
             _check_always_present(obs, info, "step/selective")
+            _check_front_camera_shapes(obs, "step/selective")
             assert "front_depth_list" in obs, "front_depth_list should be present in step"
             for field in ["maniskill_obs", "wrist_depth_list", "front_camera_extrinsic_list", "wrist_camera_extrinsic_list"]:
                 assert field not in obs, f"obs['{field}'] should be absent in step"
@@ -311,6 +339,7 @@ def test_always_present_unaffected():
         try:
             obs, info = env.reset()
             _check_always_present(obs, info, f"reset/{flag_desc}")
+            _check_front_camera_shapes(obs, f"reset/{flag_desc}")
             print(f"  RESET [{flag_desc}]: always-present fields ok ✓")
         finally:
             env.close()
