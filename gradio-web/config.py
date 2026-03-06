@@ -2,9 +2,9 @@
 配置常量模块
 """
 # --- Configuration ---
-VIDEO_PLAYBACK_FPS = 30.0  # Frame rate for demonstration video playback
+VIDEO_PLAYBACK_FPS = 20.0  # Frame rate for demonstration video playback
 USE_SEGMENTED_VIEW = False  # Set to True to use segmented view, False to use original image
-LIVE_OBS_REFRESH_HZ = 20.0  # Live observation refresh frequency in Hz
+LIVE_OBS_REFRESH_HZ = 30.0  # Live observation refresh frequency in Hz
 KEYFRAME_DOWNSAMPLE_FACTOR = 1  # Keep 1 frame out of every N streamed frames
 
 # 主界面两列宽度比例 (Keypoint Selection : Right Panel)
