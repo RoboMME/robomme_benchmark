@@ -117,9 +117,8 @@ A1: Use a physical display or set up a virtual display for GUI rendering (e.g. i
 
 **Q2: Failure related to Vulkan installation.**
 
-A2: We recommend reinstalling the NVIDIA driver and Vulkan packages. We use NVIDIA driver 570.211.01 and Vulkan 1.3.275. If it still does not work, switch to CPU rendering:
-
-```python
+A2: Please refer to the ManiSkill [solution](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#vulkan). If it still does not work, we recommend reinstalling the NVIDIA driver and Vulkan packages. We use NVIDIA driver 570.211.01 and Vulkan 1.3.275. You can also switch to CPU rendering:
+```
 os.environ['SAPIEN_RENDER_DEVICE'] = 'cpu'
 os.environ['MUJOCO_GL'] = 'osmesa'
 ```
