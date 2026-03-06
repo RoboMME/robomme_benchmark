@@ -125,11 +125,16 @@ os.environ['MUJOCO_GL'] = 'osmesa'
 
 ## 🙏 Acknowledgements
 
-This work was supported in part by NSF SES-2128623, NSF CAREER #2337870, NSF NRI #2220876, NSF NAIRR250085, NSF IIS-1949634. We would also like to thank the wonderful [OpenPi](https://github.com/Physical-Intelligence/openpi/tree/main) codebase from Physical-Intelligence.
+This work was supported in part by NSF SES-2128623, NSF CAREER #2337870, NSF NRI #2220876, NSF NAIRR250085, NSF IIS-1949634. We would also like to thank the wonderful [ManiSkill](https://github.com/haosulab/ManiSkill) codebase from UCSD Hao Su's lab.
 
 
 ## 📄 Citation
 
 ```
-...
+@article{dai2026robomme,
+  title={RoboMME: Benchmarking and Understanding Memory for Robotic Generalist Policies},
+  author={Dai, Yinpei and Fu, Hongze and Lee, Jayjun and Zhang, Haoran and Yang, Jianing and Finn, Chelsea and Fazeli, Nima and Chai, Joyce},
+  journal={arXiv preprint arXiv:2603.04639},
+  year={2026}
+}
 ```
