@@ -123,7 +123,7 @@ def build_allowed_paths():
 
 def main():
     from state_manager import start_timeout_monitor
-    from ui_layout import create_ui_blocks
+    from ui_layout import CSS, create_ui_blocks
 
     LOGGER.info("Starting Gradio real environment entrypoint: %s", __file__)
     log_runtime_graphics_env()
@@ -150,6 +150,7 @@ def main():
         debug=True,
         show_error=True,
         quiet=False,
+        css=CSS,
     )
 
 

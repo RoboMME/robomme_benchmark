@@ -43,6 +43,32 @@ def _wait_http_ready(url: str, timeout_s: float = 20.0) -> None:
     raise RuntimeError(f"Server did not become ready: {url}")
 
 
+def _resolve_button_snapshot(page, elem_id: str) -> dict[str, str | bool | None]:
+    return page.evaluate(
+        """(elemId) => {
+            const button = document.querySelector(`#${elemId} button`) || document.querySelector(`button#${elemId}`);
+            if (!button) {
+                return {
+                    found: false,
+                    disabled: null,
+                    backgroundColor: null,
+                    borderColor: null,
+                    color: null,
+                };
+            }
+            const style = getComputedStyle(button);
+            return {
+                found: true,
+                disabled: button.disabled,
+                backgroundColor: style.backgroundColor,
+                borderColor: style.borderColor,
+                color: style.color,
+            };
+        }""",
+        elem_id,
+    )
+
+
 def _read_header_task_value(page) -> str | None:
     return page.evaluate(
         """() => {
@@ -102,8 +128,10 @@ def _read_live_obs_geometry(page) -> dict[str, dict[str, float] | None]:
 def phase_machine_ui_url():
     state = {"precheck_calls": 0}
     demo_video_url = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+    ui_layout = importlib.reload(importlib.import_module("ui_layout"))
 
     with gr.Blocks(title="Native phase machine test") as demo:
+        gr.HTML(f"<style>{ui_layout.CSS}</style>")
         phase_state = gr.State("init")
 
         with gr.Column(visible=True, elem_id="login_group") as login_group:
@@ -121,6 +149,11 @@ def phase_machine_ui_url():
                 coords_box = gr.Textbox(value="please click the keypoint selection image", elem_id="coords_box")
                 with gr.Column(visible=False, elem_id="action_buttons_row") as action_buttons_row:
                     exec_btn = gr.Button("EXECUTE", elem_id="exec_btn")
+                    reference_action_btn = gr.Button(
+                        "Ground Truth Action",
+                        elem_id="reference_action_btn",
+                        interactive=False,
+                    )
                     next_task_btn = gr.Button("Next Task", elem_id="next_task_btn")
 
         log_output = gr.Markdown("", elem_id="log_output")
@@ -134,6 +167,7 @@ def phase_machine_ui_url():
                 gr.update(visible=False),
                 gr.update(visible=False),
                 gr.update(visible=False),
+                gr.update(interactive=False),
                 gr.update(value="please click the keypoint selection image"),
                 "demo_video",
             )
@@ -144,6 +178,7 @@ def phase_machine_ui_url():
                 gr.update(visible=True),
                 gr.update(visible=True),
                 gr.update(visible=True),
+                gr.update(interactive=True),
                 "action_keypoint",
             )
 
@@ -154,6 +189,7 @@ def phase_machine_ui_url():
 
         def to_execute_fn():
             return (
+                gr.update(interactive=False),
                 gr.update(interactive=False),
                 gr.update(interactive=False),
                 gr.update(interactive=False),
@@ -175,6 +211,7 @@ def phase_machine_ui_url():
                 gr.update(interactive=True),
                 gr.update(interactive=True),
                 gr.update(interactive=True),
+                gr.update(interactive=True),
                 "action_keypoint",
             )
 
@@ -188,6 +225,7 @@ def phase_machine_ui_url():
                 action_phase_group,
                 control_panel_group,
                 action_buttons_row,
+                reference_action_btn,
                 coords_box,
                 phase_state,
             ],
@@ -196,7 +234,14 @@ def phase_machine_ui_url():
 
         video_display.end(
             fn=on_video_end_fn,
-            outputs=[video_phase_group, action_phase_group, control_panel_group, action_buttons_row, phase_state],
+            outputs=[
+                video_phase_group,
+                action_phase_group,
+                control_panel_group,
+                action_buttons_row,
+                reference_action_btn,
+                phase_state,
+            ],
             queue=False,
         )
 
@@ -212,6 +257,7 @@ def phase_machine_ui_url():
                 exec_btn,
                 next_task_btn,
                 img_display,
+                reference_action_btn,
                 phase_state,
             ],
             queue=False,
@@ -221,7 +267,7 @@ def phase_machine_ui_url():
             queue=False,
         ).then(
             fn=to_action_fn,
-            outputs=[options_radio, exec_btn, next_task_btn, img_display, phase_state],
+            outputs=[options_radio, exec_btn, next_task_btn, img_display, reference_action_btn, phase_state],
             queue=False,
         )
 
@@ -397,6 +443,52 @@ def test_phase_machine_runtime_flow_and_execute_precheck(phase_machine_ui_url):
         browser.close()
 
     assert state["precheck_calls"] >= 2
+
+
+def test_reference_action_button_is_green_only_when_interactive(phase_machine_ui_url):
+    root_url, _state = phase_machine_ui_url
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(root_url, wait_until="domcontentloaded")
+
+        page.wait_for_timeout(2500)
+        page.wait_for_selector("#login_btn", timeout=20000)
+        page.click("#login_btn")
+
+        disabled_snapshot = _resolve_button_snapshot(page, "reference_action_btn")
+        if disabled_snapshot["found"]:
+            assert disabled_snapshot["disabled"] is True
+            assert disabled_snapshot["backgroundColor"] != "rgb(31, 139, 76)"
+
+        page.wait_for_selector("#demo_video video", timeout=5000)
+        did_dispatch_end = page.evaluate(
+            """() => {
+                const videoEl = document.querySelector('#demo_video video');
+                if (!videoEl) return false;
+                videoEl.dispatchEvent(new Event('ended', { bubbles: true }));
+                return true;
+            }"""
+        )
+        assert did_dispatch_end
+
+        page.wait_for_function(
+            """() => {
+                const button = document.querySelector('#reference_action_btn button') || document.querySelector('button#reference_action_btn');
+                return !!button && button.disabled === false;
+            }""",
+            timeout=6000,
+        )
+
+        enabled_snapshot = _resolve_button_snapshot(page, "reference_action_btn")
+        assert enabled_snapshot["found"] is True
+        assert enabled_snapshot["disabled"] is False
+        assert enabled_snapshot["backgroundColor"] == "rgb(31, 139, 76)"
+        assert enabled_snapshot["borderColor"] == "rgb(31, 139, 76)"
+        assert enabled_snapshot["color"] == "rgb(255, 255, 255)"
+
+        browser.close()
 
 
 def test_unified_loading_overlay_init_flow(monkeypatch):

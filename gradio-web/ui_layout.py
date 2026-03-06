@@ -216,17 +216,15 @@ CSS = f"""
     margin: 0 !important;
 }}
 
-button#reference_action_btn:not(:disabled),
-#reference_action_btn:not(:disabled),
-#reference_action_btn button:not(:disabled) {{
+#reference_action_btn button:not(:disabled),
+button#reference_action_btn:not(:disabled) {{
     background: #1f8b4c !important;
     border-color: #1f8b4c !important;
     color: #ffffff !important;
 }}
 
-button#reference_action_btn:not(:disabled):hover,
-#reference_action_btn:not(:disabled):hover,
-#reference_action_btn button:not(:disabled):hover {{
+#reference_action_btn button:not(:disabled):hover,
+button#reference_action_btn:not(:disabled):hover {{
     background: #19713d !important;
     border-color: #19713d !important;
 }}
