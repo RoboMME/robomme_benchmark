@@ -94,3 +94,22 @@ def test_init_session_fails_when_metadata_root_missing(monkeypatch, reload_modul
     assert success is False
     assert "No available environments" in msg
     assert status is None
+
+
+def test_env_choices_follow_task_name_list_order(monkeypatch, reload_module, tmp_path):
+    metadata_root = tmp_path / "metadata"
+    _write_metadata(metadata_root, "VideoPlaceButton", [0])
+    _write_metadata(metadata_root, "BinFill", [0])
+    _write_metadata(metadata_root, "PatternLock", [0])
+    _write_metadata(metadata_root, "StopCube", [0])
+    monkeypatch.setenv("ROBOMME_METADATA_ROOT", str(metadata_root))
+
+    user_manager_mod = reload_module("user_manager")
+    manager = user_manager_mod.UserManager()
+
+    assert manager.env_choices == [
+        "BinFill",
+        "StopCube",
+        "VideoPlaceButton",
+        "PatternLock",
+    ]

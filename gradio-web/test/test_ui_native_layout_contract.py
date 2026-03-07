@@ -97,6 +97,25 @@ def test_render_header_goal_capitalizes_display_value(reload_module):
     assert ui_layout.render_header_goal("") == "—"
 
 
+def test_header_task_dropdown_uses_task_name_list_order(reload_module):
+    config = reload_module("config")
+    ui_layout = reload_module("ui_layout")
+
+    ui_layout.user_manager.env_choices = list(config.TASK_NAME_LIST)
+    demo = ui_layout.create_ui_blocks()
+
+    try:
+        cfg = demo.get_config_file()
+        header_task_comp = next(
+            comp
+            for comp in cfg.get("components", [])
+            if comp.get("props", {}).get("elem_id") == "header_task"
+        )
+        assert header_task_comp.get("props", {}).get("choices") == config.TASK_NAME_LIST
+    finally:
+        demo.close()
+
+
 def test_native_ui_config_contains_phase_machine_and_precheck_chain(reload_module):
     ui_layout = reload_module("ui_layout")
     demo = ui_layout.create_ui_blocks()

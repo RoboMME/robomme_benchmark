@@ -25,6 +25,10 @@ class _FakeOptionSession:
         return Image.new("RGB", (24, 24), color=(0, 0, 0))
 
 
+def _is_fluorescent_yellow(pixel):
+    return pixel[0] > 180 and pixel[1] > 200 and pixel[2] < 80
+
+
 def test_on_reference_action_success_updates_option_and_coords(monkeypatch, reload_module):
     config = reload_module("config")
     callbacks = reload_module("gradio_callbacks")
@@ -48,7 +52,7 @@ def test_on_reference_action_success_updates_option_and_coords(monkeypatch, relo
 
     assert img_update.get("__type__") == "update"
     assert isinstance(img_update.get("value"), Image.Image)
-    assert img_update["value"].getpixel((5, 6)) != (0, 0, 0)
+    assert _is_fluorescent_yellow(img_update["value"].getpixel((5, 6)))
     assert img_update.get("elem_classes") == config.get_live_obs_elem_classes()
     assert option_update.get("value") == 2
     assert coords_text == "5, 6"
@@ -117,7 +121,7 @@ def test_on_map_click_clears_wait_state_and_restores_action_prompt(monkeypatch, 
 
     assert img_update.get("__type__") == "update"
     assert isinstance(img_update.get("value"), Image.Image)
-    assert img_update["value"].getpixel((5, 6)) != (0, 0, 0)
+    assert _is_fluorescent_yellow(img_update["value"].getpixel((5, 6)))
     assert img_update.get("elem_classes") == config.get_live_obs_elem_classes()
     assert coords_text == "5, 6"
     assert log_text == config.UI_TEXT["log"]["action_selection_prompt"]

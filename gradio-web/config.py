@@ -24,6 +24,25 @@ SESSION_TIMEOUT = 300  # Session超时时间（秒），如果30秒内没有exec
 # 兜底执行次数配置
 EXECUTE_LIMIT_OFFSET = 4  # 兜底执行次数 = non_demonstration_task_length + EXECUTE_LIMIT_OFFSET
 
+TASK_NAME_LIST = [
+    "BinFill",
+    "StopCube",
+    "PickXtimes",
+    "SwingXtimes",
+    "ButtonUnmask",
+    "VideoUnmask",
+    "VideoUnmaskSwap",
+    "ButtonUnmaskSwap",
+    "PickHighlight",
+    "VideoRepick",
+    "VideoPlaceButton",
+    "VideoPlaceOrder",
+    "MoveCube",
+    "InsertPeg",
+    "PatternLock",
+    "RouteStick",
+]
+
 
 # 应该显示demonstration videos的环境ID列表
 DEMO_VIDEO_ENV_IDS = [

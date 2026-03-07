@@ -702,16 +702,17 @@ def draw_coordinate_axes(img, position="right", rotate_180=False, env_id=None):
 
 
 def draw_marker(img, x, y):
-    """Draws a red circle and cross at (x, y)."""
+    """Draws a fluorescent yellow circle and cross at (x, y)."""
     if isinstance(img, np.ndarray):
         img = Image.fromarray(img)
     
     img = img.copy()
     draw = ImageDraw.Draw(img)
     r = 5
+    marker_color = (204, 255, 0)
     # Circle
-    draw.ellipse((x-r, y-r, x+r, y+r), outline="red", width=2)
+    draw.ellipse((x-r, y-r, x+r, y+r), outline=marker_color, width=2)
     # Cross
-    draw.line((x-r, y, x+r, y), fill="red", width=2)
-    draw.line((x, y-r, x, y+r), fill="red", width=2)
+    draw.line((x-r, y, x+r, y), fill=marker_color, width=2)
+    draw.line((x, y-r, x, y+r), fill=marker_color, width=2)
     return img

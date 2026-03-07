@@ -4,6 +4,7 @@ import random
 import threading
 from pathlib import Path
 
+from config import TASK_NAME_LIST
 from state_manager import clear_task_start_time, get_task_start_time
 
 
@@ -16,7 +17,7 @@ class UserManager:
         self.lock = threading.Lock()
 
         self.env_to_episodes = self._load_env_episode_pool()
-        self.env_choices = sorted(self.env_to_episodes.keys())
+        self.env_choices = self._build_env_choices()
 
         # Session-local progress only (no disk persistence)
         self.session_progress = {}
@@ -60,6 +61,12 @@ class UserManager:
         }
         print(f"Loaded random env pool: {len(env_to_episodes)} envs from metadata root {metadata_root}")
         return env_to_episodes
+
+    def _build_env_choices(self):
+        available_envs = set(self.env_to_episodes.keys())
+        ordered_choices = [env_id for env_id in TASK_NAME_LIST if env_id in available_envs]
+        remaining_choices = sorted(available_envs - set(ordered_choices))
+        return ordered_choices + remaining_choices
 
     def _ensure_session_entry(self, uid):
         if uid not in self.session_progress:
