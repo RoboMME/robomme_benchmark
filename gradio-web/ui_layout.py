@@ -361,8 +361,7 @@ def create_ui_blocks():
 
         uid_state = gr.State(value=None)
         ui_phase_state = gr.State(value=PHASE_INIT)
-        pending_header_task_state = gr.State(value=None)
-        programmatic_header_task_state = gr.State(value=None)
+        current_task_env_state = gr.State(value=None)
         live_obs_timer = gr.Timer(value=1.0 / LIVE_OBS_REFRESH_HZ, active=True)
 
         task_info_box = gr.Textbox(visible=False, elem_id="task_info_box")
@@ -557,42 +556,52 @@ def create_ui_blocks():
         def switch_env_with_phase(uid, selected_env):
             return _with_phase_from_load(switch_env_wrapper(uid, selected_env))
 
-        def maybe_switch_env_with_phase(uid, selected_env):
-            if not selected_env:
-                return _skip_load_flow()
-            return switch_env_with_phase(uid, selected_env)
-
-        def prepare_header_task_switch(selected_env, programmatic_selected_env):
+        def _normalize_selected_env(selected_env, current_task_env):
             base_choices = list(user_manager.env_choices)
             normalized_selected_env = _normalize_env_choice(selected_env, base_choices)
-            normalized_programmatic_env = _normalize_env_choice(programmatic_selected_env, base_choices)
+            normalized_current_env = _normalize_env_choice(current_task_env, base_choices)
+            return normalized_selected_env, normalized_current_env
 
+        def prepare_header_task_switch(selected_env, current_task_env):
+            normalized_selected_env, normalized_current_env = _normalize_selected_env(
+                selected_env,
+                current_task_env,
+            )
             if not normalized_selected_env:
-                return None, None, gr.update(visible=False)
-            if normalized_selected_env == normalized_programmatic_env:
-                return None, None, gr.update(visible=False)
-            return normalized_selected_env, None, show_loading_info()
+                return gr.update(visible=False)
+            if normalized_selected_env == normalized_current_env:
+                return gr.update(visible=False)
+            return show_loading_info()
+
+        def maybe_switch_env_with_phase(uid, selected_env, current_task_env):
+            normalized_selected_env, normalized_current_env = _normalize_selected_env(
+                selected_env,
+                current_task_env,
+            )
+            if not normalized_selected_env or normalized_selected_env == normalized_current_env:
+                return _skip_load_flow()
+            return switch_env_with_phase(uid, normalized_selected_env)
 
         task_info_box.change(
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
-            outputs=[header_task_box, header_goal_box, programmatic_header_task_state],
+            outputs=[header_task_box, header_goal_box, current_task_env_state],
         )
         goal_box.change(
             fn=sync_header_from_goal,
             inputs=[goal_box, task_info_box, header_task_box],
-            outputs=[header_task_box, header_goal_box, programmatic_header_task_state],
+            outputs=[header_task_box, header_goal_box, current_task_env_state],
         )
 
-        header_task_box.change(
+        header_task_box.select(
             fn=prepare_header_task_switch,
-            inputs=[header_task_box, programmatic_header_task_state],
-            outputs=[pending_header_task_state, programmatic_header_task_state, loading_overlay],
+            inputs=[header_task_box, current_task_env_state],
+            outputs=[loading_overlay],
             queue=False,
             show_progress="hidden",
         ).then(
             fn=maybe_switch_env_with_phase,
-            inputs=[uid_state, pending_header_task_state],
+            inputs=[uid_state, header_task_box, current_task_env_state],
             outputs=load_flow_outputs,
         ).then(
             fn=_phase_visibility_updates,
@@ -601,11 +610,9 @@ def create_ui_blocks():
             queue=False,
             show_progress="hidden",
         ).then(
-            fn=lambda _selected_env: None,
-            inputs=[pending_header_task_state],
-            outputs=[pending_header_task_state],
-            queue=False,
-            show_progress="hidden",
+            fn=sync_header_from_task,
+            inputs=[task_info_box, goal_box],
+            outputs=[header_task_box, header_goal_box, current_task_env_state],
         )
 
         next_task_btn.click(fn=show_loading_info, outputs=[loading_overlay]).then(
@@ -621,7 +628,7 @@ def create_ui_blocks():
         ).then(
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
-            outputs=[header_task_box, header_goal_box, programmatic_header_task_state],
+            outputs=[header_task_box, header_goal_box, current_task_env_state],
         )
 
         restart_episode_btn.click(fn=show_loading_info, outputs=[loading_overlay]).then(
@@ -637,7 +644,7 @@ def create_ui_blocks():
         ).then(
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
-            outputs=[header_task_box, header_goal_box, programmatic_header_task_state],
+            outputs=[header_task_box, header_goal_box, current_task_env_state],
         )
 
         video_display.end(
@@ -754,7 +761,7 @@ def create_ui_blocks():
         ).then(
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
-            outputs=[header_task_box, header_goal_box, programmatic_header_task_state],
+            outputs=[header_task_box, header_goal_box, current_task_env_state],
         )
 
     return demo

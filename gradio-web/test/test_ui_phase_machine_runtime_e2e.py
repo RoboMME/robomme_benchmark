@@ -1082,52 +1082,39 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
     demo_video_path = gr.get_video("world.mp4")
     switch_calls = []
 
-    def fake_init_app(request=None):
-        _ = request
-        return (
-            "uid-header-video",
-            gr.update(visible=True),  # main_interface
-            gr.update(value=fake_obs_img, interactive=False),  # img_display
-            "ready",  # log_output
-            gr.update(choices=[("pick", 0)], value=None),  # options_radio
-            "goal",  # goal_box
-            "No need for coordinates",  # coords_box
-            gr.update(value=None, visible=False),  # video_display
-            "PickXtimes (Episode 1)",  # task_info_box
-            "Completed: 0",  # progress_info_box
-            gr.update(interactive=True),  # restart_episode_btn
-            gr.update(interactive=True),  # next_task_btn
-            gr.update(interactive=True),  # exec_btn
-            gr.update(visible=False),  # video_phase_group
-            gr.update(visible=True),  # action_phase_group
-            gr.update(visible=True),  # control_panel_group
-            gr.update(value="hint"),  # task_hint_display
-            gr.update(visible=False),  # loading_overlay
-            gr.update(interactive=True),  # reference_action_btn
-        )
-
-    def fake_switch_env_wrapper(uid, selected_env):
-        switch_calls.append((uid, selected_env))
+    def _pick_task_response(uid, task_name, show_video):
         return (
             uid,
             gr.update(visible=True),  # main_interface
             gr.update(value=fake_obs_img, interactive=False),  # img_display
-            "demo prompt",  # log_output
+            "demo prompt" if show_video else "ready",  # log_output
             gr.update(choices=[("pick", 0)], value=None),  # options_radio
-            "video goal",  # goal_box
+            "video goal" if show_video else "goal",  # goal_box
             "No need for coordinates",  # coords_box
-            gr.update(value=demo_video_path, visible=True),  # video_display
-            "VideoPlaceButton (Episode 1)",  # task_info_box
+            gr.update(value=demo_video_path if show_video else None, visible=show_video),  # video_display
+            f"{task_name} (Episode 1)",  # task_info_box
             "Completed: 0",  # progress_info_box
             gr.update(interactive=True),  # restart_episode_btn
             gr.update(interactive=True),  # next_task_btn
             gr.update(interactive=True),  # exec_btn
-            gr.update(visible=True),  # video_phase_group
-            gr.update(visible=False),  # action_phase_group
-            gr.update(visible=False),  # control_panel_group
-            gr.update(value="video hint"),  # task_hint_display
+            gr.update(visible=show_video),  # video_phase_group
+            gr.update(visible=not show_video),  # action_phase_group
+            gr.update(visible=not show_video),  # control_panel_group
+            gr.update(value="video hint" if show_video else "hint"),  # task_hint_display
             gr.update(visible=False),  # loading_overlay
             gr.update(interactive=True),  # reference_action_btn
+        )
+
+    def fake_init_app(request=None):
+        _ = request
+        return _pick_task_response("uid-header-video", "PickXtimes", show_video=False)
+
+    def fake_switch_env_wrapper(uid, selected_env):
+        switch_calls.append((uid, selected_env))
+        return _pick_task_response(
+            uid,
+            selected_env,
+            show_video=selected_env == "VideoPlaceButton",
         )
 
     monkeypatch.setattr(ui_layout, "init_app", fake_init_app)
@@ -1163,6 +1150,7 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
                 }""",
                 timeout=5000,
             )
+            assert switch_calls == []
 
             page.click("#header_task input")
             page.get_by_role("option", name="VideoPlaceButton").click()
@@ -1194,6 +1182,10 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
             assert phase_after_switch["controlPhase"] is False
             assert phase_after_switch["currentSrc"]
             assert switch_calls == [("uid-header-video", "VideoPlaceButton")]
+
+            page.wait_for_timeout(1500)
+            assert switch_calls == [("uid-header-video", "VideoPlaceButton")]
+            assert _read_header_task_value(page) == "VideoPlaceButton"
 
             did_dispatch_end = page.evaluate(
                 """() => {
