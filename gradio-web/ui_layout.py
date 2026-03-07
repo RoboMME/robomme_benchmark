@@ -574,7 +574,7 @@ def create_ui_blocks():
             with gr.Column(scale=2):
                 header_goal_box = gr.Textbox(
                     value=render_header_goal(""),
-                    label="Task Goal 🎯",
+                    label="Task Goal ✅",
                     show_label=True,
                     interactive=False,
                     lines=1,
@@ -658,7 +658,7 @@ def create_ui_blocks():
                                         show_label=True,
                                         interactive=False,
                                         elem_id="log_output",
-                                        label="System Log📝",
+                                        label="System Log 📝",
                                     )
 
                         with gr.Row(elem_id="action_buttons_row"):

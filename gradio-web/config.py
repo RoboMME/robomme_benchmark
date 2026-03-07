@@ -59,9 +59,9 @@ DEMO_VIDEO_ENV_IDS = [
 
 UI_TEXT = {
     "log": {
-        "action_selection_prompt": "Please select the action in the left 👈,\nSome actions also need to select a point",
-        "point_selection_prompt": "Current action needs location input, please click on the image to select a point",
-        "demo_video_prompt": 'Press "Watch Video Input🎬" to watch a video\nNote: you can only watch the video once',
+        "action_selection_prompt": "Please select the action in the left 👈,\nActions with 🎯 need to select a point on the image as input",
+        "point_selection_prompt": "Current action needs location input, please click on the image to select key pixel",
+        "demo_video_prompt": 'Press "Watch Video Input 🎬" to watch a video\nNote: you can only watch the video once',
         "session_error": "Session Error",
         "reference_action_error": "Ground Truth Action Error: {error}",
         "reference_action_message": "Ground Truth Action: {option_label}. {option_action}",
