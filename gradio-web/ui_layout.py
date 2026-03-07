@@ -449,7 +449,7 @@ def create_ui_blocks():
     with gr.Blocks(title="Oracle Planner Interface") as demo:
         demo.css = CSS
 
-        gr.Markdown("## RoboMME Human Evaluation 🚀🚀🚀", elem_id="header_title")
+        gr.Markdown("## RoboMME Interactive Demo 🚀🚀🚀", elem_id="header_title")
         with gr.Row():
             with gr.Column(scale=1):
                 header_task_box = gr.Dropdown(
@@ -463,7 +463,7 @@ def create_ui_blocks():
             with gr.Column(scale=2):
                 header_goal_box = gr.Textbox(
                     value=render_header_goal(""),
-                    label="Goal 🎯",
+                    label="Task Goal 🎯",
                     show_label=True,
                     interactive=False,
                     lines=1,

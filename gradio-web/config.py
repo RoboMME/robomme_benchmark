@@ -58,7 +58,7 @@ UI_TEXT = {
         "select_keypoint_before_execute": "please click the keypoint selection image before execute!",
     },
     "actions": {
-        "keypoint_required_suffix": " (click mouse 🖱️ to select 🎯)",
+        "keypoint_required_suffix": "🎯",
     },
     "errors": {
         "load_missing_task": "Error loading task: missing current_task",
@@ -84,12 +84,12 @@ UI_ACTION_TEXT_OVERRIDES = {
         "move backward-left": "move backward-left↗︎",
         "move backward-right": "move backward-right↖︎",
     },
-    "RouteStick": {
-        "move to the nearest left target by circling around the stick clockwise": "move left clockwise↘︎→↗︎ ◟→◞",
-        "move to the nearest right target by circling around the stick clockwise": "move right clockwise↖︎←↙︎ ◟←◞",
-        "move to the nearest left target by circling around the stick counterclockwise": "move left counterclockwise↗︎→↘︎ ◜→◝",
-        "move to the nearest right target by circling around the stick counterclockwise": "move right counterclockwise↙︎←↖︎ ◜←◝",
-    },
+    # "RouteStick": {
+    #     "move to the nearest left target by circling around the stick clockwise": "move left clockwise↘︎→↗︎ ◟→◞",
+    #     "move to the nearest right target by circling around the stick clockwise": "move right clockwise↖︎←↙︎ ◟←◞",
+    #     "move to the nearest left target by circling around the stick counterclockwise": "move left counterclockwise↗︎→↘︎ ◜→◝",
+    #     "move to the nearest right target by circling around the stick counterclockwise": "move right counterclockwise↙︎←↖︎ ◜←◝",
+    # },
 }
 
 ROUTESTICK_OVERLAY_ACTION_TEXTS = [
