@@ -40,9 +40,9 @@ DEMO_VIDEO_ENV_IDS = [
 
 UI_TEXT = {
     "log": {
-        "action_selection_prompt": "please select the action in the left 👈,\nsome actions also need to select keypoint",
-        "keypoint_selection_prompt": "current action needs location input, please click on the image to select key pixel",
-        "demo_video_prompt": 'press "Watch Video Input🎬" to watch a video\nNote: you can only watch the video once',
+        "action_selection_prompt": "Please select the action in the left 👈,\nSome actions also need to select keypoint",
+        "keypoint_selection_prompt": "Current action needs location input, please click on the image to select key pixel",
+        "demo_video_prompt": 'Press "Watch Video Input🎬" to watch a video\nNote: you can only watch the video once',
         "session_error": "Session Error",
         "reference_action_error": "Ground Truth Action Error: {error}",
         "reference_action_message": "Ground Truth Action: {option_label}. {option_action}",
@@ -54,11 +54,11 @@ UI_TEXT = {
     },
     "coords": {
         "not_needed": "No need for coordinates",
-        "select_keypoint": "please click the keypoint selection image",
-        "select_keypoint_before_execute": "please click the keypoint selection image before execute!",
+        "select_keypoint": "Please click the keypoint selection image",
+        "select_keypoint_before_execute": "Please click the keypoint selection image before execute!",
     },
     "actions": {
-        "keypoint_required_suffix": "🎯",
+        "keypoint_required_suffix": " 🎯",
     },
     "errors": {
         "load_missing_task": "Error loading task: missing current_task",

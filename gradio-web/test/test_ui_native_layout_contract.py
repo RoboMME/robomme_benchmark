@@ -70,6 +70,14 @@ def test_extract_last_goal_prefers_last_list_item(reload_module):
     assert ui_layout.extract_last_goal("['goal a', 'goal b']") == "goal b"
 
 
+def test_render_header_goal_capitalizes_display_value(reload_module):
+    ui_layout = reload_module("ui_layout")
+
+    assert ui_layout.render_header_goal("place cube on target") == "Place cube on target"
+    assert ui_layout.render_header_goal("['goal a', 'goal b']") == "Goal b"
+    assert ui_layout.render_header_goal("") == "—"
+
+
 def test_native_ui_config_contains_phase_machine_and_precheck_chain(reload_module):
     ui_layout = reload_module("ui_layout")
     demo = ui_layout.create_ui_blocks()

@@ -391,6 +391,23 @@ def extract_last_goal(goal_text):
     return text.split("\n")[0].strip()
 
 
+def capitalize_first_letter(text):
+    """Uppercase only the first character for display."""
+    if not text:
+        return text
+    if len(text) == 1:
+        return text.upper()
+    return text[0].upper() + text[1:]
+
+
+def render_header_goal(goal_text):
+    """Render header goal from raw goal text using display-only normalization."""
+    last_goal = extract_last_goal(goal_text or "")
+    if not last_goal:
+        return "—"
+    return capitalize_first_letter(last_goal)
+
+
 def _phase_from_updates(main_interface_update, video_phase_update):
     if isinstance(main_interface_update, dict) and main_interface_update.get("visible") is False:
         return PHASE_INIT
@@ -441,10 +458,6 @@ def create_ui_blocks():
         if marker in clean_task:
             clean_task = clean_task.split(marker, 1)[0].strip()
         return " ".join(clean_task.splitlines()).strip() or None
-
-    def render_header_goal(goal_text):
-        last_goal = extract_last_goal(goal_text or "")
-        return last_goal if last_goal else "—"
 
     with gr.Blocks(title="Oracle Planner Interface") as demo:
         demo.css = CSS

@@ -87,6 +87,19 @@ def _read_header_task_value(page) -> str | None:
     )
 
 
+def _read_header_goal_value(page) -> str | None:
+    return page.evaluate(
+        """() => {
+            const root = document.getElementById('header_goal');
+            if (!root) return null;
+            const field = root.querySelector('textarea, input');
+            if (!field) return null;
+            const value = typeof field.value === 'string' ? field.value.trim() : '';
+            return value || null;
+        }"""
+    )
+
+
 def _read_coords_box_value(page) -> str | None:
     return page.evaluate(
         """() => {
@@ -1552,6 +1565,77 @@ def test_header_task_shows_env_after_init(monkeypatch):
                 timeout=5000,
             )
             assert _read_header_task_value(page) == "PickXtimes"
+            assert _read_header_goal_value(page) == "Goal"
+            browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        demo.close()
+
+
+def test_header_goal_capitalizes_displayed_value_after_init(monkeypatch):
+    ui_layout = importlib.reload(importlib.import_module("ui_layout"))
+
+    fake_obs = np.zeros((24, 24, 3), dtype=np.uint8)
+    fake_obs_img = Image.fromarray(fake_obs)
+
+    def fake_init_app(request=None):
+        _ = request
+        return (
+            "uid-auto",
+            gr.update(visible=True),  # main_interface
+            gr.update(value=fake_obs_img, interactive=False),  # img_display
+            "ready",  # log_output
+            gr.update(choices=[("pick", 0)], value=None),  # options_radio
+            "place cube on target",  # goal_box
+            "No need for coordinates",  # coords_box
+            gr.update(value=None, visible=False),  # video_display
+            gr.update(visible=False, interactive=False),  # watch_demo_video_btn
+            "PickXtimes (Episode 1)",  # task_info_box
+            "Completed: 0",  # progress_info_box
+            gr.update(interactive=True),  # restart_episode_btn
+            gr.update(interactive=True),  # next_task_btn
+            gr.update(interactive=True),  # exec_btn
+            gr.update(visible=False),  # video_phase_group
+            gr.update(visible=True),  # action_phase_group
+            gr.update(visible=True),  # control_panel_group
+            gr.update(value="hint"),  # task_hint_display
+            gr.update(visible=False),  # loading_overlay
+            gr.update(interactive=True),  # reference_action_btn
+        )
+
+    monkeypatch.setattr(ui_layout, "init_app", fake_init_app)
+
+    demo = ui_layout.create_ui_blocks()
+
+    port = _free_port()
+    host = "127.0.0.1"
+    root_url = f"http://{host}:{port}/"
+
+    app = FastAPI(title="header-goal-capitalization-test")
+    app = gr.mount_gradio_app(app, demo, path="/")
+
+    config = uvicorn.Config(app, host=host, port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    _wait_http_ready(root_url)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page.goto(root_url, wait_until="domcontentloaded")
+            page.wait_for_selector("#main_interface_root", state="visible", timeout=15000)
+            page.wait_for_function(
+                """() => {
+                    const root = document.getElementById('header_goal');
+                    const input = root ? root.querySelector('textarea, input') : null;
+                    return !!input && input.value.trim() === 'Place cube on target';
+                }""",
+                timeout=5000,
+            )
+            assert _read_header_goal_value(page) == "Place cube on target"
             browser.close()
     finally:
         server.should_exit = True
