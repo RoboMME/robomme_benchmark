@@ -136,13 +136,13 @@ def get_language_goal(self, env):
         target_target_language = self.target_target_language
         
         language_goals.append(f"watch the video carefully, then place the {target_color_name} cube on the target right {target_target_language} the button was pressed")
+        language_goals.append(f"watch the video carefully, and place the {target_color_name} cube on the target where it was placed immediately {target_target_language} the button was pressed")
         
+        language_goals.append(f"watch the video carefully, then place the {target_color_name} cube on the target where it was previously placed {target_target_language} the button was pressed")
         if target_target_language == "before":
             language_goals.append(f"watch the video carefully, then place the {target_color_name} cube on the target where it was last placed before the button was pressed")
         else:
             language_goals.append(f"watch the video carefully, then place the {target_color_name} cube on the target where it was first placed after the button was pressed")
-        language_goals.append(f"watch the video carefully, then place the {target_color_name} cube on the target where it was previously placed {target_target_language} the button was pressed")
-        language_goals.append(f"watch the video carefully and place the {target_color_name} cube on the target where it was placed immediately {target_target_language} the button was pressed")
         
 
     elif env == "VideoPlaceOrder":
@@ -163,11 +163,11 @@ def get_language_goal(self, env):
             
             language_goals.append(f'watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for {word} times, finally put it down and press the button to stop')
             if word == "two":
-                language_goals.append(f"watch the video carefully, identify the cube that was picked up, then pick up and place down the same cube twice, finally press the button to stop")
                 language_goals.append(f"watch the video carefully, then pick up the same cube that was previously picked up twice, and finally press the button to stop")
+                language_goals.append(f"watch the video carefully, identify the cube that was picked up, then pick up and place down the same cube twice, finally press the button to stop")
             else:
-                language_goals.append(f"watch the video carefully, identify the cube that was picked up, then pick up and place down the same cube {word} times, finally press the button to stop")
                 language_goals.append(f"watch the video carefully, then pick up the same cube that was previously picked up {word} times, and finally press the button to stop")
+                language_goals.append(f"watch the video carefully, identify the cube that was picked up, then pick up and place down the same cube {word} times, finally press the button to stop")
             
         else:
             language_goals.append(f'watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop')
