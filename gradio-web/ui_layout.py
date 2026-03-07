@@ -10,11 +10,14 @@ import gradio as gr
 
 from config import (
     CONTROL_PANEL_SCALE,
+    LIVE_OBS_BASE_CLASS,
+    LIVE_OBS_KEYPOINT_WAIT_CLASS,
     LIVE_OBS_REFRESH_HZ,
     KEYPOINT_SELECTION_SCALE,
     RIGHT_TOP_ACTION_SCALE,
     RIGHT_TOP_LOG_SCALE,
     UI_GLOBAL_FONT_SIZE,
+    get_live_obs_elem_classes,
 )
 from gradio_callbacks import (
     execute_step,
@@ -299,6 +302,60 @@ button#reference_action_btn:not(:disabled):hover {{
 button#watch_demo_video_btn {{
     width: 100%;
 }}
+
+#media_card {{
+    position: relative;
+    border-radius: 24px;
+    overflow: visible;
+}}
+
+#media_card::after {{
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: 30px;
+    border: 3px solid rgba(225, 29, 72, 0.00);
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.00);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    z-index: 0;
+}}
+
+@keyframes media-card-keypoint-ring {{
+    0% {{
+        box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.00);
+        border-color: rgba(225, 29, 72, 0.72);
+        opacity: 0.72;
+    }}
+    18% {{
+        box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.28);
+        border-color: rgba(225, 29, 72, 0.94);
+        opacity: 1;
+    }}
+    36% {{
+        box-shadow: 0 0 0 10px rgba(225, 29, 72, 0.12);
+        border-color: rgba(225, 29, 72, 0.88);
+        opacity: 0.94;
+    }}
+    62% {{
+        box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.18);
+        border-color: rgba(225, 29, 72, 0.96);
+        opacity: 1;
+    }}
+    100% {{
+        box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.00);
+        border-color: rgba(225, 29, 72, 0.72);
+        opacity: 0.72;
+    }}
+}}
+
+#media_card:has(#live_obs.{LIVE_OBS_KEYPOINT_WAIT_CLASS})::after {{
+    border-color: rgba(225, 29, 72, 0.94);
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.00);
+    opacity: 1;
+    animation: media-card-keypoint-ring 1.2s ease-in-out infinite;
+}}
 """
 
 
@@ -439,7 +496,7 @@ def create_ui_blocks():
                                 interactive=False,
                                 type="pil",
                                 elem_id="live_obs",
-                                elem_classes=["live-obs-resizable"],
+                                elem_classes=get_live_obs_elem_classes(),
                                 show_label=True,
                                 buttons=[],
                                 sources=[],
@@ -739,13 +796,13 @@ def create_ui_blocks():
         img_display.select(
             fn=on_map_click,
             inputs=[uid_state, options_radio],
-            outputs=[img_display, coords_box],
+            outputs=[img_display, coords_box, log_output],
         )
 
         options_radio.change(
             fn=on_option_select,
             inputs=[uid_state, options_radio, coords_box],
-            outputs=[coords_box, img_display],
+            outputs=[coords_box, img_display, log_output],
         )
 
         watch_demo_video_btn.click(

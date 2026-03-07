@@ -41,6 +41,7 @@ DEMO_VIDEO_ENV_IDS = [
 UI_TEXT = {
     "log": {
         "action_selection_prompt": "please select the action in the left 👈,\nsome actions also need to select keypoint",
+        "keypoint_selection_prompt": "current action needs location input, please click on the image to select key pixel",
         "demo_video_prompt": 'press "Watch Video Input🎬" to watch a video\nNote: you can only watch the video once',
         "session_error": "Session Error",
         "reference_action_error": "Ground Truth Action Error: {error}",
@@ -97,6 +98,16 @@ ROUTESTICK_OVERLAY_ACTION_TEXTS = [
     "move to the nearest right target by circling around the stick clockwise",
     "move to the nearest right target by circling around the stick counterclockwise",
 ]
+
+LIVE_OBS_BASE_CLASS = "live-obs-resizable"
+LIVE_OBS_KEYPOINT_WAIT_CLASS = "live-obs-keypoint-waiting"
+
+
+def get_live_obs_elem_classes(waiting_for_keypoint=False):
+    classes = [LIVE_OBS_BASE_CLASS]
+    if waiting_for_keypoint:
+        classes.append(LIVE_OBS_KEYPOINT_WAIT_CLASS)
+    return classes
 
 
 def get_ui_action_text(env_id, action_text):

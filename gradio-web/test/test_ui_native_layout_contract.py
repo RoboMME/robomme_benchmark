@@ -45,6 +45,20 @@ def test_native_ui_css_excludes_header_title_from_global_font_size(reload_module
     assert "font-size: var(--text-xxl) !important;" in ui_layout.CSS
 
 
+def test_native_ui_css_highlights_media_card_not_live_obs_transform(reload_module):
+    ui_layout = reload_module("ui_layout")
+
+    css = ui_layout.CSS
+
+    assert "#media_card::after" in css
+    assert "#media_card:has(#live_obs.live-obs-keypoint-waiting)::after" in css
+    assert "animation: media-card-keypoint-ring 1.2s ease-in-out infinite;" in css
+    assert "@keyframes media-card-keypoint-ring" in css
+    assert "#live_obs.live-obs-keypoint-waiting .image-frame" not in css
+    assert "#live_obs.live-obs-keypoint-waiting .upload-container" not in css
+    assert "transform: scale(" not in css
+
+
 def test_extract_last_goal_prefers_last_list_item(reload_module):
     ui_layout = reload_module("ui_layout")
 

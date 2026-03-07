@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import pytest
+from PIL import Image
 
 
 class _FakeOptionSession:
     def __init__(self, env_id="BinFill", raw_solve_options=None):
         self.env_id = env_id
         self.raw_solve_options = raw_solve_options or [{"available": True}]
+
+    def get_pil_image(self, use_segmented=False):
+        _ = use_segmented
+        return Image.new("RGB", (8, 8), color=(0, 0, 0))
 
 
 class _FakeLoadSession:
@@ -25,18 +30,25 @@ class _FakeLoadSession:
         return "IMG"
 
 
-def test_on_option_select_uses_configured_select_keypoint_message(monkeypatch, reload_module):
+def test_on_option_select_uses_configured_select_keypoint_and_log_messages(monkeypatch, reload_module):
     reload_module("config")
     callbacks = reload_module("gradio_callbacks")
 
     monkeypatch.setitem(callbacks.UI_TEXT["coords"], "select_keypoint", "pick a point from config")
+    monkeypatch.setitem(
+        callbacks.UI_TEXT["log"],
+        "keypoint_selection_prompt",
+        "custom log prompt from config",
+    )
     monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: _FakeOptionSession())
 
-    coords_text, img_update = callbacks.on_option_select("uid-1", 0, None)
+    coords_text, img_update, log_text = callbacks.on_option_select("uid-1", 0, None)
 
     assert coords_text == "pick a point from config"
     assert img_update.get("interactive") is True
+    assert callbacks.get_live_obs_elem_classes(waiting_for_keypoint=True) == img_update.get("elem_classes")
+    assert log_text == "custom log prompt from config"
 
 
 def test_precheck_execute_inputs_uses_configured_before_execute_message(monkeypatch, reload_module):
@@ -101,12 +113,14 @@ def test_missing_session_paths_use_configured_session_error(monkeypatch, reload_
     monkeypatch.setattr(callbacks, "get_session", lambda uid: None)
 
     _img, _option_update, coords_text, log_text = callbacks.on_reference_action("uid-missing")
-    map_img, map_text = callbacks.on_map_click("uid-missing", None, None)
+    map_img, map_coords, map_log = callbacks.on_map_click("uid-missing", None, None)
 
     assert coords_text == callbacks.UI_TEXT["coords"]["not_needed"]
     assert log_text == "Session Error From Config"
-    assert map_img is None
-    assert map_text == "Session Error From Config"
+    assert map_img.get("__type__") == "update"
+    assert map_img.get("value") is None
+    assert map_coords == callbacks.UI_TEXT["coords"]["not_needed"]
+    assert map_log == "Session Error From Config"
 
 
 def test_get_ui_action_text_uses_configured_overrides_and_fallback(reload_module):

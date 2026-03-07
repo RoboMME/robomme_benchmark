@@ -40,6 +40,7 @@ from config import (
     SESSION_TIMEOUT,
     UI_TEXT,
     USE_SEGMENTED_VIEW,
+    get_live_obs_elem_classes,
     get_ui_action_text,
     should_show_demo_video,
 )
@@ -57,6 +58,55 @@ LOGGER = logging.getLogger("robomme.callbacks")
 def _ui_text(section, key, **kwargs):
     template = UI_TEXT[section][key]
     return template.format(**kwargs) if kwargs else template
+
+
+_LIVE_OBS_UPDATE_SKIP = object()
+
+
+def _action_selection_log():
+    return format_log_markdown(_ui_text("log", "action_selection_prompt"))
+
+
+def _keypoint_selection_log():
+    return format_log_markdown(_ui_text("log", "keypoint_selection_prompt"))
+
+
+def _live_obs_update(
+    *,
+    value=_LIVE_OBS_UPDATE_SKIP,
+    interactive=None,
+    visible=None,
+    waiting_for_keypoint=False,
+):
+    kwargs = {
+        "elem_classes": get_live_obs_elem_classes(waiting_for_keypoint=waiting_for_keypoint),
+    }
+    if value is not _LIVE_OBS_UPDATE_SKIP:
+        kwargs["value"] = value
+    if interactive is not None:
+        kwargs["interactive"] = interactive
+    if visible is not None:
+        kwargs["visible"] = visible
+    return gr.update(**kwargs)
+
+
+def _parse_option_idx(option_value):
+    if isinstance(option_value, tuple):
+        _, option_idx = option_value
+        return option_idx
+    return option_value
+
+
+def _option_requires_coords(session, option_value) -> bool:
+    option_idx = _parse_option_idx(option_value)
+    if not isinstance(option_idx, int):
+        return False
+    raw_solve_options = getattr(session, "raw_solve_options", None)
+    if not isinstance(raw_solve_options, list):
+        return False
+    if not (0 <= option_idx < len(raw_solve_options)):
+        return False
+    return bool(raw_solve_options[option_idx].get("available"))
 
 
 def _should_enqueue_sample(sample_index: int) -> bool:
@@ -224,7 +274,7 @@ def on_video_end(uid):
     Called when the demonstration video finishes playing.
     Updates the system log to prompt for action selection.
     """
-    return format_log_markdown(_ui_text("log", "action_selection_prompt"))
+    return _action_selection_log()
 
 
 def on_demo_video_play(uid):
@@ -263,7 +313,7 @@ def switch_to_execute_phase(uid):
         gr.update(interactive=False),  # exec_btn
         gr.update(interactive=False),  # restart_episode_btn
         gr.update(interactive=False),  # next_task_btn
-        gr.update(interactive=False),  # img_display
+        _live_obs_update(interactive=False),  # img_display
         gr.update(interactive=False),  # reference_action_btn
     )
 
@@ -279,7 +329,7 @@ def switch_to_action_phase(uid=None):
         gr.update(),  # exec_btn (keep execute_step result)
         gr.update(),  # restart_episode_btn (keep execute_step result)
         gr.update(),  # next_task_btn (keep execute_step result)
-        gr.update(interactive=True),  # img_display
+        _live_obs_update(interactive=True),  # img_display
         gr.update(interactive=True),  # reference_action_btn
     )
 
@@ -414,7 +464,7 @@ def refresh_live_obs(uid, ui_phase):
     img = _prepare_refresh_frame(latest)
     if img is None:
         return gr.update()
-    return gr.update(value=img, interactive=False)
+    return _live_obs_update(value=img, interactive=False)
 
 
 def on_video_end_transition(uid):
@@ -423,7 +473,7 @@ def on_video_end_transition(uid):
         gr.update(visible=False),  # video_phase_group
         gr.update(visible=True),   # action_phase_group
         gr.update(visible=True),   # control_panel_group
-        format_log_markdown(_ui_text("log", "action_selection_prompt")),
+        _action_selection_log(),
         gr.update(visible=False, interactive=False),  # watch_demo_video_btn
     )
 
@@ -433,7 +483,7 @@ def _task_load_failed_response(uid, message):
     return (
         uid,
         gr.update(visible=True),  # main_interface
-        gr.update(value=None, interactive=False),  # img_display
+        _live_obs_update(value=None, interactive=False),  # img_display
         format_log_markdown(message),  # log_output
         gr.update(choices=[], value=None),  # options_radio
         "",  # goal_box
@@ -514,7 +564,7 @@ def _load_status_task(uid, status):
         return (
             uid,
             gr.update(visible=True),  # main_interface
-            gr.update(value=None, interactive=False),  # img_display
+            _live_obs_update(value=None, interactive=False),  # img_display
             format_log_markdown(_ui_text("errors", "load_episode_error", load_msg=load_msg)),  # log_output
             gr.update(choices=[], value=None),  # options_radio
             "",  # goal_box
@@ -561,7 +611,7 @@ def _load_status_task(uid, status):
 
     demo_video_path = None
     should_show = should_show_demo_video(actual_env_id) if actual_env_id else False
-    initial_log_msg = format_log_markdown(_ui_text("log", "action_selection_prompt"))
+    initial_log_msg = _action_selection_log()
 
     if should_show:
         if session.demonstration_frames:
@@ -594,7 +644,7 @@ def _load_status_task(uid, status):
         return (
             uid,
             gr.update(visible=True),  # main_interface
-            gr.update(value=img, interactive=False),  # img_display
+            _live_obs_update(value=img, interactive=False),  # img_display
             initial_log_msg,  # log_output
             gr.update(choices=radio_choices, value=None),  # options_radio
             goal_text,  # goal_box
@@ -619,7 +669,7 @@ def _load_status_task(uid, status):
     return (
         uid,
         gr.update(visible=True),  # main_interface
-        gr.update(value=img, interactive=False),  # img_display
+        _live_obs_update(value=img, interactive=False),  # img_display
         initial_log_msg,  # log_output
         gr.update(choices=radio_choices, value=None),  # options_radio
         goal_text,  # goal_box
@@ -743,22 +793,14 @@ def on_map_click(uid, option_value, evt: gr.SelectData):
     session = get_session(uid)
     if not session:
         LOGGER.warning("on_map_click: missing session uid=%s", _uid_for_log(uid))
-        return None, _ui_text("log", "session_error")
+        return (
+            _live_obs_update(value=None, interactive=False),
+            _ui_text("coords", "not_needed"),
+            format_log_markdown(_ui_text("log", "session_error")),
+        )
         
     # Check if current option actually needs coordinates
-    needs_coords = False
-    if option_value is not None:
-        # Parse option index similar to on_option_select
-        option_idx = None
-        if isinstance(option_value, tuple):
-             _, option_idx = option_value
-        else:
-             option_idx = option_value
-             
-        if option_idx is not None and 0 <= option_idx < len(session.raw_solve_options):
-             opt = session.raw_solve_options[option_idx]
-             if opt.get("available"):
-                 needs_coords = True
+    needs_coords = _option_requires_coords(session, option_value)
     
     if not needs_coords:
         LOGGER.debug(
@@ -770,7 +812,7 @@ def on_map_click(uid, option_value, evt: gr.SelectData):
         # Return current state without changes (or reset to default message if needed, but it should already be there)
         # We return the clean image and the "No need" message to enforce state
         base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
-        return base_img, _ui_text("coords", "not_needed")
+        return _live_obs_update(value=base_img, interactive=False), _ui_text("coords", "not_needed"), _action_selection_log()
 
     x, y = evt.index[0], evt.index[1]
     LOGGER.debug(
@@ -789,7 +831,7 @@ def on_map_click(uid, option_value, evt: gr.SelectData):
     
     coords_str = f"{x}, {y}"
     
-    return marked_img, coords_str
+    return _live_obs_update(value=marked_img, interactive=True), coords_str, _action_selection_log()
 
 
 def _is_valid_coords_text(coords_text: str) -> bool:
@@ -821,7 +863,9 @@ def on_option_select(uid, option_value, coords_str=None):
     
     if option_value is None:
         LOGGER.debug("on_option_select uid=%s option=None", _uid_for_log(uid))
-        return default_msg, gr.update(interactive=False)
+        session = get_session(uid) if uid else None
+        base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW) if session else _LIVE_OBS_UPDATE_SKIP
+        return default_msg, _live_obs_update(value=base_img, interactive=False), _action_selection_log()
     
     # 更新session活动时间（选择选项操作）
     if uid:
@@ -830,30 +874,27 @@ def on_option_select(uid, option_value, coords_str=None):
     session = get_session(uid)
     if not session:
         LOGGER.warning("on_option_select: missing session uid=%s", _uid_for_log(uid))
-        return default_msg, gr.update(interactive=False)
+        return default_msg, _live_obs_update(interactive=False), format_log_markdown(_ui_text("log", "session_error"))
     
-    # option_value 是 (label, idx) 元组或直接是 idx
-    if isinstance(option_value, tuple):
-        _, option_idx = option_value
-    else:
-        option_idx = option_value
+    option_idx = _parse_option_idx(option_value)
+    base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
 
     # Determine coords message
-    if 0 <= option_idx < len(session.raw_solve_options):
-        opt = session.raw_solve_options[option_idx]
-        if opt.get("available"):
-             LOGGER.debug(
-                 "on_option_select uid=%s option=%s requires_coords=True valid_coords=%s",
-                 _uid_for_log(uid),
-                 option_idx,
-                 _is_valid_coords_text(coords_str),
-             )
-             if _is_valid_coords_text(coords_str):
-                 return coords_str, gr.update(interactive=True)
-             return _ui_text("coords", "select_keypoint"), gr.update(interactive=True)
+    if _option_requires_coords(session, option_idx):
+        LOGGER.debug(
+            "on_option_select uid=%s option=%s requires_coords=True valid_coords=%s",
+            _uid_for_log(uid),
+            option_idx,
+            _is_valid_coords_text(coords_str),
+        )
+        return (
+            _ui_text("coords", "select_keypoint"),
+            _live_obs_update(value=base_img, interactive=True, waiting_for_keypoint=True),
+            _keypoint_selection_log(),
+        )
     
     LOGGER.debug("on_option_select uid=%s option=%s requires_coords=False", _uid_for_log(uid), option_idx)
-    return default_msg, gr.update(interactive=False)
+    return default_msg, _live_obs_update(value=base_img, interactive=False), _action_selection_log()
 
 
 def on_reference_action(uid):
@@ -867,7 +908,7 @@ def on_reference_action(uid):
     if not session:
         LOGGER.warning("on_reference_action: missing session uid=%s", _uid_for_log(uid))
         return (
-            None,
+            _live_obs_update(value=None, interactive=False),
             gr.update(),
             _ui_text("coords", "not_needed"),
             format_log_markdown(_ui_text("log", "session_error")),
@@ -881,7 +922,7 @@ def on_reference_action(uid):
     except Exception as exc:
         LOGGER.exception("on_reference_action failed uid=%s", _uid_for_log(uid))
         return (
-            current_img,
+            _live_obs_update(value=current_img, interactive=False),
             gr.update(),
             gr.update(),
             format_log_markdown(_ui_text("log", "reference_action_error", error=exc)),
@@ -892,7 +933,7 @@ def on_reference_action(uid):
         if isinstance(reference, dict) and reference.get("message"):
             message = str(reference.get("message"))
         return (
-            current_img,
+            _live_obs_update(value=current_img, interactive=False),
             gr.update(),
             gr.update(),
             format_log_markdown(_ui_text("log", "reference_action_status", message=message)),
@@ -935,7 +976,7 @@ def on_reference_action(uid):
     )
 
     return (
-        updated_img,
+        _live_obs_update(value=updated_img, interactive=False),
         gr.update(value=option_idx),
         coords_text,
         format_log_markdown(log_text),
@@ -979,21 +1020,13 @@ def precheck_execute_inputs(uid, option_idx, coords_str):
         LOGGER.error("precheck_execute_inputs: missing session uid=%s", _uid_for_log(uid))
         raise gr.Error(_ui_text("log", "session_error"))
 
-    parsed_option_idx = option_idx
-    if isinstance(option_idx, tuple):
-        _, parsed_option_idx = option_idx
+    parsed_option_idx = _parse_option_idx(option_idx)
 
     if parsed_option_idx is None:
         LOGGER.debug("precheck_execute_inputs uid=%s missing option", _uid_for_log(uid))
         raise gr.Error(_ui_text("log", "execute_missing_action"))
 
-    needs_coords = False
-    if (
-        isinstance(parsed_option_idx, int)
-        and 0 <= parsed_option_idx < len(session.raw_solve_options)
-    ):
-        opt = session.raw_solve_options[parsed_option_idx]
-        needs_coords = bool(opt.get("available"))
+    needs_coords = _option_requires_coords(session, parsed_option_idx)
 
     if needs_coords and not _is_valid_coords_text(coords_str):
         LOGGER.debug(
@@ -1038,7 +1071,7 @@ def execute_step(uid, option_idx, coords_str):
     if not session:
         LOGGER.error("execute_step missing session uid=%s", _uid_for_log(uid))
         return (
-            None,
+            _live_obs_update(value=None, interactive=False),
             format_log_markdown(_ui_text("log", "session_error")),
             gr.update(),
             gr.update(),
@@ -1073,10 +1106,11 @@ def execute_step(uid, option_idx, coords_str):
         LOGGER.debug("execute_step uid=%s base_frames empty; triggering update_observation", _uid_for_log(uid))
         session.update_observation(use_segmentation=USE_SEGMENTED_VIEW)
     
+    option_idx = _parse_option_idx(option_idx)
     if option_idx is None:
         LOGGER.debug("execute_step uid=%s aborted: option_idx is None", _uid_for_log(uid))
         return (
-            session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW),
+            _live_obs_update(value=session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW), interactive=False),
             format_log_markdown(_ui_text("log", "execute_missing_action")),
             gr.update(),
             gr.update(),
@@ -1084,12 +1118,7 @@ def execute_step(uid, option_idx, coords_str):
             gr.update(interactive=True),
         )
 
-    # 检查当前选项是否需要坐标
-    needs_coords = False
-    if option_idx is not None and 0 <= option_idx < len(session.raw_solve_options):
-        opt = session.raw_solve_options[option_idx]
-        if opt.get("available"):
-            needs_coords = True
+    needs_coords = _option_requires_coords(session, option_idx)
     
     # 如果选项需要坐标，检查是否已经点击了图片
     if needs_coords:
@@ -1102,7 +1131,7 @@ def execute_step(uid, option_idx, coords_str):
             )
             current_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
             error_msg = _ui_text("coords", "select_keypoint_before_execute")
-            return current_img, format_log_markdown(error_msg), gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True)
+            return _live_obs_update(value=current_img, interactive=False), format_log_markdown(error_msg), gr.update(), gr.update(), gr.update(interactive=False), gr.update(interactive=True)
 
     # Parse coords
     click_coords = None
@@ -1257,7 +1286,7 @@ def execute_step(uid, option_idx, coords_str):
     )
     
     return (
-        img,
+        _live_obs_update(value=img, interactive=False),
         formatted_status,
         task_update,
         progress_update,

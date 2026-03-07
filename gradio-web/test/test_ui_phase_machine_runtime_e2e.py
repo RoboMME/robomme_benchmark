@@ -100,6 +100,68 @@ def _read_coords_box_value(page) -> str | None:
     )
 
 
+def _read_log_output_value(page) -> str | None:
+    return page.evaluate(
+        """() => {
+            const root = document.getElementById('log_output');
+            if (!root) return null;
+            const field = root.querySelector('textarea, input');
+            if (field && typeof field.value === 'string') {
+                const value = field.value.trim();
+                return value || null;
+            }
+            const value = (root.textContent || '').trim();
+            return value || null;
+        }"""
+    )
+
+
+def _read_elem_classes(page, elem_id: str) -> list[str] | None:
+    return page.evaluate(
+        """(elemId) => {
+            const root = document.getElementById(elemId);
+            return root ? Array.from(root.classList) : null;
+        }""",
+        elem_id,
+    )
+
+
+def _read_media_card_wait_snapshot(page) -> dict[str, str | float | None]:
+    return page.evaluate(
+        """() => {
+            const card = document.getElementById('media_card');
+            if (!card) {
+                return {
+                    opacity: null,
+                    borderColor: null,
+                    boxShadow: null,
+                    animationName: null,
+                };
+            }
+            const style = getComputedStyle(card, '::after');
+            return {
+                opacity: Number.parseFloat(style.opacity || '0'),
+                borderColor: style.borderColor || null,
+                boxShadow: style.boxShadow || null,
+                animationName: style.animationName || null,
+            };
+        }"""
+    )
+
+
+def _read_live_obs_transform_snapshot(page) -> dict[str, str | None]:
+    return page.evaluate(
+        """() => {
+            const img = document.querySelector('#live_obs img');
+            const frame = document.querySelector('#live_obs .image-frame');
+            return {
+                imgTransform: img ? getComputedStyle(img).transform : null,
+                frameTransform: frame ? getComputedStyle(frame).transform : null,
+            };
+        }"""
+    )
+
+
 def _read_phase_visibility(page) -> dict[str, bool | str | None]:
     return page.evaluate(
         """() => {
@@ -978,6 +1040,207 @@ def test_no_video_task_hides_manual_demo_button(monkeypatch):
             assert phase_snapshot["actionPhase"] is True
             assert phase_snapshot["controlPhase"] is True
             assert controls_snapshot["buttonVisible"] is False
+
+            browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        demo.close()
+
+
+def test_keypoint_wait_state_pulses_live_obs_and_updates_system_log(monkeypatch):
+    config_module = importlib.reload(importlib.import_module("config"))
+    callbacks = importlib.reload(importlib.import_module("gradio_callbacks"))
+    ui_layout = importlib.reload(importlib.import_module("ui_layout"))
+
+    fake_obs = np.zeros((24, 48, 3), dtype=np.uint8)
+    fake_obs[:, :] = [15, 20, 25]
+    fake_obs_img = Image.fromarray(fake_obs)
+
+    class FakeSession:
+        raw_solve_options = [{"available": [object()]}, {"available": False}]
+
+        def get_pil_image(self, use_segmented=False):
+            _ = use_segmented
+            return fake_obs_img.copy()
+
+    def fake_init_app(_request=None):
+        return (
+            "uid-keypoint-wait",
+            gr.update(visible=True),  # main_interface
+            gr.update(
+                value=fake_obs_img.copy(),
+                interactive=False,
+                elem_classes=config_module.get_live_obs_elem_classes(),
+            ),  # img_display
+            config_module.UI_TEXT["log"]["action_selection_prompt"],  # log_output
+            gr.update(choices=[("pick", 0), ("skip", 1)], value=None),  # options_radio
+            "goal",  # goal_box
+            gr.update(
+                value=config_module.UI_TEXT["coords"]["not_needed"],
+                visible=True,
+                interactive=False,
+            ),  # coords_box
+            gr.update(value=None, visible=False),  # video_display
+            gr.update(visible=False, interactive=False),  # watch_demo_video_btn
+            "KeypointEnv (Episode 1)",  # task_info_box
+            "Completed: 0",  # progress_info_box
+            gr.update(interactive=True),  # restart_episode_btn
+            gr.update(interactive=True),  # next_task_btn
+            gr.update(interactive=True),  # exec_btn
+            gr.update(visible=False),  # video_phase_group
+            gr.update(visible=True),  # action_phase_group
+            gr.update(visible=True),  # control_panel_group
+            gr.update(value="hint"),  # task_hint_display
+            gr.update(visible=False),  # loading_overlay
+            gr.update(interactive=True),  # reference_action_btn
+        )
+
+    monkeypatch.setattr(ui_layout, "init_app", fake_init_app)
+    monkeypatch.setattr(callbacks, "get_session", lambda uid: FakeSession())
+    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
+
+    demo = ui_layout.create_ui_blocks()
+
+    port = _free_port()
+    host = "127.0.0.1"
+    root_url = f"http://{host}:{port}/"
+
+    app = FastAPI(title="keypoint-wait-state-test")
+    app = gr.mount_gradio_app(app, demo, path="/")
+
+    config = uvicorn.Config(app, host=host, port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    _wait_http_ready(root_url)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page.goto(root_url, wait_until="domcontentloaded")
+            page.add_style_tag(content=ui_layout.CSS)
+            page.wait_for_selector("#main_interface_root", state="visible", timeout=15000)
+            page.wait_for_selector("#live_obs img", timeout=15000)
+
+            initial_classes = _read_elem_classes(page, "live_obs")
+            assert initial_classes is not None
+            assert config_module.LIVE_OBS_KEYPOINT_WAIT_CLASS not in initial_classes
+            assert _read_log_output_value(page) == config_module.UI_TEXT["log"]["action_selection_prompt"]
+            initial_card_wait = _read_media_card_wait_snapshot(page)
+            initial_transforms = _read_live_obs_transform_snapshot(page)
+            initial_img_box = page.locator("#live_obs img").bounding_box()
+            initial_frame_box = page.locator("#live_obs .image-frame").bounding_box()
+            assert initial_card_wait["opacity"] == 0
+            assert initial_card_wait["animationName"] == "none"
+            assert initial_transforms["imgTransform"] == "none"
+            assert initial_transforms["frameTransform"] == "none"
+            assert initial_img_box is not None
+            assert initial_frame_box is not None
+
+            page.locator("#action_radio input[type='radio']").first.check(force=True)
+
+            page.wait_for_function(
+                """(state) => {
+                    const liveObs = document.getElementById('live_obs');
+                    const coordsRoot = document.getElementById('coords_box');
+                    const coordsField = coordsRoot?.querySelector('textarea, input');
+                    const logRoot = document.getElementById('log_output');
+                    const logField = logRoot?.querySelector('textarea, input');
+                    const mediaCard = document.getElementById('media_card');
+                    const mediaAfter = mediaCard ? getComputedStyle(mediaCard, '::after') : null;
+                    const coordsValue = coordsField ? coordsField.value.trim() : '';
+                    const logValue = logField ? logField.value.trim() : (logRoot?.textContent || '').trim();
+                    return (
+                        !!liveObs &&
+                        liveObs.classList.contains(state.waitClass) &&
+                        !!mediaAfter &&
+                        Number.parseFloat(mediaAfter.opacity || '0') > 0.5 &&
+                        mediaAfter.animationName === state.cardAnimation &&
+                        coordsValue === state.coordsPrompt &&
+                        logValue === state.waitLog
+                    );
+                }""",
+                arg={
+                    "cardAnimation": "media-card-keypoint-ring",
+                    "waitClass": config_module.LIVE_OBS_KEYPOINT_WAIT_CLASS,
+                    "coordsPrompt": config_module.UI_TEXT["coords"]["select_keypoint"],
+                    "waitLog": config_module.UI_TEXT["log"]["keypoint_selection_prompt"],
+                },
+                timeout=5000,
+            )
+
+            wait_classes = _read_elem_classes(page, "live_obs")
+            assert wait_classes is not None
+            assert config_module.LIVE_OBS_KEYPOINT_WAIT_CLASS in wait_classes
+            assert _read_coords_box_value(page) == config_module.UI_TEXT["coords"]["select_keypoint"]
+            assert _read_log_output_value(page) == config_module.UI_TEXT["log"]["keypoint_selection_prompt"]
+            wait_card = _read_media_card_wait_snapshot(page)
+            wait_transforms = _read_live_obs_transform_snapshot(page)
+            wait_img_box = page.locator("#live_obs img").bounding_box()
+            wait_frame_box = page.locator("#live_obs .image-frame").bounding_box()
+            assert wait_card["opacity"] is not None and wait_card["opacity"] > 0.5
+            assert wait_card["animationName"] == "media-card-keypoint-ring"
+            assert wait_card["borderColor"] != "rgba(225, 29, 72, 0)"
+            assert wait_transforms["imgTransform"] == "none"
+            assert wait_transforms["frameTransform"] == "none"
+            assert wait_img_box is not None
+            assert wait_frame_box is not None
+            assert wait_img_box["x"] == pytest.approx(initial_img_box["x"], abs=1.0)
+            assert wait_img_box["y"] == pytest.approx(initial_img_box["y"], abs=1.0)
+            assert wait_img_box["width"] == pytest.approx(initial_img_box["width"], abs=1.0)
+            assert wait_img_box["height"] == pytest.approx(initial_img_box["height"], abs=1.0)
+            assert wait_frame_box["x"] == pytest.approx(initial_frame_box["x"], abs=1.0)
+            assert wait_frame_box["y"] == pytest.approx(initial_frame_box["y"], abs=1.0)
+            assert wait_frame_box["width"] == pytest.approx(initial_frame_box["width"], abs=1.0)
+            assert wait_frame_box["height"] == pytest.approx(initial_frame_box["height"], abs=1.0)
+
+            box = page.locator("#live_obs img").bounding_box()
+            assert box is not None
+            target_x = box["x"] + ((24.5) / 48.0) * box["width"]
+            target_y = box["y"] + ((8.5) / 24.0) * box["height"]
+            page.mouse.click(target_x, target_y)
+
+            page.wait_for_function(
+                """(state) => {
+                    const liveObs = document.getElementById('live_obs');
+                    const coordsRoot = document.getElementById('coords_box');
+                    const coordsField = coordsRoot?.querySelector('textarea, input');
+                    const logRoot = document.getElementById('log_output');
+                    const logField = logRoot?.querySelector('textarea, input');
+                    const coordsValue = coordsField ? coordsField.value.trim() : '';
+                    const logValue = logField ? logField.value.trim() : (logRoot?.textContent || '').trim();
+                    return (
+                        !!liveObs &&
+                        !liveObs.classList.contains(state.waitClass) &&
+                        /^\\d+\\s*,\\s*\\d+$/.test(coordsValue) &&
+                        logValue === state.actionLog
+                    );
+                }""",
+                arg={
+                    "waitClass": config_module.LIVE_OBS_KEYPOINT_WAIT_CLASS,
+                    "actionLog": config_module.UI_TEXT["log"]["action_selection_prompt"],
+                },
+                timeout=5000,
+            )
+
+            coords_value = _read_coords_box_value(page)
+            assert coords_value is not None
+            coord_x, coord_y = [int(part.strip()) for part in coords_value.split(",", 1)]
+            assert abs(coord_x - 24) <= 1
+            assert abs(coord_y - 8) <= 1
+            final_classes = _read_elem_classes(page, "live_obs")
+            assert final_classes is not None
+            assert config_module.LIVE_OBS_KEYPOINT_WAIT_CLASS not in final_classes
+            assert config_module.LIVE_OBS_BASE_CLASS in final_classes
+            assert _read_log_output_value(page) == config_module.UI_TEXT["log"]["action_selection_prompt"]
+            final_card_wait = _read_media_card_wait_snapshot(page)
+            final_transforms = _read_live_obs_transform_snapshot(page)
+            assert final_card_wait["opacity"] == 0
+            assert final_card_wait["animationName"] == "none"
+            assert final_transforms["imgTransform"] == "none"
+            assert final_transforms["frameTransform"] == "none"
 
             browser.close()
     finally:

@@ -17,15 +17,9 @@ TEMP_DEMOS_DIR = PROJECT_ROOT / "temp_demos"
 CWD_TEMP_DEMOS_DIR = Path.cwd() / "temp_demos"
 
 
-def configure_runtime_devices():
-    """Restrict the app to physical GPU 1 and map rendering to the visible device."""
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    os.environ.setdefault("NVIDIA_VISIBLE_DEVICES", "1")
-    # After masking to physical GPU 1, libraries should use logical cuda:0.
-    os.environ["SAPIEN_RENDER_DEVICE"] = "cuda:0"
 
 
-configure_runtime_devices()
+
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -132,7 +126,8 @@ def main():
 
     os.environ.setdefault("ROBOMME_TEMP_DEMOS_DIR", str(TEMP_DEMOS_DIR))
     allowed_paths = build_allowed_paths()
-    server_port = int(os.getenv("PORT", "7860"))
+    #server_port = int(os.getenv("PORT", "7860"))
+    server_port = 7861
     LOGGER.info(
         "Launching UI with server_name=%s server_port=%s ROBOMME_TEMP_DEMOS_DIR=%s",
         "0.0.0.0",

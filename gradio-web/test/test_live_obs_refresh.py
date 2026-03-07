@@ -21,6 +21,7 @@ def test_refresh_live_obs_skips_when_not_execution_phase(monkeypatch, reload_mod
 
 
 def test_refresh_live_obs_updates_image_from_latest_frame(monkeypatch, reload_module):
+    config = reload_module("config")
     callbacks = reload_module("gradio_callbacks")
     frame0 = np.zeros((8, 8, 3), dtype=np.uint8)
     frame1 = np.full((8, 8, 3), 11, dtype=np.uint8)
@@ -29,6 +30,7 @@ def test_refresh_live_obs_updates_image_from_latest_frame(monkeypatch, reload_mo
     frame4 = np.full((8, 8, 3), 44, dtype=np.uint8)
     session = _FakeSession([frame0])
     monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
+    monkeypatch.setattr(callbacks, "KEYFRAME_DOWNSAMPLE_FACTOR", 2)
 
     # Reset queue state at execute start (cursor anchored at current base_frames length).
     callbacks.switch_to_execute_phase("uid-2")
@@ -41,11 +43,13 @@ def test_refresh_live_obs_updates_image_from_latest_frame(monkeypatch, reload_mo
 
     assert update1.get("__type__") == "update"
     assert update1.get("interactive") is False
+    assert update1.get("elem_classes") == config.get_live_obs_elem_classes()
     assert isinstance(update1.get("value"), Image.Image)
     assert update1["value"].getpixel((0, 0)) == (11, 11, 11)
 
     assert update2.get("__type__") == "update"
     assert update2.get("interactive") is False
+    assert update2.get("elem_classes") == config.get_live_obs_elem_classes()
     assert isinstance(update2.get("value"), Image.Image)
     assert update2["value"].getpixel((0, 0)) == (33, 33, 33)
 
@@ -55,16 +59,19 @@ def test_refresh_live_obs_updates_image_from_latest_frame(monkeypatch, reload_mo
 
 
 def test_switch_phase_keeps_live_obs_visible_and_toggles_interactive(reload_module):
+    config = reload_module("config")
     callbacks = reload_module("gradio_callbacks")
 
     to_exec = callbacks.switch_to_execute_phase("uid-3")
     assert len(to_exec) == 6
     assert to_exec[0].get("interactive") is False
     assert to_exec[4].get("interactive") is False
+    assert to_exec[4].get("elem_classes") == config.get_live_obs_elem_classes()
     assert to_exec[5].get("interactive") is False
 
     to_action = callbacks.switch_to_action_phase()
     assert len(to_action) == 6
     assert to_action[0].get("interactive") is True
     assert to_action[4].get("interactive") is True
+    assert to_action[4].get("elem_classes") == config.get_live_obs_elem_classes()
     assert to_action[5].get("interactive") is True
