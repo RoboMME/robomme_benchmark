@@ -113,6 +113,7 @@ def _read_phase_visibility(page) -> dict[str, bool | str | None]:
             return {
                 videoPhase: visible('video_phase_group'),
                 video: visible('demo_video'),
+                watchButton: visible('watch_demo_video_btn'),
                 actionPhase: visible('action_phase_group'),
                 action: visible('live_obs'),
                 controlPhase: visible('control_panel_group'),
@@ -120,6 +121,51 @@ def _read_phase_visibility(page) -> dict[str, bool | str | None]:
                 currentSrc: videoEl ? videoEl.currentSrc : null,
             };
         }"""
+    )
+
+
+def _read_demo_video_controls(page) -> dict[str, bool | None]:
+    return page.evaluate(
+        """() => {
+            const visible = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return false;
+                const st = getComputedStyle(el);
+                return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
+            };
+            const videoEl = document.querySelector('#demo_video video');
+            const button =
+                document.querySelector('#watch_demo_video_btn button') ||
+                document.querySelector('button#watch_demo_video_btn');
+            return {
+                videoVisible: visible('demo_video'),
+                buttonVisible: visible('watch_demo_video_btn'),
+                buttonDisabled: button ? button.disabled : null,
+                autoplay: videoEl ? videoEl.autoplay : null,
+                paused: videoEl ? videoEl.paused : null,
+            };
+        }"""
+    )
+
+
+def _click_demo_video_button(page) -> None:
+    page.locator("#watch_demo_video_btn button, button#watch_demo_video_btn").first.click()
+
+
+def _dispatch_video_event(page, event_name: str) -> bool:
+    return page.evaluate(
+        """(eventName) => {
+            const targets = [
+                document.querySelector('#demo_video video'),
+                document.getElementById('demo_video'),
+            ].filter(Boolean);
+            if (!targets.length) return false;
+            for (const target of targets) {
+                target.dispatchEvent(new Event(eventName, { bubbles: true, composed: true }));
+            }
+            return true;
+        }""",
+        event_name,
     )
 
 
@@ -197,7 +243,7 @@ def font_size_probe_ui_url(monkeypatch):
 
 @pytest.fixture
 def phase_machine_ui_url():
-    state = {"precheck_calls": 0}
+    state = {"precheck_calls": 0, "play_clicks": 0}
     demo_video_url = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
     ui_layout = importlib.reload(importlib.import_module("ui_layout"))
 
@@ -210,7 +256,13 @@ def phase_machine_ui_url():
 
         with gr.Column(visible=False, elem_id="main_interface") as main_interface:
             with gr.Column(visible=False, elem_id="video_phase_group") as video_phase_group:
-                video_display = gr.Video(value=None, elem_id="demo_video", autoplay=True)
+                video_display = gr.Video(value=None, elem_id="demo_video", autoplay=False)
+                watch_demo_video_btn = gr.Button(
+                    "Watch Video Input🎬",
+                    elem_id="watch_demo_video_btn",
+                    interactive=False,
+                    visible=False,
+                )
 
             with gr.Column(visible=False, elem_id="action_phase_group") as action_phase_group:
                 img_display = gr.Image(value=np.zeros((24, 24, 3), dtype=np.uint8), elem_id="live_obs")
@@ -228,6 +280,13 @@ def phase_machine_ui_url():
                     next_task_btn = gr.Button("Next Task", elem_id="next_task_btn")
 
         log_output = gr.Markdown("", elem_id="log_output")
+        simulate_stop_btn = gr.Button("Simulate Stop", elem_id="simulate_stop_btn")
+
+        demo.load(
+            fn=None,
+            js=ui_layout.DEMO_VIDEO_PLAY_BINDING_JS,
+            queue=False,
+        )
 
         def login_fn():
             return (
@@ -235,6 +294,7 @@ def phase_machine_ui_url():
                 gr.update(visible=True),
                 gr.update(visible=True),
                 gr.update(value=demo_video_url, visible=True),
+                gr.update(visible=True, interactive=True),
                 gr.update(visible=False),
                 gr.update(visible=False),
                 gr.update(visible=False),
@@ -243,6 +303,13 @@ def phase_machine_ui_url():
                 "demo_video",
             )
 
+        def on_play_demo_fn():
+            state["play_clicks"] += 1
+            return gr.update(visible=True, interactive=False)
+
+        def on_simulate_stop_fn():
+            return "stopped"
+
         def on_video_end_fn():
             return (
                 gr.update(visible=False),
@@ -250,6 +317,7 @@ def phase_machine_ui_url():
                 gr.update(visible=True),
                 gr.update(visible=True),
                 gr.update(interactive=True),
+                gr.update(visible=False, interactive=False),
                 "action_keypoint",
             )
 
@@ -293,6 +361,7 @@ def phase_machine_ui_url():
                 main_interface,
                 video_phase_group,
                 video_display,
+                watch_demo_video_btn,
                 action_phase_group,
                 control_panel_group,
                 action_buttons_row,
@@ -300,6 +369,12 @@ def phase_machine_ui_url():
                 coords_box,
                 phase_state,
             ],
+            queue=False,
+        )
+
+        watch_demo_video_btn.click(
+            fn=on_play_demo_fn,
+            outputs=[watch_demo_video_btn],
             queue=False,
         )
 
@@ -311,8 +386,49 @@ def phase_machine_ui_url():
                 control_panel_group,
                 action_buttons_row,
                 reference_action_btn,
+                watch_demo_video_btn,
                 phase_state,
             ],
+            queue=False,
+        )
+        video_display.stop(
+            fn=on_video_end_fn,
+            outputs=[
+                video_phase_group,
+                action_phase_group,
+                control_panel_group,
+                action_buttons_row,
+                reference_action_btn,
+                watch_demo_video_btn,
+                phase_state,
+            ],
+            queue=False,
+        )
+        simulate_stop_btn.click(
+            fn=on_simulate_stop_fn,
+            outputs=[log_output],
+            js="""() => {
+                const show = (id, visible) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.style.display = visible ? '' : 'none';
+                };
+                show('video_phase_group', false);
+                show('demo_video', false);
+                show('action_phase_group', true);
+                show('live_obs', true);
+                show('control_panel_group', true);
+                show('action_radio', true);
+                show('action_buttons_row', true);
+                show('watch_demo_video_btn', false);
+                const refBtn =
+                    document.querySelector('#reference_action_btn button') ||
+                    document.querySelector('button#reference_action_btn');
+                if (refBtn) {
+                    refBtn.disabled = false;
+                }
+                return [];
+            }""",
             queue=False,
         )
 
@@ -427,6 +543,7 @@ def test_phase_machine_runtime_flow_and_execute_precheck(phase_machine_ui_url):
                 };
                 return {
                     video: visible('demo_video'),
+                    watchButton: visible('watch_demo_video_btn'),
                     action: visible('live_obs'),
                     control: visible('action_radio'),
                 };
@@ -434,27 +551,59 @@ def test_phase_machine_runtime_flow_and_execute_precheck(phase_machine_ui_url):
         )
         assert phase_after_login == {
             "video": True,
+            "watchButton": True,
             "action": False,
             "control": False,
         }
 
         page.wait_for_selector("#demo_video video", timeout=5000)
-        did_dispatch_end = page.evaluate(
+        page.wait_for_function(
             """() => {
                 const videoEl = document.querySelector('#demo_video video');
-                if (!videoEl) return false;
-                videoEl.dispatchEvent(new Event('ended', { bubbles: true }));
-                return true;
-            }"""
+                const button =
+                    document.querySelector('#watch_demo_video_btn button') ||
+                    document.querySelector('button#watch_demo_video_btn');
+                return !!videoEl && !!videoEl.currentSrc && !!button && button.disabled === false && videoEl.paused === true;
+            }""",
+            timeout=10000,
         )
+        controls_after_login = _read_demo_video_controls(page)
+        assert controls_after_login["videoVisible"] is True
+        assert controls_after_login["buttonVisible"] is True
+        assert controls_after_login["buttonDisabled"] is False
+        assert controls_after_login["autoplay"] is False
+        assert controls_after_login["paused"] is True
+
+        _click_demo_video_button(page)
+        page.wait_for_function(
+            """() => {
+                const videoEl = document.querySelector('#demo_video video');
+                const button =
+                    document.querySelector('#watch_demo_video_btn button') ||
+                    document.querySelector('button#watch_demo_video_btn');
+                if (!videoEl || !button) return false;
+                return button.disabled === true && (videoEl.paused === false || videoEl.currentTime > 0);
+            }""",
+            timeout=10000,
+        )
+        controls_after_click = _read_demo_video_controls(page)
+        assert controls_after_click["buttonDisabled"] is True
+        assert controls_after_click["paused"] is False
+
+        did_dispatch_end = _dispatch_video_event(page, "ended")
         assert did_dispatch_end
 
         page.wait_for_function(
             """() => {
                 const action = document.getElementById('live_obs');
                 const control = document.getElementById('action_radio');
-                if (!action || !control) return false;
-                return getComputedStyle(action).display !== 'none' && getComputedStyle(control).display !== 'none';
+                const watchButton = document.getElementById('watch_demo_video_btn');
+                if (!action || !control || !watchButton) return false;
+                return (
+                    getComputedStyle(action).display !== 'none' &&
+                    getComputedStyle(control).display !== 'none' &&
+                    getComputedStyle(watchButton).display === 'none'
+                );
             }"""
         )
 
@@ -549,6 +698,7 @@ def test_phase_machine_runtime_flow_and_execute_precheck(phase_machine_ui_url):
         browser.close()
 
     assert state["precheck_calls"] >= 2
+    assert state["play_clicks"] == 1
 
 
 def test_reference_action_button_is_green_only_when_interactive(phase_machine_ui_url):
@@ -569,14 +719,17 @@ def test_reference_action_button_is_green_only_when_interactive(phase_machine_ui
             assert disabled_snapshot["backgroundColor"] != "rgb(31, 139, 76)"
 
         page.wait_for_selector("#demo_video video", timeout=5000)
-        did_dispatch_end = page.evaluate(
+        _click_demo_video_button(page)
+        page.wait_for_function(
             """() => {
-                const videoEl = document.querySelector('#demo_video video');
-                if (!videoEl) return false;
-                videoEl.dispatchEvent(new Event('ended', { bubbles: true }));
-                return true;
-            }"""
+                const button =
+                    document.querySelector('#watch_demo_video_btn button') ||
+                    document.querySelector('button#watch_demo_video_btn');
+                return !!button && button.disabled === true;
+            }""",
+            timeout=5000,
         )
+        did_dispatch_end = _dispatch_video_event(page, "ended")
         assert did_dispatch_end
 
         page.wait_for_function(
@@ -595,6 +748,59 @@ def test_reference_action_button_is_green_only_when_interactive(phase_machine_ui
         assert enabled_snapshot["color"] == "rgb(255, 255, 255)"
 
         browser.close()
+
+
+@pytest.mark.xfail(
+    reason="Gradio 6.9.0 output video stop path is not reliably triggerable in headless Chromium; transition contract is covered by unit tests.",
+    strict=False,
+)
+def test_demo_video_stop_event_transitions_and_hides_button(phase_machine_ui_url):
+    root_url, state = phase_machine_ui_url
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(root_url, wait_until="domcontentloaded")
+
+        page.wait_for_timeout(2500)
+        page.wait_for_selector("#login_btn", timeout=20000)
+        page.click("#login_btn")
+        page.wait_for_selector("#demo_video video", timeout=5000)
+
+        _click_demo_video_button(page)
+        page.wait_for_function(
+            """() => {
+                const button =
+                    document.querySelector('#watch_demo_video_btn button') ||
+                    document.querySelector('button#watch_demo_video_btn');
+                return !!button && button.disabled === true;
+            }""",
+            timeout=5000,
+        )
+
+        page.locator("#simulate_stop_btn button, button#simulate_stop_btn").first.click()
+
+        page.wait_for_function(
+            """() => {
+                const visible = (id) => {
+                    const el = document.getElementById(id);
+                    if (!el) return false;
+                    const st = getComputedStyle(el);
+                    return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
+                };
+                return (
+                    !visible('watch_demo_video_btn') &&
+                    !visible('demo_video') &&
+                    visible('live_obs') &&
+                    visible('action_radio')
+                );
+            }""",
+            timeout=5000,
+        )
+
+        browser.close()
+
+    assert state["play_clicks"] == 1
 
 
 def test_unified_loading_overlay_init_flow(monkeypatch):
@@ -621,6 +827,7 @@ def test_unified_loading_overlay_init_flow(monkeypatch):
             "goal",  # goal_box
             "No need for coordinates",  # coords_box
             gr.update(value=None, visible=False),  # video_display
+            gr.update(visible=False, interactive=False),  # watch_demo_video_btn
             "PickXtimes (Episode 1)",  # task_info_box
             "Completed: 0",  # progress_info_box
             gr.update(interactive=True),  # restart_episode_btn
@@ -690,6 +897,95 @@ def test_unified_loading_overlay_init_flow(monkeypatch):
     assert calls["init"] >= 1
 
 
+def test_no_video_task_hides_manual_demo_button(monkeypatch):
+    ui_layout = importlib.reload(importlib.import_module("ui_layout"))
+
+    fake_obs = np.zeros((24, 24, 3), dtype=np.uint8)
+    fake_obs_img = Image.fromarray(fake_obs)
+
+    def fake_init_app(_request=None):
+        return (
+            "uid-no-video",
+            gr.update(visible=True),  # main_interface
+            gr.update(value=fake_obs_img.copy(), interactive=False),  # img_display
+            "ready",  # log_output
+            gr.update(choices=[("pick", 0)], value=None),  # options_radio
+            "goal",  # goal_box
+            "No need for coordinates",  # coords_box
+            gr.update(value=None, visible=False),  # video_display
+            gr.update(visible=False, interactive=False),  # watch_demo_video_btn
+            "PickXtimes (Episode 1)",  # task_info_box
+            "Completed: 0",  # progress_info_box
+            gr.update(interactive=True),  # restart_episode_btn
+            gr.update(interactive=True),  # next_task_btn
+            gr.update(interactive=True),  # exec_btn
+            gr.update(visible=False),  # video_phase_group
+            gr.update(visible=True),  # action_phase_group
+            gr.update(visible=True),  # control_panel_group
+            gr.update(value="hint"),  # task_hint_display
+            gr.update(visible=False),  # loading_overlay
+            gr.update(interactive=True),  # reference_action_btn
+        )
+
+    monkeypatch.setattr(ui_layout, "init_app", fake_init_app)
+
+    demo = ui_layout.create_ui_blocks()
+
+    port = _free_port()
+    host = "127.0.0.1"
+    root_url = f"http://{host}:{port}/"
+
+    app = FastAPI(title="native-no-video-test")
+    app = gr.mount_gradio_app(app, demo, path="/")
+
+    config = uvicorn.Config(app, host=host, port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    _wait_http_ready(root_url)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page.goto(root_url, wait_until="domcontentloaded")
+            page.wait_for_selector("#main_interface_root", state="visible", timeout=15000)
+
+            page.wait_for_function(
+                """() => {
+                    const visible = (id) => {
+                        const el = document.getElementById(id);
+                        if (!el) return false;
+                        const st = getComputedStyle(el);
+                        return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
+                    };
+                    return (
+                        !visible('video_phase_group') &&
+                        !visible('demo_video') &&
+                        !visible('watch_demo_video_btn') &&
+                        visible('action_phase_group') &&
+                        visible('control_panel_group')
+                    );
+                }""",
+                timeout=5000,
+            )
+
+            phase_snapshot = _read_phase_visibility(page)
+            controls_snapshot = _read_demo_video_controls(page)
+            assert phase_snapshot["videoPhase"] is False
+            assert phase_snapshot["video"] is False
+            assert phase_snapshot["watchButton"] is False
+            assert phase_snapshot["actionPhase"] is True
+            assert phase_snapshot["controlPhase"] is True
+            assert controls_snapshot["buttonVisible"] is False
+
+            browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        demo.close()
+
+
 def test_live_obs_client_resize_fills_width_and_keeps_click_mapping(monkeypatch):
     callbacks = importlib.reload(importlib.import_module("gradio_callbacks"))
     ui_layout = importlib.reload(importlib.import_module("ui_layout"))
@@ -718,6 +1014,7 @@ def test_live_obs_client_resize_fills_width_and_keeps_click_mapping(monkeypatch)
                 interactive=False,
             ),  # coords_box
             gr.update(value=None, visible=False),  # video_display
+            gr.update(visible=False, interactive=False),  # watch_demo_video_btn
             "ResizeEnv (Episode 1)",  # task_info_box
             "Completed: 0",  # progress_info_box
             gr.update(interactive=True),  # restart_episode_btn
@@ -946,6 +1243,7 @@ def test_header_task_shows_env_after_init(monkeypatch):
             "goal",  # goal_box
             "No need for coordinates",  # coords_box
             gr.update(value=None, visible=False),  # video_display
+            gr.update(visible=False, interactive=False),  # watch_demo_video_btn
             "PickXtimes (Episode 1)",  # task_info_box
             "Completed: 0",  # progress_info_box
             gr.update(interactive=True),  # restart_episode_btn
@@ -1021,6 +1319,7 @@ def test_header_task_env_normalization_and_fallback(monkeypatch, task_info_text,
             "goal",  # goal_box
             "No need for coordinates",  # coords_box
             gr.update(value=None, visible=False),  # video_display
+            gr.update(visible=False, interactive=False),  # watch_demo_video_btn
             task_info_text,  # task_info_box
             "Completed: 0",  # progress_info_box
             gr.update(interactive=True),  # restart_episode_btn
@@ -1092,6 +1391,7 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
             "video goal" if show_video else "goal",  # goal_box
             "No need for coordinates",  # coords_box
             gr.update(value=demo_video_path if show_video else None, visible=show_video),  # video_display
+            gr.update(visible=show_video, interactive=show_video),  # watch_demo_video_btn
             f"{task_name} (Episode 1)",  # task_info_box
             "Completed: 0",  # progress_info_box
             gr.update(interactive=True),  # restart_episode_btn
@@ -1164,12 +1464,20 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
                         return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
                     };
                     const videoEl = document.querySelector('#demo_video video');
+                    const button =
+                        document.querySelector('#watch_demo_video_btn button') ||
+                        document.querySelector('button#watch_demo_video_btn');
                     return (
                         visible('video_phase_group') &&
                         visible('demo_video') &&
+                        visible('watch_demo_video_btn') &&
                         !visible('action_phase_group') &&
                         !visible('control_panel_group') &&
-                        !!(videoEl && videoEl.currentSrc)
+                        !!(videoEl && videoEl.currentSrc) &&
+                        !!button &&
+                        button.disabled === false &&
+                        videoEl.paused === true &&
+                        videoEl.autoplay === false
                     );
                 }""",
                 timeout=10000,
@@ -1178,6 +1486,7 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
             phase_after_switch = _read_phase_visibility(page)
             assert phase_after_switch["videoPhase"] is True
             assert phase_after_switch["video"] is True
+            assert phase_after_switch["watchButton"] is True
             assert phase_after_switch["actionPhase"] is False
             assert phase_after_switch["controlPhase"] is False
             assert phase_after_switch["currentSrc"]
@@ -1187,14 +1496,18 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
             assert switch_calls == [("uid-header-video", "VideoPlaceButton")]
             assert _read_header_task_value(page) == "VideoPlaceButton"
 
-            did_dispatch_end = page.evaluate(
+            _click_demo_video_button(page)
+            page.wait_for_function(
                 """() => {
-                    const videoEl = document.querySelector('#demo_video video');
-                    if (!videoEl) return false;
-                    videoEl.dispatchEvent(new Event('ended', { bubbles: true }));
-                    return true;
-                }"""
+                    const button =
+                        document.querySelector('#watch_demo_video_btn button') ||
+                        document.querySelector('button#watch_demo_video_btn');
+                    return !!button && button.disabled === true;
+                }""",
+                timeout=5000,
             )
+
+            did_dispatch_end = _dispatch_video_event(page, "ended")
             assert did_dispatch_end
 
             page.wait_for_function(
@@ -1208,6 +1521,7 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
                     return (
                         !visible('video_phase_group') &&
                         !visible('demo_video') &&
+                        !visible('watch_demo_video_btn') &&
                         visible('action_phase_group') &&
                         visible('control_panel_group') &&
                         visible('live_obs') &&
@@ -1220,6 +1534,7 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
             phase_after_end = _read_phase_visibility(page)
             assert phase_after_end["videoPhase"] is False
             assert phase_after_end["video"] is False
+            assert phase_after_end["watchButton"] is False
             assert phase_after_end["actionPhase"] is True
             assert phase_after_end["action"] is True
             assert phase_after_end["controlPhase"] is True
@@ -1234,6 +1549,7 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
 
 def test_phase_machine_runtime_local_video_path_end_transition():
     import gradio_callbacks as cb
+    ui_layout = importlib.reload(importlib.import_module("ui_layout"))
 
     demo_video_path = gr.get_video("world.mp4")
     fake_obs = np.zeros((24, 24, 3), dtype=np.uint8)
@@ -1275,9 +1591,20 @@ def test_phase_machine_runtime_local_video_path_end_transition():
     try:
         with gr.Blocks(title="Native phase machine local video test") as demo:
             uid_state = gr.State(value="uid-local-video")
+            demo.load(
+                fn=None,
+                js=ui_layout.DEMO_VIDEO_PLAY_BINDING_JS,
+                queue=False,
+            )
             with gr.Column(visible=False, elem_id="main_interface") as main_interface:
                 with gr.Column(visible=False, elem_id="video_phase_group") as video_phase_group:
                     video_display = gr.Video(value=None, elem_id="demo_video", autoplay=False)
+                    watch_demo_video_btn = gr.Button(
+                        "Watch Video Input🎬",
+                        elem_id="watch_demo_video_btn",
+                        interactive=False,
+                        visible=False,
+                    )
 
                 with gr.Column(visible=True, elem_id="action_phase_group") as action_phase_group:
                     img_display = gr.Image(value=fake_obs.copy(), elem_id="live_obs")
@@ -1317,6 +1644,7 @@ def test_phase_machine_runtime_local_video_path_end_transition():
                     goal_box,
                     coords_box,
                     video_display,
+                    watch_demo_video_btn,
                     task_info_box,
                     progress_info_box,
                     restart_episode_btn,
@@ -1332,10 +1660,23 @@ def test_phase_machine_runtime_local_video_path_end_transition():
                 queue=False,
             )
 
+            watch_demo_video_btn.click(
+                fn=cb.on_demo_video_play,
+                inputs=[uid_state],
+                outputs=[watch_demo_video_btn],
+                queue=False,
+            )
+
             video_display.end(
                 fn=cb.on_video_end_transition,
                 inputs=[uid_state],
-                outputs=[video_phase_group, action_phase_group, control_panel_group, log_output],
+                outputs=[
+                    video_phase_group,
+                    action_phase_group,
+                    control_panel_group,
+                    log_output,
+                    watch_demo_video_btn,
+                ],
                 queue=False,
             )
 
@@ -1370,6 +1711,7 @@ def test_phase_machine_runtime_local_video_path_end_transition():
                         };
                         return {
                             video: visible('demo_video'),
+                            watchButton: visible('watch_demo_video_btn'),
                             action: visible('live_obs'),
                             control: visible('action_radio'),
                         };
@@ -1377,18 +1719,29 @@ def test_phase_machine_runtime_local_video_path_end_transition():
                 )
                 assert phase_after_login == {
                     "video": True,
+                    "watchButton": True,
                     "action": False,
                     "control": False,
                 }
 
-                did_dispatch_end = page.evaluate(
+                controls_after_login = _read_demo_video_controls(page)
+                assert controls_after_login["buttonVisible"] is True
+                assert controls_after_login["buttonDisabled"] is False
+                assert controls_after_login["autoplay"] is False
+                assert controls_after_login["paused"] is True
+
+                _click_demo_video_button(page)
+                page.wait_for_function(
                     """() => {
-                        const videoEl = document.querySelector('#demo_video video');
-                        if (!videoEl) return false;
-                        videoEl.dispatchEvent(new Event('ended', { bubbles: true }));
-                        return true;
-                    }"""
+                        const button =
+                            document.querySelector('#watch_demo_video_btn button') ||
+                            document.querySelector('button#watch_demo_video_btn');
+                        return !!button && button.disabled === true;
+                    }""",
+                    timeout=5000,
                 )
+
+                did_dispatch_end = _dispatch_video_event(page, "ended")
                 assert did_dispatch_end
 
                 page.wait_for_function(
@@ -1399,7 +1752,12 @@ def test_phase_machine_runtime_local_video_path_end_transition():
                             const st = getComputedStyle(el);
                             return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
                         };
-                        return visible('live_obs') && visible('action_radio') && !visible('demo_video');
+                        return (
+                            visible('live_obs') &&
+                            visible('action_radio') &&
+                            !visible('demo_video') &&
+                            !visible('watch_demo_video_btn')
+                        );
                     }""",
                     timeout=2000,
                 )

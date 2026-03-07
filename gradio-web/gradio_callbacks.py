@@ -24,6 +24,8 @@ from state_manager import (
     update_session_activity,
     get_session_activity,
     cleanup_session,
+    get_play_button_clicked,
+    set_play_button_clicked,
     reset_play_button_clicked,
     GLOBAL_SESSIONS,
     SESSION_LAST_ACTIVITY,
@@ -225,6 +227,21 @@ def on_video_end(uid):
     return format_log_markdown(_ui_text("log", "action_selection_prompt"))
 
 
+def on_demo_video_play(uid):
+    """Mark the demo video as consumed and disable the play button."""
+    if uid:
+        update_session_activity(uid)
+        already_clicked = get_play_button_clicked(uid)
+        if not already_clicked:
+            set_play_button_clicked(uid, True)
+        LOGGER.debug(
+            "demo video play clicked uid=%s already_clicked=%s",
+            _uid_for_log(uid),
+            already_clicked,
+        )
+    return gr.update(visible=True, interactive=False)
+
+
 def switch_to_execute_phase(uid):
     """Disable controls and keypoint clicking during execute playback."""
     if uid:
@@ -406,7 +423,8 @@ def on_video_end_transition(uid):
         gr.update(visible=False),  # video_phase_group
         gr.update(visible=True),   # action_phase_group
         gr.update(visible=True),   # control_panel_group
-        format_log_markdown(_ui_text("log", "action_selection_prompt"))
+        format_log_markdown(_ui_text("log", "action_selection_prompt")),
+        gr.update(visible=False, interactive=False),  # watch_demo_video_btn
     )
 
 
@@ -421,6 +439,7 @@ def _task_load_failed_response(uid, message):
         "",  # goal_box
         _ui_text("coords", "not_needed"),  # coords_box
         gr.update(value=None, visible=False),  # video_display
+        gr.update(visible=False, interactive=False),  # watch_demo_video_btn
         "",  # task_info_box
         "",  # progress_info_box
         gr.update(interactive=False),  # restart_episode_btn
@@ -501,6 +520,7 @@ def _load_status_task(uid, status):
             "",  # goal_box
             _ui_text("coords", "not_needed"),  # coords_box
             gr.update(value=None, visible=False),  # video_display
+            gr.update(visible=False, interactive=False),  # watch_demo_video_btn
             f"{actual_env_id} (Episode {ep_num})",  # task_info_box
             progress_text,  # progress_info_box
             gr.update(interactive=True),  # restart_episode_btn
@@ -540,13 +560,10 @@ def _load_status_task(uid, status):
     )
 
     demo_video_path = None
-    has_demo_video = False
     should_show = should_show_demo_video(actual_env_id) if actual_env_id else False
     initial_log_msg = format_log_markdown(_ui_text("log", "action_selection_prompt"))
 
     if should_show:
-        has_demo_video = True
-        initial_log_msg = format_log_markdown(_ui_text("log", "demo_video_prompt"))
         if session.demonstration_frames:
             try:
                 demo_video_path = save_video(session.demonstration_frames, "demo")
@@ -565,6 +582,10 @@ def _load_status_task(uid, status):
             bool(demo_video_path),
         )
 
+    has_demo_video = bool(demo_video_path)
+    if has_demo_video:
+        initial_log_msg = format_log_markdown(_ui_text("log", "demo_video_prompt"))
+
     img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
 
     if has_demo_video:
@@ -579,6 +600,7 @@ def _load_status_task(uid, status):
             goal_text,  # goal_box
             _ui_text("coords", "not_needed"),  # coords_box
             gr.update(value=demo_video_path, visible=True),  # video_display
+            gr.update(visible=True, interactive=True),  # watch_demo_video_btn
             f"{actual_env_id} (Episode {ep_num})",  # task_info_box
             progress_text,  # progress_info_box
             gr.update(interactive=True),  # restart_episode_btn
@@ -603,6 +625,7 @@ def _load_status_task(uid, status):
         goal_text,  # goal_box
         _ui_text("coords", "not_needed"),  # coords_box
         gr.update(value=None, visible=False),  # video_display (no video)
+        gr.update(visible=False, interactive=False),  # watch_demo_video_btn
         f"{actual_env_id} (Episode {ep_num})",  # task_info_box
         progress_text,  # progress_info_box
         gr.update(interactive=True),  # restart_episode_btn

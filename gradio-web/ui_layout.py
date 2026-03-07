@@ -21,6 +21,7 @@ from gradio_callbacks import (
     init_app,
     load_next_task_wrapper,
     on_map_click,
+    on_demo_video_play,
     on_option_select,
     on_reference_action,
     on_video_end_transition,
@@ -43,6 +44,42 @@ PHASE_EXECUTION_PLAYBACK = "execution_playback"
 
 # Deprecated: no legacy runtime JS logic in native Gradio mode.
 SYNC_JS = ""
+
+
+DEMO_VIDEO_PLAY_BINDING_JS = r"""
+() => {
+    const bindPlayButton = () => {
+        const button =
+            document.querySelector("#watch_demo_video_btn button") ||
+            document.querySelector("button#watch_demo_video_btn");
+        if (!button || button.dataset.robommeDemoPlayBound === "1") {
+            return;
+        }
+        button.dataset.robommeDemoPlayBound = "1";
+        button.addEventListener("click", () => {
+            const videoEl = document.querySelector("#demo_video video");
+            if (!videoEl) {
+                return;
+            }
+            const playPromise = videoEl.play();
+            if (playPromise && typeof playPromise.catch === "function") {
+                playPromise.catch(() => {});
+            }
+        });
+    };
+
+    if (!window.__robommeDemoPlayBindingInstalled) {
+        const observer = new MutationObserver(() => bindPlayButton());
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+        window.__robommeDemoPlayBindingInstalled = true;
+    }
+
+    bindPlayButton();
+}
+"""
 
 
 LIVE_OBS_CLIENT_RESIZE_JS = r"""
@@ -256,6 +293,12 @@ button#reference_action_btn:not(:disabled):hover {{
 #live_obs.live-obs-resizable .upload-container {{
     width: 100%;
 }}
+
+#watch_demo_video_btn,
+#watch_demo_video_btn button,
+button#watch_demo_video_btn {{
+    width: 100%;
+}}
 """
 
 
@@ -286,12 +329,12 @@ def _phase_from_updates(main_interface_update, video_phase_update):
 
 
 def _with_phase_from_load(load_result):
-    phase = _phase_from_updates(load_result[1], load_result[13])
+    phase = _phase_from_updates(load_result[1], load_result[14])
     return (*load_result, phase)
 
 
 def _skip_load_flow():
-    return tuple(gr.skip() for _ in range(20))
+    return tuple(gr.skip() for _ in range(21))
 
 
 def _phase_visibility_updates(phase):
@@ -377,9 +420,17 @@ def create_ui_blocks():
                                 label="Demonstration Video 🎬",
                                 interactive=False,
                                 elem_id="demo_video",
-                                autoplay=True,
+                                autoplay=False,
                                 show_label=True,
                                 visible=True,
+                            )
+                            watch_demo_video_btn = gr.Button(
+                                "Watch Video Input🎬",
+                                variant="primary",
+                                size="lg",
+                                interactive=False,
+                                visible=False,
+                                elem_id="watch_demo_video_btn",
                             )
 
                         with gr.Column(visible=False, elem_id="action_phase_group") as action_phase_group:
@@ -484,6 +535,7 @@ def create_ui_blocks():
             goal_box,
             coords_box,
             video_display,
+            watch_demo_video_btn,
             task_info_box,
             progress_info_box,
             restart_episode_btn,
@@ -650,7 +702,13 @@ def create_ui_blocks():
         video_display.end(
             fn=on_video_end_transition,
             inputs=[uid_state],
-            outputs=[video_phase_group, action_phase_group, control_panel_group, log_output],
+            outputs=[
+                video_phase_group,
+                action_phase_group,
+                control_panel_group,
+                log_output,
+                watch_demo_video_btn,
+            ],
             queue=False,
             show_progress="hidden",
         ).then(
@@ -662,7 +720,13 @@ def create_ui_blocks():
         video_display.stop(
             fn=on_video_end_transition,
             inputs=[uid_state],
-            outputs=[video_phase_group, action_phase_group, control_panel_group, log_output],
+            outputs=[
+                video_phase_group,
+                action_phase_group,
+                control_panel_group,
+                log_output,
+                watch_demo_video_btn,
+            ],
             queue=False,
             show_progress="hidden",
         ).then(
@@ -682,6 +746,14 @@ def create_ui_blocks():
             fn=on_option_select,
             inputs=[uid_state, options_radio, coords_box],
             outputs=[coords_box, img_display],
+        )
+
+        watch_demo_video_btn.click(
+            fn=on_demo_video_play,
+            inputs=[uid_state],
+            outputs=[watch_demo_video_btn],
+            queue=False,
+            show_progress="hidden",
         )
 
         reference_action_btn.click(
@@ -745,6 +817,12 @@ def create_ui_blocks():
         demo.load(
             fn=None,
             js=LIVE_OBS_CLIENT_RESIZE_JS,
+            queue=False,
+        )
+
+        demo.load(
+            fn=None,
+            js=DEMO_VIDEO_PLAY_BINDING_JS,
             queue=False,
         )
 

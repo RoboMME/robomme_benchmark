@@ -77,6 +77,7 @@ def test_native_ui_config_contains_phase_machine_and_precheck_chain(reload_modul
             "video_phase_group",
             "action_phase_group",
             "demo_video",
+            "watch_demo_video_btn",
             "live_obs",
             "action_radio",
             "coords_box",
@@ -107,7 +108,15 @@ def test_native_ui_config_contains_phase_machine_and_precheck_chain(reload_modul
         )
         assert log_output_comp.get("props", {}).get("max_lines") is None
 
+        demo_video_comp = next(
+            comp
+            for comp in cfg.get("components", [])
+            if comp.get("props", {}).get("elem_id") == "demo_video"
+        )
+        assert demo_video_comp.get("props", {}).get("autoplay") is False
+
         api_names = [dep.get("api_name") for dep in cfg.get("dependencies", [])]
+        assert "on_demo_video_play" in api_names
         assert "precheck_execute_inputs" in api_names
         assert "switch_to_execute_phase" in api_names
         assert "execute_step" in api_names
