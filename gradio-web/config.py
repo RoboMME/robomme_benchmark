@@ -16,7 +16,7 @@ RIGHT_TOP_ACTION_SCALE = 2
 RIGHT_TOP_LOG_SCALE = 1
 
 # 全局界面字号（不作用于页面主标题）
-UI_GLOBAL_FONT_SIZE = "20px"
+UI_GLOBAL_FONT_SIZE = "25px"
 
 # Session超时配置
 SESSION_TIMEOUT = 300  # Session超时时间（秒），如果30秒内没有execute_step操作，将自动回收session
