@@ -25,22 +25,22 @@ VIDEO_BORDER_COLOR = (255, 0, 0)
 VIDEO_BORDER_THICKNESS = 10
 
 TaskID = Literal[
-    # "BinFill",
-    # "PickXtimes",
-    # "SwingXtimes",
-    # "StopCube",
-    # "VideoUnmask",
+    "BinFill",
+    "PickXtimes",
+    "SwingXtimes",
+    "StopCube",
+    "VideoUnmask",
     "VideoUnmaskSwap",
-    # "ButtonUnmask",
-    # "ButtonUnmaskSwap",
-    # "PickHighlight",
-    # "VideoRepick",
-    # "VideoPlaceButton",
-    # "VideoPlaceOrder",
-    # "MoveCube",
-    # "InsertPeg",
-    # "PatternLock",
-    # "RouteStick",
+    "ButtonUnmask",
+    "ButtonUnmaskSwap",
+    "PickHighlight",
+    "VideoRepick",
+    "VideoPlaceButton",
+    "VideoPlaceOrder",
+    "MoveCube",
+    "InsertPeg",
+    "PatternLock",
+    "RouteStick",
 ]
 
 
@@ -212,8 +212,7 @@ def process_episode(
         gui_render=GUI_RENDER,
     ).make_env_for_episode(episode_idx)
 
-    print(f"\nTask: {task_id}, Episode: {episode_idx}, ",
-          f"Seed: {env.unwrapped.seed}, Difficulty: {env.unwrapped.difficulty}")
+    print(f"\nTask: {task_id}, Episode: {episode_idx}")
     print(f"Task goal: {task_goal}")
     print(f"Total actions after dedup: {len(action_sequence)}")
 
@@ -249,8 +248,7 @@ def replay(
     replay_number: int = 10,
 ) -> None:
     """Replay episodes from HDF5 dataset files and save rollout videos."""
-    #for task_id in BenchmarkEnvBuilder.get_task_list():
-    for task_id in ["VideoUnmaskSwap"]:
+    for task_id in BenchmarkEnvBuilder.get_task_list():
         file_path = Path(h5_data_dir) / f"record_dataset_{task_id}.h5"
 
         if not file_path.exists():

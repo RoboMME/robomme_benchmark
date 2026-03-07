@@ -1,5 +1,7 @@
 # RoboMME: A Robotic Benchmark for Memory-Augmented Manipulation
 
+### [Website](https://robomme.github.io/) | [Paper](https://arxiv.org/abs/2603.04639) | [Dataset](https://huggingface.co/Yinpei/robomme_data_h5) | [Leaderboard](https://robomme.github.io/leaderboard.html)
+
 ![Robomme bench](assets/robomme_bench.jpg)
 
 ## 📢 Announcements
@@ -44,7 +46,7 @@ All tasks are defined in `src/robomme/robomme_env`. A detailed description can b
 
 ### 📥 Training Data
 
-Training data can be downloaded [here](https://huggingface.co/datasets/Yinpei/robomme_data). There are 1,600 demonstrations in total (100 per task). The HDF5 format is described in [doc/h5_data_format.md](doc/h5_data_format.md).
+Training data can be downloaded [here](https://huggingface.co/Yinpei/robomme_data_h5). There are 1,600 demonstrations in total (100 per task). The HDF5 format is described in [doc/h5_data_format.md](doc/h5_data_format.md).
 
 After downloading, replay the dataset for a sanity check:
 
@@ -75,21 +77,21 @@ The train split has 100 episodes. The val/test splits each have 50 episodes. All
 The environment input/output format is described in [doc/env_format.md](doc/env_format.md).
 
 > Currently, environment spawning is set up only for imitation learning. We are working on extending it to support more general parallel environments for reinforcement learning in the future.
-
+<!-- 
 ### 🔧 Data Generation
 
 You can also re-generate your own HDF5 data via parallel processing using
 @hongze
 ```bash
 uv run scripts/dev/xxxx
-```
+``` -->
 
 
 ## 🎓 Model Training
 
 ### 🌟 MME-VLA-Suite
 
-The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo provides MME-VLA model training and evaluation used in our paper. It contains a family of memory-augmented VLA models built on [pi05](https://github.com/Physical-Intelligence/openpi) backbone and our implementation of [MemER](https://jen-pan.github.io/memer/). 
+The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo provides MME-VLA model training and evaluation used in our paper. It contains a family of 14 memory-augmented VLA models built on [pi05](https://github.com/Physical-Intelligence/openpi) backbone.
 
 ### 📚 Prior Methods
 
@@ -115,9 +117,8 @@ A1: Use a physical display or set up a virtual display for GUI rendering (e.g. i
 
 **Q2: Failure related to Vulkan installation.**
 
-A2: We recommend reinstalling the NVIDIA driver and Vulkan packages. We use NVIDIA driver 570.211.01 and Vulkan 1.3.275. If it still does not work, switch to CPU rendering:
-
-```python
+A2: Please refer to the ManiSkill [solution](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#vulkan). If it still does not work, we recommend reinstalling the NVIDIA driver and Vulkan packages. We use NVIDIA driver 570.211.01 and Vulkan 1.3.275. You can also switch to CPU rendering:
+```
 os.environ['SAPIEN_RENDER_DEVICE'] = 'cpu'
 os.environ['MUJOCO_GL'] = 'osmesa'
 ```
@@ -125,11 +126,16 @@ os.environ['MUJOCO_GL'] = 'osmesa'
 
 ## 🙏 Acknowledgements
 
-This work was supported in part by NSF SES-2128623, NSF CAREER #2337870, NSF NRI #2220876, NSF NAIRR250085. We would also like to thank the wonderful [OpenPi](https://github.com/Physical-Intelligence/openpi/tree/main) codebase from Physical-Intelligence.
+This work was supported in part by NSF SES-2128623, NSF CAREER #2337870, NSF NRI #2220876, NSF NAIRR250085, NSF IIS-1949634. We would also like to thank the wonderful [ManiSkill](https://github.com/haosulab/ManiSkill) codebase from UCSD Hao Su's lab.
 
 
 ## 📄 Citation
 
 ```
-...
+@article{dai2026robomme,
+  title={RoboMME: Benchmarking and Understanding Memory for Robotic Generalist Policies},
+  author={Dai, Yinpei and Fu, Hongze and Lee, Jayjun and Zhang, Haoran and Yang, Jianing and Finn, Chelsea and Fazeli, Nima and Chai, Joyce},
+  journal={arXiv preprint arXiv:2603.04639},
+  year={2026}
+}
 ```

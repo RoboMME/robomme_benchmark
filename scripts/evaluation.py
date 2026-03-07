@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy
 import random
@@ -81,21 +82,11 @@ for task in TASKS:
         env_id=task,
         dataset="test",
         action_space="joint_angle", # change this to your model's action space
-        max_steps=1300,  # we set 1300 in MME-VLA experiments. The longest length of training data is @daiyp
+        max_steps=300,  # we set 1300 in MME-VLA experiments.
     )
     episode_count = env_builder.get_episode_num()
-    for episode in range(2):
-        env = env_builder.make_env_for_episode(
-            episode,
-            include_maniskill_obs=True,
-            include_front_depth=True,
-            include_wrist_depth=True,
-            include_front_camera_extrinsic=True,
-            include_wrist_camera_extrinsic=True,
-            include_available_multi_choices=True,
-            include_front_camera_intrinsic=True,
-            include_wrist_camera_intrinsic=True,
-        )
+    for episode in range(episode_count):
+        env = env_builder.make_env_for_episode(episode)
         obs, info = env.reset()
         task_goal = info["task_goal"]
         if isinstance(task_goal, list):
@@ -112,7 +103,7 @@ for task in TASKS:
             dummy_action = dummy_model.predict(current_front_rgb, current_wrist_rgb, task_goal)
             obs, reward, terminated, truncated, info = env.step(dummy_action)
             if info is not None and info.get("status") == "error":
-                print(f"Error: {info.get('error_message')}")
+                print(f"Error: {info.get('error_message')}") # often IK error when using ee pose
                 total_success.append(False)
                 break
             if terminated or truncated:
@@ -125,7 +116,8 @@ for task in TASKS:
             recorder.add_step_obs(obs)
         
         env.close()
-        recorder.save(file_path=f"rollout_videos/{task}_ep_{episode}_{outcome}_{task_goal}.mp4")
+        os.makedirs("saved_videos", exist_ok=True)
+        recorder.save(file_path=f"saved_videos/{task}_ep_{episode}_{outcome}_{task_goal}.mp4")
         
 print(f"Evaluation completed.")
 print(f"Success rate: {sum(total_success) / len(total_success)}")

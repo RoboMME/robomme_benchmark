@@ -12,7 +12,7 @@ from ..logging_utils import logger
 
 DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
 
-_ALLOWED_DATASETS = {"train", "test"}
+_ALLOWED_DATASETS = {"train", "test", "val"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "waypoint", "multi_choice"}
 _DEFAULT_TASK_LIST = [
     "PickXtimes",
