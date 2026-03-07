@@ -14,6 +14,7 @@ from config import (
     KEYPOINT_SELECTION_SCALE,
     RIGHT_TOP_ACTION_SCALE,
     RIGHT_TOP_LOG_SCALE,
+    UI_GLOBAL_FONT_SIZE,
 )
 from gradio_callbacks import (
     execute_step,
@@ -194,7 +195,26 @@ LIVE_OBS_CLIENT_RESIZE_JS = r"""
 
 
 CSS = f"""
+:root {{
+    --body-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --prose-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --input-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --block-label-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --block-title-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --block-info-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --checkbox-label-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --button-large-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --button-medium-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --button-small-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --section-header-text-size: {UI_GLOBAL_FONT_SIZE} !important;
+    --text-md: {UI_GLOBAL_FONT_SIZE} !important;
+}}
+
 .native-card {{
+}}
+
+#header_title h2 {{
+    font-size: var(--text-xxl) !important;
 }}
 
 #loading_overlay_group {{
@@ -289,16 +309,15 @@ def create_ui_blocks():
         return last_goal if last_goal else "—"
 
     with gr.Blocks(title="Oracle Planner Interface") as demo:
-        demo.theme = gr.themes.Soft()
         demo.css = CSS
 
-        gr.Markdown("## RoboMME Human Evaluation", elem_id="header_title")
+        gr.Markdown("## RoboMME Human Evaluation 🚀🚀🚀", elem_id="header_title")
         with gr.Row():
             with gr.Column(scale=1):
                 header_task_box = gr.Dropdown(
                     choices=list(user_manager.env_choices),
                     value=render_header_task(""),
-                    label="Current Task",
+                    label="Current Task 🔥",
                     show_label=True,
                     interactive=True,
                     elem_id="header_task",
@@ -306,7 +325,7 @@ def create_ui_blocks():
             with gr.Column(scale=2):
                 header_goal_box = gr.Textbox(
                     value=render_header_goal(""),
-                    label="Goal",
+                    label="Goal 🎯",
                     show_label=True,
                     interactive=False,
                     lines=1,
@@ -330,7 +349,7 @@ def create_ui_blocks():
                     with gr.Column(elem_classes=["native-card"], elem_id="media_card"):
                         with gr.Column(visible=False, elem_id="video_phase_group") as video_phase_group:
                             video_display = gr.Video(
-                                label="Demonstration Video",
+                                label="Demonstration Video 🎬",
                                 interactive=False,
                                 elem_id="demo_video",
                                 autoplay=True,
@@ -357,7 +376,7 @@ def create_ui_blocks():
                                 with gr.Column(elem_classes=["native-card"], elem_id="action_selection_card"):
                                     options_radio = gr.Radio(
                                         choices=[],
-                                        label=" Action Selection",
+                                        label="Action Selection 🦾",
                                         type="value",
                                         show_label=True,
                                         elem_id="action_radio",
@@ -380,19 +399,19 @@ def create_ui_blocks():
                                         show_label=True,
                                         interactive=False,
                                         elem_id="log_output",
-                                        label="System Log",
+                                        label="System Log📝",
                                     )
 
                         with gr.Row(elem_id="action_buttons_row"):
                             with gr.Column(elem_classes=["native-card", "native-button-card"], elem_id="exec_btn_card"):
-                                exec_btn = gr.Button("EXECUTE", variant="stop", size="lg", elem_id="exec_btn")
+                                exec_btn = gr.Button("EXECUTE 🤖", variant="stop", size="lg", elem_id="exec_btn")
 
                             with gr.Column(
                                 elem_classes=["native-card", "native-button-card"],
                                 elem_id="reference_btn_card",
                             ):
                                 reference_action_btn = gr.Button(
-                                    "Ground Truth Action",
+                                    "Ground Truth Action 🙋‍♀️",
                                     variant="secondary",
                                     interactive=False,
                                     elem_id="reference_action_btn",
@@ -403,7 +422,7 @@ def create_ui_blocks():
                                 elem_id="restart_episode_btn_card",
                             ):
                                 restart_episode_btn = gr.Button(
-                                    "restart episode",
+                                    "Restart Episode 🔄",
                                     variant="secondary",
                                     interactive=False,
                                     elem_id="restart_episode_btn",
@@ -414,7 +433,7 @@ def create_ui_blocks():
                                 elem_id="next_task_btn_card",
                             ):
                                 next_task_btn = gr.Button(
-                                    "change episode",
+                                    "Change Episode ⏩️",
                                     variant="primary",
                                     interactive=False,
                                     elem_id="next_task_btn",
@@ -426,7 +445,7 @@ def create_ui_blocks():
                                 lines=8,
                                 max_lines=16,
                                 show_label=True,
-                                label="Task Hint",
+                                label="Task Hint💡",
                                 interactive=True,
                                 elem_id="task_hint_display",
                             )

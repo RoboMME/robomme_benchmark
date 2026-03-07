@@ -124,6 +124,54 @@ def _read_live_obs_geometry(page) -> dict[str, dict[str, float] | None]:
     )
 
 
+def _read_font_probe_snapshot(page) -> dict[str, str | None]:
+    return page.evaluate(
+        """() => {
+            const heading = document.querySelector('#header_title h2');
+            const field = document.querySelector('#font_probe textarea, #font_probe input');
+            const prose = document.querySelector('#body_probe p');
+            const readSize = (node) => (node ? getComputedStyle(node).fontSize : null);
+            return {
+                header: readSize(heading),
+                field: readSize(field),
+                body: readSize(prose),
+            };
+        }"""
+    )
+
+
+@pytest.fixture
+def font_size_probe_ui_url(monkeypatch):
+    config_module = importlib.reload(importlib.import_module("config"))
+    monkeypatch.setattr(config_module, "UI_GLOBAL_FONT_SIZE", "32px")
+    ui_layout = importlib.reload(importlib.import_module("ui_layout"))
+
+    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = int(sock.getsockname()[1])
+
+    with gr.Blocks(title="Native font size probe test") as demo:
+        gr.Markdown("## RoboMME Human Evaluation", elem_id="header_title")
+        gr.Textbox(value="font probe", label="Probe", elem_id="font_probe")
+        gr.Markdown("Probe body text", elem_id="body_probe")
+
+    _app, root_url, _share_url = demo.launch(
+        server_name="127.0.0.1",
+        server_port=port,
+        prevent_thread_lock=True,
+        quiet=True,
+        show_error=True,
+        ssr_mode=False,
+        css=ui_layout.CSS,
+    )
+    _wait_http_ready(root_url)
+
+    try:
+        yield root_url
+    finally:
+        demo.close()
+
+
 @pytest.fixture
 def phase_machine_ui_url():
     state = {"precheck_calls": 0}
@@ -290,6 +338,41 @@ def phase_machine_ui_url():
         server.should_exit = True
         thread.join(timeout=10)
         demo.close()
+
+
+def test_global_font_size_applies_except_header_title(font_size_probe_ui_url):
+    root_url = font_size_probe_ui_url
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.goto(root_url, wait_until="domcontentloaded")
+
+        page.wait_for_selector("#header_title h2", timeout=10000)
+        page.wait_for_selector("#font_probe textarea, #font_probe input", timeout=10000)
+        page.wait_for_selector("#body_probe p", timeout=10000)
+        page.wait_for_function(
+            """() => {
+                const heading = document.querySelector('#header_title h2');
+                const field = document.querySelector('#font_probe textarea, #font_probe input');
+                const prose = document.querySelector('#body_probe p');
+                if (!heading || !field || !prose) return false;
+                return (
+                    getComputedStyle(heading).fontSize === '26px' &&
+                    getComputedStyle(field).fontSize === '32px' &&
+                    getComputedStyle(prose).fontSize === '32px'
+                );
+            }""",
+            timeout=10000,
+        )
+
+        snapshot = _read_font_probe_snapshot(page)
+        assert snapshot["header"] == "26px"
+        assert snapshot["field"] == "32px"
+        assert snapshot["body"] == "32px"
+        assert snapshot["header"] != snapshot["field"]
+
+        browser.close()
 
 
 def test_phase_machine_runtime_flow_and_execute_precheck(phase_machine_ui_url):

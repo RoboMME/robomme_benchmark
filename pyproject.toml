@@ -5,15 +5,21 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "gradio",
+    "gymnasium",
+    "h5py",
+    "imageio",
     "mani-skill",
+    "numpy",
     "opencv-python>=4.11.0.86",
+    "Pillow",
     "setuptools==80.9.0",
     "torch==2.9.1",
     "torchvision==0.24.1",
 ]
 
 [project.optional-dependencies]
-dev = ["opencv-python", "pytest"]
+dev = ["opencv-python", "playwright", "pytest", "uvicorn"]
 
 [tool.uv.sources]
 mani-skill = { git = "https://github.com/YinpeiDai/ManiSkill.git", rev = "07be6fbc66350ddca200abfb0a11b692f078f7fd" }

@@ -23,6 +23,28 @@ def test_native_ui_has_no_legacy_runtime_js_or_card_shell_tokens(reload_module):
         assert token not in css
 
 
+def test_native_ui_css_uses_configured_global_font_size_variables(reload_module):
+    config = reload_module("config")
+    ui_layout = reload_module("ui_layout")
+
+    css = ui_layout.CSS
+
+    assert f"--body-text-size: {config.UI_GLOBAL_FONT_SIZE} !important;" in css
+    assert f"--prose-text-size: {config.UI_GLOBAL_FONT_SIZE} !important;" in css
+    assert f"--input-text-size: {config.UI_GLOBAL_FONT_SIZE} !important;" in css
+    assert f"--block-label-text-size: {config.UI_GLOBAL_FONT_SIZE} !important;" in css
+    assert f"--button-large-text-size: {config.UI_GLOBAL_FONT_SIZE} !important;" in css
+    assert f"--section-header-text-size: {config.UI_GLOBAL_FONT_SIZE} !important;" in css
+    assert f"--text-md: {config.UI_GLOBAL_FONT_SIZE} !important;" in css
+
+
+def test_native_ui_css_excludes_header_title_from_global_font_size(reload_module):
+    ui_layout = reload_module("ui_layout")
+
+    assert "#header_title h2" in ui_layout.CSS
+    assert "font-size: var(--text-xxl) !important;" in ui_layout.CSS
+
+
 def test_extract_last_goal_prefers_last_list_item(reload_module):
     ui_layout = reload_module("ui_layout")
 
