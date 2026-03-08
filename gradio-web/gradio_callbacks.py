@@ -159,25 +159,6 @@ def capitalize_first_letter(text: str) -> str:
     return text[0].upper() + text[1:]
 
 
-def get_videoplacebutton_goal(original_goal: str) -> str:
-    """
-    为 VideoPlaceButton 任务构造新的任务目标
-    匹配 "cube on the target" 并替换为新的目标格式
-    """
-    if not original_goal:
-        return ""
-    
-    original_lower = original_goal.lower()
-    
-    # 匹配 "cube on the target" 并替换
-    if "cube on the target" in original_lower:
-        # 使用正则表达式进行不区分大小写的替换
-        pattern = re.compile(re.escape("cube on the target"), re.IGNORECASE)
-        new_goal = pattern.sub("cube on the target that it was previously placed on", original_goal)
-        return capitalize_first_letter(new_goal)
-    else:
-        # 如果无法匹配，保持原始任务目标不变
-        return capitalize_first_letter(original_goal)
 
 
 def _ui_option_label(session, opt_label: str, opt_idx: int) -> str:
