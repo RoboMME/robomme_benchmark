@@ -3,33 +3,29 @@ Gradio回调函数模块
 响应UI事件，调用业务逻辑，返回UI更新
 """
 import logging
+import os
+import queue
+import re
+import threading
+import time
+from datetime import datetime
+
 import gradio as gr
 import numpy as np
-import time
-import threading
-import queue
-import os
-import re
-from datetime import datetime
 from PIL import Image
+
 from state_manager import (
-    get_session,
-    create_session,
-    set_ui_phase,
-    reset_ui_phase,
-    get_execute_count,
-    increment_execute_count,
-    reset_execute_count,
-    set_task_start_time,
-    update_session_activity,
-    get_session_activity,
     cleanup_session,
+    create_session,
+    get_execute_count,
     get_play_button_clicked,
-    set_play_button_clicked,
+    get_session,
+    increment_execute_count,
     reset_play_button_clicked,
-    GLOBAL_SESSIONS,
-    SESSION_LAST_ACTIVITY,
-    _state_lock,
+    reset_execute_count,
+    set_play_button_clicked,
+    set_task_start_time,
+    set_ui_phase,
 )
 from image_utils import draw_marker, save_video, concatenate_frames_horizontally
 from user_manager import user_manager
@@ -37,14 +33,13 @@ from config import (
     EXECUTE_LIMIT_OFFSET,
     KEYFRAME_DOWNSAMPLE_FACTOR,
     LIVE_OBS_REFRESH_HZ,
-    SESSION_TIMEOUT,
     UI_TEXT,
     USE_SEGMENTED_VIEW,
     get_live_obs_elem_classes,
     get_ui_action_text,
     should_show_demo_video,
 )
-from process_session import ScrewPlanFailureError, ProcessSessionProxy
+from process_session import ScrewPlanFailureError
 from note_content import get_task_hint
 
 
@@ -69,6 +64,29 @@ def _action_selection_log():
 
 def _point_selection_log():
     return format_log_markdown(_ui_text("log", "point_selection_prompt"))
+
+
+def _session_error_text():
+    return _ui_text("log", "session_error")
+
+
+def touch_session(uid):
+    """Re-emit the current session key to refresh gr.State TTL."""
+    return uid if uid and get_session(uid) is not None else None
+
+
+def cleanup_user_session(uid):
+    """Unified cleanup entry for gr.State TTL deletion and unload hooks."""
+    if not uid:
+        return
+    with _LIVE_OBS_REFRESH_LOCK:
+        _LIVE_OBS_REFRESH.pop(uid, None)
+    cleanup_session(uid)
+
+
+def cleanup_current_request_session(request: gr.Request):
+    """Clean up the current browser tab's session on unload."""
+    cleanup_user_session(getattr(request, "session_hash", None))
 
 
 def _live_obs_update(
@@ -279,16 +297,18 @@ def on_video_end(uid):
 
 def on_demo_video_play(uid):
     """Mark the demo video as consumed and disable the play button."""
-    if uid:
-        update_session_activity(uid)
-        already_clicked = get_play_button_clicked(uid)
-        if not already_clicked:
-            set_play_button_clicked(uid, True)
-        LOGGER.debug(
-            "demo video play clicked uid=%s already_clicked=%s",
-            _uid_for_log(uid),
-            already_clicked,
-        )
+    if not get_session(uid):
+        LOGGER.warning("on_demo_video_play: missing session uid=%s", _uid_for_log(uid))
+        raise gr.Error(_session_error_text())
+
+    already_clicked = get_play_button_clicked(uid)
+    if not already_clicked:
+        set_play_button_clicked(uid, True)
+    LOGGER.debug(
+        "demo video play clicked uid=%s already_clicked=%s",
+        _uid_for_log(uid),
+        already_clicked,
+    )
     return gr.update(visible=True, interactive=False)
 
 
@@ -530,12 +550,8 @@ def _load_status_task(uid, status):
 
     session = get_session(uid)
     if session is None:
-        LOGGER.warning("session missing for uid=%s, creating ProcessSessionProxy", _uid_for_log(uid))
-        session = ProcessSessionProxy()
-        with _state_lock:
-            GLOBAL_SESSIONS[uid] = session
-            SESSION_LAST_ACTIVITY[uid] = time.time()
-        LOGGER.info("created replacement session for uid=%s", _uid_for_log(uid))
+        LOGGER.warning("load_status_task missing session uid=%s", _uid_for_log(uid))
+        return _task_load_failed_response(uid, _session_error_text())
 
     LOGGER.debug("loading episode env=%s episode=%s uid=%s", env_id, ep_num, _uid_for_log(uid))
 
@@ -693,7 +709,10 @@ def _load_status_task(uid, status):
 def init_session_and_load_task(uid):
     """Initialize the Gradio session and load the current task."""
     if not uid:
-        uid = create_session()
+        return _task_load_failed_response(uid, _session_error_text())
+
+    if get_session(uid) is None:
+        create_session(uid)
 
     LOGGER.debug("init_session_and_load_task: init_session uid=%s", _uid_for_log(uid))
     success, msg, status = user_manager.init_session(uid)
@@ -704,9 +723,6 @@ def init_session_and_load_task(uid):
         msg,
     )
 
-    if uid:
-        update_session_activity(uid)
-
     if not success:
         LOGGER.warning("init_session_and_load_task failed uid=%s msg=%s", _uid_for_log(uid), msg)
         return _task_load_failed_response(uid, msg)
@@ -716,13 +732,8 @@ def init_session_and_load_task(uid):
 
 def load_next_task_wrapper(uid):
     """Move to a random episode within the same env and reload task."""
-
-    if not uid:
-        uid = create_session()
-        LOGGER.debug("load_next_task_wrapper created uid=%s", _uid_for_log(uid))
-
-    if uid:
-        update_session_activity(uid)
+    if not uid or get_session(uid) is None:
+        return _task_load_failed_response(uid, _session_error_text())
 
     LOGGER.info("load_next_task_wrapper uid=%s", _uid_for_log(uid))
     status = user_manager.next_episode_same_env(uid)
@@ -733,12 +744,8 @@ def load_next_task_wrapper(uid):
 
 def restart_episode_wrapper(uid):
     """Reload the current env + episode."""
-    if not uid:
-        uid = create_session()
-        LOGGER.debug("restart_episode_wrapper created uid=%s", _uid_for_log(uid))
-
-    if uid:
-        update_session_activity(uid)
+    if not uid or get_session(uid) is None:
+        return _task_load_failed_response(uid, _session_error_text())
 
     LOGGER.info("restart_episode_wrapper uid=%s", _uid_for_log(uid))
     status = user_manager.get_session_status(uid)
@@ -756,12 +763,8 @@ def restart_episode_wrapper(uid):
 
 def switch_env_wrapper(uid, selected_env):
     """Switch env from Current Task dropdown and randomly assign an episode."""
-    if not uid:
-        uid = create_session()
-        LOGGER.debug("switch_env_wrapper created uid=%s", _uid_for_log(uid))
-
-    if uid:
-        update_session_activity(uid)
+    if not uid or get_session(uid) is None:
+        return _task_load_failed_response(uid, _session_error_text())
 
     LOGGER.info(
         "switch_env_wrapper uid=%s selected_env=%s",
@@ -786,17 +789,13 @@ def on_map_click(uid, option_value, evt: gr.SelectData):
     """
     处理图片点击事件
     """
-    # 更新session活动时间（点击图片操作）
-    if uid:
-        update_session_activity(uid)
-    
     session = get_session(uid)
     if not session:
         LOGGER.warning("on_map_click: missing session uid=%s", _uid_for_log(uid))
         return (
             _live_obs_update(value=None, interactive=False),
             _ui_text("coords", "not_needed"),
-            format_log_markdown(_ui_text("log", "session_error")),
+            format_log_markdown(_session_error_text()),
         )
         
     # Check if current option actually needs coordinates
@@ -875,14 +874,10 @@ def on_option_select(uid, option_value, coords_str=None, suppress_next_option_ch
         base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW) if session else _LIVE_OBS_UPDATE_SKIP
         return default_msg, _live_obs_update(value=base_img, interactive=False), _action_selection_log(), False
     
-    # 更新session活动时间（选择选项操作）
-    if uid:
-        update_session_activity(uid)
-    
     session = get_session(uid)
     if not session:
         LOGGER.warning("on_option_select: missing session uid=%s", _uid_for_log(uid))
-        return default_msg, _live_obs_update(interactive=False), format_log_markdown(_ui_text("log", "session_error")), False
+        return default_msg, _live_obs_update(interactive=False), format_log_markdown(_session_error_text()), False
     
     option_idx = _parse_option_idx(option_value)
     base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
@@ -910,9 +905,6 @@ def on_reference_action(uid, current_option_value=None):
     """
     自动获取并回填当前步参考 action + 像素坐标（不执行）。
     """
-    if uid:
-        update_session_activity(uid)
-
     session = get_session(uid)
     if not session:
         LOGGER.warning("on_reference_action: missing session uid=%s", _uid_for_log(uid))
@@ -920,7 +912,7 @@ def on_reference_action(uid, current_option_value=None):
             _live_obs_update(value=None, interactive=False),
             gr.update(),
             _ui_text("coords", "not_needed"),
-            format_log_markdown(_ui_text("log", "session_error")),
+            format_log_markdown(_session_error_text()),
             False,
         )
 
@@ -1008,10 +1000,9 @@ def init_app(request: gr.Request):
     Returns:
         初始化后的UI状态
     """
-    _ = request  # Query params are intentionally ignored in session-based mode.
     try:
-        LOGGER.info("init_app: creating session")
-        uid = create_session()
+        uid = getattr(request, "session_hash", None)
+        LOGGER.info("init_app: session_hash=%s", _uid_for_log(uid))
         LOGGER.info("init_app: created uid=%s", _uid_for_log(uid))
         result = init_session_and_load_task(uid)
         LOGGER.debug("init_app: init_session_and_load_task returned %s outputs", len(result))
@@ -1027,13 +1018,10 @@ def precheck_execute_inputs(uid, option_idx, coords_str):
     Native precheck for execute action.
     Replaces frontend JS interception by validating inputs server-side before phase switch.
     """
-    if uid:
-        update_session_activity(uid)
-
     session = get_session(uid)
     if not session:
         LOGGER.error("precheck_execute_inputs: missing session uid=%s", _uid_for_log(uid))
-        raise gr.Error(_ui_text("log", "session_error"))
+        raise gr.Error(_session_error_text())
 
     parsed_option_idx = _parse_option_idx(option_idx)
 
@@ -1066,28 +1054,12 @@ def execute_step(uid, option_idx, coords_str):
         option_idx,
         coords_str,
     )
-    # 检查session是否超时（在更新活动时间之前检查）
-    last_activity = get_session_activity(uid)
-    if last_activity is not None:
-        elapsed = time.time() - last_activity
-        if elapsed > SESSION_TIMEOUT:
-            LOGGER.warning(
-                "execute_step timeout uid=%s elapsed=%.2fs timeout=%ss",
-                _uid_for_log(uid),
-                elapsed,
-                SESSION_TIMEOUT,
-            )
-            raise gr.Error(f"Session已超时：超过 {SESSION_TIMEOUT} 秒未活动。请刷新页面重新登录。")
-    
-    # 更新session的最后活动时间
-    update_session_activity(uid)
-    
     session = get_session(uid)
     if not session:
         LOGGER.error("execute_step missing session uid=%s", _uid_for_log(uid))
         return (
             _live_obs_update(value=None, interactive=False),
-            format_log_markdown(_ui_text("log", "session_error")),
+            format_log_markdown(_session_error_text()),
             gr.update(),
             gr.update(),
             gr.update(interactive=False),

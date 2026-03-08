@@ -1280,7 +1280,6 @@ def test_point_wait_state_pulses_live_obs_and_updates_system_log(monkeypatch):
 
     monkeypatch.setattr(ui_layout, "init_app", fake_init_app)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: FakeSession())
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
 
     demo = ui_layout.create_ui_blocks()
 
@@ -1506,7 +1505,6 @@ def test_reference_action_single_click_applies_coords_without_wait_state(monkeyp
 
     monkeypatch.setattr(ui_layout, "init_app", fake_init_app)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: FakeSession())
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
 
     demo = ui_layout.create_ui_blocks()
 
@@ -1659,7 +1657,6 @@ def test_live_obs_client_resize_fills_width_and_keeps_click_mapping(monkeypatch)
 
     monkeypatch.setattr(ui_layout, "init_app", fake_init_app)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: FakeSession())
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
 
     demo = ui_layout.create_ui_blocks()
 

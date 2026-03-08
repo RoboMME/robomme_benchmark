@@ -18,8 +18,10 @@ RIGHT_TOP_LOG_SCALE = 1
 # 全局界面字号（不作用于页面主标题）
 UI_GLOBAL_FONT_SIZE = "24px"
 
-# Session超时配置
-SESSION_TIMEOUT = 300  # Session超时时间（秒），如果30秒内没有execute_step操作，将自动回收session
+# Session / queue 配置
+SESSION_TIMEOUT = 5  # 30秒无用户主动操作后，交由 gr.State TTL 自动回收 session
+SESSION_CONCURRENCY_ID = "session_slots"
+SESSION_CONCURRENCY_LIMIT = 2
 
 # 兜底执行次数配置
 EXECUTE_LIMIT_OFFSET = 4  # 兜底执行次数 = non_demonstration_task_length + EXECUTE_LIMIT_OFFSET
@@ -65,7 +67,7 @@ UI_TEXT = {
         "action_selection_prompt": "Please select the action.\nActions with 🎯 need to select a point on the image as input",
         "point_selection_prompt": "Current action needs location input, please click on the image to select key pixel",
         "demo_video_prompt": 'Press "Watch Video Input 🎬" to watch a video\nNote: you can only watch the video once',
-        "session_error": "Session Error",
+        "session_error": "Session expired. Please refresh the page and try again.",
         "reference_action_error": "Ground Truth Action Error: {error}",
         "reference_action_message": "Ground Truth Action: {option_label}. {option_action}",
         "reference_action_message_with_coords": "Ground Truth Action: {option_label}. {option_action} | coords: {coords_text}",

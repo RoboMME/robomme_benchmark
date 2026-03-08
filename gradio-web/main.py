@@ -116,13 +116,11 @@ def build_allowed_paths():
 
 
 def main():
-    from state_manager import start_timeout_monitor
     from ui_layout import CSS, create_ui_blocks
 
     LOGGER.info("Starting Gradio real environment entrypoint: %s", __file__)
     log_runtime_graphics_env()
     ensure_media_dirs()
-    start_timeout_monitor()
 
     os.environ.setdefault("ROBOMME_TEMP_DEMOS_DIR", str(TEMP_DEMOS_DIR))
     allowed_paths = build_allowed_paths()

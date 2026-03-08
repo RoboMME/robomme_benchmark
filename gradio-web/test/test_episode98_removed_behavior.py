@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-import time
-
-
 def test_load_next_task_wrapper_treats_episode98_as_normal(monkeypatch, reload_module):
     reload_module("config")
     callbacks = reload_module("gradio_callbacks")
 
     expected = ("SENTINEL",)
 
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
+    monkeypatch.setattr(callbacks, "get_session", lambda uid: object())
     monkeypatch.setattr(
         callbacks.user_manager,
         "next_episode_same_env",
@@ -29,7 +26,7 @@ def test_restart_episode_wrapper_reloads_same_episode(monkeypatch, reload_module
     load_calls = []
     expected = ("RESTARTED",)
 
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
+    monkeypatch.setattr(callbacks, "get_session", lambda uid: object())
     monkeypatch.setattr(
         callbacks.user_manager,
         "get_session_status",
@@ -53,7 +50,7 @@ def test_restart_episode_wrapper_missing_status_returns_login_failed(monkeypatch
     config = reload_module("config")
     callbacks = reload_module("gradio_callbacks")
 
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
+    monkeypatch.setattr(callbacks, "get_session", lambda uid: object())
     monkeypatch.setattr(callbacks.user_manager, "get_session_status", lambda uid: None)
 
     result = callbacks.restart_episode_wrapper("uid1")
@@ -89,8 +86,6 @@ def test_execute_step_failed_episode98_still_advances(monkeypatch, reload_module
     fake_session = _FakeSession()
     complete_calls = []
 
-    monkeypatch.setattr(callbacks, "get_session_activity", lambda uid: time.time())
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: fake_session)
     monkeypatch.setattr(callbacks, "increment_execute_count", lambda uid, env_id, episode_idx: 1)
 

@@ -45,7 +45,6 @@ def test_on_reference_action_success_updates_option_and_coords(monkeypatch, relo
         }
     )
 
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
 
     img_update, option_update, coords_text, log_html, suppress_flag = callbacks.on_reference_action("uid-1", None)
@@ -69,7 +68,6 @@ def test_on_reference_action_session_missing(monkeypatch, reload_module):
     config = reload_module("config")
     callbacks = reload_module("gradio_callbacks")
 
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: None)
 
     img_update, option_update, coords_text, log_html, suppress_flag = callbacks.on_reference_action("uid-missing", None)
@@ -87,7 +85,6 @@ def test_on_reference_action_error_message_from_reference(monkeypatch, reload_mo
     callbacks = reload_module("gradio_callbacks")
 
     session = _FakeSession({"ok": False, "message": "bad ref"})
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
 
     _img, _opt, _coords, log_html, suppress_flag = callbacks.on_reference_action("uid-1", None)
@@ -110,7 +107,6 @@ def test_on_reference_action_same_selected_option_does_not_set_suppression(monke
         }
     )
 
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
 
     _img, _option_update, coords_text, _log_html, suppress_flag = callbacks.on_reference_action("uid-1", 0)
@@ -124,7 +120,6 @@ def test_on_option_select_resets_to_point_wait_state_for_point_action(monkeypatc
     callbacks = reload_module("gradio_callbacks")
 
     session = _FakeOptionSession()
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
 
     coords_text, img_update, log_text, suppress_flag = callbacks.on_option_select("uid-1", 0, "12, 34", False)
@@ -153,7 +148,6 @@ def test_on_map_click_clears_wait_state_and_restores_action_prompt(monkeypatch, 
 
     session = _FakeOptionSession()
     event = type("Evt", (), {"index": (5, 6)})()
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
 
     img_update, coords_text, log_text = callbacks.on_map_click("uid-1", 0, event)
@@ -183,7 +177,6 @@ def test_on_reference_action_uses_configured_action_text_override(monkeypatch, r
         env_id="PatternLock",
     )
 
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
 
     _img, _option_update, coords_text, log_html, suppress_flag = callbacks.on_reference_action("uid-1", None)

@@ -40,7 +40,6 @@ def test_on_option_select_uses_configured_select_point_and_log_messages(monkeypa
         "point_selection_prompt",
         "custom log prompt from config",
     )
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: _FakeOptionSession())
 
     coords_text, img_update, log_text, suppress_flag = callbacks.on_option_select("uid-1", 0, None, False)
@@ -62,7 +61,6 @@ def test_precheck_execute_inputs_uses_configured_before_execute_message(monkeypa
         "select_point_before_execute",
         "pick a point before execute from config",
     )
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: _FakeOptionSession())
 
     with pytest.raises(Exception) as excinfo:
@@ -87,9 +85,8 @@ def test_on_video_end_transition_uses_configured_action_prompt(monkeypatch, relo
 def test_on_demo_video_play_disables_button_and_sets_single_use_state(monkeypatch, reload_module):
     reload_module("config")
     callbacks = reload_module("gradio_callbacks")
-    recorded = {"activity": [], "clicked": []}
-
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: recorded["activity"].append(uid))
+    recorded = {"clicked": []}
+    monkeypatch.setattr(callbacks, "get_session", lambda uid: object())
     monkeypatch.setattr(callbacks, "get_play_button_clicked", lambda uid: False)
     monkeypatch.setattr(
         callbacks,
@@ -99,7 +96,6 @@ def test_on_demo_video_play_disables_button_and_sets_single_use_state(monkeypatc
 
     result = callbacks.on_demo_video_play("uid-play")
 
-    assert recorded["activity"] == ["uid-play"]
     assert recorded["clicked"] == [("uid-play", True)]
     assert result["visible"] is True
     assert result["interactive"] is False
@@ -110,7 +106,6 @@ def test_missing_session_paths_use_configured_session_error(monkeypatch, reload_
     callbacks = reload_module("gradio_callbacks")
 
     monkeypatch.setitem(callbacks.UI_TEXT["log"], "session_error", "Session Error From Config")
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
     monkeypatch.setattr(callbacks, "get_session", lambda uid: None)
 
     _img, _option_update, coords_text, log_text, suppress_flag = callbacks.on_reference_action("uid-missing", None)

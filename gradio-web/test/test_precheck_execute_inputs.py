@@ -12,7 +12,6 @@ def test_precheck_execute_inputs_requires_action(monkeypatch, reload_module):
     config = reload_module("config")
     callbacks = reload_module("gradio_callbacks")
     monkeypatch.setattr(callbacks, "get_session", lambda uid: _FakeSession(available=False))
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
 
     with pytest.raises(Exception) as excinfo:
         callbacks.precheck_execute_inputs("uid-1", None, config.UI_TEXT["coords"]["not_needed"])
@@ -24,7 +23,6 @@ def test_precheck_execute_inputs_requires_coords_when_option_needs_it(monkeypatc
     config = reload_module("config")
     callbacks = reload_module("gradio_callbacks")
     monkeypatch.setattr(callbacks, "get_session", lambda uid: _FakeSession(available=True))
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
 
     with pytest.raises(Exception) as excinfo:
         callbacks.precheck_execute_inputs(
@@ -38,7 +36,6 @@ def test_precheck_execute_inputs_accepts_valid_coords(monkeypatch, reload_module
     reload_module("config")
     callbacks = reload_module("gradio_callbacks")
     monkeypatch.setattr(callbacks, "get_session", lambda uid: _FakeSession(available=True))
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
 
     result = callbacks.precheck_execute_inputs("uid-1", 0, "11, 22")
 
@@ -49,7 +46,6 @@ def test_precheck_execute_inputs_session_error(monkeypatch, reload_module):
     config = reload_module("config")
     callbacks = reload_module("gradio_callbacks")
     monkeypatch.setattr(callbacks, "get_session", lambda uid: None)
-    monkeypatch.setattr(callbacks, "update_session_activity", lambda uid: None)
 
     with pytest.raises(Exception) as excinfo:
         callbacks.precheck_execute_inputs("uid-missing", 0, "1, 2")

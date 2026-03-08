@@ -12,6 +12,9 @@ from config import (
     CONTROL_PANEL_SCALE,
     LIVE_OBS_BASE_CLASS,
     LIVE_OBS_POINT_WAIT_CLASS,
+    SESSION_CONCURRENCY_ID,
+    SESSION_CONCURRENCY_LIMIT,
+    SESSION_TIMEOUT,
     LIVE_OBS_REFRESH_HZ,
     POINT_SELECTION_SCALE,
     RIGHT_TOP_ACTION_SCALE,
@@ -20,6 +23,8 @@ from config import (
     get_live_obs_elem_classes,
 )
 from gradio_callbacks import (
+    cleanup_current_request_session,
+    cleanup_user_session,
     execute_step,
     init_app,
     load_next_task_wrapper,
@@ -35,6 +40,7 @@ from gradio_callbacks import (
     switch_env_wrapper,
     switch_to_action_phase,
     switch_to_execute_phase,
+    touch_session,
 )
 from user_manager import user_manager
 
@@ -581,10 +587,17 @@ def create_ui_blocks():
                     elem_id="header_goal",
                 )
 
-        with gr.Column(visible=True, elem_id="loading_overlay_group") as loading_overlay:
-            gr.Markdown("### The episode is loading...")
+        loading_overlay = gr.Markdown(
+            "### The episode is loading...",
+            visible=True,
+            elem_id="loading_overlay_group",
+        )
 
-        uid_state = gr.State(value=None)
+        uid_state = gr.State(
+            value=None,
+            time_to_live=SESSION_TIMEOUT,
+            delete_callback=cleanup_user_session,
+        )
         ui_phase_state = gr.State(value=PHASE_INIT)
         current_task_env_state = gr.State(value=None)
         suppress_next_option_change_state = gr.State(value=False)
@@ -806,7 +819,7 @@ def create_ui_blocks():
                 return gr.update(visible=False)
             if normalized_selected_env == normalized_current_env:
                 return gr.update(visible=False)
-            return show_loading_info()
+            return gr.update(visible=False)
 
         def maybe_switch_env_with_phase(uid, selected_env, current_task_env):
             normalized_selected_env, normalized_current_env = _normalize_selected_env(
@@ -821,11 +834,15 @@ def create_ui_blocks():
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
             outputs=[header_task_box, header_goal_box, current_task_env_state],
+            queue=False,
+            show_progress="hidden",
         )
         goal_box.change(
             fn=sync_header_from_goal,
             inputs=[goal_box, task_info_box, header_task_box],
             outputs=[header_task_box, header_goal_box, current_task_env_state],
+            queue=False,
+            show_progress="hidden",
         )
 
         header_task_box.select(
@@ -838,6 +855,8 @@ def create_ui_blocks():
             fn=maybe_switch_env_with_phase,
             inputs=[uid_state, header_task_box, current_task_env_state],
             outputs=load_flow_outputs,
+            concurrency_id=SESSION_CONCURRENCY_ID,
+            concurrency_limit=SESSION_CONCURRENCY_LIMIT,
         ).then(
             fn=_phase_visibility_updates,
             inputs=[ui_phase_state],
@@ -848,12 +867,22 @@ def create_ui_blocks():
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
             outputs=[header_task_box, header_goal_box, current_task_env_state],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
 
-        next_task_btn.click(fn=show_loading_info, outputs=[loading_overlay]).then(
+        next_task_btn.click(
             fn=load_next_task_with_phase,
             inputs=[uid_state],
             outputs=load_flow_outputs,
+            concurrency_id=SESSION_CONCURRENCY_ID,
+            concurrency_limit=SESSION_CONCURRENCY_LIMIT,
         ).then(
             fn=_phase_visibility_updates,
             inputs=[ui_phase_state],
@@ -864,12 +893,22 @@ def create_ui_blocks():
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
             outputs=[header_task_box, header_goal_box, current_task_env_state],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
 
-        restart_episode_btn.click(fn=show_loading_info, outputs=[loading_overlay]).then(
+        restart_episode_btn.click(
             fn=restart_episode_with_phase,
             inputs=[uid_state],
             outputs=load_flow_outputs,
+            concurrency_id=SESSION_CONCURRENCY_ID,
+            concurrency_limit=SESSION_CONCURRENCY_LIMIT,
         ).then(
             fn=_phase_visibility_updates,
             inputs=[ui_phase_state],
@@ -880,6 +919,14 @@ def create_ui_blocks():
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
             outputs=[header_task_box, header_goal_box, current_task_env_state],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
 
         video_display.end(
@@ -897,6 +944,12 @@ def create_ui_blocks():
         ).then(
             fn=lambda: PHASE_ACTION_POINT,
             outputs=[ui_phase_state],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
             queue=False,
             show_progress="hidden",
         )
@@ -917,18 +970,40 @@ def create_ui_blocks():
             outputs=[ui_phase_state],
             queue=False,
             show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
 
         img_display.select(
             fn=on_map_click,
             inputs=[uid_state, options_radio],
             outputs=[img_display, coords_box, log_output],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
 
         options_radio.change(
             fn=on_option_select,
             inputs=[uid_state, options_radio, coords_box, suppress_next_option_change_state],
             outputs=[coords_box, img_display, log_output, suppress_next_option_change_state],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
 
         watch_demo_video_btn.click(
@@ -937,18 +1012,33 @@ def create_ui_blocks():
             outputs=[watch_demo_video_btn],
             queue=False,
             show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
 
         reference_action_btn.click(
             fn=on_reference_action,
             inputs=[uid_state, options_radio],
             outputs=[img_display, options_radio, coords_box, log_output, suppress_next_option_change_state],
+            concurrency_id=SESSION_CONCURRENCY_ID,
+            concurrency_limit=SESSION_CONCURRENCY_LIMIT,
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
 
         exec_btn.click(
             fn=precheck_execute_inputs,
             inputs=[uid_state, options_radio, coords_box],
             outputs=[],
+            queue=False,
             show_progress="hidden",
         ).then(
             fn=switch_to_execute_phase,
@@ -961,15 +1051,25 @@ def create_ui_blocks():
                 img_display,
                 reference_action_btn,
             ],
+            queue=False,
             show_progress="hidden",
         ).then(
             fn=lambda: PHASE_EXECUTION_PLAYBACK,
             outputs=[ui_phase_state],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
             show_progress="hidden",
         ).then(
             fn=execute_step,
             inputs=[uid_state, options_radio, coords_box],
             outputs=[img_display, log_output, task_info_box, progress_info_box, restart_episode_btn, next_task_btn, exec_btn],
+            concurrency_id=SESSION_CONCURRENCY_ID,
+            concurrency_limit=SESSION_CONCURRENCY_LIMIT,
             show_progress="hidden",
         ).then(
             fn=switch_to_action_phase,
@@ -982,10 +1082,18 @@ def create_ui_blocks():
                 img_display,
                 reference_action_btn,
             ],
+            queue=False,
             show_progress="hidden",
         ).then(
             fn=lambda: PHASE_ACTION_POINT,
             outputs=[ui_phase_state],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
             show_progress="hidden",
         )
 
@@ -1019,6 +1127,8 @@ def create_ui_blocks():
             fn=init_app_with_phase,
             inputs=[],
             outputs=load_flow_outputs,
+            concurrency_id=SESSION_CONCURRENCY_ID,
+            concurrency_limit=SESSION_CONCURRENCY_LIMIT,
         ).then(
             fn=_phase_visibility_updates,
             inputs=[ui_phase_state],
@@ -1029,6 +1139,17 @@ def create_ui_blocks():
             fn=sync_header_from_task,
             inputs=[task_info_box, goal_box],
             outputs=[header_task_box, header_goal_box, current_task_env_state],
+            queue=False,
+            show_progress="hidden",
+        ).then(
+            fn=touch_session,
+            inputs=[uid_state],
+            outputs=[uid_state],
+            queue=False,
+            show_progress="hidden",
         )
+
+        demo.unload(fn=cleanup_current_request_session)
+        demo.queue(max_size=None, default_concurrency_limit=None)
 
     return demo

@@ -113,7 +113,9 @@ def test_header_task_dropdown_uses_task_name_list_order(reload_module):
             for comp in cfg.get("components", [])
             if comp.get("props", {}).get("elem_id") == "header_task"
         )
-        assert header_task_comp.get("props", {}).get("choices") == config.TASK_NAME_LIST
+        choices = header_task_comp.get("props", {}).get("choices") or []
+        normalized_choices = [choice[0] if isinstance(choice, (list, tuple)) else choice for choice in choices]
+        assert normalized_choices == config.TASK_NAME_LIST
     finally:
         demo.close()
 

@@ -181,5 +181,12 @@ class UserManager:
 
         return self.get_session_status(uid)
 
+    def cleanup_session(self, uid):
+        if not uid:
+            return
+
+        with self.lock:
+            self.session_progress.pop(uid, None)
+
 
 user_manager = UserManager()
