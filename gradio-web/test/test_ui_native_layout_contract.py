@@ -169,7 +169,7 @@ def test_native_ui_config_contains_phase_machine_and_precheck_chain(reload_modul
         )
         assert all("Loading environment, please wait..." not in str(v) for v in values)
         assert "The episode is loading..." in ui_layout.PROGRESS_TEXT_REWRITE_JS
-        assert "Lots of people are playing! Please wait..." in ui_layout.PROGRESS_TEXT_REWRITE_JS
+        assert ui_layout.UI_TEXT["progress"]["entry_rejected"] == "too many people playing"
 
         log_output_comp = next(
             comp

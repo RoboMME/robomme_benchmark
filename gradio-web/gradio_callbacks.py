@@ -16,7 +16,6 @@ from PIL import Image
 
 from state_manager import (
     cleanup_session,
-    create_session,
     get_execute_count,
     get_play_button_clicked,
     get_session,
@@ -71,16 +70,13 @@ def _session_error_text():
     return _ui_text("log", "session_error")
 
 
+def _entry_rejected_text():
+    return _ui_text("progress", "entry_rejected")
+
+
 def touch_session(uid):
     """Re-emit the current session key to refresh gr.State TTL."""
     return uid if uid and get_session(uid) is not None else None
-
-
-def touch_session_or_preserve_pending(uid, init_pending=False):
-    """Keep pending init uid alive until a real session is created."""
-    if init_pending:
-        return uid
-    return touch_session(uid)
 
 
 def cleanup_user_session(uid):
@@ -692,8 +688,8 @@ def init_session_and_load_task(uid):
     if not uid:
         return _task_load_failed_response(uid, _session_error_text())
 
-    if get_session(uid) is None:
-        create_session(uid)
+    if get_session(uid) is None and not try_create_session(uid):
+        return _task_load_failed_response(uid, _entry_rejected_text())
 
     return _load_initialized_session_task(uid)
 
@@ -716,7 +712,7 @@ def _load_initialized_session_task(uid):
 
 
 def try_init_session_and_load_task(uid):
-    """Try to initialize the session without blocking on a full slot queue."""
+    """Try to initialize the session and reject immediately when full."""
     if not uid:
         return {
             "status": "ready",
@@ -724,31 +720,24 @@ def try_init_session_and_load_task(uid):
         }
 
     if get_session(uid) is None:
-        ready, queue_position = try_create_session(uid)
+        ready = try_create_session(uid)
         if not ready:
+            message = _entry_rejected_text()
             LOGGER.info(
-                "try_init_session_and_load_task pending uid=%s queue_position=%s",
+                "try_init_session_and_load_task rejected uid=%s",
                 _uid_for_log(uid),
-                queue_position,
             )
             return {
-                "status": "pending",
+                "status": "rejected",
                 "uid": uid,
-                "queue_position": queue_position,
+                "message": message,
+                "load_result": _task_load_failed_response(uid, message),
             }
 
     return {
         "status": "ready",
         "load_result": _load_initialized_session_task(uid),
     }
-
-
-def resume_pending_init(uid, init_pending=False, request: gr.Request | None = None):
-    """Retry a previously pending init attempt."""
-    if not init_pending:
-        return {"status": "skip"}
-    effective_uid = uid or getattr(request, "session_hash", None)
-    return try_init_session_and_load_task(effective_uid)
 
 
 def load_next_task_wrapper(uid):

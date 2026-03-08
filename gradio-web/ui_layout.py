@@ -15,8 +15,6 @@ from config import (
     LIVE_OBS_POINT_WAIT_CLASS,
     SESSION_CONCURRENCY_ID,
     SESSION_CONCURRENCY_LIMIT,
-    SESSION_INIT_CONCURRENCY_ID,
-    SESSION_INIT_CONCURRENCY_LIMIT,
     SESSION_TIMEOUT,
     LIVE_OBS_REFRESH_HZ,
     POINT_SELECTION_SCALE,
@@ -39,13 +37,11 @@ from gradio_callbacks import (
     on_video_end_transition,
     precheck_execute_inputs,
     refresh_live_obs,
-    resume_pending_init,
     restart_episode_wrapper,
     switch_env_wrapper,
     switch_to_action_phase,
     switch_to_execute_phase,
     touch_session,
-    touch_session_or_preserve_pending,
 )
 from user_manager import user_manager
 
@@ -715,9 +711,15 @@ def _with_phase_from_load(load_result):
     return (
         *load_result,
         phase,
-        False,
         gr.update(value=""),
-        gr.update(active=False),
+    )
+
+
+def _with_rejected_init(load_result, message):
+    return (
+        *load_result,
+        PHASE_INIT,
+        gr.update(value=message),
     )
 
 
@@ -787,11 +789,9 @@ def create_ui_blocks():
             delete_callback=cleanup_user_session,
         )
         ui_phase_state = gr.State(value=PHASE_INIT)
-        session_boot_pending_state = gr.State(value=False)
         current_task_env_state = gr.State(value=None)
         suppress_next_option_change_state = gr.State(value=False)
         live_obs_timer = gr.Timer(value=1.0 / LIVE_OBS_REFRESH_HZ, active=True)
-        session_init_retry_timer = gr.Timer(value=0.5, active=False)
 
         task_info_box = gr.Textbox(visible=False, elem_id="task_info_box")
         progress_info_box = gr.Textbox(visible=False)
@@ -799,7 +799,7 @@ def create_ui_blocks():
 
         with gr.Column(visible=True, elem_id="main_interface_root") as main_interface:
             native_progress_host = gr.Markdown(
-                value="",
+                value=UI_TEXT["progress"]["episode_loading"],
                 visible=True,
                 container=False,
                 elem_id="native_progress_host",
@@ -939,9 +939,7 @@ def create_ui_blocks():
             task_hint_display,
             reference_action_btn,
             ui_phase_state,
-            session_boot_pending_state,
             native_progress_host,
-            session_init_retry_timer,
         ]
         phase_visibility_outputs = [
             video_phase_group,
@@ -952,51 +950,20 @@ def create_ui_blocks():
             "concurrency_id": SESSION_CONCURRENCY_ID,
             "concurrency_limit": SESSION_CONCURRENCY_LIMIT,
         }
-        init_queue_kwargs = {
-            "concurrency_id": SESSION_INIT_CONCURRENCY_ID,
-            "concurrency_limit": SESSION_INIT_CONCURRENCY_LIMIT,
-        }
 
         def _skip_load_flow():
             return tuple(gr.skip() for _ in range(len(load_flow_outputs)))
 
-        def _pending_init_flow(uid, queue_position):
-            queue_label = f'queue: {max(1, int(queue_position or 1))}'
-            return (
-                uid,
-                gr.update(visible=True),
-                gr.update(interactive=False),
-                "",
-                gr.update(choices=[], value=None),
-                "",
-                "",
-                gr.update(value=None, visible=False),
-                gr.update(visible=False, interactive=False),
-                "",
-                "",
-                gr.update(interactive=False),
-                gr.update(interactive=False),
-                gr.update(interactive=False),
-                gr.update(visible=False),
-                gr.update(visible=False),
-                gr.update(visible=False),
-                gr.update(value=""),
-                gr.update(interactive=False),
-                PHASE_INIT,
-                True,
-                gr.update(value=f'{UI_TEXT["progress"]["queue_wait"]} | {queue_label}'),
-                gr.update(active=True),
-            )
-
         def _coerce_init_load_result(result):
             if isinstance(result, dict):
                 status = result.get("status")
-                if status == "pending":
-                    return _pending_init_flow(result.get("uid"), result.get("queue_position"))
-                if status == "skip":
-                    return _skip_load_flow()
                 if status == "ready":
                     return _with_phase_from_load(result.get("load_result"))
+                if status == "rejected":
+                    return _with_rejected_init(
+                        result.get("load_result"),
+                        result.get("message", UI_TEXT["progress"]["entry_rejected"]),
+                    )
             return _with_phase_from_load(result)
 
         def _normalize_env_choice(env_value, choices):
@@ -1042,9 +1009,6 @@ def create_ui_blocks():
 
         def init_app_with_phase(request: gr.Request):
             return _coerce_init_load_result(init_app(request))
-
-        def resume_pending_init_with_phase(uid, init_pending, request: gr.Request):
-            return _coerce_init_load_result(resume_pending_init(uid, init_pending, request))
 
         def load_next_task_with_phase(uid):
             return _with_phase_from_load(load_next_task_wrapper(uid))
@@ -1410,7 +1374,7 @@ def create_ui_blocks():
             show_progress="full",
             js=SET_EPISODE_LOAD_MODE_JS,
             show_progress_on=[native_progress_host],
-            **init_queue_kwargs,
+            queue=False,
         ).then(
             fn=_phase_visibility_updates,
             inputs=[ui_phase_state],
@@ -1424,8 +1388,8 @@ def create_ui_blocks():
             queue=False,
             show_progress="hidden",
         ).then(
-            fn=touch_session_or_preserve_pending,
-            inputs=[uid_state, session_boot_pending_state],
+            fn=touch_session,
+            inputs=[uid_state],
             outputs=[uid_state],
             queue=False,
             show_progress="hidden",
@@ -1439,32 +1403,6 @@ def create_ui_blocks():
         init_load.failure(
             fn=None,
             js=RESET_EPISODE_LOAD_MODE_JS,
-            queue=False,
-            show_progress="hidden",
-        )
-
-        session_init_retry_timer.tick(
-            fn=resume_pending_init_with_phase,
-            inputs=[uid_state, session_boot_pending_state],
-            outputs=load_flow_outputs,
-            show_progress="hidden",
-            **init_queue_kwargs,
-        ).then(
-            fn=_phase_visibility_updates,
-            inputs=[ui_phase_state],
-            outputs=phase_visibility_outputs,
-            queue=False,
-            show_progress="hidden",
-        ).then(
-            fn=sync_header_from_task,
-            inputs=[task_info_box, goal_box],
-            outputs=[header_task_box, header_goal_box, current_task_env_state],
-            queue=False,
-            show_progress="hidden",
-        ).then(
-            fn=touch_session_or_preserve_pending,
-            inputs=[uid_state, session_boot_pending_state],
-            outputs=[uid_state],
             queue=False,
             show_progress="hidden",
         )
