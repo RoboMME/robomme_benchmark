@@ -36,30 +36,30 @@ def get_task_hint(env_id):
     # Order follows solve_3.5_parallel_multi_loop_v4.py DEFAULT_ENVS list
     hints = {
         "PickXtimes": """\
-To pick up red cubes twice, a typical sequence:
+For example, to pick up red cubes twice, a typical action sequence is:
     1. pick up the cube (click to select the correct color)
-    2. place it on the target.
+    2. place it onto the target.
     3. pick up the cube (click to select the correct color)
-    4. place it on the target.
+    4. place it onto the target.
     5. press the button to stop.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
 
         "StopCube": """\
-To stop the cube on the target three times, a typical sequence:
+For example, to stop the cube on the target on its third visit, a typical action sequence is:
     1. move above the button to prepare.
-    2. remain static for a fixed duration (count how many times the cube passes the target, may select "remain static" multiple times).
-    3. when the cube is about to reach the target for the last time, press the button to stop.
+    2. remain static (count how many times the cube passes the target, may select "remain static" multiple times).
+    3. when the cube is about to reach the target for the third time, press the button to stop. You need to anticipate the time duration of pressing.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
 
         "SwingXtimes": """\
-To swing right-to-left twice, a typical sequence:
+For example, to swing right-to-left twice, a typical action sequence is:
     1. pick up the cube (click to select the correct color).
-    2. move above the right target, then the left (click to select each).
-    3. move to the right target again, then the left again (click to select each).
+    2. move to the right target, then to the left target (click to select each).
+    3. move to the right target again, then to the left target again (click to select each).
     4. put the cube on the table and press the button to stop.
 
 Spatial directions (left, right) follow the robot base frame.
@@ -76,7 +76,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
 
         "VideoUnmaskSwap": """\
-Watch the video: cubes are hidden by containers. Memorize each cube's color. Track the swap of containers.
+Watch the video where the cubes are hidden by containers. Memorize each cube's color. Track the swap of containers.
 Typical sequence:
     1. pick up a container (click to select), then drop it.
     Repeat for a second container if the goal is to find two cubes.
@@ -85,9 +85,9 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
 
         "VideoUnmask": """\
-Watch the video: cubes are hidden by containers. Memorize each cube's color.
+Watch the video where the cubes are hidden by containers. Memorize each cube's color.
 Typical sequence:
-    1. Pick up a container (click to select), then put it down.
+    1. pick up a container (click to select), then put it down.
     Repeat for a second container if the goal is to find two cubes.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
@@ -96,7 +96,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
         "ButtonUnmaskSwap": """\
 Press the buttons. While doing so, cubes are hidden in containers. Memorize each cube's color. Track the swap of containers.
 Typical sequence:
-    1. Press the first button, then the second.
+    1. press the first button, then the second.
     2. pick up a container (click to select), then drop it.
     Repeat for a second container if the goal is to find two cubes.
 
@@ -118,7 +118,7 @@ Remember which cube was picked in the video, then pick it again. Cube positions 
 Typical sequence:
     1. pick up the correct cube (click to select by color)
     2. put it on the table.
-    3. repeat step 1 for the required number of times.
+    3. repeat step 1-2 for the required number of times.
     4. press the button to stop.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
@@ -128,7 +128,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 The video shows a robot placing a cube on different targets and pressing the button in sequence. Targets may change positions.
 Typical sequence:
     1. pick up the correct cube (click to select)
-    2. place it on the target (click to select target).
+    2. drop it onto the target (click to select target).
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
@@ -137,7 +137,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 The video shows a robot placing a cube on different targets and pressing the button in sequence. Targets may change positions.
 Typical sequence:
     1. pick up the correct cube (click to select)
-    2. place it on the target (click to select target).
+    2. drop it onto the target (click to select target).
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
@@ -154,7 +154,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
 
         "InsertPeg": """\
-The video shows a robot inserting a peg into a hole. The peg has two colored parts—pick the correct part and insert from the correct side.
+The video shows a robot inserting a peg into a hole. The peg has two colored parts. Pick the correct part and insert from the correct side.
 Typical sequence:
     1. pick up the peg (click to select correct peg and part).
     2. insert it into the hole on the left.
@@ -164,7 +164,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
 
         "MoveCube": """\
-The video shows a robot moving a cube to a target by (1) pick-and-place, (2) pushing with the gripper, or (3) hooking with a peg.
+The video shows a robot moving a cube to a target by either (1) pick-and-place, (2) pushing with the gripper, or (3) hooking with a peg.
 Remember which method was used and reproduce it.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
