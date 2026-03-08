@@ -342,9 +342,9 @@ SET_EPISODE_LOAD_MODE_JS = f"""
 }}
 """
 
-
+# Gradio js preprocessors with inputs must return the original args, or Python receives None.
 SET_EPISODE_LOAD_MODE_IF_SWITCH_JS = f"""
-(_uid, selectedEnv, currentTaskEnv) => {{
+(uid, selectedEnv, currentTaskEnv) => {{
     const normalize = (value) => (value == null ? "" : String(value).trim().toLowerCase());
     const nextEnv = normalize(selectedEnv);
     const currentEnv = normalize(currentTaskEnv);
@@ -352,6 +352,7 @@ SET_EPISODE_LOAD_MODE_IF_SWITCH_JS = f"""
         nextEnv && nextEnv !== currentEnv
             ? {json.dumps(LOAD_STATUS_MODE_EPISODE_LOAD)}
             : {json.dumps(LOAD_STATUS_MODE_IDLE)};
+    return [uid, selectedEnv, currentTaskEnv];
 }}
 """
 
@@ -901,13 +902,13 @@ def create_ui_blocks():
         demo.head = THEME_LOCK_HEAD
 
         gr.Markdown("## 🔥 RoboMME Interactive Demo 🚀🚀🚀", elem_id="header_title")
-        gr.Markdown("### Think robots 🤖 struggle with memory?  Let's see how you do 👇")
+        gr.Markdown("### Curious about memory-based robotic tasks? 🤖 Try it yourself 👇")
         with gr.Row():
             with gr.Column(scale=1):
                 header_task_box = gr.Dropdown(
                     choices=list(user_manager.env_choices),
                     value=render_header_task(""),
-                    label="Current Task 🏆",
+                    label="Current Task 📚",
                     show_label=True,
                     interactive=True,
                     elem_id="header_task",
@@ -915,7 +916,7 @@ def create_ui_blocks():
             with gr.Column(scale=2):
                 header_goal_box = gr.Textbox(
                     value=render_header_goal(""),
-                    label="Task Goal ✅",
+                    label="Task Goal 🏆",
                     show_label=True,
                     interactive=False,
                     lines=1,
@@ -1046,13 +1047,18 @@ def create_ui_blocks():
                                     elem_id="next_task_btn",
                                 )
 
-                        with gr.Column(visible=True, elem_classes=["native-card"], elem_id="task_hint_card"):
+                        with gr.Accordion(
+                            "Task Hint💡",
+                            open=False,
+                            visible=True,
+                            elem_classes=["native-card"],
+                            elem_id="task_hint_card",
+                        ):
                             task_hint_display = gr.Textbox(
                                 value="",
                                 lines=8,
                                 max_lines=16,
-                                show_label=True,
-                                label="Task Hint💡",
+                                show_label=False,
                                 interactive=True,
                                 elem_id="task_hint_display",
                             )
