@@ -901,6 +901,7 @@ def create_ui_blocks():
         demo.head = THEME_LOCK_HEAD
 
         gr.Markdown("## 🔥 RoboMME Interactive Demo 🚀🚀🚀", elem_id="header_title")
+        gr.Markdown("### Think robots 🤖 struggle with memory?  Let's see how you do 👇")
         with gr.Row():
             with gr.Column(scale=1):
                 header_task_box = gr.Dropdown(
