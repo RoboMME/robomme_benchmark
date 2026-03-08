@@ -50,7 +50,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 For example, to stop the cube on the target on its third visit, a typical action sequence is:
     1. move above the button to prepare.
     2. remain static (count how many times the cube passes the target, may select "remain static" multiple times).
-    3. when the cube is about to reach the target for the third time, press the button to stop. You need to anticipate the time duration of pressing.
+    3. when the cube is about to reach the target for the third time, press the button to stop.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
@@ -67,7 +67,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
 
         "BinFill": """\
-Suppose the task is to pick two red cubes and put them into the bin, a typical sequence:
+For example, to pick two red cubes and put them into the bin, a typical action sequence is:
     1. pick up a red cube (click to select), then put it in the bin.
     2. pick up another red cube (click to select), then put it in the bin.
     3. press the button to stop.
@@ -78,8 +78,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
         "VideoUnmaskSwap": """\
 Watch the video where the cubes are hidden by containers. Memorize each cube's color. Track the swap of containers.
 Typical sequence:
-    1. pick up a container (click to select), then drop it.
-    Repeat for a second container if the goal is to find two cubes.
+    1. pick up a container (click to select), then put it down.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
@@ -88,7 +87,6 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 Watch the video where the cubes are hidden by containers. Memorize each cube's color.
 Typical sequence:
     1. pick up a container (click to select), then put it down.
-    Repeat for a second container if the goal is to find two cubes.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
@@ -96,9 +94,8 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
         "ButtonUnmaskSwap": """\
 Press the buttons. While doing so, cubes are hidden in containers. Memorize each cube's color. Track the swap of containers.
 Typical sequence:
-    1. press the first button, then the second.
-    2. pick up a container (click to select), then drop it.
-    Repeat for a second container if the goal is to find two cubes.
+    1. press the first button and the second button
+    3. pick up a container (click to select), then put it down.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
@@ -107,8 +104,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 Press the button first. While doing so, cubes are hidden in containers. Memorize each cube's color.
 Typical sequence:
     1. press the button.
-    2. pick up a container (click to select), then drop it.
-    Repeat for a second container if the goal is to find two cubes.
+    2. pick up a container (click to select), then put it down.
 
 Select "Ground Truth Action" if you need help, then "Execute" it.
 """,
@@ -117,7 +113,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 Remember which cube was picked in the video, then pick it again. Cube positions may be swapped.
 Typical sequence:
     1. pick up the correct cube (click to select by color)
-    2. put it on the table.
+    2. put it down.
     3. repeat step 1-2 for the required number of times.
     4. press the button to stop.
 
@@ -157,7 +153,7 @@ Select "Ground Truth Action" if you need help, then "Execute" it.
 The video shows a robot inserting a peg into a hole. The peg has two colored parts. Pick the correct part and insert from the correct side.
 Typical sequence:
     1. pick up the peg (click to select correct peg and part).
-    2. insert it into the hole on the left.
+    2. insert the peg from the left / right side
 
 Spatial directions (left, right) follow the robot base frame.
 Select "Ground Truth Action" if you need help, then "Execute" it.
