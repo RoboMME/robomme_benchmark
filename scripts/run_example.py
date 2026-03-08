@@ -133,9 +133,7 @@ def main(
             if action_space_type == "multi_choice":
                 print(f"Available multi choices: {info['available_multi_choices']}")
                 
-            task_goal = info["task_goal"]
-            if isinstance(task_goal, list):
-                task_goal = task_goal[0]
+            task_goal = info["task_goal"][0]
             print(f"Task goal: {task_goal}")
 
             frames = _extract_frames(

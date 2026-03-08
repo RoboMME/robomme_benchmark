@@ -82,15 +82,13 @@ for task in TASKS:
         env_id=task,
         dataset="test",
         action_space="joint_angle", # change this to your model's action space
-        max_steps=300,  # we set 1300 in MME-VLA experiments.
+        max_steps=1300,  # we set 1300 in MME-VLA experiments.
     )
     episode_count = env_builder.get_episode_num()
     for episode in range(episode_count):
         env = env_builder.make_env_for_episode(episode)
         obs, info = env.reset()
-        task_goal = info["task_goal"]
-        if isinstance(task_goal, list):
-            task_goal = task_goal[0] # you can take alternative task goals if you want
+        task_goal = info["task_goal"][0] # you can take alternative task goals if you want
         print(f"\nTask goal: {task_goal}")
         
         recorder = VideoRecorder()

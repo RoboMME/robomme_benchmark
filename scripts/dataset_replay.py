@@ -243,8 +243,8 @@ def process_episode(
 
 
 def replay(
-    h5_data_dir: str = "/data/hongzefu/data_0226",
-    action_space_type: ActionSpaceType = "ee_pose",
+    h5_data_dir: str = "robomme_data_h5",
+    action_space_type: ActionSpaceType = "joint_angle",
     replay_number: int = 10,
 ) -> None:
     """Replay episodes from HDF5 dataset files and save rollout videos."""
