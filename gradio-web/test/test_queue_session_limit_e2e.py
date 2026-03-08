@@ -87,6 +87,15 @@ def _read_progress_text(page) -> str | None:
     )
 
 
+def _read_unified_overlay_text(page) -> str | None:
+    progress_text = _read_progress_text(page)
+    if progress_text:
+        return progress_text
+    snapshot = _read_session_wait_overlay_snapshot(page)
+    content = snapshot.get("content")
+    return str(content).strip() if content else None
+
+
 def _read_progress_overlay_snapshot(page) -> dict[str, float | bool | None]:
     return page.evaluate(
         """() => {
@@ -111,13 +120,24 @@ def _read_session_wait_overlay_snapshot(page) -> dict[str, float | bool | None]:
         """() => {
             const host = document.getElementById('native_progress_host');
             if (!host) {
-                return { present: false, visible: false, width: null, height: null, background: null, content: null };
+                return {
+                    present: false,
+                    visible: false,
+                    width: null,
+                    height: null,
+                    background: null,
+                    content: null,
+                    proseBackground: null,
+                    proseBorderRadius: null,
+                    proseBoxShadow: null,
+                };
             }
             const markdown = host.querySelector('[data-testid="markdown"]');
             const prose = markdown ? markdown.querySelector('.prose, .md') || markdown : null;
             const text = prose ? ((prose.innerText || prose.textContent || '').trim()) : '';
             const rect = host.getBoundingClientRect();
             const style = getComputedStyle(host);
+            const proseStyle = prose ? getComputedStyle(prose) : null;
             return {
                 present: true,
                 visible: style.display !== 'none' && rect.width > 0 && rect.height > 0 && text.length > 0,
@@ -125,6 +145,9 @@ def _read_session_wait_overlay_snapshot(page) -> dict[str, float | bool | None]:
                 height: rect.height,
                 background: style.backgroundColor || null,
                 content: text || null,
+                proseBackground: proseStyle ? proseStyle.backgroundColor || null : null,
+                proseBorderRadius: proseStyle ? proseStyle.borderRadius || null : null,
+                proseBoxShadow: proseStyle ? proseStyle.boxShadow || null : null,
             };
         }"""
     )
@@ -189,7 +212,7 @@ def test_gradio_queue_respects_configured_limit_on_init_load(monkeypatch):
                 time.sleep(0.25)
 
             def _queue_snapshot_ready():
-                progress_texts = [_read_progress_text(page) for page in pages]
+                progress_texts = [_read_unified_overlay_text(page) for page in pages]
                 processing_ready = all(
                     text and config.UI_TEXT["progress"]["episode_loading"] in text
                     for text in progress_texts[: config.SESSION_INIT_CONCURRENCY_LIMIT]
@@ -204,11 +227,11 @@ def test_gradio_queue_respects_configured_limit_on_init_load(monkeypatch):
 
             _wait_until(_queue_snapshot_ready, timeout_s=10.0)
             processing_pages = [
-                _read_progress_text(page) or ""
+                _read_unified_overlay_text(page) or ""
                 for page in pages[: config.SESSION_INIT_CONCURRENCY_LIMIT]
             ]
             queued_pages = [
-                _read_progress_text(page) or ""
+                _read_unified_overlay_text(page) or ""
                 for page in pages[config.SESSION_INIT_CONCURRENCY_LIMIT :]
             ]
 
@@ -223,6 +246,8 @@ def test_gradio_queue_respects_configured_limit_on_init_load(monkeypatch):
             assert overlay_snapshot["width"] and overlay_snapshot["width"] > 0
             assert overlay_snapshot["height"] and overlay_snapshot["height"] >= 400
             assert overlay_snapshot["background"] == "rgba(255, 255, 255, 0.92)"
+            session_wait_snapshot = _read_session_wait_overlay_snapshot(pages[-1])
+            assert session_wait_snapshot["content"] in (None, "")
 
             _wait_until(lambda: _read_progress_text(pages[0]) is None, timeout_s=15.0)
             _wait_until(lambda: _read_progress_text(pages[-1]) is None, timeout_s=25.0)
@@ -483,6 +508,11 @@ def test_late_user_waits_for_active_session_slot_release(monkeypatch):
             assert len(state_manager.GLOBAL_SESSIONS) == config.SESSION_CONCURRENCY_LIMIT
             assert len(state_manager.ACTIVE_SESSION_SLOTS) == config.SESSION_CONCURRENCY_LIMIT
             assert _read_session_wait_overlay_snapshot(page3)["visible"] is True
+            wait_snapshot = _read_session_wait_overlay_snapshot(page3)
+            assert wait_snapshot["content"] == f'{config.UI_TEXT["progress"]["queue_wait"]} | queue: 1'
+            assert wait_snapshot["proseBackground"] == "rgba(0, 0, 0, 0)"
+            assert wait_snapshot["proseBorderRadius"] == "0px"
+            assert wait_snapshot["proseBoxShadow"] == "none"
 
             page1.close()
 
@@ -579,6 +609,10 @@ def test_second_and_later_late_users_show_queue_overlay(monkeypatch):
                 assert overlay_snapshot["width"] and overlay_snapshot["width"] > 0
                 assert overlay_snapshot["height"] and overlay_snapshot["height"] >= 400
                 assert config.UI_TEXT["progress"]["queue_wait"] in str(overlay_snapshot["content"] or "")
+                assert "queue:" in str(overlay_snapshot["content"] or "").lower()
+                assert overlay_snapshot["proseBackground"] == "rgba(0, 0, 0, 0)"
+                assert overlay_snapshot["proseBorderRadius"] == "0px"
+                assert overlay_snapshot["proseBoxShadow"] == "none"
 
             browser.close()
     finally:

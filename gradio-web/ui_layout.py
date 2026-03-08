@@ -405,67 +405,11 @@ PROGRESS_TEXT_REWRITE_JS = f"""
             wrap.style.setProperty("background", "rgba(255, 255, 255, 0.92)", "important");
             wrap.style.setProperty("backdrop-filter", "blur(2px)", "important");
         }}
-    }};
-
-    const resetManualOverlayStyles = (host, markdown, prose) => {{
-        host.style.setProperty("pointer-events", "none", "important");
-        if (markdown instanceof HTMLElement) {{
-            [
-                "position",
-                "inset",
-                "display",
-                "align-items",
-                "justify-content",
-                "padding",
-            ].forEach((prop) => markdown.style.removeProperty(prop));
-        }}
-        if (prose instanceof HTMLElement) {{
-            [
-                "min-width",
-                "max-width",
-                "margin",
-                "padding",
-                "border-radius",
-                "background",
-                "border",
-                "box-shadow",
-                "text-align",
-                "color",
-                "font-size",
-                "font-weight",
-                "line-height",
-                "white-space",
-            ].forEach((prop) => prose.style.removeProperty(prop));
-        }}
-    }};
-
-    const updateManualWaitOverlay = () => {{
-        const host = document.getElementById("native_progress_host");
-        if (!(host instanceof HTMLElement)) {{
-            return;
-        }}
-
         const markdown = host.querySelector('[data-testid="markdown"]');
         const prose =
             markdown instanceof HTMLElement
                 ? markdown.querySelector(".prose, .md") || markdown
                 : null;
-        const progressNode = host.querySelector(".progress-text");
-        const text =
-            prose instanceof HTMLElement
-                ? (prose.innerText || prose.textContent || "").trim()
-                : "";
-        const manualVisible =
-            Boolean(text) &&
-            !progressNode &&
-            text.toLowerCase().includes(queueWaitText.toLowerCase());
-
-        if (!manualVisible) {{
-            resetManualOverlayStyles(host, markdown, prose);
-            return;
-        }}
-
-        host.style.setProperty("pointer-events", "auto", "important");
         if (markdown instanceof HTMLElement) {{
             markdown.style.setProperty("position", "fixed", "important");
             markdown.style.setProperty("inset", "0", "important");
@@ -475,14 +419,10 @@ PROGRESS_TEXT_REWRITE_JS = f"""
             markdown.style.setProperty("padding", "24px", "important");
         }}
         if (prose instanceof HTMLElement) {{
-            prose.style.setProperty("min-width", "min(560px, calc(100vw - 48px))", "important");
+            prose.style.setProperty("width", "min(720px, calc(100vw - 48px))", "important");
             prose.style.setProperty("max-width", "calc(100vw - 48px)", "important");
             prose.style.setProperty("margin", "0", "important");
-            prose.style.setProperty("padding", "28px 32px", "important");
-            prose.style.setProperty("border-radius", "16px", "important");
-            prose.style.setProperty("background", "rgba(255, 255, 255, 0.96)", "important");
-            prose.style.setProperty("border", "1px solid rgba(15, 23, 42, 0.08)", "important");
-            prose.style.setProperty("box-shadow", "0 24px 60px rgba(15, 23, 42, 0.14)", "important");
+            prose.style.setProperty("padding", "0", "important");
             prose.style.setProperty("text-align", "center", "important");
             prose.style.setProperty("color", "#0f172a", "important");
             prose.style.setProperty("font-size", "var(--text-lg)", "important");
@@ -550,7 +490,6 @@ PROGRESS_TEXT_REWRITE_JS = f"""
     const rewriteAll = () => {{
         ensureOverlayStyles();
         document.querySelectorAll(".progress-text").forEach(rewriteNode);
-        updateManualWaitOverlay();
     }};
 
     const scheduleRewrite = () => {{
@@ -1015,7 +954,7 @@ def create_ui_blocks():
             return tuple(gr.skip() for _ in range(len(load_flow_outputs)))
 
         def _pending_init_flow(uid, queue_position):
-            _ = queue_position
+            queue_label = f'queue: {max(1, int(queue_position or 1))}'
             return (
                 uid,
                 gr.update(visible=True),
@@ -1038,7 +977,7 @@ def create_ui_blocks():
                 gr.update(interactive=False),
                 PHASE_INIT,
                 True,
-                gr.update(value=f'{UI_TEXT["progress"]["queue_wait"]}\\n\\nqueue: {max(1, int(queue_position or 1))}'),
+                gr.update(value=f'{UI_TEXT["progress"]["queue_wait"]} | {queue_label}'),
                 gr.update(active=True),
             )
 
