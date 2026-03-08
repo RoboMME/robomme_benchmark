@@ -124,8 +124,8 @@ def main():
 
     os.environ.setdefault("ROBOMME_TEMP_DEMOS_DIR", str(TEMP_DEMOS_DIR))
     allowed_paths = build_allowed_paths()
-    #server_port = int(os.getenv("PORT", "7860"))
-    server_port = 7861
+    server_port = int(os.getenv("PORT", "7860"))
+    #server_port = 7862
     LOGGER.info(
         "Launching UI with server_name=%s server_port=%s ROBOMME_TEMP_DEMOS_DIR=%s",
         "0.0.0.0",
