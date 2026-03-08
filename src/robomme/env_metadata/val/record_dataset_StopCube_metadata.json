@@ -1,6 +1,6 @@
 {
   "env_id": "StopCube",
-  "record_count": 100,
+  "record_count": 96,
   "records": [
     {
       "task": "StopCube",
@@ -209,396 +209,372 @@
     {
       "task": "StopCube",
       "episode": 34,
-      "seed": 1023400,
-      "difficulty": "medium"
-    },
-    {
-      "task": "StopCube",
-      "episode": 35,
       "seed": 1023500,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 36,
+      "episode": 35,
       "seed": 1023600,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 37,
+      "episode": 36,
       "seed": 1023700,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 38,
-      "seed": 1023800,
-      "difficulty": "medium"
-    },
-    {
-      "task": "StopCube",
-      "episode": 39,
+      "episode": 37,
       "seed": 1023900,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 40,
+      "episode": 38,
       "seed": 1024000,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 41,
+      "episode": 39,
       "seed": 1024100,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 42,
+      "episode": 40,
       "seed": 1024200,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 43,
+      "episode": 41,
       "seed": 1024300,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 44,
+      "episode": 42,
       "seed": 1024400,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 45,
+      "episode": 43,
       "seed": 1024500,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 46,
+      "episode": 44,
       "seed": 1024600,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 47,
+      "episode": 45,
       "seed": 1024700,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 48,
+      "episode": 46,
       "seed": 1024800,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 49,
+      "episode": 47,
       "seed": 1024900,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 50,
+      "episode": 48,
       "seed": 1025000,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 51,
+      "episode": 49,
       "seed": 1025100,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 52,
+      "episode": 50,
       "seed": 1025200,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 53,
+      "episode": 51,
       "seed": 1025300,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 54,
+      "episode": 52,
       "seed": 1025400,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 55,
+      "episode": 53,
       "seed": 1025500,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 56,
+      "episode": 54,
       "seed": 1025600,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 57,
+      "episode": 55,
       "seed": 1025700,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 58,
+      "episode": 56,
       "seed": 1025800,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 59,
+      "episode": 57,
       "seed": 1025900,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 60,
+      "episode": 58,
       "seed": 1026000,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 61,
+      "episode": 59,
       "seed": 1026100,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 62,
+      "episode": 60,
       "seed": 1026200,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 63,
+      "episode": 61,
       "seed": 1026300,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 64,
+      "episode": 62,
       "seed": 1026400,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 65,
+      "episode": 63,
       "seed": 1026500,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 66,
+      "episode": 64,
       "seed": 1026600,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 67,
+      "episode": 65,
       "seed": 1026700,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 68,
+      "episode": 66,
       "seed": 1026800,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 69,
+      "episode": 67,
       "seed": 1026900,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 70,
+      "episode": 68,
       "seed": 1027000,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 71,
+      "episode": 69,
       "seed": 1027100,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 72,
+      "episode": 70,
       "seed": 1027200,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 73,
+      "episode": 71,
       "seed": 1027300,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 74,
+      "episode": 72,
       "seed": 1027400,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 75,
-      "seed": 1027500,
-      "difficulty": "hard"
-    },
-    {
-      "task": "StopCube",
-      "episode": 76,
+      "episode": 73,
       "seed": 1027600,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 77,
+      "episode": 74,
       "seed": 1027700,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 78,
+      "episode": 75,
       "seed": 1027800,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 79,
+      "episode": 76,
       "seed": 1027900,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 80,
+      "episode": 77,
       "seed": 1028000,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 81,
+      "episode": 78,
       "seed": 1028100,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 82,
+      "episode": 79,
       "seed": 1028200,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 83,
+      "episode": 80,
       "seed": 1028300,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 84,
+      "episode": 81,
       "seed": 1028400,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 85,
+      "episode": 82,
       "seed": 1028500,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 86,
+      "episode": 83,
       "seed": 1028600,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 87,
+      "episode": 84,
       "seed": 1028700,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 88,
+      "episode": 85,
       "seed": 1028800,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 89,
-      "seed": 1028900,
-      "difficulty": "easy"
-    },
-    {
-      "task": "StopCube",
-      "episode": 90,
+      "episode": 86,
       "seed": 1029000,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 91,
+      "episode": 87,
       "seed": 1029100,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 92,
+      "episode": 88,
       "seed": 1029200,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 93,
+      "episode": 89,
       "seed": 1029300,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 94,
+      "episode": 90,
       "seed": 1029400,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 95,
+      "episode": 91,
       "seed": 1029500,
       "difficulty": "hard"
     },
     {
       "task": "StopCube",
-      "episode": 96,
+      "episode": 92,
       "seed": 1029600,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 97,
+      "episode": 93,
       "seed": 1029700,
       "difficulty": "easy"
     },
     {
       "task": "StopCube",
-      "episode": 98,
+      "episode": 94,
       "seed": 1029800,
       "difficulty": "medium"
     },
     {
       "task": "StopCube",
-      "episode": 99,
+      "episode": 95,
       "seed": 1029900,
       "difficulty": "hard"
     }
