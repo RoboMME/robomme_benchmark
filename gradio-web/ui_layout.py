@@ -560,13 +560,13 @@ def create_ui_blocks():
         demo.theme = APP_THEME
         demo.head = THEME_LOCK_HEAD
 
-        gr.Markdown("## RoboMME Interactive Demo 🚀🚀🚀", elem_id="header_title")
+        gr.Markdown("## 🔥 RoboMME Interactive Demo 🚀🚀🚀", elem_id="header_title")
         with gr.Row():
             with gr.Column(scale=1):
                 header_task_box = gr.Dropdown(
                     choices=list(user_manager.env_choices),
                     value=render_header_task(""),
-                    label="Current Task 🔥",
+                    label="Current Task 🏆",
                     show_label=True,
                     interactive=True,
                     elem_id="header_task",
@@ -608,7 +608,7 @@ def create_ui_blocks():
                                 visible=True,
                             )
                             watch_demo_video_btn = gr.Button(
-                                "Watch Video Input🎬",
+                                "Watch Video Input 🎬",
                                 variant="primary",
                                 size="lg",
                                 interactive=False,
