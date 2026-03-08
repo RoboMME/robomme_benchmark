@@ -315,13 +315,18 @@ def create_dummy_demo() -> gr.Blocks:
                                     elem_id="next_task_btn",
                                 )
 
-                        with gr.Column(visible=True, elem_classes=["native-card"], elem_id="task_hint_card"):
+                        with gr.Accordion(
+                            "Task Hint",
+                            open=False,
+                            visible=True,
+                            elem_classes=["native-card"],
+                            elem_id="task_hint_card",
+                        ):
                             task_hint_display = gr.Textbox(
                                 value=_task_hint(DUMMY_TASKS[0]),
                                 lines=8,
                                 max_lines=16,
-                                show_label=True,
-                                label="Task Hint",
+                                show_label=False,
                                 interactive=True,
                                 elem_id="task_hint_display",
                             )
