@@ -342,9 +342,9 @@ SET_EPISODE_LOAD_MODE_JS = f"""
 }}
 """
 
-
+# Gradio js preprocessors with inputs must return the original args, or Python receives None.
 SET_EPISODE_LOAD_MODE_IF_SWITCH_JS = f"""
-(_uid, selectedEnv, currentTaskEnv) => {{
+(uid, selectedEnv, currentTaskEnv) => {{
     const normalize = (value) => (value == null ? "" : String(value).trim().toLowerCase());
     const nextEnv = normalize(selectedEnv);
     const currentEnv = normalize(currentTaskEnv);
@@ -352,6 +352,7 @@ SET_EPISODE_LOAD_MODE_IF_SWITCH_JS = f"""
         nextEnv && nextEnv !== currentEnv
             ? {json.dumps(LOAD_STATUS_MODE_EPISODE_LOAD)}
             : {json.dumps(LOAD_STATUS_MODE_IDLE)};
+    return [uid, selectedEnv, currentTaskEnv];
 }}
 """
 

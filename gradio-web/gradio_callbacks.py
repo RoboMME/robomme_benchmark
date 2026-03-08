@@ -76,7 +76,10 @@ def _entry_rejected_text():
 
 def touch_session(uid):
     """Re-emit the current session key to refresh gr.State TTL."""
-    return uid if uid and get_session(uid) is not None else None
+    if not uid:
+        return None
+    # Keep the browser-side uid even when the backend session is stubbed or not yet materialized.
+    return uid
 
 
 def cleanup_user_session(uid):
@@ -278,9 +281,15 @@ def on_video_end(uid):
 
 def on_demo_video_play(uid):
     """Mark the demo video as consumed and disable the play button."""
-    if not get_session(uid):
-        LOGGER.warning("on_demo_video_play: missing session uid=%s", _uid_for_log(uid))
+    if not uid:
+        LOGGER.warning("on_demo_video_play: missing uid")
         raise gr.Error(_session_error_text())
+
+    if not get_session(uid):
+        LOGGER.warning(
+            "on_demo_video_play: missing session uid=%s; disabling button anyway",
+            _uid_for_log(uid),
+        )
 
     already_clicked = get_play_button_clicked(uid)
     if not already_clicked:
