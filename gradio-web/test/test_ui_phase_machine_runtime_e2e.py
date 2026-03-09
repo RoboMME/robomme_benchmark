@@ -2576,7 +2576,10 @@ def _run_local_execute_video_transition_test(
             self.episode_idx = 1
             self.language_goal = "place cube on target"
             self.available_options = [("pick", 0), ("point", 1)]
-            self.raw_solve_options = [{"available": False}, {"available": [object()]}]
+            self.raw_solve_options = [
+                {"label": "a", "action": "pick", "available": False},
+                {"label": "b", "action": "point", "available": [object()]},
+            ]
             self.demonstration_frames = []
             self.last_execution_frames = []
             self.base_frames = [fake_obs.copy()]
@@ -2624,6 +2627,8 @@ def _run_local_execute_video_transition_test(
                 value={
                     "preserve_terminal_log": False,
                     "terminal_log_value": None,
+                    "preserve_execute_video_log": False,
+                    "execute_video_log_value": None,
                 }
             )
             suppress_state = gr.State(value=False)
@@ -2705,6 +2710,12 @@ def _run_local_execute_video_transition_test(
                 outputs=[coords_box, img_display, log_output, suppress_state, post_execute_log_state],
                 queue=False,
             )
+            img_display.select(
+                fn=cb.on_map_click,
+                inputs=[uid_state, options_radio],
+                outputs=[img_display, coords_box, log_output],
+                queue=False,
+            )
 
             execute_video_display.end(
                 fn=cb.on_execute_video_end_transition,
@@ -2721,6 +2732,7 @@ def _run_local_execute_video_transition_test(
                     log_output,
                     reference_action_btn,
                     task_hint_display,
+                    post_execute_log_state,
                     phase_state,
                 ],
                 queue=False,
@@ -2740,6 +2752,7 @@ def _run_local_execute_video_transition_test(
                     log_output,
                     reference_action_btn,
                     task_hint_display,
+                    post_execute_log_state,
                     phase_state,
                 ],
                 queue=False,
@@ -2764,7 +2777,39 @@ def _run_local_execute_video_transition_test(
                 page = browser.new_page(viewport={"width": 1280, "height": 900})
                 page.goto(root_url, wait_until="domcontentloaded")
                 page.wait_for_selector("#main_interface", state="visible", timeout=20000)
-                page.locator("#action_radio input[type='radio']").first.check(force=True)
+                page.locator("#action_radio input[type='radio']").nth(1).check(force=True)
+                page.wait_for_function(
+                    """(state) => {
+                        const coordsRoot = document.getElementById('coords_box');
+                        const coordsField = coordsRoot?.querySelector('textarea, input');
+                        const logRoot = document.getElementById('log_output');
+                        const logField = logRoot?.querySelector('textarea, input');
+                        const coordsValue = coordsField ? coordsField.value.trim() : '';
+                        const logValue = logField ? logField.value.trim() : (logRoot?.textContent || '').trim();
+                        return coordsValue === state.coordsPrompt && logValue === state.waitLog;
+                    }""",
+                    arg={
+                        "coordsPrompt": config_module.UI_TEXT["coords"]["select_point"],
+                        "waitLog": config_module.UI_TEXT["log"]["point_selection_prompt"],
+                    },
+                    timeout=5000,
+                )
+                box = page.locator("#live_obs img").bounding_box()
+                assert box is not None
+                page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+                page.wait_for_function(
+                    """(state) => {
+                        const coordsRoot = document.getElementById('coords_box');
+                        const coordsField = coordsRoot?.querySelector('textarea, input');
+                        const logRoot = document.getElementById('log_output');
+                        const logField = logRoot?.querySelector('textarea, input');
+                        const coordsValue = coordsField ? coordsField.value.trim() : '';
+                        const logValue = logField ? logField.value.trim() : (logRoot?.textContent || '').trim();
+                        return /^\\d+\\s*,\\s*\\d+$/.test(coordsValue) && logValue === state.actionLog;
+                    }""",
+                    arg={"actionLog": config_module.UI_TEXT["log"]["action_selection_prompt"]},
+                    timeout=5000,
+                )
                 page.locator("#exec_btn button, button#exec_btn").first.click()
                 page.wait_for_selector("#execute_video video", timeout=5000)
                 page.wait_for_function(
@@ -2788,6 +2833,10 @@ def _run_local_execute_video_transition_test(
                     }""",
                     timeout=10000,
                 )
+                if not done:
+                    execution_log = _read_log_output_value(page)
+                    assert execution_log == config_module.UI_TEXT["log"]["execute_action_prompt"].format(label="b")
+                    assert execution_log != config_module.UI_TEXT["log"]["point_selection_prompt"]
                 controls_after_execute = _read_demo_video_controls(page, elem_id="execute_video", button_elem_id=None)
                 assert controls_after_execute["autoplay"] is True
                 assert controls_after_execute["paused"] is False
@@ -2881,30 +2930,7 @@ def _run_local_execute_video_transition_test(
                         "execDisabled": False,
                         "refDisabled": False,
                     }
-                    page.locator("#action_radio input[type='radio']").nth(1).check(force=True)
-                    page.wait_for_function(
-                        """(state) => {
-                            const liveObs = document.getElementById('live_obs');
-                            const coordsRoot = document.getElementById('coords_box');
-                            const coordsField = coordsRoot?.querySelector('textarea, input');
-                            const logRoot = document.getElementById('log_output');
-                            const logField = logRoot?.querySelector('textarea, input');
-                            const coordsValue = coordsField ? coordsField.value.trim() : '';
-                            const logValue = logField ? logField.value.trim() : (logRoot?.textContent || '').trim();
-                            return (
-                                !!liveObs &&
-                                liveObs.classList.contains(state.waitClass) &&
-                                coordsValue === state.coordsPrompt &&
-                                logValue === state.waitLog
-                            );
-                        }""",
-                        arg={
-                            "waitClass": config_module.LIVE_OBS_POINT_WAIT_CLASS,
-                            "coordsPrompt": config_module.UI_TEXT["coords"]["select_point"],
-                            "waitLog": config_module.UI_TEXT["log"]["point_selection_prompt"],
-                        },
-                        timeout=5000,
-                    )
+                    assert _read_log_output_value(page) == config_module.UI_TEXT["log"]["action_selection_prompt"]
 
                 browser.close()
         finally:
@@ -3039,6 +3065,8 @@ def test_phase_machine_runtime_stopcube_remain_static_merges_short_tail(monkeypa
             value={
                 "preserve_terminal_log": False,
                 "terminal_log_value": None,
+                "preserve_execute_video_log": False,
+                "execute_video_log_value": None,
             }
         )
         suppress_state = gr.State(value=False)
@@ -3140,6 +3168,7 @@ def test_phase_machine_runtime_stopcube_remain_static_merges_short_tail(monkeypa
                 log_output,
                 reference_action_btn,
                 task_hint_display,
+                post_execute_log_state,
                 phase_state,
             ],
             queue=False,
@@ -3159,6 +3188,7 @@ def test_phase_machine_runtime_stopcube_remain_static_merges_short_tail(monkeypa
                 log_output,
                 reference_action_btn,
                 task_hint_display,
+                post_execute_log_state,
                 phase_state,
             ],
             queue=False,

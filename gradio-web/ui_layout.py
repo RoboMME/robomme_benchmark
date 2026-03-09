@@ -969,6 +969,8 @@ def create_ui_blocks():
             value={
                 "preserve_terminal_log": False,
                 "terminal_log_value": None,
+                "preserve_execute_video_log": False,
+                "execute_video_log_value": None,
             }
         )
         current_task_env_state = gr.State(value=None)
@@ -1425,6 +1427,7 @@ def create_ui_blocks():
                 log_output,
                 reference_action_btn,
                 task_hint_display,
+                post_execute_log_state,
                 ui_phase_state,
             ],
             queue=False,
@@ -1451,6 +1454,7 @@ def create_ui_blocks():
                 log_output,
                 reference_action_btn,
                 task_hint_display,
+                post_execute_log_state,
                 ui_phase_state,
             ],
             queue=False,

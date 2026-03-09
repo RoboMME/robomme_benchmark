@@ -62,10 +62,41 @@ def _point_selection_log():
     return format_log_markdown(_ui_text("log", "point_selection_prompt"))
 
 
+def _get_raw_option_label(session, option_idx):
+    try:
+        option_index = int(option_idx)
+    except (TypeError, ValueError):
+        return None
+
+    raw_solve_options = getattr(session, "raw_solve_options", None)
+    if not isinstance(raw_solve_options, list):
+        return None
+    if not (0 <= option_index < len(raw_solve_options)):
+        return None
+
+    raw_option = raw_solve_options[option_index]
+    if not isinstance(raw_option, dict):
+        return None
+
+    label = str(raw_option.get("label", "")).strip()
+    return label or None
+
+
+def _execution_video_log(session, option_idx, fallback_status=None):
+    label = _get_raw_option_label(session, option_idx)
+    if label:
+        return format_log_markdown(_ui_text("log", "execute_action_prompt", label=label))
+    if fallback_status is None:
+        return None
+    return format_log_markdown(fallback_status)
+
+
 def _default_post_execute_log_state():
     return {
         "preserve_terminal_log": False,
         "terminal_log_value": None,
+        "preserve_execute_video_log": False,
+        "execute_video_log_value": None,
     }
 
 
@@ -78,9 +109,17 @@ def _normalize_post_execute_log_state(state):
             preserve_terminal_log = False
         else:
             terminal_log_value = str(terminal_log_value)
+        preserve_execute_video_log = bool(state.get("preserve_execute_video_log", False))
+        execute_video_log_value = state.get("execute_video_log_value")
+        if execute_video_log_value is None:
+            preserve_execute_video_log = False
+        else:
+            execute_video_log_value = str(execute_video_log_value)
         return {
             "preserve_terminal_log": preserve_terminal_log,
             "terminal_log_value": terminal_log_value,
+            "preserve_execute_video_log": preserve_execute_video_log,
+            "execute_video_log_value": execute_video_log_value,
         }
     return _default_post_execute_log_state()
 
@@ -487,9 +526,11 @@ def on_execute_video_end_transition(
     """Transition from execute video phase back to the action phase."""
     controls_state = _normalize_post_execute_controls_state(post_execute_controls_state)
     log_state = _normalize_post_execute_log_state(post_execute_log_state)
-    log_update = gr.update()
+    next_log_state = _default_post_execute_log_state()
+    log_update = gr.update(value=_action_selection_log())
     if log_state["preserve_terminal_log"]:
         log_update = gr.update(value=log_state["terminal_log_value"])
+        next_log_state = log_state
     LOGGER.debug(
         "on_execute_video_end_transition uid=%s controls_state=%s log_state=%s",
         _uid_for_log(uid),
@@ -508,6 +549,7 @@ def on_execute_video_end_transition(
         log_update,  # log_output
         gr.update(interactive=controls_state["reference_action_interactive"]),  # reference_action_btn
         gr.update(interactive=True),  # task_hint_display
+        next_log_state,  # post_execute_log_state
         "action_point",  # ui_phase_state
     )
 
@@ -925,6 +967,20 @@ def on_option_select(
             gr.update(),
             gr.update(),
             gr.update(value=normalized_post_execute_log_state["terminal_log_value"]),
+            False,
+            normalized_post_execute_log_state,
+        )
+
+    if normalized_post_execute_log_state["preserve_execute_video_log"]:
+        LOGGER.debug(
+            "on_option_select preserving execution-video log uid=%s option=%s",
+            _uid_for_log(uid),
+            option_value,
+        )
+        return (
+            gr.update(),
+            gr.update(),
+            gr.update(value=normalized_post_execute_log_state["execute_video_log_value"]),
             False,
             normalized_post_execute_log_state,
         )
@@ -1445,10 +1501,20 @@ def execute_step(uid, option_idx, coords_str):
     
     # 格式化日志消息为 HTML 格式（支持颜色显示）
     formatted_status = format_log_markdown(status)
+    if show_execution_video and not done:
+        formatted_status = _execution_video_log(session, option_idx, fallback_status=status) or formatted_status
+        post_execute_log_state = {
+            "preserve_terminal_log": False,
+            "terminal_log_value": None,
+            "preserve_execute_video_log": True,
+            "execute_video_log_value": formatted_status,
+        }
     if done:
         post_execute_log_state = {
             "preserve_terminal_log": True,
             "terminal_log_value": formatted_status,
+            "preserve_execute_video_log": False,
+            "execute_video_log_value": None,
         }
     LOGGER.debug(
         "execute_step done uid=%s env=%s ep=%s done=%s post_execute_controls=%s post_execute_log=%s show_execution_video=%s",

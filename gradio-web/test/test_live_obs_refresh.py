@@ -7,7 +7,7 @@ class _FakeSession:
     def __init__(self):
         self.env_id = "BinFill"
         self.episode_idx = 1
-        self.raw_solve_options = [{"available": False}]
+        self.raw_solve_options = [{"label": "a", "available": False}]
         self.available_options = [("pick", 0)]
         self.base_frames = []
         self.last_execution_frames = []
@@ -63,8 +63,19 @@ def test_execute_step_builds_video_from_last_execution_frames(monkeypatch, reloa
     assert result[11]["value"] is None
     assert result[11]["interactive"] is False
     assert result[14]["interactive"] is False
-    assert result[15] is True
-    assert result[16] == "execution_video"
+    expected_log = callbacks.UI_TEXT["log"]["execute_action_prompt"].format(label="a")
+    assert result[1] == expected_log
+    assert result[15] == {
+        "exec_btn_interactive": True,
+        "reference_action_interactive": True,
+    }
+    assert result[16] == {
+        "preserve_terminal_log": False,
+        "terminal_log_value": None,
+        "preserve_execute_video_log": True,
+        "execute_video_log_value": expected_log,
+    }
+    assert result[17] == "execution_video"
 
 
 def test_execute_step_falls_back_to_single_frame_clip_when_no_new_frames(monkeypatch, reload_module):
@@ -98,7 +109,7 @@ def test_execute_step_falls_back_to_single_frame_clip_when_no_new_frames(monkeyp
     assert int(captured["frames"][0][0, 0, 0]) == 33
     assert result[7]["visible"] is True
     assert result[10]["visible"] is True
-    assert result[16] == "execution_video"
+    assert result[17] == "execution_video"
 
 
 def test_switch_phase_toggles_live_obs_interactive_without_refresh_queue(reload_module):

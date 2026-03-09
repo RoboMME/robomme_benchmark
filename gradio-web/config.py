@@ -65,6 +65,7 @@ UI_TEXT = {
     "log": {
         "action_selection_prompt": "Please select the action.\nActions with 🎯 need to select a point on the image as input",
         "point_selection_prompt": "Current action needs location input, please click on the image to select key pixel",
+        "execute_action_prompt": "Executing Action {label}",
         "demo_video_prompt": 'Press "Watch Video Input 🎬" to watch a video\nNote: you can only watch the video once',
         "session_error": "Session expired. Please refresh the page and try again.",
         "reference_action_error": "Ground Truth Action Error: {error}",

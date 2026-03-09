@@ -103,10 +103,33 @@ def test_on_execute_video_end_transition_restores_controls_for_non_terminal_stat
     assert result[4]["interactive"] is True
     assert result[5]["interactive"] is True
     assert result[6]["interactive"] is True
-    assert result[8].get("__type__") == "update"
+    assert result[8]["value"] == callbacks.UI_TEXT["log"]["action_selection_prompt"]
     assert result[9]["interactive"] is True
     assert result[10]["interactive"] is True
-    assert result[11] == "action_point"
+    assert result[11] == callbacks._default_post_execute_log_state()
+    assert result[12] == "action_point"
+
+
+def test_on_execute_video_end_transition_clears_execution_video_log_state(reload_module):
+    callbacks = reload_module("gradio_callbacks")
+
+    result = callbacks.on_execute_video_end_transition(
+        "uid-1",
+        {
+            "exec_btn_interactive": True,
+            "reference_action_interactive": True,
+        },
+        {
+            "preserve_terminal_log": False,
+            "terminal_log_value": None,
+            "preserve_execute_video_log": True,
+            "execute_video_log_value": "Executing Action b",
+        },
+    )
+
+    assert result[8]["value"] == callbacks.UI_TEXT["log"]["action_selection_prompt"]
+    assert result[11] == callbacks._default_post_execute_log_state()
+    assert result[12] == "action_point"
 
 
 def test_on_execute_video_end_transition_keeps_terminal_buttons_disabled(reload_module):
@@ -134,7 +157,13 @@ def test_on_execute_video_end_transition_keeps_terminal_buttons_disabled(reload_
     assert result[8]["value"] == "terminal banner"
     assert result[9]["interactive"] is False
     assert result[10]["interactive"] is True
-    assert result[11] == "action_point"
+    assert result[11] == callbacks._normalize_post_execute_log_state(
+        {
+            "preserve_terminal_log": True,
+            "terminal_log_value": "terminal banner",
+        }
+    )
+    assert result[12] == "action_point"
 
 
 def test_on_option_select_preserves_terminal_log_state(reload_module):
@@ -158,6 +187,36 @@ def test_on_option_select_preserves_terminal_log_state(reload_module):
     assert log_state == {
         "preserve_terminal_log": True,
         "terminal_log_value": "episode success banner",
+        "preserve_execute_video_log": False,
+        "execute_video_log_value": None,
+    }
+
+
+def test_on_option_select_preserves_execution_video_log_state(reload_module):
+    callbacks = reload_module("gradio_callbacks")
+
+    coords_update, img_update, log_update, suppress_flag, log_state = callbacks.on_option_select(
+        "uid-1",
+        1,
+        callbacks.UI_TEXT["coords"]["select_point"],
+        False,
+        {
+            "preserve_terminal_log": False,
+            "terminal_log_value": None,
+            "preserve_execute_video_log": True,
+            "execute_video_log_value": "Executing Action b",
+        },
+    )
+
+    assert coords_update.get("__type__") == "update"
+    assert img_update.get("__type__") == "update"
+    assert log_update["value"] == "Executing Action b"
+    assert suppress_flag is False
+    assert log_state == {
+        "preserve_terminal_log": False,
+        "terminal_log_value": None,
+        "preserve_execute_video_log": True,
+        "execute_video_log_value": "Executing Action b",
     }
 
 
