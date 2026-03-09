@@ -134,7 +134,7 @@ This work was supported in part by NSF SES-2128623, NSF CAREER #2337870, NSF NRI
 ```
 @article{dai2026robomme,
   title={RoboMME: Benchmarking and Understanding Memory for Robotic Generalist Policies},
-  author={Dai, Yinpei and Fu, Hongze and Lee, Jayjun and Zhang, Haoran and Yang, Jianing and Finn, Chelsea and Fazeli, Nima and Chai, Joyce},
+  author={Dai, Yinpei and Fu, Hongze and Lee, Jayjun and Liu, Yuejiang and Zhang, Haoran and Yang, Jianing and Finn, Chelsea and Fazeli, Nima and Chai, Joyce},
   journal={arXiv preprint arXiv:2603.04639},
   year={2026}
 }
