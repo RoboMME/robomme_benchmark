@@ -115,3 +115,67 @@ def test_get_reference_action_when_choice_text_cannot_match(monkeypatch, reload_
     assert result["ok"] is False
     assert result["option_idx"] is None
     assert "Cannot map ground truth action" in result["message"]
+
+
+def test_get_reference_action_video_place_action_still_maps_after_gradio_filter(monkeypatch, reload_module):
+    oracle_logic = reload_module("oracle_logic")
+
+    target = _FakeActor("target", [0.3, 0.4, 0.5])
+    unwrapped = _FakeUnwrapped(
+        choice_label="drop onto",
+        current_segment=target,
+        seg_map={11: target},
+    )
+    env = _FakeEnv(unwrapped)
+
+    monkeypatch.setattr(
+        oracle_logic,
+        "_build_solve_options",
+        lambda env, planner, selected_target, env_id: [
+            {"label": "a", "action": "pick up the cube", "available": []},
+            {"label": "b", "action": "drop onto", "available": [target]},
+        ],
+    )
+
+    session = oracle_logic.OracleSession(dataset_root=None, gui_render=False)
+    session.env = env
+    session.planner = object()
+    session.env_id = "VideoPlaceButton"
+    session.seg_raw = np.zeros((12, 12), dtype=np.int64)
+    session.seg_raw[5:8, 7:10] = 11
+
+    result = session.get_reference_action()
+
+    assert result["ok"] is True
+    assert result["option_idx"] == 1
+    assert result["option_label"] == "b"
+    assert result["option_action"] == "drop onto"
+    assert result["need_coords"] is True
+    assert result["coords_xy"] == [8, 6]
+
+
+def test_get_reference_action_video_place_hidden_button_fails_cleanly(monkeypatch, reload_module):
+    oracle_logic = reload_module("oracle_logic")
+
+    unwrapped = _FakeUnwrapped(choice_label="press the button")
+    env = _FakeEnv(unwrapped)
+
+    monkeypatch.setattr(
+        oracle_logic,
+        "_build_solve_options",
+        lambda env, planner, selected_target, env_id: [
+            {"label": "a", "action": "pick up the cube", "available": []},
+            {"label": "b", "action": "drop onto", "available": []},
+        ],
+    )
+
+    session = oracle_logic.OracleSession(dataset_root=None, gui_render=False)
+    session.env = env
+    session.planner = object()
+    session.env_id = "VideoPlaceOrder"
+
+    result = session.get_reference_action()
+
+    assert result["ok"] is False
+    assert result["option_idx"] is None
+    assert "Cannot map ground truth action 'press the button'" in result["message"]

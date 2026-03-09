@@ -141,7 +141,14 @@ def _fetch_segmentation(env):
     return obs["sensor_data"]["base_camera"]["segmentation"]
 
 def _build_solve_options(env, planner, selected_target, env_id):
-    return get_vqa_options(env, planner, selected_target, env_id)
+    options = get_vqa_options(env, planner, selected_target, env_id)
+    if env_id in {"VideoPlaceButton", "VideoPlaceOrder"}:
+        return [
+            option
+            for option in options
+            if str(option.get("action", "")).strip() != "press the button"
+        ]
+    return options
 
 def _extract_last_text(value, default="Unknown Goal"):
     if isinstance(value, str):

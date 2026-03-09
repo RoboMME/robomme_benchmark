@@ -58,6 +58,34 @@ def test_available_options_use_label_plus_action(monkeypatch, reload_module):
     assert session.raw_solve_options[0]["label"] == "a"
 
 
+def test_build_solve_options_filters_press_button_for_video_place_envs(monkeypatch, reload_module):
+    oracle_logic = reload_module("oracle_logic")
+
+    base_options = [
+        {"label": "a", "action": "pick up the cube", "available": [1]},
+        {"label": "b", "action": "drop onto", "available": [2]},
+        {"label": "c", "action": "press the button"},
+    ]
+    monkeypatch.setattr(
+        oracle_logic,
+        "get_vqa_options",
+        lambda env, planner, selected_target, env_id: list(base_options),
+    )
+
+    filtered_button = oracle_logic._build_solve_options(None, None, {}, "VideoPlaceButton")
+    filtered_order = oracle_logic._build_solve_options(None, None, {}, "VideoPlaceOrder")
+    unfiltered_other = oracle_logic._build_solve_options(None, None, {}, "ButtonUnmask")
+
+    assert [opt["label"] for opt in filtered_button] == ["a", "b"]
+    assert [opt["action"] for opt in filtered_button] == ["pick up the cube", "drop onto"]
+    assert [opt["label"] for opt in filtered_order] == ["a", "b"]
+    assert [opt["action"] for opt in unfiltered_other] == [
+        "pick up the cube",
+        "drop onto",
+        "press the button",
+    ]
+
+
 def test_update_observation_no_seg_vis_base_fallback(monkeypatch, reload_module):
     oracle_logic = reload_module("oracle_logic")
 
