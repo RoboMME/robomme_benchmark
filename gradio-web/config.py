@@ -2,7 +2,7 @@
 配置常量模块
 """
 # --- Configuration ---
-VIDEO_PLAYBACK_FPS = 20.0  # Frame rate for demonstration and execute video playback
+VIDEO_PLAYBACK_FPS = 35.0  # Shared output frame rate for demonstration and execute video playback
 USE_SEGMENTED_VIEW = False  # Set to True to use segmented view, False to use original image
 
 # 主界面两列宽度比例 (Point Selection : Right Panel)
