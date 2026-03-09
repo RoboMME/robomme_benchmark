@@ -1855,8 +1855,7 @@ def test_reference_action_single_click_applies_coords_without_wait_state(monkeyp
             page.wait_for_selector("#reference_action_btn button, button#reference_action_btn", timeout=15000)
 
             expected_reference_log = config_module.UI_TEXT["log"]["reference_action_message_with_coords"].format(
-                option_label="a",
-                option_action="pick the left cube",
+                option_label="A",
                 coords_text="5, 6",
             )
             page.locator("#reference_action_btn button, button#reference_action_btn").first.click()
@@ -2817,6 +2816,8 @@ def _run_local_execute_video_transition_test(
                     arg={"label": "B"},
                     timeout=5000,
                 )
+                selected_coords = _read_coords_box_value(page)
+                assert selected_coords is not None
                 page.locator("#exec_btn button, button#exec_btn").first.click()
                 page.wait_for_selector("#execute_video video", timeout=5000)
                 page.wait_for_function(
@@ -2842,7 +2843,10 @@ def _run_local_execute_video_transition_test(
                 )
                 if not done:
                     execution_log = _read_log_output_value(page)
-                    assert execution_log == config_module.UI_TEXT["log"]["execute_action_prompt"].format(label="b")
+                    assert execution_log == config_module.UI_TEXT["log"]["execute_action_prompt_with_coords"].format(
+                        label="B",
+                        coords_text=selected_coords,
+                    )
                     assert execution_log != config_module.UI_TEXT["log"]["point_selection_prompt"]
                 controls_after_execute = _read_demo_video_controls(page, elem_id="execute_video", button_elem_id=None)
                 assert controls_after_execute["autoplay"] is True

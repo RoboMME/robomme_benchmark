@@ -82,10 +82,71 @@ def _get_raw_option_label(session, option_idx):
     return label or None
 
 
-def _execution_video_log(session, option_idx, fallback_status=None):
+def _choice_label_token(text):
+    if not isinstance(text, str):
+        return None
+
+    stripped = text.strip()
+    if not stripped:
+        return None
+
+    prefix, dot, _rest = stripped.partition(".")
+    if dot and prefix.isalpha() and len(prefix) <= 4:
+        return prefix.upper()
+    if stripped.isalpha() and len(stripped) <= 4:
+        return stripped.upper()
+    return stripped
+
+
+def _display_choice_label(session, option_idx=None, fallback_label=None):
     label = _get_raw_option_label(session, option_idx)
-    if label:
-        return format_log_markdown(_ui_text("log", "execute_action_prompt", label=label))
+    if label is None:
+        label = fallback_label
+    return _choice_label_token(label)
+
+
+def _parse_coords_text(coords_text):
+    if not isinstance(coords_text, str):
+        return None
+
+    text = coords_text.strip()
+    if text in {
+        "",
+        _ui_text("coords", "select_point"),
+        _ui_text("coords", "not_needed"),
+    }:
+        return None
+    if "," not in text:
+        return None
+
+    try:
+        x_raw, y_raw = text.split(",", 1)
+        return int(x_raw.strip()), int(y_raw.strip())
+    except Exception:
+        return None
+
+
+def _coords_text(x, y):
+    return f"{int(x)}, {int(y)}"
+
+
+def _format_action_log(message_key, label_key, label, coords=None):
+    display_label = _choice_label_token(label)
+    if not display_label:
+        return None
+
+    kwargs = {label_key: display_label}
+    if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+        kwargs["coords_text"] = _coords_text(coords[0], coords[1])
+        return format_log_markdown(_ui_text("log", f"{message_key}_with_coords", **kwargs))
+    return format_log_markdown(_ui_text("log", message_key, **kwargs))
+
+
+def _execution_video_log(session, option_idx, coords=None, fallback_status=None):
+    label = _display_choice_label(session, option_idx)
+    log_text = _format_action_log("execute_action_prompt", "label", label, coords=coords)
+    if log_text is not None:
+        return log_text
     if fallback_status is None:
         return None
     return format_log_markdown(fallback_status)
@@ -101,11 +162,11 @@ def _default_post_execute_log_state():
 
 
 def _point_selected_log(session, option_value, x, y):
-    label = _get_raw_option_label(session, option_value)
-    if label:
-        display_label = _format_choice_prefix(label)
-    else:
-        display_label = str(option_value).strip() if option_value is not None else "?"
+    display_label = _display_choice_label(
+        session,
+        option_value,
+        fallback_label=str(option_value).strip() if option_value is not None else "?",
+    )
     return format_log_markdown(
         _ui_text("log", "point_selected_message", label=display_label, x=int(x), y=int(y))
     )
@@ -931,24 +992,7 @@ def on_map_click(uid, option_value, evt: gr.SelectData):
 
 
 def _is_valid_coords_text(coords_text: str) -> bool:
-    if not isinstance(coords_text, str):
-        return False
-    text = coords_text.strip()
-    if text in {
-        "",
-        _ui_text("coords", "select_point"),
-        _ui_text("coords", "not_needed"),
-    }:
-        return False
-    if "," not in text:
-        return False
-    try:
-        x_raw, y_raw = text.split(",", 1)
-        int(x_raw.strip())
-        int(y_raw.strip())
-    except Exception:
-        return False
-    return True
+    return _parse_coords_text(coords_text) is not None
 
 
 def on_option_select(
@@ -1096,33 +1140,29 @@ def on_reference_action(uid, current_option_value=None):
 
     option_idx = reference.get("option_idx")
     current_option_idx = _parse_option_idx(current_option_value)
-    option_label = str(reference.get("option_label", "")).strip()
-    option_action = str(reference.get("option_action", "")).strip()
-    option_action = get_ui_action_text(getattr(session, "env_id", None), option_action)
+    option_label = _display_choice_label(
+        session,
+        option_idx,
+        fallback_label=str(reference.get("option_label", "")).strip(),
+    )
     need_coords = bool(reference.get("need_coords", False))
     coords_xy = reference.get("coords_xy")
     suppress_next_option_change = option_idx != current_option_idx
 
     updated_img = current_img
     coords_text = _ui_text("coords", "not_needed")
-    log_text = _ui_text(
-        "log",
-        "reference_action_message",
-        option_label=option_label,
-        option_action=option_action,
-    ).strip()
+    log_text = _format_action_log("reference_action_message", "option_label", option_label)
 
     if need_coords and isinstance(coords_xy, (list, tuple)) and len(coords_xy) >= 2:
         x = int(coords_xy[0])
         y = int(coords_xy[1])
         updated_img = draw_marker(current_img, x, y)
-        coords_text = f"{x}, {y}"
-        log_text = _ui_text(
-            "log",
-            "reference_action_message_with_coords",
-            option_label=option_label,
-            option_action=option_action,
-            coords_text=coords_text,
+        coords_text = _coords_text(x, y)
+        log_text = _format_action_log(
+            "reference_action_message",
+            "option_label",
+            option_label,
+            coords=(x, y),
         )
     LOGGER.debug(
         "on_reference_action resolved uid=%s option_idx=%s need_coords=%s coords=%s",
@@ -1136,7 +1176,7 @@ def on_reference_action(uid, current_option_value=None):
         _live_obs_update(value=updated_img, interactive=False),
         gr.update(value=option_idx),
         coords_text,
-        format_log_markdown(log_text),
+        log_text,
         suppress_next_option_change,
     )
 
@@ -1363,13 +1403,7 @@ def execute_step(uid, option_idx, coords_str):
             )
 
     # Parse coords
-    click_coords = None
-    if coords_str and "," in coords_str:
-        try:
-            parts = coords_str.split(",")
-            click_coords = (int(parts[0].strip()), int(parts[1].strip()))
-        except:
-            pass
+    click_coords = _parse_coords_text(coords_str)
     
     # Execute
     # 如果达到 execute 次数限制，模拟失败状态（使用和任务失败一样的机制）
@@ -1517,7 +1551,10 @@ def execute_step(uid, option_idx, coords_str):
     # 格式化日志消息为 HTML 格式（支持颜色显示）
     formatted_status = format_log_markdown(status)
     if show_execution_video and not done:
-        formatted_status = _execution_video_log(session, option_idx, fallback_status=status) or formatted_status
+        formatted_status = (
+            _execution_video_log(session, option_idx, coords=click_coords, fallback_status=status)
+            or formatted_status
+        )
         post_execute_log_state = {
             "preserve_terminal_log": False,
             "terminal_log_value": None,

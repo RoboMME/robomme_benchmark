@@ -141,7 +141,7 @@ def test_on_execute_video_end_transition_clears_execution_video_log_state(reload
             "preserve_terminal_log": False,
             "terminal_log_value": None,
             "preserve_execute_video_log": True,
-            "execute_video_log_value": "Executing Action b",
+            "execute_video_log_value": "Executing: B",
         },
     )
 
@@ -222,19 +222,19 @@ def test_on_option_select_preserves_execution_video_log_state(reload_module):
             "preserve_terminal_log": False,
             "terminal_log_value": None,
             "preserve_execute_video_log": True,
-            "execute_video_log_value": "Executing Action b",
+            "execute_video_log_value": "Executing: B",
         },
     )
 
     assert coords_update.get("__type__") == "update"
     assert img_update.get("__type__") == "update"
-    assert log_update["value"] == "Executing Action b"
+    assert log_update["value"] == "Executing: B"
     assert suppress_flag is False
     assert log_state == {
         "preserve_terminal_log": False,
         "terminal_log_value": None,
         "preserve_execute_video_log": True,
-        "execute_video_log_value": "Executing Action b",
+        "execute_video_log_value": "Executing: B",
     }
 
 

@@ -63,7 +63,7 @@ def test_execute_step_builds_video_from_last_execution_frames(monkeypatch, reloa
     assert result[11]["value"] is None
     assert result[11]["interactive"] is False
     assert result[14]["interactive"] is False
-    expected_log = callbacks.UI_TEXT["log"]["execute_action_prompt"].format(label="a")
+    expected_log = callbacks.UI_TEXT["log"]["execute_action_prompt"].format(label="A")
     assert result[1] == expected_log
     assert result[15] == {
         "exec_btn_interactive": True,
@@ -76,6 +76,37 @@ def test_execute_step_builds_video_from_last_execution_frames(monkeypatch, reloa
         "execute_video_log_value": expected_log,
     }
     assert result[17] == "execution_video"
+
+
+def test_execute_step_execution_log_includes_point_when_coords_selected(monkeypatch, reload_module):
+    callbacks = reload_module("gradio_callbacks")
+
+    frame = np.full((8, 8, 3), 44, dtype=np.uint8)
+    session = _FakeSession()
+    session.raw_solve_options = [{"label": "b", "available": [object()]}]
+    session.base_frames = [frame]
+
+    captured = {}
+
+    def _execute_action(_option_idx, coords):
+        captured["coords"] = coords
+        session.last_execution_frames = [frame]
+        return "IMG", "Executing: pick", False
+
+    session.execute_action = _execute_action
+
+    monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
+    monkeypatch.setattr(callbacks, "increment_execute_count", lambda uid, env_id, episode_idx: 1)
+    monkeypatch.setattr(callbacks, "concatenate_frames_horizontally", lambda frames, env_id=None: list(frames))
+    monkeypatch.setattr(callbacks, "save_video", lambda frames, suffix="": "/tmp/exec-point.mp4")
+    monkeypatch.setattr(callbacks.os.path, "exists", lambda path: True)
+    monkeypatch.setattr(callbacks.os.path, "getsize", lambda path: 10)
+
+    result = callbacks.execute_step("uid-1", 0, "12, 34")
+
+    assert captured["coords"] == (12, 34)
+    assert result[1] == "Executing: B | point <12, 34>"
+    assert result[16]["execute_video_log_value"] == "Executing: B | point <12, 34>"
 
 
 def test_execute_step_falls_back_to_single_frame_clip_when_no_new_frames(monkeypatch, reload_module):

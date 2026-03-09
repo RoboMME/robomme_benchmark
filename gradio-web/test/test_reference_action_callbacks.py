@@ -57,8 +57,7 @@ def test_on_reference_action_success_updates_option_and_coords(monkeypatch, relo
     assert coords_text == "5, 6"
     assert suppress_flag is True
     expected_log = config.UI_TEXT["log"]["reference_action_message_with_coords"].format(
-        option_label="c",
-        option_action="press the button",
+        option_label="C",
         coords_text="5, 6",
     )
     assert log_html == expected_log
@@ -189,7 +188,6 @@ def test_on_reference_action_uses_configured_action_text_override(monkeypatch, r
 
     assert coords_text == config.UI_TEXT["coords"]["not_needed"]
     assert log_html == config.UI_TEXT["log"]["reference_action_message"].format(
-        option_label="a",
-        option_action="move forward↓",
+        option_label="A",
     )
     assert suppress_flag is True
