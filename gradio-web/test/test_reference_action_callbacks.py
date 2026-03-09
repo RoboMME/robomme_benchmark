@@ -122,24 +122,26 @@ def test_on_option_select_resets_to_point_wait_state_for_point_action(monkeypatc
     session = _FakeOptionSession()
     monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
 
-    coords_text, img_update, log_text, suppress_flag = callbacks.on_option_select("uid-1", 0, "12, 34", False)
+    coords_text, img_update, log_text, suppress_flag, log_state = callbacks.on_option_select("uid-1", 0, "12, 34", False)
 
     assert coords_text == config.UI_TEXT["coords"]["select_point"]
     assert img_update.get("interactive") is True
     assert img_update.get("elem_classes") == config.get_live_obs_elem_classes(waiting_for_point=True)
     assert log_text == config.UI_TEXT["log"]["point_selection_prompt"]
     assert suppress_flag is False
+    assert log_state == callbacks._default_post_execute_log_state()
 
 
 def test_on_option_select_suppresses_programmatic_reference_change(reload_module):
     callbacks = reload_module("gradio_callbacks")
 
-    coords_update, img_update, log_update, suppress_flag = callbacks.on_option_select("uid-1", 0, "12, 34", True)
+    coords_update, img_update, log_update, suppress_flag, log_state = callbacks.on_option_select("uid-1", 0, "12, 34", True)
 
     assert coords_update.get("__type__") == "update"
     assert img_update.get("__type__") == "update"
     assert log_update.get("__type__") == "update"
     assert suppress_flag is False
+    assert log_state == callbacks._default_post_execute_log_state()
 
 
 def test_on_map_click_clears_wait_state_and_restores_action_prompt(monkeypatch, reload_module):

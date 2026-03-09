@@ -2556,7 +2556,13 @@ def test_header_task_switch_to_video_task_shows_demo_phase(monkeypatch):
         demo.close()
 
 
-def _run_local_execute_video_transition_test(*, status_text, done, expect_terminal_buttons_disabled):
+def _run_local_execute_video_transition_test(
+    *,
+    status_text,
+    done,
+    expect_terminal_buttons_disabled,
+    expected_terminal_log=None,
+):
     import gradio_callbacks as cb
     import config as config_module
 
@@ -2612,6 +2618,12 @@ def _run_local_execute_video_transition_test(*, status_text, done, expect_termin
                 value={
                     "exec_btn_interactive": True,
                     "reference_action_interactive": True,
+                }
+            )
+            post_execute_log_state = gr.State(
+                value={
+                    "preserve_terminal_log": False,
+                    "terminal_log_value": None,
                 }
             )
             suppress_state = gr.State(value=False)
@@ -2682,20 +2694,21 @@ def _run_local_execute_video_transition_test(*, status_text, done, expect_termin
                     reference_action_btn,
                     task_hint_display,
                     post_execute_controls_state,
+                    post_execute_log_state,
                     phase_state,
                 ],
                 queue=False,
             )
             options_radio.change(
                 fn=cb.on_option_select,
-                inputs=[uid_state, options_radio, coords_box, suppress_state],
-                outputs=[coords_box, img_display, log_output, suppress_state],
+                inputs=[uid_state, options_radio, coords_box, suppress_state, post_execute_log_state],
+                outputs=[coords_box, img_display, log_output, suppress_state, post_execute_log_state],
                 queue=False,
             )
 
             execute_video_display.end(
                 fn=cb.on_execute_video_end_transition,
-                inputs=[uid_state, post_execute_controls_state],
+                inputs=[uid_state, post_execute_controls_state, post_execute_log_state],
                 outputs=[
                     execution_video_group,
                     action_phase_group,
@@ -2705,6 +2718,7 @@ def _run_local_execute_video_transition_test(*, status_text, done, expect_termin
                     restart_episode_btn,
                     next_task_btn,
                     img_display,
+                    log_output,
                     reference_action_btn,
                     task_hint_display,
                     phase_state,
@@ -2713,7 +2727,7 @@ def _run_local_execute_video_transition_test(*, status_text, done, expect_termin
             )
             execute_video_display.stop(
                 fn=cb.on_execute_video_end_transition,
-                inputs=[uid_state, post_execute_controls_state],
+                inputs=[uid_state, post_execute_controls_state, post_execute_log_state],
                 outputs=[
                     execution_video_group,
                     action_phase_group,
@@ -2723,6 +2737,7 @@ def _run_local_execute_video_transition_test(*, status_text, done, expect_termin
                     restart_episode_btn,
                     next_task_btn,
                     img_display,
+                    log_output,
                     reference_action_btn,
                     task_hint_display,
                     phase_state,
@@ -2841,6 +2856,13 @@ def _run_local_execute_video_transition_test(*, status_text, done, expect_termin
                         "execDisabled": True,
                         "refDisabled": True,
                     }
+                    terminal_log_before = _read_log_output_value(page)
+                    assert terminal_log_before is not None
+                    assert expected_terminal_log is not None
+                    assert expected_terminal_log in terminal_log_before
+                    page.locator("#action_radio input[type='radio']").nth(1).check(force=True)
+                    page.wait_for_timeout(300)
+                    assert _read_log_output_value(page) == terminal_log_before
                 else:
                     button_snapshot = page.evaluate(
                         """() => {
@@ -2907,6 +2929,7 @@ def test_phase_machine_runtime_local_video_path_end_transition_terminal_success(
         status_text="SUCCESS",
         done=True,
         expect_terminal_buttons_disabled=True,
+        expected_terminal_log="episode success",
     )
 
 
@@ -2915,4 +2938,5 @@ def test_phase_machine_runtime_local_video_path_end_transition_terminal_failed()
         status_text="Executing: pick | FAILED",
         done=True,
         expect_terminal_buttons_disabled=True,
+        expected_terminal_log="episode failed",
     )

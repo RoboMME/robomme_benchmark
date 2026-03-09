@@ -42,13 +42,14 @@ def test_on_option_select_uses_configured_select_point_and_log_messages(monkeypa
     )
     monkeypatch.setattr(callbacks, "get_session", lambda uid: _FakeOptionSession())
 
-    coords_text, img_update, log_text, suppress_flag = callbacks.on_option_select("uid-1", 0, None, False)
+    coords_text, img_update, log_text, suppress_flag, log_state = callbacks.on_option_select("uid-1", 0, None, False)
 
     assert coords_text == "pick a point from config"
     assert img_update.get("interactive") is True
     assert callbacks.get_live_obs_elem_classes(waiting_for_point=True) == img_update.get("elem_classes")
     assert log_text == "custom log prompt from config"
     assert suppress_flag is False
+    assert log_state == callbacks._default_post_execute_log_state()
 
 
 def test_precheck_execute_inputs_uses_configured_before_execute_message(monkeypatch, reload_module):
@@ -92,6 +93,7 @@ def test_on_execute_video_end_transition_restores_controls_for_non_terminal_stat
             "exec_btn_interactive": True,
             "reference_action_interactive": True,
         },
+        callbacks._default_post_execute_log_state(),
     )
 
     assert result[0]["visible"] is False
@@ -101,9 +103,10 @@ def test_on_execute_video_end_transition_restores_controls_for_non_terminal_stat
     assert result[4]["interactive"] is True
     assert result[5]["interactive"] is True
     assert result[6]["interactive"] is True
-    assert result[8]["interactive"] is True
+    assert result[8].get("__type__") == "update"
     assert result[9]["interactive"] is True
-    assert result[10] == "action_point"
+    assert result[10]["interactive"] is True
+    assert result[11] == "action_point"
 
 
 def test_on_execute_video_end_transition_keeps_terminal_buttons_disabled(reload_module):
@@ -115,6 +118,10 @@ def test_on_execute_video_end_transition_keeps_terminal_buttons_disabled(reload_
             "exec_btn_interactive": False,
             "reference_action_interactive": False,
         },
+        {
+            "preserve_terminal_log": True,
+            "terminal_log_value": "terminal banner",
+        },
     )
 
     assert result[0]["visible"] is False
@@ -124,9 +131,34 @@ def test_on_execute_video_end_transition_keeps_terminal_buttons_disabled(reload_
     assert result[4]["interactive"] is False
     assert result[5]["interactive"] is True
     assert result[6]["interactive"] is True
-    assert result[8]["interactive"] is False
-    assert result[9]["interactive"] is True
-    assert result[10] == "action_point"
+    assert result[8]["value"] == "terminal banner"
+    assert result[9]["interactive"] is False
+    assert result[10]["interactive"] is True
+    assert result[11] == "action_point"
+
+
+def test_on_option_select_preserves_terminal_log_state(reload_module):
+    callbacks = reload_module("gradio_callbacks")
+
+    coords_update, img_update, log_update, suppress_flag, log_state = callbacks.on_option_select(
+        "uid-1",
+        None,
+        None,
+        False,
+        {
+            "preserve_terminal_log": True,
+            "terminal_log_value": "episode success banner",
+        },
+    )
+
+    assert coords_update.get("__type__") == "update"
+    assert img_update.get("__type__") == "update"
+    assert log_update["value"] == "episode success banner"
+    assert suppress_flag is False
+    assert log_state == {
+        "preserve_terminal_log": True,
+        "terminal_log_value": "episode success banner",
+    }
 
 
 def test_on_demo_video_play_disables_button_and_sets_single_use_state(monkeypatch, reload_module):

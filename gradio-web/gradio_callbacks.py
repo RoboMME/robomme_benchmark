@@ -62,6 +62,29 @@ def _point_selection_log():
     return format_log_markdown(_ui_text("log", "point_selection_prompt"))
 
 
+def _default_post_execute_log_state():
+    return {
+        "preserve_terminal_log": False,
+        "terminal_log_value": None,
+    }
+
+
+def _normalize_post_execute_log_state(state):
+    """Normalize terminal-log preservation payloads across callback boundaries."""
+    if isinstance(state, dict):
+        preserve_terminal_log = bool(state.get("preserve_terminal_log", False))
+        terminal_log_value = state.get("terminal_log_value")
+        if terminal_log_value is None:
+            preserve_terminal_log = False
+        else:
+            terminal_log_value = str(terminal_log_value)
+        return {
+            "preserve_terminal_log": preserve_terminal_log,
+            "terminal_log_value": terminal_log_value,
+        }
+    return _default_post_execute_log_state()
+
+
 def _session_error_text():
     return _ui_text("log", "session_error")
 
@@ -439,13 +462,22 @@ def _normalize_post_execute_controls_state(state):
     }
 
 
-def on_execute_video_end_transition(uid, post_execute_controls_state=True):
+def on_execute_video_end_transition(
+    uid,
+    post_execute_controls_state=True,
+    post_execute_log_state=None,
+):
     """Transition from execute video phase back to the action phase."""
     controls_state = _normalize_post_execute_controls_state(post_execute_controls_state)
+    log_state = _normalize_post_execute_log_state(post_execute_log_state)
+    log_update = gr.update()
+    if log_state["preserve_terminal_log"]:
+        log_update = gr.update(value=log_state["terminal_log_value"])
     LOGGER.debug(
-        "on_execute_video_end_transition uid=%s controls_state=%s",
+        "on_execute_video_end_transition uid=%s controls_state=%s log_state=%s",
         _uid_for_log(uid),
         controls_state,
+        log_state,
     )
     return (
         gr.update(visible=False),  # execution_video_group
@@ -456,6 +488,7 @@ def on_execute_video_end_transition(uid, post_execute_controls_state=True):
         gr.update(interactive=True),  # restart_episode_btn
         gr.update(interactive=True),  # next_task_btn
         _live_obs_update(interactive=False),  # img_display
+        log_update,  # log_output
         gr.update(interactive=controls_state["reference_action_interactive"]),  # reference_action_btn
         gr.update(interactive=True),  # task_hint_display
         "action_point",  # ui_phase_state
@@ -487,6 +520,7 @@ def _task_load_failed_response(uid, message):
         gr.update(visible=False),  # control_panel_group
         gr.update(value=""),  # task_hint_display
         gr.update(interactive=False),  # reference_action_btn
+        _default_post_execute_log_state(),  # post_execute_log_state
     )
 
 
@@ -564,6 +598,7 @@ def _load_status_task(uid, status):
             gr.update(visible=True),  # control_panel_group
             gr.update(value=get_task_hint(env_id) if env_id else ""),  # task_hint_display
             gr.update(interactive=False),  # reference_action_btn
+            _default_post_execute_log_state(),  # post_execute_log_state
         )
 
     goal_text = capitalize_first_letter(session.language_goal) if session.language_goal else ""
@@ -630,6 +665,7 @@ def _load_status_task(uid, status):
             gr.update(visible=False),  # control_panel_group
             gr.update(value=get_task_hint(actual_env_id)),  # task_hint_display
             gr.update(interactive=True),  # reference_action_btn
+            _default_post_execute_log_state(),  # post_execute_log_state
         )
 
     set_ui_phase(uid, "executing_task")
@@ -656,6 +692,7 @@ def _load_status_task(uid, status):
         gr.update(visible=True),  # control_panel_group
         gr.update(value=get_task_hint(actual_env_id)),  # task_hint_display
         gr.update(interactive=True),  # reference_action_btn
+        _default_post_execute_log_state(),  # post_execute_log_state
     )
 
 
@@ -840,11 +877,18 @@ def _is_valid_coords_text(coords_text: str) -> bool:
     return True
 
 
-def on_option_select(uid, option_value, coords_str=None, suppress_next_option_change=False):
+def on_option_select(
+    uid,
+    option_value,
+    coords_str=None,
+    suppress_next_option_change=False,
+    post_execute_log_state=None,
+):
     """
     处理选项选择事件
     """
     default_msg = _ui_text("coords", "not_needed")
+    normalized_post_execute_log_state = _normalize_post_execute_log_state(post_execute_log_state)
 
     if suppress_next_option_change:
         LOGGER.debug(
@@ -852,18 +896,44 @@ def on_option_select(uid, option_value, coords_str=None, suppress_next_option_ch
             _uid_for_log(uid),
             option_value,
         )
-        return gr.update(), gr.update(), gr.update(), False
+        return gr.update(), gr.update(), gr.update(), False, normalized_post_execute_log_state
+
+    if normalized_post_execute_log_state["preserve_terminal_log"]:
+        LOGGER.debug(
+            "on_option_select preserving terminal log uid=%s option=%s",
+            _uid_for_log(uid),
+            option_value,
+        )
+        return (
+            gr.update(),
+            gr.update(),
+            gr.update(value=normalized_post_execute_log_state["terminal_log_value"]),
+            False,
+            normalized_post_execute_log_state,
+        )
     
     if option_value is None:
         LOGGER.debug("on_option_select uid=%s option=None", _uid_for_log(uid))
         session = get_session(uid) if uid else None
         base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW) if session else _LIVE_OBS_UPDATE_SKIP
-        return default_msg, _live_obs_update(value=base_img, interactive=False), _action_selection_log(), False
+        return (
+            default_msg,
+            _live_obs_update(value=base_img, interactive=False),
+            _action_selection_log(),
+            False,
+            normalized_post_execute_log_state,
+        )
     
     session = get_session(uid)
     if not session:
         LOGGER.warning("on_option_select: missing session uid=%s", _uid_for_log(uid))
-        return default_msg, _live_obs_update(interactive=False), format_log_markdown(_session_error_text()), False
+        return (
+            default_msg,
+            _live_obs_update(interactive=False),
+            format_log_markdown(_session_error_text()),
+            False,
+            normalized_post_execute_log_state,
+        )
     
     option_idx = _parse_option_idx(option_value)
     base_img = session.get_pil_image(use_segmented=USE_SEGMENTED_VIEW)
@@ -881,10 +951,17 @@ def on_option_select(uid, option_value, coords_str=None, suppress_next_option_ch
             _live_obs_update(value=base_img, interactive=True, waiting_for_point=True),
             _point_selection_log(),
             False,
+            normalized_post_execute_log_state,
         )
     
     LOGGER.debug("on_option_select uid=%s option=%s requires_coords=False", _uid_for_log(uid), option_idx)
-    return default_msg, _live_obs_update(value=base_img, interactive=False), _action_selection_log(), False
+    return (
+        default_msg,
+        _live_obs_update(value=base_img, interactive=False),
+        _action_selection_log(),
+        False,
+        normalized_post_execute_log_state,
+    )
 
 
 def on_reference_action(uid, current_option_value=None):
@@ -1063,6 +1140,7 @@ def execute_step(uid, option_idx, coords_str):
         reference_update=gr.update(interactive=True),
         task_hint_update=gr.update(interactive=True),
         post_execute_controls_state=None,
+        post_execute_log_state=None,
         show_execution_video=False,
         ui_phase="action_point",
     ):
@@ -1078,6 +1156,7 @@ def execute_step(uid, option_idx, coords_str):
         normalized_post_execute_controls_state = _normalize_post_execute_controls_state(
             post_execute_controls_state
         )
+        normalized_post_execute_log_state = _normalize_post_execute_log_state(post_execute_log_state)
         return (
             img_update,
             log_update,
@@ -1095,6 +1174,7 @@ def execute_step(uid, option_idx, coords_str):
             reference_update,
             task_hint_update,
             normalized_post_execute_controls_state,
+            normalized_post_execute_log_state,
             ui_phase,
         )
 
@@ -1114,6 +1194,7 @@ def execute_step(uid, option_idx, coords_str):
                 "exec_btn_interactive": False,
                 "reference_action_interactive": False,
             },
+            post_execute_log_state=_default_post_execute_log_state(),
             show_execution_video=False,
         )
 
@@ -1160,6 +1241,7 @@ def execute_step(uid, option_idx, coords_str):
                 "exec_btn_interactive": True,
                 "reference_action_interactive": True,
             },
+            post_execute_log_state=_default_post_execute_log_state(),
             show_execution_video=False,
         )
 
@@ -1188,6 +1270,7 @@ def execute_step(uid, option_idx, coords_str):
                     "exec_btn_interactive": True,
                     "reference_action_interactive": True,
                 },
+                post_execute_log_state=_default_post_execute_log_state(),
                 show_execution_video=False,
             )
 
@@ -1326,6 +1409,7 @@ def execute_step(uid, option_idx, coords_str):
         "exec_btn_interactive": not done,
         "reference_action_interactive": not done,
     }
+    post_execute_log_state = _default_post_execute_log_state()
     restart_episode_update = gr.update(interactive=False) if show_execution_video else gr.update(interactive=True)
     next_task_update = gr.update(interactive=False) if show_execution_video else gr.update(interactive=True)
     exec_btn_update = (
@@ -1344,13 +1428,19 @@ def execute_step(uid, option_idx, coords_str):
     
     # 格式化日志消息为 HTML 格式（支持颜色显示）
     formatted_status = format_log_markdown(status)
+    if done:
+        post_execute_log_state = {
+            "preserve_terminal_log": True,
+            "terminal_log_value": formatted_status,
+        }
     LOGGER.debug(
-        "execute_step done uid=%s env=%s ep=%s done=%s post_execute_controls=%s show_execution_video=%s",
+        "execute_step done uid=%s env=%s ep=%s done=%s post_execute_controls=%s post_execute_log=%s show_execution_video=%s",
         _uid_for_log(uid),
         getattr(session, "env_id", None),
         getattr(session, "episode_idx", None),
         done,
         post_execute_controls_state,
+        post_execute_log_state,
         show_execution_video,
     )
 
@@ -1368,6 +1458,7 @@ def execute_step(uid, option_idx, coords_str):
         reference_update=reference_update,
         task_hint_update=task_hint_update,
         post_execute_controls_state=post_execute_controls_state,
+        post_execute_log_state=post_execute_log_state,
         show_execution_video=show_execution_video,
         ui_phase="execution_video" if show_execution_video else "action_point",
     )

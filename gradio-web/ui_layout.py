@@ -872,6 +872,13 @@ def _normalize_load_result(load_result):
     if len(normalized) in {19, 20}:
         normalized.insert(8, gr.update(value=None, visible=False, playback_position=0))
         normalized.insert(16, gr.update(visible=False))
+    if len(normalized) == 21:
+        normalized.append(
+            {
+                "preserve_terminal_log": False,
+                "terminal_log_value": None,
+            }
+        )
     return tuple(normalized)
 
 
@@ -956,6 +963,12 @@ def create_ui_blocks():
             value={
                 "exec_btn_interactive": True,
                 "reference_action_interactive": True,
+            }
+        )
+        post_execute_log_state = gr.State(
+            value={
+                "preserve_terminal_log": False,
+                "terminal_log_value": None,
             }
         )
         current_task_env_state = gr.State(value=None)
@@ -1123,6 +1136,7 @@ def create_ui_blocks():
             control_panel_group,
             task_hint_display,
             reference_action_btn,
+            post_execute_log_state,
             ui_phase_state,
             native_progress_host,
         ]
@@ -1398,7 +1412,7 @@ def create_ui_blocks():
 
         execute_video_display.end(
             fn=on_execute_video_end_transition,
-            inputs=[uid_state, post_execute_controls_state],
+            inputs=[uid_state, post_execute_controls_state, post_execute_log_state],
             outputs=[
                 execution_video_group,
                 action_phase_group,
@@ -1408,6 +1422,7 @@ def create_ui_blocks():
                 restart_episode_btn,
                 next_task_btn,
                 img_display,
+                log_output,
                 reference_action_btn,
                 task_hint_display,
                 ui_phase_state,
@@ -1423,7 +1438,7 @@ def create_ui_blocks():
         )
         execute_video_display.stop(
             fn=on_execute_video_end_transition,
-            inputs=[uid_state, post_execute_controls_state],
+            inputs=[uid_state, post_execute_controls_state, post_execute_log_state],
             outputs=[
                 execution_video_group,
                 action_phase_group,
@@ -1433,6 +1448,7 @@ def create_ui_blocks():
                 restart_episode_btn,
                 next_task_btn,
                 img_display,
+                log_output,
                 reference_action_btn,
                 task_hint_display,
                 ui_phase_state,
@@ -1463,8 +1479,8 @@ def create_ui_blocks():
 
         options_radio.change(
             fn=on_option_select,
-            inputs=[uid_state, options_radio, coords_box, suppress_next_option_change_state],
-            outputs=[coords_box, img_display, log_output, suppress_next_option_change_state],
+            inputs=[uid_state, options_radio, coords_box, suppress_next_option_change_state, post_execute_log_state],
+            outputs=[coords_box, img_display, log_output, suppress_next_option_change_state, post_execute_log_state],
             queue=False,
             show_progress="hidden",
         ).then(
@@ -1548,6 +1564,7 @@ def create_ui_blocks():
                 reference_action_btn,
                 task_hint_display,
                 post_execute_controls_state,
+                post_execute_log_state,
                 ui_phase_state,
             ],
             show_progress="hidden",
