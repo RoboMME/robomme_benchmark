@@ -295,6 +295,33 @@ def test_load_status_task_hides_demo_video_button_when_video_is_missing(monkeypa
     assert callbacks.UI_TEXT["log"]["action_selection_prompt"] in result[3]
 
 
+def test_load_status_task_uses_default_goal_format_for_videoplacebutton(monkeypatch, reload_module):
+    callbacks = reload_module("gradio_callbacks")
+    session = _FakeLoadSession(
+        env_id="VideoPlaceButton",
+        available_options=[("pick", 0)],
+        raw_solve_options=[{"label": "a", "action": "pick", "available": False}],
+        language_goal="watch the video carefully, then place the red cube on the target right after the button was pressed",
+    )
+
+    monkeypatch.setattr(callbacks, "get_session", lambda uid: session)
+    monkeypatch.setattr(callbacks, "reset_play_button_clicked", lambda uid: None)
+    monkeypatch.setattr(callbacks, "reset_execute_count", lambda uid, env_id, episode_idx: None)
+    monkeypatch.setattr(callbacks, "set_task_start_time", lambda uid, env_id, episode_idx, start_time: None)
+    monkeypatch.setattr(callbacks, "set_ui_phase", lambda uid, phase: None)
+    monkeypatch.setattr(callbacks, "get_task_hint", lambda env_id: "")
+    monkeypatch.setattr(callbacks, "should_show_demo_video", lambda env_id: False)
+
+    result = callbacks._load_status_task(
+        "uid-vpb",
+        {"current_task": {"env_id": "VideoPlaceButton", "episode_idx": 1}, "completed_count": 0},
+    )
+
+    assert result[5] == (
+        "Watch the video carefully, then place the red cube on the target right after the button was pressed"
+    )
+
+
 def test_draw_coordinate_axes_uses_configured_routestick_overlay_labels(monkeypatch, reload_module):
     config = reload_module("config")
     image_utils = reload_module("image_utils")
