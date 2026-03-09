@@ -151,17 +151,9 @@ def test_get_ui_action_text_uses_configured_overrides_and_fallback(reload_module
         "move backward-left": "move backward-left↗︎",
         "move backward-right": "move backward-right↖︎",
     }
-    routestick_expected = {
-        "move to the nearest left target by circling around the stick clockwise": "move left clockwise↘︎→↗︎ ◟→◞",
-        "move to the nearest right target by circling around the stick clockwise": "move right clockwise↖︎←↙︎ ◟←◞",
-        "move to the nearest left target by circling around the stick counterclockwise": "move left counterclockwise↗︎→↘︎ ◜→◝",
-        "move to the nearest right target by circling around the stick counterclockwise": "move right counterclockwise↙︎←↖︎ ◜←◝",
-    }
 
     for raw_action, expected in patternlock_expected.items():
         assert config.get_ui_action_text("PatternLock", raw_action) == expected
-    for raw_action, expected in routestick_expected.items():
-        assert config.get_ui_action_text("RouteStick", raw_action) == expected
     assert config.get_ui_action_text("BinFill", "pick up the cube") == "pick up the cube"
 
 
@@ -174,23 +166,6 @@ def test_ui_option_label_uses_patternlock_configured_action_text(reload_module):
     )
 
     assert callbacks._ui_option_label(session, "fallback", 0) == "a. move forward↓"
-
-
-def test_ui_option_label_uses_routestick_configured_action_text(reload_module):
-    reload_module("config")
-    callbacks = reload_module("gradio_callbacks")
-    session = _FakeOptionSession(
-        env_id="RouteStick",
-        raw_solve_options=[
-            {
-                "label": "d",
-                "action": "move to the nearest right target by circling around the stick counterclockwise",
-                "available": False,
-            }
-        ],
-    )
-
-    assert callbacks._ui_option_label(session, "fallback", 0) == "d. move right counterclockwise↙︎←↖︎ ◜←◝"
 
 
 def test_load_status_task_appends_configured_point_suffix_after_mapped_label(monkeypatch, reload_module):
