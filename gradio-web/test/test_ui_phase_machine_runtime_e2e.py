@@ -2940,3 +2940,297 @@ def test_phase_machine_runtime_local_video_path_end_transition_terminal_failed()
         expect_terminal_buttons_disabled=True,
         expected_terminal_log="episode failed",
     )
+
+
+def test_phase_machine_runtime_stopcube_remain_static_merges_short_tail(monkeypatch):
+    import gradio_callbacks as cb
+    import config as config_module
+    import vqa_options_override as override
+
+    demo_video_path = gr.get_video("world.mp4")
+    fake_obs = np.zeros((24, 24, 3), dtype=np.uint8)
+    hold_calls = []
+
+    def _hold_spy(env, planner, absTimestep):
+        _ = planner
+        hold_calls.append(int(absTimestep))
+        env.elapsed_steps = int(absTimestep)
+        return None
+
+    monkeypatch.setattr(override, "solve_hold_obj_absTimestep", _hold_spy)
+
+    class FakeBase:
+        def __init__(self):
+            self.steps_press = 270
+            self.interval = 30
+            self.button = object()
+
+    class FakeEnv:
+        def __init__(self):
+            self.unwrapped = FakeBase()
+            self.elapsed_steps = 0
+
+    class FakeSession:
+        def __init__(self):
+            self.env_id = "StopCube"
+            self.episode_idx = 1
+            self.language_goal = "stop the moving cube"
+            self.difficulty = "easy"
+            self.seed = 123
+            self.non_demonstration_task_length = None
+            self.demonstration_frames = []
+            self.last_execution_frames = []
+            self.base_frames = [fake_obs.copy()]
+            self.env = FakeEnv()
+            self.planner = object()
+            self.raw_solve_options = override.get_vqa_options(
+                self.env,
+                self.planner,
+                {"obj": None},
+                self.env_id,
+            )
+            self.available_options = [
+                (f"{opt['label']}. {opt['action']}", idx)
+                for idx, opt in enumerate(self.raw_solve_options)
+            ]
+
+        def get_pil_image(self, use_segmented=False):
+            _ = use_segmented
+            return fake_obs.copy()
+
+        def update_observation(self, use_segmentation=False):
+            _ = use_segmentation
+            return None
+
+        def execute_action(self, option_idx, click_coords):
+            _ = click_coords
+            current_options = override.get_vqa_options(
+                self.env,
+                self.planner,
+                {"obj": None},
+                self.env_id,
+            )
+            current_options[option_idx]["solve"]()
+
+            frame_value = hold_calls[-1] if hold_calls else 0
+            frame = np.full((24, 24, 3), frame_value, dtype=np.uint8)
+            self.last_execution_frames = [frame.copy(), frame.copy()]
+            self.base_frames.extend(self.last_execution_frames)
+            return frame.copy(), f"Executing: {current_options[option_idx]['label']}", False
+
+    fake_session = FakeSession()
+    monkeypatch.setattr(cb, "get_session", lambda uid: fake_session)
+    monkeypatch.setattr(cb, "increment_execute_count", lambda uid, env_id, ep_num: 1)
+    monkeypatch.setattr(cb, "save_video", lambda frames, suffix="": demo_video_path)
+    monkeypatch.setattr(cb, "concatenate_frames_horizontally", lambda frames, env_id=None: list(frames))
+    monkeypatch.setattr(cb.os.path, "exists", lambda path: True)
+    monkeypatch.setattr(cb.os.path, "getsize", lambda path: 10)
+
+    with gr.Blocks(title="Native StopCube merge test") as demo:
+        uid_state = gr.State(value="uid-stopcube-merge")
+        phase_state = gr.State(value="action_point")
+        post_execute_controls_state = gr.State(
+            value={
+                "exec_btn_interactive": True,
+                "reference_action_interactive": True,
+            }
+        )
+        post_execute_log_state = gr.State(
+            value={
+                "preserve_terminal_log": False,
+                "terminal_log_value": None,
+            }
+        )
+        suppress_state = gr.State(value=False)
+        with gr.Column(visible=True, elem_id="main_interface") as main_interface:
+            with gr.Column(visible=False, elem_id="video_phase_group") as video_phase_group:
+                video_display = gr.Video(value=None, elem_id="demo_video", autoplay=False)
+                watch_demo_video_btn = gr.Button(
+                    "Watch Video Input🎬",
+                    elem_id="watch_demo_video_btn",
+                    interactive=False,
+                    visible=False,
+                )
+
+            with gr.Column(visible=False, elem_id="execution_video_group") as execution_video_group:
+                execute_video_display = gr.Video(value=None, elem_id="execute_video", autoplay=True)
+
+            with gr.Column(visible=True, elem_id="action_phase_group") as action_phase_group:
+                img_display = gr.Image(value=fake_obs.copy(), elem_id="live_obs")
+
+            with gr.Column(visible=True, elem_id="control_panel_group") as control_panel_group:
+                options_radio = gr.Radio(
+                    choices=fake_session.available_options,
+                    value=None,
+                    elem_id="action_radio",
+                )
+                coords_box = gr.Textbox(config_module.UI_TEXT["coords"]["not_needed"], elem_id="coords_box")
+                exec_btn = gr.Button("execute", interactive=True, elem_id="exec_btn")
+                reference_action_btn = gr.Button("reference", interactive=True, elem_id="reference_action_btn")
+                restart_episode_btn = gr.Button("restart", interactive=True, elem_id="restart_episode_btn")
+                next_task_btn = gr.Button("next", interactive=True, elem_id="next_task_btn")
+                task_hint_display = gr.Textbox("hint", interactive=True, elem_id="task_hint_display")
+
+        log_output = gr.Markdown("", elem_id="log_output")
+        task_info_box = gr.Textbox("")
+        progress_info_box = gr.Textbox("")
+
+        exec_btn.click(
+            fn=cb.precheck_execute_inputs,
+            inputs=[uid_state, options_radio, coords_box],
+            outputs=[],
+            queue=False,
+        ).then(
+            fn=cb.switch_to_execute_phase,
+            inputs=[uid_state],
+            outputs=[
+                options_radio,
+                exec_btn,
+                restart_episode_btn,
+                next_task_btn,
+                img_display,
+                reference_action_btn,
+                task_hint_display,
+            ],
+            queue=False,
+        ).then(
+            fn=cb.execute_step,
+            inputs=[uid_state, options_radio, coords_box],
+            outputs=[
+                img_display,
+                log_output,
+                task_info_box,
+                progress_info_box,
+                restart_episode_btn,
+                next_task_btn,
+                exec_btn,
+                execute_video_display,
+                action_phase_group,
+                control_panel_group,
+                execution_video_group,
+                options_radio,
+                coords_box,
+                reference_action_btn,
+                task_hint_display,
+                post_execute_controls_state,
+                post_execute_log_state,
+                phase_state,
+            ],
+            queue=False,
+        )
+        options_radio.change(
+            fn=cb.on_option_select,
+            inputs=[uid_state, options_radio, coords_box, suppress_state, post_execute_log_state],
+            outputs=[coords_box, img_display, log_output, suppress_state, post_execute_log_state],
+            queue=False,
+        )
+
+        execute_video_display.end(
+            fn=cb.on_execute_video_end_transition,
+            inputs=[uid_state, post_execute_controls_state, post_execute_log_state],
+            outputs=[
+                execution_video_group,
+                action_phase_group,
+                control_panel_group,
+                options_radio,
+                exec_btn,
+                restart_episode_btn,
+                next_task_btn,
+                img_display,
+                log_output,
+                reference_action_btn,
+                task_hint_display,
+                phase_state,
+            ],
+            queue=False,
+        )
+        execute_video_display.stop(
+            fn=cb.on_execute_video_end_transition,
+            inputs=[uid_state, post_execute_controls_state, post_execute_log_state],
+            outputs=[
+                execution_video_group,
+                action_phase_group,
+                control_panel_group,
+                options_radio,
+                exec_btn,
+                restart_episode_btn,
+                next_task_btn,
+                img_display,
+                log_output,
+                reference_action_btn,
+                task_hint_display,
+                phase_state,
+            ],
+            queue=False,
+        )
+
+    port = _free_port()
+    host = "127.0.0.1"
+    root_url = f"http://{host}:{port}/"
+
+    app = FastAPI(title="native-stopcube-merge-test")
+    app = gr.mount_gradio_app(app, demo, path="/")
+
+    config = uvicorn.Config(app, host=host, port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    _wait_http_ready(root_url)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page.goto(root_url, wait_until="domcontentloaded")
+            page.wait_for_selector("#main_interface", state="visible", timeout=20000)
+
+            for _ in range(2):
+                page.locator("#action_radio input[type='radio']").nth(1).check(force=True)
+                page.locator("#exec_btn button, button#exec_btn").first.click()
+                page.wait_for_selector("#execute_video video", timeout=5000)
+                page.wait_for_function(
+                    """() => {
+                        const visible = (id) => {
+                            const el = document.getElementById(id);
+                            if (!el) return false;
+                            const st = getComputedStyle(el);
+                            return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
+                        };
+                        const videoEl = document.querySelector('#execute_video video');
+                        return (
+                            visible('execution_video_group') &&
+                            visible('execute_video') &&
+                            !visible('action_phase_group') &&
+                            !!videoEl &&
+                            videoEl.autoplay === true
+                        );
+                    }""",
+                    timeout=10000,
+                )
+                assert _dispatch_video_event(page, "ended", elem_id="execute_video")
+                page.wait_for_function(
+                    """() => {
+                        const visible = (id) => {
+                            const el = document.getElementById(id);
+                            if (!el) return false;
+                            const st = getComputedStyle(el);
+                            return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
+                        };
+                        const execBtn = document.querySelector('#exec_btn button') || document.querySelector('button#exec_btn');
+                        return (
+                            visible('action_phase_group') &&
+                            visible('control_panel_group') &&
+                            !visible('execute_video') &&
+                            !!execBtn &&
+                            execBtn.disabled === false
+                        );
+                    }""",
+                    timeout=5000,
+                )
+
+            assert hold_calls == [100, 240]
+            browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        demo.close()

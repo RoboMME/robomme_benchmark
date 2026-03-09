@@ -31,7 +31,7 @@ except Exception as e:
 # --- Project Imports ---
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
 from robomme.robomme_env import *  # noqa: F401,F403; ensure gym envs are registered
-from robomme.robomme_env.utils.vqa_options import get_vqa_options
+from vqa_options_override import get_vqa_options
 from robomme.robomme_env.utils.oracle_action_matcher import (
     find_exact_label_option_index,
     map_action_text_to_option_label,
