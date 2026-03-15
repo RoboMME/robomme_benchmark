@@ -27,7 +27,7 @@ uv run scripts/run_example.py
 
 This generates a rollout video in the `sample_run_videos` directory.
 
-We provide four action types: `joint_angle`, `ee_pose`, `waypoint`, and `multi_choice`, e.g., predict continuous actions with `joint_angle` or `ee_pose`, discrete waypoint actions with `waypoint`, or use `multi_choice` for VideoQA-style problems.
+We provide four action types: `joint_angle`, `ee_pose`, `waypoint`, and `multi_choice`, e.g., predict continuous absolute actions with `joint_angle` or `ee_pose`, discrete waypoint actions with `waypoint`, or use `multi_choice` for VideoQA-style problems.
 
 ## 📁 Benchmark
 
