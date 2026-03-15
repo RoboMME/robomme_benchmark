@@ -1,6 +1,6 @@
 # RoboMME: A Robotic Benchmark for Memory-Augmented Manipulation
 
-### [Website](https://robomme.github.io/) | [Paper](https://arxiv.org/abs/2603.04639) | [Dataset](https://huggingface.co/Yinpei/robomme_data_h5) | [Leaderboard](https://robomme.github.io/leaderboard.html) | [Interactive Demo](https://huggingface.co/spaces/HongzeFu/RoboMME) | [Policy Learning](https://github.com/RoboMME/robomme_policy_learning) | [Models](https://huggingface.co/Yinpei/mme_vla_suite)
+### [Website](https://robomme.github.io/) | [Paper](https://arxiv.org/abs/2603.04639) | [Dataset](https://huggingface.co/Yinpei/robomme_data_h5) | [Leaderboard](https://robomme.github.io/leaderboard.html) | [Interactive Demo](https://huggingface.co/spaces/HongzeFu/RoboMME) | [MME-VLA Code](https://github.com/RoboMME/robomme_policy_learning) | [Models](https://huggingface.co/Yinpei/mme_vla_suite)
 
 ![Robomme bench](assets/robomme_bench.jpg)
 
