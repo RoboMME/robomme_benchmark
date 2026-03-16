@@ -69,6 +69,7 @@ env_builder = BenchmarkEnvBuilder(
 
 env = env_builder.make_env_for_episode(episode_idx)
 obs, info = env.reset() # initial step
+task_goal = info['task_goal'][0]
 ...
 obs, _, terminated, truncated, info = env.step(action) # each step
 ```
