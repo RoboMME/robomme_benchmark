@@ -36,7 +36,7 @@ We provide an example [here](https://github.com/RoboMME/robomme_policy_learning/
 
 ## Evaluation 
 
-For the official challenge, we use a **separate held-out test set**.  The full evaluation consists of **800 episodes** in total (50 per task).
+For the official challenge, we use a **separate held-out test set**.  The full evaluation consists of **800 episodes** in total (50 per task). We only eval one model seed for simplicity in this challenge. 
 
 Before running the full evaluation, we first run a **small subset of episodes** to check that your endpoint is stable and reaches at least **20% average success**.
 
