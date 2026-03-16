@@ -83,7 +83,7 @@ def run_episode(client, env_builder, episode_idx, env_id):
     
     for i in range(len(obs["front_rgb_list"])):
         video_frames.append(np.hstack([obs["front_rgb_list"][i], obs["wrist_rgb_list"][i]]))
-        if i < exec_start_idx:
+        if i < exec_start_idx: # add red border to indicate the conditioned video frames
             video_frames[-1] = cv2.rectangle(video_frames[-1], (0, 0), (video_frames[-1].shape[1], video_frames[-1].shape[0]), (255, 0, 0), 10)
 
     while True:

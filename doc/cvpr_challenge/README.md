@@ -32,7 +32,7 @@ We provide two reference scripts:
 - `scripts/challenge_serve_policy.py`: example script for hosting your policy server (used by participants).
 
 Implement your policy in `src/remote_evaluation/policy.py` and host it via `scripts/challenge_serve_policy.py`.  
-We provide a server example [here]() using our MME-VLA (framesamp + modulation) as the serving policy.
+We provide an example [here](https://github.com/RoboMME/robomme_policy_learning/blob/cvpr26challenge/scripts/challenge_serve_policy.py) using our MME-VLA (framesamp + modulation) as the serving policy.
 
 ## Evaluation 
 
@@ -48,6 +48,7 @@ After evaluation, we will update the **challenge leaderboard** on eval.ai with y
 
 
 ## Timeline
-
+...
 
 ## Acknownledgement
+...
