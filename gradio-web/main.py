@@ -15,6 +15,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 VIDEOS_DIR = APP_DIR / "videos"
 TEMP_DEMOS_DIR = PROJECT_ROOT / "temp_demos"
 CWD_TEMP_DEMOS_DIR = Path.cwd() / "temp_demos"
+DEFAULT_LLVMPipe_ICD = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 CPU_ONLY_ENV_OVERRIDES = {
     "CUDA_VISIBLE_DEVICES": "-1",
     "NVIDIA_VISIBLE_DEVICES": "void",
@@ -22,7 +23,6 @@ CPU_ONLY_ENV_OVERRIDES = {
 }
 CPU_ONLY_ENV_CLEAR_KEYS = (
     "NVIDIA_DRIVER_CAPABILITIES",
-    "VK_ICD_FILENAMES",
     "MUJOCO_GL",
 )
 
@@ -46,11 +46,20 @@ def configure_cpu_only_runtime(logger: logging.Logger | None = None):
         previous = os.environ.pop(key, None)
         if previous is not None:
             cleared[key] = previous
+    vk_icd_status = "preserved"
+    if "VK_ICD_FILENAMES" not in os.environ:
+        if DEFAULT_LLVMPipe_ICD.exists():
+            os.environ["VK_ICD_FILENAMES"] = str(DEFAULT_LLVMPipe_ICD)
+            vk_icd_status = "auto-set"
+        else:
+            vk_icd_status = "unavailable"
     if logger is not None:
         logger.info(
-            "Configured CPU-only runtime overrides=%s cleared=%s",
+            "Configured CPU-only runtime overrides=%s cleared=%s vk_icd_status=%s vk_icd=%s",
             CPU_ONLY_ENV_OVERRIDES,
             cleared,
+            vk_icd_status,
+            os.environ.get("VK_ICD_FILENAMES"),
         )
     return cleared
 

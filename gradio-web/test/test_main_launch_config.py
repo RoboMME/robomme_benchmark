@@ -3,6 +3,10 @@ from __future__ import annotations
 import os
 import sys
 import types
+from pathlib import Path
+
+
+DEFAULT_LLVMPipe_ICD = "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
 
 
 class _FakeDemo:
@@ -51,6 +55,61 @@ def test_main_launch_passes_ui_css_and_forces_cpu_runtime(monkeypatch, reload_mo
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
     assert os.environ["SAPIEN_RENDER_DEVICE"] == "cpu"
+    assert os.environ["VK_ICD_FILENAMES"] == "/tmp/another_nvidia_icd.json"
     assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
-    assert "VK_ICD_FILENAMES" not in os.environ
+    assert "MUJOCO_GL" not in os.environ
+
+
+def test_configure_cpu_only_runtime_autosets_llvmpipe_icd(monkeypatch, reload_module):
+    original_exists = Path.exists
+
+    def fake_exists(self):
+        if str(self) == DEFAULT_LLVMPipe_ICD:
+            return True
+        return original_exists(self)
+
+    monkeypatch.setattr(Path, "exists", fake_exists)
+    monkeypatch.delenv("VK_ICD_FILENAMES", raising=False)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "3")
+    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
+    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
+    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "graphics")
+    monkeypatch.setenv("MUJOCO_GL", "egl")
+
+    main = reload_module("main")
+    monkeypatch.delenv("VK_ICD_FILENAMES", raising=False)
+
+    main.configure_cpu_only_runtime()
+
+    assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
+    assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
+    assert os.environ["SAPIEN_RENDER_DEVICE"] == "cpu"
+    assert os.environ["VK_ICD_FILENAMES"] == DEFAULT_LLVMPipe_ICD
+    assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
+    assert "MUJOCO_GL" not in os.environ
+
+
+def test_configure_cpu_only_runtime_preserves_existing_vk_icd(monkeypatch, reload_module):
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "4")
+    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
+    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
+    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "graphics")
+    monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/custom_icd.json")
+    monkeypatch.setenv("MUJOCO_GL", "egl")
+
+    main = reload_module("main")
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "5")
+    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
+    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
+    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "graphics")
+    monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/preserved_icd.json")
+    monkeypatch.setenv("MUJOCO_GL", "egl")
+
+    main.configure_cpu_only_runtime()
+
+    assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
+    assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
+    assert os.environ["SAPIEN_RENDER_DEVICE"] == "cpu"
+    assert os.environ["VK_ICD_FILENAMES"] == "/tmp/preserved_icd.json"
+    assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
     assert "MUJOCO_GL" not in os.environ
