@@ -1,15 +1,5 @@
-"""Adds NumPy array support to msgpack.
-
-msgpack is good for (de)serializing data over a network for multiple reasons:
-- msgpack is secure (as opposed to pickle/dill/etc which allow for arbitrary code execution)
-- msgpack is widely used and has good cross-language support
-- msgpack does not require a schema (as opposed to protobuf/flatbuffers/etc) which is convenient in dynamically typed
-    languages like Python and JavaScript
-- msgpack is fast and efficient (as opposed to readable formats like JSON/YAML/etc); I found that msgpack was ~4x faster
-    than pickle for serializing large arrays using the below strategy
-
-The code below is adapted from https://github.com/lebedov/msgpack-numpy. The reason not to use that library directly is
-that it falls back to pickle for object arrays.
+"""
+Copied from https://github.com/Physical-Intelligence/openpi/blob/main/packages/openpi-client/src/openpi_client/msgpack_numpy.py
 """
 
 import functools

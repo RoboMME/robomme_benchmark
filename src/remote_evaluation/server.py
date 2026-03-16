@@ -1,10 +1,11 @@
 """
 Adapted from https://github.com/Physical-Intelligence/openpi/blob/main/src/openpi/serving/websocket_policy_server.py
+
+This is used by participants to serve their policy.
 """
 
 import asyncio
 import http
-import time
 import traceback
 import websockets.asyncio.server as _server
 import websockets.frames

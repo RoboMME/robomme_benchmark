@@ -22,43 +22,35 @@ def add_small_noise(
    
 class Policy:
     def infer(self, inputs: dict):
+        # inputs: dict of observations
+        # output is dict of action chunk: {"actions": np.ndarray}
+        # If action space is joint_angle, the action shape is (chunk_size, 8)
+        # Otherwise, the action shape is (chunk_size, 7)
         raise NotImplementedError
 
-    def reset(self):
+    def reset(self) -> None:
         raise NotImplementedError
 
  
 class DummyPolicy(Policy):
     # A random policy that saves video for debugging
     def __init__(self):
-        self.imgs = []
         self.chunk_size = 10
 
-    def infer(self, inputs: dict):
-        for (img, wrist_img) in zip(inputs["front_rgb_list"], inputs["wrist_rgb_list"]):
-            self.imgs.append(np.hstack([img, wrist_img]))
-        
+    def infer(self, inputs: dict):        
+        # We need to differentiate the first step from the subsequent steps
+        # For video-conditioned tasks, there would be more than one steps in inputs, the last step is the current step ready for execution, all previous steps are the conditioned video frames
+        # For normal tasks, there would be only one step in inputs, which is the current step ready for execution
         if inputs["is_first_step"]:
-            self.exec_id = len(inputs["front_rgb_list"]) - 1 # sample id < self.exec_id is the conditioned video frames
+            self.exec_start_idx = len(inputs["front_rgb_list"]) - 1 # sample id < self.exec_id is the conditioned video frames
+        
+        # Fake action chunk for debugging
         action_chunk = np.concatenate([BASE_ACTION] * self.chunk_size, axis=0).reshape(-1, 8)
         return {"action": add_small_noise(action_chunk)}
 
     def reset(self):
-        if self.imgs:
-            self._save_video(f"test_video.mp4")
-        self.imgs = []
-        self.exec_id = None
+        self.exec_start_idx = 0
     
-    def _save_video(self, file_path: str):
-        # just for checking 
-        video_frames = []
-        for i, img in enumerate(self.imgs):
-            if i < self.exec_id:
-                # add border to the frame
-                img = cv2.rectangle(img, (0, 0), (img.shape[1], img.shape[0]), (255, 0, 0), 10)
-            video_frames.append(img)
-        imageio.mimsave(file_path, video_frames, fps=30)
-
 
 class YourPolicy(Policy):
     ...

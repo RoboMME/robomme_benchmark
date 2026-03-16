@@ -1,3 +1,7 @@
+"""
+This is used by RoboMME challenge organizers to evaluate the policy.
+"""
+
 
 import time
 from typing import Dict, Optional, Tuple
@@ -9,8 +13,6 @@ from . import msgpack_numpy
 
 class PolicyClient:
     """Implements the Policy interface by communicating with a server over websocket.
-
-    See WebsocketPolicyServer for a corresponding server implementation.
     """
 
     def __init__(self, host: str = "0.0.0.0", port: Optional[int] = None, api_key: Optional[str] = None) -> None:
