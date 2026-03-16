@@ -54,16 +54,13 @@ class PolicyServer:
         
         while True:
             try:
-                obs = msgpack_numpy.unpackb(await websocket.recv())
+                inputs = msgpack_numpy.unpackb(await websocket.recv())
                 
-                if obs.get("reset", False):
-                    tstart = time.monotonic()
+                if inputs.get("reset", False):
                     self._policy.reset()
-                    tend = time.monotonic() - tstart
-                    await websocket.send(packer.pack(
-                        {"reset_finished": True, "reset_time_ms": tend * 1000}))
+                    await websocket.send(packer.pack({"reset_finished": True}))
                 else:
-                    outputs = self._policy.step(obs)
+                    outputs = self._policy.infer(inputs)
                     await websocket.send(packer.pack(outputs))
 
             except websockets.ConnectionClosed:

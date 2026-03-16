@@ -21,7 +21,7 @@ def add_small_noise(
 
    
 class Policy:
-    def step(self, buffer: dict):
+    def infer(self, inputs: dict):
         raise NotImplementedError
 
     def reset(self):
@@ -34,13 +34,12 @@ class DummyPolicy(Policy):
         self.imgs = []
         self.chunk_size = 10
 
-    def step(self, buffer: dict):
-        import pdb; pdb.set_trace()
-        for (img, wrist_img) in zip(buffer["front_rgb_list"], buffer["wrist_rgb_list"]):
+    def infer(self, inputs: dict):
+        for (img, wrist_img) in zip(inputs["front_rgb_list"], inputs["wrist_rgb_list"]):
             self.imgs.append(np.hstack([img, wrist_img]))
         
-        if buffer["is_first_step"]:
-            self.exec_id = len(buffer["front_rgb_list"]) - 1 # sample id < self.exec_id is the conditioned video frames
+        if inputs["is_first_step"]:
+            self.exec_id = len(inputs["front_rgb_list"]) - 1 # sample id < self.exec_id is the conditioned video frames
         action_chunk = np.concatenate([BASE_ACTION] * self.chunk_size, axis=0).reshape(-1, 8)
         return {"action": add_small_noise(action_chunk)}
 

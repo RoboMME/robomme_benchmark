@@ -54,10 +54,3 @@ class PolicyClient:
         self._ws.send(data)
         response = self._ws.recv()
         return msgpack_numpy.unpackb(response)
-    
-    
-    def add_buffer(self, buffer: Dict):
-        data = self._packer.pack(buffer)
-        self._ws.send(data)
-        response = self._ws.recv()
-        return msgpack_numpy.unpackb(response)
