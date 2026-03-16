@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -11,10 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     ffmpeg \
     libgl1 \
-    libglvnd-dev \
     libglib2.0-0 \
     libvulkan1 \
-    vulkan-tools \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update && apt-get install -y --no-install-recommends \
     python3.11 \
@@ -32,7 +30,6 @@ RUN useradd -m -u 1000 user
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics \
     HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH \
     OMP_NUM_THREADS=1 \

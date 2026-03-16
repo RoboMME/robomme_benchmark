@@ -15,7 +15,7 @@ uv sync
 uv pip install -e .
 ```
 
-## 🐳 Gradio Docker Deployment (HF Space + GPU)
+## 🐳 Gradio Docker Deployment (HF Space CPU-only)
 
 This repository also supports Docker deployment for the Gradio app entrypoint:
 
@@ -26,23 +26,23 @@ python3 gradio-web/main.py
 Build image:
 
 ```bash
-docker build -t robomme-gradio:gpu .
+docker build -t robomme-gradio:cpu .
 ```
 
-Run container (GPU + Vulkan for ManiSkill/SAPIEN):
+Run container:
 
 ```bash
-docker run --rm --gpus all -p 7860:7860 robomme-gradio:gpu
+docker run --rm -p 7860:7860 robomme-gradio:cpu
 ```
 
-The image sets `NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics` so the NVIDIA container runtime exposes Vulkan/graphics driver files inside the container. Without graphics capability, ManiSkill/SAPIEN may fail with `vk::createInstanceUnique: ErrorIncompatibleDriver`.
+The container forces CPU-only ManiSkill/SAPIEN backends and does not require NVIDIA runtime or `--gpus all`, which keeps it aligned with Hugging Face Docker Spaces CPU deployments.
 
 Optional metadata override:
 
 ```bash
-docker run --rm --gpus all -p 7860:7860 \
+docker run --rm -p 7860:7860 \
   -e ROBOMME_METADATA_ROOT=/home/user/app/src/robomme/env_metadata/train \
-  robomme-gradio:gpu
+  robomme-gradio:cpu
 ```
 
 Notes:
@@ -148,13 +148,16 @@ Want to add your model? Download the [dataset](https://huggingface.co/datasets/Y
 
 A1: Use a physical display or set up a virtual display for GUI rendering (e.g. install a VNC server and set the `DISPLAY` variable correctly).
 
-**Q2: Failure related to Vulkan installation.**
+**Q2: Failure related to ManiSkill/SAPIEN rendering initialization.**
 
-A2: ManiSkill/SAPIEN requires both Vulkan userspace packages inside the container and NVIDIA graphics capability exposed by the container runtime. This image installs `libvulkan1`, `vulkan-tools`, and `libglvnd-dev`, and sets `NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics`. If it still does not work, first verify the host machine itself supports Vulkan (`vulkaninfo` on the host), then switch to CPU rendering:
+A2: This Docker image is configured for CPU-only execution and should not rely on NVIDIA runtime settings. If rendering still fails, first check that no external environment variables are forcing GPU paths, then keep the container on the CPU-only defaults:
 
 ```python
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['NVIDIA_VISIBLE_DEVICES'] = 'void'
 os.environ['SAPIEN_RENDER_DEVICE'] = 'cpu'
-os.environ['MUJOCO_GL'] = 'osmesa'
+os.environ.pop('VK_ICD_FILENAMES', None)
+os.environ.pop('MUJOCO_GL', None)
 ```
 
 

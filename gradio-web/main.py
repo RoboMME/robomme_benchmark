@@ -15,6 +15,16 @@ SRC_DIR = PROJECT_ROOT / "src"
 VIDEOS_DIR = APP_DIR / "videos"
 TEMP_DEMOS_DIR = PROJECT_ROOT / "temp_demos"
 CWD_TEMP_DEMOS_DIR = Path.cwd() / "temp_demos"
+CPU_ONLY_ENV_OVERRIDES = {
+    "CUDA_VISIBLE_DEVICES": "-1",
+    "NVIDIA_VISIBLE_DEVICES": "void",
+    "SAPIEN_RENDER_DEVICE": "cpu",
+}
+CPU_ONLY_ENV_CLEAR_KEYS = (
+    "NVIDIA_DRIVER_CAPABILITIES",
+    "VK_ICD_FILENAMES",
+    "MUJOCO_GL",
+)
 
 
 
@@ -25,6 +35,27 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
+
+
+def configure_cpu_only_runtime(logger: logging.Logger | None = None):
+    """Force CPU-only execution before importing project modules."""
+    cleared = {}
+    for key, value in CPU_ONLY_ENV_OVERRIDES.items():
+        os.environ[key] = value
+    for key in CPU_ONLY_ENV_CLEAR_KEYS:
+        previous = os.environ.pop(key, None)
+        if previous is not None:
+            cleared[key] = previous
+    if logger is not None:
+        logger.info(
+            "Configured CPU-only runtime overrides=%s cleared=%s",
+            CPU_ONLY_ENV_OVERRIDES,
+            cleared,
+        )
+    return cleared
+
+
+configure_cpu_only_runtime()
 
 
 def setup_logging() -> logging.Logger:
@@ -116,6 +147,7 @@ def build_allowed_paths():
 
 
 def main():
+    configure_cpu_only_runtime(LOGGER)
     from ui_layout import CSS, create_ui_blocks
 
     LOGGER.info("Starting Gradio real environment entrypoint: %s", __file__)

@@ -14,9 +14,9 @@ python3 gradio-web/main.py
 
 `app_file` is intentionally not set here because this is a Docker Space; the application entrypoint comes from Docker `CMD`, while `app_port: 7860` is the external port published by the Space.
 
-Local GPU Docker run:
+Local CPU Docker run:
 
 ```bash
-docker build -t robomme-gradio:gpu .
-docker run --rm --gpus all -p 7860:7860 robomme-gradio:gpu
+docker build -t robomme-gradio:cpu .
+docker run --rm -p 7860:7860 robomme-gradio:cpu
 ```

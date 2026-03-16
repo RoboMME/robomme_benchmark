@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import types
 
@@ -15,7 +16,14 @@ class _FakeDemo:
         return None
 
 
-def test_main_launch_passes_ui_css(monkeypatch, reload_module):
+def test_main_launch_passes_ui_css_and_forces_cpu_runtime(monkeypatch, reload_module):
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
+    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
+    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
+    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "compute,utility,graphics")
+    monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/nvidia_icd.json")
+    monkeypatch.setenv("MUJOCO_GL", "egl")
+
     main = reload_module("main")
     fake_demo = _FakeDemo()
     fake_ui_layout = types.SimpleNamespace(
@@ -25,6 +33,12 @@ def test_main_launch_passes_ui_css(monkeypatch, reload_module):
 
     monkeypatch.setitem(sys.modules, "ui_layout", fake_ui_layout)
     monkeypatch.setenv("PORT", "7861")
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "2")
+    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
+    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
+    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "graphics")
+    monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/another_nvidia_icd.json")
+    monkeypatch.setenv("MUJOCO_GL", "egl")
 
     main.main()
 
@@ -34,3 +48,9 @@ def test_main_launch_passes_ui_css(monkeypatch, reload_module):
     assert fake_demo.launch_kwargs["theme"] == fake_demo.theme
     assert fake_demo.launch_kwargs["css"] == fake_ui_layout.CSS
     assert fake_demo.launch_kwargs["head"] == fake_demo.head
+    assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
+    assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
+    assert os.environ["SAPIEN_RENDER_DEVICE"] == "cpu"
+    assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
+    assert "VK_ICD_FILENAMES" not in os.environ
+    assert "MUJOCO_GL" not in os.environ

@@ -195,6 +195,8 @@ class BenchmarkEnvBuilder:
             control_mode="pd_joint_pos",
             render_mode=self.render_mode,
             reward_mode="dense",
+            sim_backend="physx_cpu",
+            render_backend="sapien_cpu",
         )
         if seed is not None:
             env_kwargs["seed"] = seed

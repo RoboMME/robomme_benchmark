@@ -1,50 +1,20 @@
 #!/bin/sh
 set -eu
 
-pick_vulkan_icd() {
-    for candidate in \
-        /etc/vulkan/icd.d/nvidia_icd.json \
-        /etc/vulkan/icd.d/nvidia_icd.x86_64.json \
-        /usr/share/vulkan/icd.d/nvidia_icd.json \
-        /usr/share/vulkan/icd.d/nvidia_icd.x86_64.json
-    do
-        if [ -f "$candidate" ]; then
-            printf '%s\n' "$candidate"
-            return 0
-        fi
-    done
-    return 1
-}
-
-run_diagnostic() {
-    label="$1"
-    shift
-    echo "[entrypoint] $label"
-    if "$@"; then
-        return 0
-    else
-        status=$?
-    fi
-    echo "[entrypoint] $label failed with exit code $status"
-    return 0
-}
-
 if [ -z "${OMP_NUM_THREADS:-}" ]; then
     export OMP_NUM_THREADS=1
 fi
 
-if [ -z "${VK_ICD_FILENAMES:-}" ]; then
-    if detected_icd="$(pick_vulkan_icd)"; then
-        export VK_ICD_FILENAMES="$detected_icd"
-        echo "[entrypoint] Using Vulkan ICD: $VK_ICD_FILENAMES"
-    else
-        echo "[entrypoint] Vulkan ICD file not found under /etc or /usr/share"
-    fi
-else
-    echo "[entrypoint] Respecting preset VK_ICD_FILENAMES: $VK_ICD_FILENAMES"
-fi
+export CUDA_VISIBLE_DEVICES=-1
+export NVIDIA_VISIBLE_DEVICES=void
+export SAPIEN_RENDER_DEVICE=cpu
+unset NVIDIA_DRIVER_CAPABILITIES
+unset VK_ICD_FILENAMES
+unset MUJOCO_GL
 
+echo "[entrypoint] Starting RoboMME Gradio app in CPU-only mode"
 echo "[entrypoint] OMP_NUM_THREADS=$OMP_NUM_THREADS"
-run_diagnostic "nvidia-smi" nvidia-smi
-run_diagnostic "vulkaninfo --summary" vulkaninfo --summary
+echo "[entrypoint] CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+echo "[entrypoint] NVIDIA_VISIBLE_DEVICES=$NVIDIA_VISIBLE_DEVICES"
+echo "[entrypoint] SAPIEN_RENDER_DEVICE=$SAPIEN_RENDER_DEVICE"
 exec "$@"
