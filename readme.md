@@ -2,10 +2,12 @@
 
 ### [Website](https://robomme.github.io/) | [Paper](https://arxiv.org/abs/2603.04639) | [Dataset](https://huggingface.co/Yinpei/robomme_data_h5) | [Leaderboard](https://robomme.github.io/leaderboard.html) | [Interactive Demo](https://huggingface.co/spaces/HongzeFu/RoboMME) | [MME-VLA Code](https://github.com/RoboMME/robomme_policy_learning) | [Models](https://huggingface.co/Yinpei/mme_vla_suite)
 
+### [Wechat Group](doc/WechatIMG365.jpg) | [Discord](https://discord.gg/xbmSqMd4)
 ![Robomme bench](assets/robomme_bench.jpg)
 
 ## 📢 Announcements
 
+[03/2026]  
 [03/2026] 🎉 We are thrilled to release RoboMME, the first large-scale robotic benchmark dedicated to memory-augmented manipulation! Spanning 4 cognitively motivated task suites with 16 carefully designed tasks, RoboMME pushes robots to remember 🧠, reason 💭, and act ⚡.
 
 ## 📦 Installation
