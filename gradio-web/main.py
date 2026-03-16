@@ -19,10 +19,10 @@ DEFAULT_LLVMPipe_ICD = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 CPU_ONLY_ENV_OVERRIDES = {
     "CUDA_VISIBLE_DEVICES": "-1",
     "NVIDIA_VISIBLE_DEVICES": "void",
-    "SAPIEN_RENDER_DEVICE": "cpu",
 }
 CPU_ONLY_ENV_CLEAR_KEYS = (
     "NVIDIA_DRIVER_CAPABILITIES",
+    "SAPIEN_RENDER_DEVICE",
     "MUJOCO_GL",
 )
 

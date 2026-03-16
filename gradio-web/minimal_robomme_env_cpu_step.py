@@ -26,8 +26,8 @@ if str(SRC_DIR) not in sys.path:
 def configure_cpu_only_runtime() -> None:
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     os.environ["NVIDIA_VISIBLE_DEVICES"] = "void"
-    os.environ["SAPIEN_RENDER_DEVICE"] = "cpu"
     os.environ.pop("NVIDIA_DRIVER_CAPABILITIES", None)
+    os.environ.pop("SAPIEN_RENDER_DEVICE", None)
     os.environ.pop("MUJOCO_GL", None)
     if "VK_ICD_FILENAMES" not in os.environ:
         lvp_icd = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")

@@ -155,7 +155,7 @@ A2: This Docker image is configured for CPU-only execution and should not rely o
 ```python
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ['NVIDIA_VISIBLE_DEVICES'] = 'void'
-os.environ['SAPIEN_RENDER_DEVICE'] = 'cpu'
+os.environ.pop('SAPIEN_RENDER_DEVICE', None)
 os.environ.pop('NVIDIA_DRIVER_CAPABILITIES', None)
 os.environ.pop('MUJOCO_GL', None)
 os.environ.setdefault('VK_ICD_FILENAMES', '/usr/share/vulkan/icd.d/lvp_icd.x86_64.json')

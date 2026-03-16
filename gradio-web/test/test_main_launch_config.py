@@ -54,9 +54,9 @@ def test_main_launch_passes_ui_css_and_forces_cpu_runtime(monkeypatch, reload_mo
     assert fake_demo.launch_kwargs["head"] == fake_demo.head
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
-    assert os.environ["SAPIEN_RENDER_DEVICE"] == "cpu"
     assert os.environ["VK_ICD_FILENAMES"] == "/tmp/another_nvidia_icd.json"
     assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
+    assert "SAPIEN_RENDER_DEVICE" not in os.environ
     assert "MUJOCO_GL" not in os.environ
 
 
@@ -83,9 +83,9 @@ def test_configure_cpu_only_runtime_autosets_llvmpipe_icd(monkeypatch, reload_mo
 
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
-    assert os.environ["SAPIEN_RENDER_DEVICE"] == "cpu"
     assert os.environ["VK_ICD_FILENAMES"] == DEFAULT_LLVMPipe_ICD
     assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
+    assert "SAPIEN_RENDER_DEVICE" not in os.environ
     assert "MUJOCO_GL" not in os.environ
 
 
@@ -109,7 +109,22 @@ def test_configure_cpu_only_runtime_preserves_existing_vk_icd(monkeypatch, reloa
 
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
-    assert os.environ["SAPIEN_RENDER_DEVICE"] == "cpu"
     assert os.environ["VK_ICD_FILENAMES"] == "/tmp/preserved_icd.json"
     assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
+    assert "SAPIEN_RENDER_DEVICE" not in os.environ
     assert "MUJOCO_GL" not in os.environ
+
+
+def test_configure_cpu_only_runtime_clears_stale_sapien_render_device(monkeypatch, reload_module):
+    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cpu")
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "7")
+    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
+
+    main = reload_module("main")
+    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda:0")
+
+    main.configure_cpu_only_runtime()
+
+    assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
+    assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
+    assert "SAPIEN_RENDER_DEVICE" not in os.environ
