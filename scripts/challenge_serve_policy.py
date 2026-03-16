@@ -10,7 +10,7 @@ from remote_evaluation.policy import DummyPolicy
 ###### Participant Parameters ######
 # You will submit a json file including the following parameters at eval.ai 
 HOST = "141.212.115.116"
-PORT = 8012
+PORT = 8001
 ####################################
 
 

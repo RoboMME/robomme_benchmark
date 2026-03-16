@@ -19,7 +19,7 @@ ACTION_SPACE = "joint_angle"
 USE_DEPTH = False
 USE_CAMERA_PARAMS = False
 HOST = "141.212.115.116"
-PORT = 8012
+PORT = 8001
 # -----------------------------------------------------------------------------
 
 

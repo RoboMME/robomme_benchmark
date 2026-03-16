@@ -46,7 +46,7 @@ class DummyPolicy(Policy):
         
         # Fake action chunk for debugging
         action_chunk = np.concatenate([BASE_ACTION] * self.chunk_size, axis=0).reshape(-1, 8)
-        return {"action": add_small_noise(action_chunk)}
+        return {"actions": add_small_noise(action_chunk)}
 
     def reset(self):
         self.exec_start_idx = 0
