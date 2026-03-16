@@ -26,6 +26,7 @@ if str(SRC_DIR) not in sys.path:
 def configure_cpu_only_runtime() -> None:
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     os.environ["NVIDIA_VISIBLE_DEVICES"] = "void"
+    os.environ.setdefault("ROBOMME_RENDER_BACKEND", "pci:0")
     os.environ.pop("NVIDIA_DRIVER_CAPABILITIES", None)
     os.environ.pop("SAPIEN_RENDER_DEVICE", None)
     os.environ.pop("MUJOCO_GL", None)
@@ -52,6 +53,7 @@ def main() -> None:
     args = parser.parse_args()
 
     import robomme.robomme_env as robomme_env
+    from robomme.env_record_wrapper.episode_config_resolver import resolve_render_backend
 
     env_cls = getattr(robomme_env, args.env_class)
     env = None
@@ -64,7 +66,7 @@ def main() -> None:
             render_mode="rgb_array",
             reward_mode="dense",
             sim_backend="physx_cpu",
-            render_backend="sapien_cpu",
+            render_backend=resolve_render_backend(),
             seed=args.seed,
         )
         print("instantiate ok", flush=True)

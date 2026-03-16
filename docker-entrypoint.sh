@@ -7,6 +7,7 @@ fi
 
 export CUDA_VISIBLE_DEVICES=-1
 export NVIDIA_VISIBLE_DEVICES=void
+export ROBOMME_RENDER_BACKEND="${ROBOMME_RENDER_BACKEND:-pci:0}"
 unset NVIDIA_DRIVER_CAPABILITIES
 unset SAPIEN_RENDER_DEVICE
 unset MUJOCO_GL
@@ -18,6 +19,7 @@ echo "[entrypoint] Starting RoboMME Gradio app in CPU-only mode"
 echo "[entrypoint] OMP_NUM_THREADS=$OMP_NUM_THREADS"
 echo "[entrypoint] CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 echo "[entrypoint] NVIDIA_VISIBLE_DEVICES=$NVIDIA_VISIBLE_DEVICES"
+echo "[entrypoint] ROBOMME_RENDER_BACKEND=$ROBOMME_RENDER_BACKEND"
 echo "[entrypoint] SAPIEN_RENDER_DEVICE=${SAPIEN_RENDER_DEVICE:-<unset>}"
 echo "[entrypoint] VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-<unset>}"
 exec "$@"

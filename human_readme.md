@@ -155,6 +155,7 @@ A2: This Docker image is configured for CPU-only execution and should not rely o
 ```python
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ['NVIDIA_VISIBLE_DEVICES'] = 'void'
+os.environ.setdefault('ROBOMME_RENDER_BACKEND', 'pci:0')  # llvmpipe software Vulkan on CPU
 os.environ.pop('SAPIEN_RENDER_DEVICE', None)
 os.environ.pop('NVIDIA_DRIVER_CAPABILITIES', None)
 os.environ.pop('MUJOCO_GL', None)
