@@ -7,7 +7,7 @@ RoboMME is a challenge in the **Foundation Models Meet Embodied Agents** worksho
 ## Submission format
 
 We use **remote evaluation**: our server connects to the host and ports you provide.  
-Each team submits one JSON file (see the [example](doc/cvpr_challenge/submit_example.json)) with:
+Each team submits one JSON file (see the `doc/cvpr_challenge/submit_example.json`) with:
 
 | Field               | Type      | Description                                                                                               |
 |---------------------|-----------|-----------------------------------------------------------------------------------------------------------|
