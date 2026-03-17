@@ -9,18 +9,20 @@ import time
 import imageio
 import cv2
 import numpy as np
-
+import argparse
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
 from remote_evaluation.client import PolicyClient
 
-# -----------------------------------------------------------------------------
-# Participant parameters (submit via JSON on eval.ai)
-ACTION_SPACE = "joint_angle"
-USE_DEPTH = False
-USE_CAMERA_PARAMS = False
-HOST = "141.212.115.116"
-PORT = 8001
-# -----------------------------------------------------------------------------
+# Participant parameters (you will need to submit this parameters at eval.ai)
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Evaluate a policy for the CVPR challenge.")
+    parser.add_argument("--action_space", type=str, default="joint_angle", help="Action space to use.")
+    parser.add_argument("--use_depth", type=bool, default=False, help="Whether to use depth images.")
+    parser.add_argument("--use_camera_params", type=bool, default=False, help="Whether to use camera parameters.")
+    parser.add_argument("--host", type=str, default="141.212.115.116", help="Host/IP to connect to the policy server.")
+    parser.add_argument("--port", type=int, default=8001, help="Port to connect to the policy server.")
+    return parser.parse_args()
 
 
 VALID_ACTION_SPACES = ("joint_angle", "ee_pose", "waypoint")
@@ -111,23 +113,23 @@ def run_episode(client, env_builder, episode_idx, env_id):
     return outcome
 
 
-def main():
-    assert ACTION_SPACE in VALID_ACTION_SPACES, (
+def main() -> None:
+    args = parse_args()
+    assert args.action_space in VALID_ACTION_SPACES, (
         f"ACTION_SPACE must be one of {VALID_ACTION_SPACES}"
     )
-
-    client = PolicyClient(host=HOST, port=PORT)
+    client = PolicyClient(host=args.host, port=args.port)
     
     for env_id in BenchmarkEnvBuilder.get_task_list():
         env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
             dataset="test",
-            action_space=ACTION_SPACE,
+            action_space=args.action_space,
             gui_render=False,
-            max_steps=1500,
+            max_steps=1500, # We set 1500 in RoboMME Challenge, should be sufficient enough for all tasks
         )
         
-        for episode_idx in range(50):
+        for episode_idx in range(10):
             outcome = run_episode(client, env_builder, episode_idx, env_id)
             print(f"Outcome: {outcome}")
 
