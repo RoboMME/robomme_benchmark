@@ -18,8 +18,16 @@ def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Evaluate a policy for the CVPR challenge.")
     parser.add_argument("--action_space", type=str, default="joint_angle", help="Action space to use.")
-    parser.add_argument("--use_depth", type=bool, default=False, help="Whether to use depth images.")
-    parser.add_argument("--use_camera_params", type=bool, default=False, help="Whether to use camera parameters.")
+    parser.add_argument(
+        "--use_depth",
+        action="store_true",
+        help="Whether to use depth images.",
+    )
+    parser.add_argument(
+        "--use_camera_params",
+        action="store_true",
+        help="Whether to use camera parameters.",
+    )
     parser.add_argument("--host", type=str, default="141.212.115.116", help="Host/IP to connect to the policy server.")
     parser.add_argument("--port", type=int, default=8001, help="Port to connect to the policy server.")
     return parser.parse_args()
@@ -57,7 +65,16 @@ def _clear_inputs(buffer, obs):
         buffer[key].clear()
 
 
-def run_episode(client, env_builder, episode_idx, env_id):
+def run_episode(
+    client,
+    env_builder,
+    episode_idx,
+    env_id,
+    *,
+    use_depth: bool,
+    use_camera_params: bool,
+    action_space: str,
+):
     """Run one episode: reset env, stream obs to policy, step until done."""
     
     resp = client.reset()
@@ -67,18 +84,18 @@ def run_episode(client, env_builder, episode_idx, env_id):
     
     env = env_builder.make_env_for_episode(
         episode_idx=episode_idx,
-        include_front_depth=USE_DEPTH,
-        include_wrist_depth=USE_DEPTH,
-        include_front_camera_extrinsic=USE_CAMERA_PARAMS,
-        include_wrist_camera_extrinsic=USE_CAMERA_PARAMS,
-        include_front_camera_intrinsic=USE_CAMERA_PARAMS,
-        include_wrist_camera_intrinsic=USE_CAMERA_PARAMS,
+        include_front_depth=use_depth,
+        include_wrist_depth=use_depth,
+        include_front_camera_extrinsic=use_camera_params,
+        include_wrist_camera_extrinsic=use_camera_params,
+        include_front_camera_intrinsic=use_camera_params,
+        include_wrist_camera_intrinsic=use_camera_params,
     )
     action_plan = collections.deque()
     obs, info = env.reset()
     task_goal = info["task_goal"]
     inputs = _build_inputs(obs, task_goal)
-    expected_shape = EXPECTED_ACTION_SHAPES[ACTION_SPACE]
+    expected_shape = EXPECTED_ACTION_SHAPES[action_space]
     
     video_frames = []
     exec_start_idx = len(obs["front_rgb_list"]) - 1
@@ -130,7 +147,15 @@ def main() -> None:
         )
         
         for episode_idx in range(10):
-            outcome = run_episode(client, env_builder, episode_idx, env_id)
+            outcome = run_episode(
+                client,
+                env_builder,
+                episode_idx,
+                env_id,
+                use_depth=args.use_depth,
+                use_camera_params=args.use_camera_params,
+                action_space=args.action_space,
+            )
             print(f"Outcome: {outcome}")
 
 
