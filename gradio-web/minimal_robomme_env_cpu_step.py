@@ -26,7 +26,7 @@ if str(SRC_DIR) not in sys.path:
 def configure_cpu_only_runtime() -> None:
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     os.environ["NVIDIA_VISIBLE_DEVICES"] = "void"
-    os.environ.setdefault("ROBOMME_RENDER_BACKEND", "pci:0")
+    os.environ.setdefault("ROBOMME_RENDER_BACKEND", "cpu")
     os.environ.pop("NVIDIA_DRIVER_CAPABILITIES", None)
     os.environ.pop("SAPIEN_RENDER_DEVICE", None)
     os.environ.pop("MUJOCO_GL", None)

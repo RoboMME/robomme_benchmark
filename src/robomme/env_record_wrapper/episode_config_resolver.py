@@ -14,7 +14,7 @@ DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
 
 _ALLOWED_DATASETS = {"train", "test"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "waypoint", "multi_choice"}
-_DEFAULT_CPU_RENDER_BACKEND = "pci:0"
+_DEFAULT_CPU_RENDER_BACKEND = "cpu"
 _DEFAULT_TASK_LIST = [
     "PickXtimes",
     "StopCube",
@@ -91,8 +91,8 @@ def get_episode_metadata(
 def resolve_render_backend(default: str = _DEFAULT_CPU_RENDER_BACKEND) -> str:
     """Resolve the render backend for CPU-only execution.
 
-    Docker CPU mode uses llvmpipe, which SAPIEN exposes as a Vulkan PCI device
-    rather than the string "cpu".
+    Default to SAPIEN's CPU renderer. PCI-style Vulkan device strings remain
+    supported as explicit overrides for environments that require them.
     """
     value = str(os.environ.get("ROBOMME_RENDER_BACKEND", default)).strip()
     return value or default

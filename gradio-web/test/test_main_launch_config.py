@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 DEFAULT_LLVMPipe_ICD = "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
-DEFAULT_CPU_RENDER_BACKEND = "pci:0"
+DEFAULT_CPU_RENDER_BACKEND = "cpu"
 
 
 class _FakeDemo:

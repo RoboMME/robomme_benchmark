@@ -27,7 +27,7 @@ if str(SRC_DIR) not in sys.path:
 import robomme  # noqa: F401,E402 - applies ManiSkill PCI render-backend patch
 
 
-os.environ.setdefault("ROBOMME_RENDER_BACKEND", "pci:0")
+os.environ.setdefault("ROBOMME_RENDER_BACKEND", "cpu")
 
 
 warnings.filterwarnings(

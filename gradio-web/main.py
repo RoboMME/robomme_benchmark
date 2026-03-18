@@ -16,7 +16,7 @@ VIDEOS_DIR = APP_DIR / "videos"
 TEMP_DEMOS_DIR = PROJECT_ROOT / "temp_demos"
 CWD_TEMP_DEMOS_DIR = Path.cwd() / "temp_demos"
 DEFAULT_LLVMPipe_ICD = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
-DEFAULT_CPU_RENDER_BACKEND = "pci:0"
+DEFAULT_CPU_RENDER_BACKEND = "cpu"
 CPU_ONLY_ENV_OVERRIDES = {
     "CUDA_VISIBLE_DEVICES": "-1",
     "NVIDIA_VISIBLE_DEVICES": "void",

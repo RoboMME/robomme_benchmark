@@ -64,7 +64,7 @@ def test_builder_make_env_for_episode_forces_cpu_backends(monkeypatch, reload_mo
     assert captured["kwargs"]["render_mode"] == "rgb_array"
     assert captured["kwargs"]["reward_mode"] == "dense"
     assert captured["kwargs"]["sim_backend"] == "physx_cpu"
-    assert captured["kwargs"]["render_backend"] == "pci:0"
+    assert captured["kwargs"]["render_backend"] == "cpu"
     assert captured["kwargs"]["seed"] == 123
     assert captured["kwargs"]["difficulty"] == "hard"
     assert _FakeDemonstrationWrapper.last_kwargs["gui_render"] is False
