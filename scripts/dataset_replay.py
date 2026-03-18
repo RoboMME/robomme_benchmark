@@ -19,7 +19,7 @@ import torch
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
 
 GUI_RENDER = False
-REPLAY_VIDEO_DIR = "replay_videos"
+REPLAY_VIDEO_DIR = "runs/replay_videos"
 VIDEO_FPS = 30
 VIDEO_BORDER_COLOR = (255, 0, 0)
 VIDEO_BORDER_THICKNESS = 10
@@ -245,7 +245,7 @@ def process_episode(
 
 
 def replay(
-    h5_data_dir: str = "robomme_data_h5",
+    h5_data_dir: str = "data/robomme_data_h5",
     action_space_type: ActionSpaceType = "joint_angle",
     replay_number: int = 10,
 ) -> None:

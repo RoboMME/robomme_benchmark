@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04
+FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libegl1 \
     libgl1 \
     libglib2.0-0 \
-    libsm6 \
     libvulkan1 \
+    vulkan-tools \
     libxext6 \
     libxrender1 \
     && rm -rf /var/lib/apt/lists/*
@@ -27,24 +27,19 @@ ENV UV_LINK_MODE=copy \
     PYTHONPATH=/app/src \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility,video \
-    MUJOCO_GL=egl \
-    PYOPENGL_PLATFORM=egl \
     SAPIEN_RENDER_DEVICE=cuda \
     XDG_RUNTIME_DIR=/tmp/runtime-root
 
-RUN mkdir -p "${XDG_RUNTIME_DIR}" /app/test_videos
+RUN mkdir -p "${XDG_RUNTIME_DIR}" /runs
 
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --group server --no-install-project --python 3.11
 
 COPY src ./src
 COPY scripts ./scripts
-COPY doc ./doc
 COPY readme.md ./
 
 RUN uv sync --frozen --no-dev --group server --python 3.11
 
-COPY docker/challenge-eval-entrypoint.sh /usr/local/bin/challenge-eval-entrypoint.sh
-RUN chmod +x /usr/local/bin/challenge-eval-entrypoint.sh
+CMD ["bash"]
 
-ENTRYPOINT ["/usr/local/bin/challenge-eval-entrypoint.sh"]

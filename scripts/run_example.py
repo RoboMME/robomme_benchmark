@@ -18,7 +18,7 @@ from robomme.robomme_env.utils import generate_sample_actions
 
 GUI_RENDER = False
 VIDEO_FPS = 30
-VIDEO_OUTPUT_DIR = "sample_run_videos"
+VIDEO_OUTPUT_DIR = "runs/sample_run_videos"
 MAX_STEPS = 300
 EPISODE_LIMITS = {"train": 100, "test": 50, "val": 50}
 VIDEO_BORDER_COLOR = (255, 0, 0)
