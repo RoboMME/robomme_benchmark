@@ -48,6 +48,7 @@ RUN python3 -m pip install --user --upgrade pip setuptools wheel \
     && python3 -m pip install --user -r requirements.txt
 
 COPY --chown=user:user docker-entrypoint.sh ./
+COPY --chown=user:user app.py ./
 COPY --chown=user:user gradio-web ./gradio-web
 COPY --chown=user:user src ./src
 

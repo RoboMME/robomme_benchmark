@@ -13,7 +13,6 @@ __pycache__
 *.pyd
 
 Untitled
-app.py
 human_readme.md
 tests
 tests/
