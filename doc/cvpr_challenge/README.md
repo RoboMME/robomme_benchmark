@@ -34,6 +34,87 @@ We provide two reference scripts:
 Implement your policy in `src/remote_evaluation/policy.py` and host it via `scripts/challenge_serve_policy.py`.  
 We provide an example [here](https://github.com/RoboMME/robomme_policy_learning/blob/cvpr26challenge/scripts/challenge_serve_policy.py) using our MME-VLA (framesamp + modulation) as the serving policy.
 
+## Docker evaluation image
+
+We also provide a Docker image path for the organizer-side evaluation client in [`scripts/challenge_eval_policy.py`](../../scripts/challenge_eval_policy.py). This image only runs the eval client and does **not** replace the existing remote policy server protocol.
+
+### Host requirements
+
+- Linux host with NVIDIA GPU access enabled for Docker.
+- NVIDIA Driver installed on the host.
+- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed so `docker run --gpus all ...` works.
+- CPU-only execution is not the primary supported path for this image.
+
+The container is configured for headless GPU rendering and writes evaluation videos to `/app/test_videos` inside the container.
+
+### Build locally
+
+```bash
+docker build -t robomme-challenge:cvpr26challenge-docker .
+```
+
+### Run locally
+
+The container entrypoint is `scripts/challenge_eval_policy.py`, so any extra arguments are forwarded directly to the eval script.
+
+```bash
+docker run --rm --gpus all \
+  -v "$(pwd)/test_videos:/app/test_videos" \
+  robomme-challenge:cvpr26challenge-docker \
+  --host 141.212.115.116 \
+  --port 8001 \
+  --action_space joint_angle
+```
+
+Example with optional flags enabled:
+
+```bash
+docker run --rm --gpus all \
+  -v "$(pwd)/test_videos:/app/test_videos" \
+  robomme-challenge:cvpr26challenge-docker \
+  --host <policy-server-host> \
+  --port 8001 \
+  --action_space waypoint \
+  --use_depth \
+  --use_camera_params
+```
+
+Supported forwarded arguments remain the same as the Python script:
+
+- `--host`
+- `--port`
+- `--action_space`
+- `--use_depth`
+- `--use_camera_params`
+
+If the policy server is unreachable or a CLI argument is invalid, the error is emitted directly to the container logs via stdout/stderr.
+
+### Manual publish to Docker Hub
+
+Recommended repository naming:
+
+```text
+<dockerhub-username>/robomme-challenge
+```
+
+Example manual tagging and push flow:
+
+```bash
+docker tag robomme-challenge:cvpr26challenge-docker \
+  <dockerhub-username>/robomme-challenge:cvpr26challenge-docker
+
+docker push <dockerhub-username>/robomme-challenge:cvpr26challenge-docker
+```
+
+You can additionally publish a traceable version tag or `latest` manually if needed:
+
+```bash
+docker tag robomme-challenge:cvpr26challenge-docker \
+  <dockerhub-username>/robomme-challenge:latest
+
+docker push <dockerhub-username>/robomme-challenge:latest
+```
+
 ## Evaluation 
 
 For the official challenge, we use a **separate held-out test set**.  The full evaluation consists of **800 episodes** in total (50 per task). We only eval one model seed for simplicity in this challenge. 
