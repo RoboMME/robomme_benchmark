@@ -12,12 +12,31 @@
 
 ## 📦 Installation
 
-After cloning the repo, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+(1) Using UV
+After cloning the repo, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
 ```bash
 uv sync
 uv pip install -e .
 ```
+
+(2) Using docker
+Build the image:
+
+```bash
+docker build -t robomme:cuda12.8 .
+```
+
+Run an interactive shell (videos/logs will be written to host `./runs`):
+
+```bash
+docker run --rm -it --gpus all \
+  -e NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility,video \
+  -v "$PWD/runs:/app/runs" \
+  robomme:cuda12.8
+```
+
+More Docker options (mounting datasets, troubleshooting, etc.) are in [doc/docker_installation.md](doc/docker_installation.md).
 
 ## 🚀 Quick Start
 
