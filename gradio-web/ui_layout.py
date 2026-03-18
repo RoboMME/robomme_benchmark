@@ -1612,7 +1612,6 @@ def create_ui_blocks():
             show_progress="full",
             js=SET_EPISODE_LOAD_MODE_JS,
             show_progress_on=[native_progress_host],
-            queue=False,
         ).then(
             fn=_phase_visibility_updates,
             inputs=[ui_phase_state],
