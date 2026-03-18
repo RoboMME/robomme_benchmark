@@ -116,6 +116,8 @@ def run_episode(
         assert action.shape == expected_shape, f"Expected {expected_shape}, got {action.shape}"
 
         obs, _, terminated, truncated, info = env.step(action)
+        print("Action: ", action)
+
         video_frames.append(np.hstack([obs["front_rgb_list"][-1], obs["wrist_rgb_list"][-1]]))
         _update_inputs(inputs, obs)
 
@@ -143,7 +145,7 @@ def main() -> None:
             dataset="test",
             action_space=args.action_space,
             gui_render=False,
-            max_steps=1500, # We set 1500 in RoboMME Challenge, should be sufficient enough for all tasks
+            max_steps=150, # We set 1500 in RoboMME Challenge, should be sufficient enough for all tasks
         )
         
         for episode_idx in range(10):
@@ -156,7 +158,9 @@ def main() -> None:
                 use_camera_params=args.use_camera_params,
                 action_space=args.action_space,
             )
-            print(f"Outcome: {outcome}")
+            print(
+                f"Outcome: {outcome} | env_id: {env_id} | episode: {episode_idx}"
+            )
 
 
 if __name__ == "__main__":

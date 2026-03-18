@@ -234,7 +234,9 @@ def process_episode(
             env.render()
         if terminated or truncated:
             outcome = info.get("status", "unknown")
-            print(f"Outcome: {outcome}")
+            print(
+                f"Outcome: {outcome} | task_id: {task_id} | episode: {episode_idx}"
+            )
             break
 
     env.close()

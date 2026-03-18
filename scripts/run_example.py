@@ -153,7 +153,7 @@ def main(
                 if GUI_RENDER:
                     env.render()
                 if terminated or truncated:
-                    print(f"Outcome: {status}")
+                    print(f"Outcome: {status} | env_id: {tid} | episode: {ep}")
                     break
 
             env.close()
