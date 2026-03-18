@@ -12,7 +12,7 @@
 
 ## 📦 Installation
 
-(1) Using UV
+(1) Using UV  
 After cloning the repo, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
 ```bash
@@ -20,7 +20,7 @@ uv sync
 uv pip install -e .
 ```
 
-(2) Using docker
+(2) Using docker  
 Build the image:
 
 ```bash
