@@ -3,9 +3,9 @@ name = "robomme"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10,<3.11"
 dependencies = [
-    "gradio",
+    "gradio==6.9.0",
     "gymnasium",
     "h5py",
     "imageio",
@@ -13,6 +13,8 @@ dependencies = [
     "numpy",
     "opencv-python>=4.11.0.86",
     "Pillow",
+    "sentence-transformers",
+    "spaces",
     "setuptools==80.9.0",
     "torch==2.9.1",
     "torchvision==0.24.1",

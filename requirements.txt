@@ -1,4 +1,5 @@
-gradio
+# Derived from pyproject.toml for compatibility only.
+gradio==6.9.0
 numpy
 Pillow
 opencv-python>=4.11.0.86
@@ -8,4 +9,6 @@ imageio
 setuptools==80.9.0
 torch==2.9.1
 torchvision==0.24.1
+sentence-transformers
+spaces
 mani-skill @ git+https://github.com/YinpeiDai/ManiSkill.git@07be6fbc66350ddca200abfb0a11b692f078f7fd

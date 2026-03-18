@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import numpy as np
 import gymnasium as gym
 import cv2
@@ -15,18 +16,10 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# --- NLP Imports ---
-try:
-    from sentence_transformers import SentenceTransformer, util as st_util
-    print("Loading NLP Model (all-MiniLM-L6-v2)...")
-    _NLP_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
-    print("NLP Model loaded.")
-except ImportError:
-    print("Warning: sentence-transformers not found. NLP matching will fail.")
-    _NLP_MODEL = None
-except Exception as e:
-    print(f"Error loading NLP model: {e}")
-    _NLP_MODEL = None
+LOGGER = logging.getLogger("robomme.oracle_logic")
+_NLP_MODEL = None
+_NLP_UTIL = None
+_NLP_MODEL_LOAD_ATTEMPTED = False
 
 # --- Project Imports ---
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
@@ -334,7 +327,8 @@ def _extract_demonstration_payload(demonstration_data):
     return default_goal, default_frames
 
 def _find_best_semantic_match(user_query, options):
-    if _NLP_MODEL is None:
+    nlp_model, st_util = _get_nlp_runtime()
+    if nlp_model is None or st_util is None:
         return -1, 0.0
     
     if not options:
@@ -344,16 +338,41 @@ def _find_best_semantic_match(user_query, options):
     query_text = str(user_query or "").strip()
 
     try:
-        query_embedding = _NLP_MODEL.encode(query_text, convert_to_tensor=True)
-        corpus_embeddings = _NLP_MODEL.encode(labels, convert_to_tensor=True)
+        query_embedding = nlp_model.encode(query_text, convert_to_tensor=True)
+        corpus_embeddings = nlp_model.encode(labels, convert_to_tensor=True)
         cos_scores = st_util.cos_sim(query_embedding, corpus_embeddings)[0]
         best_idx = torch.argmax(cos_scores).item()
         best_score = cos_scores[best_idx].item()
     except Exception as exc:
-        print(f"  [NLP] Semantic match failed ({exc}); defaulting to option 1.")
+        LOGGER.warning("Semantic match failed (%s); defaulting to option 1.", exc)
         return 0, 0.0
     
     return best_idx, best_score
+
+
+def _get_nlp_runtime():
+    global _NLP_MODEL, _NLP_UTIL, _NLP_MODEL_LOAD_ATTEMPTED
+
+    if _NLP_MODEL_LOAD_ATTEMPTED:
+        return _NLP_MODEL, _NLP_UTIL
+
+    _NLP_MODEL_LOAD_ATTEMPTED = True
+    try:
+        from sentence_transformers import SentenceTransformer, util as st_util
+    except ImportError:
+        LOGGER.warning("sentence-transformers not installed; semantic matching disabled")
+        _NLP_MODEL = None
+        _NLP_UTIL = None
+        return _NLP_MODEL, _NLP_UTIL
+    try:
+        LOGGER.info("Loading NLP model all-MiniLM-L6-v2 lazily")
+        _NLP_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+        _NLP_UTIL = st_util
+    except Exception as exc:
+        LOGGER.warning("Failed to load NLP model lazily: %s", exc)
+        _NLP_MODEL = None
+        _NLP_UTIL = None
+    return _NLP_MODEL, _NLP_UTIL
 
 # --- Core Logic Wrapper ---
 

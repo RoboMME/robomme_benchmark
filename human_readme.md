@@ -15,40 +15,27 @@ uv sync
 uv pip install -e .
 ```
 
-## 🐳 Gradio Docker Deployment (HF Space CPU-only)
+## Gradio App and ZeroGPU
 
-This repository also supports Docker deployment for the Gradio app entrypoint:
-
-```bash
-python3 gradio-web/main.py
-```
-
-Build image:
+The Gradio app now targets native Hugging Face Gradio Spaces instead of Docker Spaces.
 
 ```bash
-docker build -t robomme-gradio:cpu .
+uv sync
+uv run python app.py
 ```
 
-Run container:
-
-```bash
-docker run --rm -p 7860:7860 robomme-gradio:cpu
-```
-
-The container forces CPU-only ManiSkill/SAPIEN backends and does not require NVIDIA runtime or `--gpus all`, which keeps it aligned with Hugging Face Docker Spaces CPU deployments.
+Local runs default to CPU fallback rendering. In Hugging Face ZeroGPU environments, GPU is requested only around the heavy environment functions.
 
 Optional metadata override:
 
 ```bash
-docker run --rm -p 7860:7860 \
-  -e ROBOMME_METADATA_ROOT=/home/user/app/src/robomme/env_metadata/train \
-  robomme-gradio:cpu
+ROBOMME_METADATA_ROOT=src/robomme/env_metadata/train uv run python app.py
 ```
 
 Notes:
-- Docker deployment is focused on `gradio-web/main.py`.
+- The Spaces entrypoint is root `app.py`.
 - Existing `uv` workflow for training/testing remains unchanged.
-- Space metadata is configured via root `README.md` with `sdk: docker` and `app_port: 7860`.
+- Space metadata is configured via root `README.md` with `sdk: gradio`.
 
 ## 🚀 Quick Start
 

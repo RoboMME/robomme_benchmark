@@ -1,12 +1,12 @@
-"""Main entry for Gradio app (single-instance mode for Hugging Face Spaces)."""
+"""Main entry for the Gradio app across local and Hugging Face Spaces runtimes."""
+
+from __future__ import annotations
 
 import logging
 import os
 import sys
 import tempfile
 from pathlib import Path
-
-
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -29,18 +29,30 @@ CPU_ONLY_ENV_CLEAR_KEYS = (
 )
 
 
-
-
-
-
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 
-def configure_cpu_only_runtime(logger: logging.Logger | None = None):
-    """Force CPU-only execution before importing project modules."""
+def is_spaces_runtime() -> bool:
+    """Best-effort detection of Hugging Face Spaces runtime."""
+    return bool(os.getenv("SPACE_ID") or os.getenv("SPACE_HOST"))
+
+
+def configure_runtime(logger: logging.Logger | None = None):
+    """
+    Configure runtime defaults.
+
+    Local runs default to CPU-only rendering to keep development portable.
+    Hugging Face Spaces runs preserve the GPU environment so ZeroGPU can
+    allocate hardware on decorated functions.
+    """
+    if is_spaces_runtime():
+        if logger is not None:
+            logger.info("Detected Spaces runtime; preserving GPU environment for ZeroGPU")
+        return {"mode": "spaces", "cpu_only": False}
+
     cleared = {}
     for key, value in CPU_ONLY_ENV_OVERRIDES.items():
         os.environ[key] = value
@@ -57,23 +69,24 @@ def configure_cpu_only_runtime(logger: logging.Logger | None = None):
             vk_icd_status = "unavailable"
     if logger is not None:
         logger.info(
-            "Configured CPU-only runtime overrides=%s cleared=%s vk_icd_status=%s vk_icd=%s",
+            "Configured local CPU fallback overrides=%s cleared=%s vk_icd_status=%s vk_icd=%s",
             CPU_ONLY_ENV_OVERRIDES,
             cleared,
             vk_icd_status,
             os.environ.get("VK_ICD_FILENAMES"),
         )
-    return cleared
+    return {"mode": "local", "cpu_only": True, "cleared": cleared}
 
 
-configure_cpu_only_runtime()
+def configure_cpu_only_runtime(logger: logging.Logger | None = None):
+    """Backward-compatible alias for older tests and scripts."""
+    return configure_runtime(logger)
 
 
 def setup_logging() -> logging.Logger:
-    """Configure structured logging for Spaces runtime."""
-    level_name = "DEBUG"
-    os.environ["LOG_LEVEL"] = level_name
-    level = logging.DEBUG
+    """Configure structured logging for runtime diagnostics."""
+    level_name = os.getenv("LOG_LEVEL", "DEBUG").upper()
+    level = getattr(logging, level_name, logging.DEBUG)
     try:
         sys.stdout.reconfigure(line_buffering=True)
         sys.stderr.reconfigure(line_buffering=True)
@@ -110,7 +123,7 @@ LOGGER = setup_logging()
 
 
 def log_runtime_graphics_env():
-    """Log graphics-related runtime env so Spaces diagnostics are visible in stdout."""
+    """Log graphics-related runtime env so diagnostics are visible in stdout."""
     keys = [
         "CUDA_VISIBLE_DEVICES",
         "NVIDIA_VISIBLE_DEVICES",
@@ -120,6 +133,7 @@ def log_runtime_graphics_env():
         "ROBOMME_RENDER_BACKEND",
         "SAPIEN_RENDER_DEVICE",
         "MUJOCO_GL",
+        "SPACE_ID",
     ]
     snapshot = {key: os.getenv(key) for key in keys}
     LOGGER.info("Runtime graphics env: %s", snapshot)
@@ -158,18 +172,27 @@ def build_allowed_paths():
     return deduped
 
 
-def main():
-    configure_cpu_only_runtime(LOGGER)
+def build_app():
+    """Create the Gradio demo after runtime setup."""
+    configure_runtime(LOGGER)
     from ui_layout import CSS, create_ui_blocks
 
-    LOGGER.info("Starting Gradio real environment entrypoint: %s", __file__)
+    LOGGER.info("Building Gradio UI entrypoint: %s", __file__)
     log_runtime_graphics_env()
     ensure_media_dirs()
 
     os.environ.setdefault("ROBOMME_TEMP_DEMOS_DIR", str(TEMP_DEMOS_DIR))
+    demo = create_ui_blocks()
+    demo.css = CSS
+    return demo
+
+
+def main(*, demo=None):
+    """Launch the Gradio app."""
+    if demo is None:
+        demo = build_app()
     allowed_paths = build_allowed_paths()
     server_port = int(os.getenv("PORT", "7860"))
-    #server_port = 7862
     LOGGER.info(
         "Launching UI with server_name=%s server_port=%s ROBOMME_TEMP_DEMOS_DIR=%s",
         "0.0.0.0",
@@ -177,8 +200,6 @@ def main():
         os.environ.get("ROBOMME_TEMP_DEMOS_DIR"),
     )
     LOGGER.debug("Python path head entries: %s", sys.path[:5])
-
-    demo = create_ui_blocks()
     demo.launch(
         server_name="0.0.0.0",
         server_port=server_port,
@@ -188,7 +209,7 @@ def main():
         show_error=True,
         quiet=False,
         theme=getattr(demo, "theme", None),
-        css=CSS,
+        css=getattr(demo, "css", None),
         head=getattr(demo, "head", None),
     )
 

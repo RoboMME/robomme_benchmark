@@ -1,22 +1,22 @@
 ---
 title: RoboMME Oracle Planner
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 6.9.0
+app_file: app.py
+python_version: 3.10.13
 ---
 
-This Space runs the RoboMME Gradio interface with the Docker SDK.
+This Space runs the RoboMME Gradio interface with the Gradio SDK and Hugging Face ZeroGPU.
 
-The container entrypoint is defined by the root `Dockerfile` and launches:
+Local development uses `uv`:
 
 ```bash
-python3 gradio-web/main.py
+uv sync
+uv run python app.py
 ```
 
-`app_file` is intentionally not set here because this is a Docker Space; the application entrypoint comes from Docker `CMD`, while `app_port: 7860` is the external port published by the Space.
-
-Local CPU Docker run:
+The app keeps a local CPU fallback for development. On Hugging Face ZeroGPU, GPU is requested only around the heavy environment calls via `@spaces.GPU`.
 
 ```bash
-docker build -t robomme-gradio:cpu .
-docker run --rm -p 7860:7860 robomme-gradio:cpu
+uv run python app.py
 ```

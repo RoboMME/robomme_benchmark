@@ -3,7 +3,7 @@
 管理所有全局状态和 Session 生命周期。
 
 GLOBAL_SESSIONS 中存储的是 ProcessSessionProxy，而不是 OracleSession。
-实际的 OracleSession 运行在独立工作进程中，通过代理对象进行通信。
+实际的 OracleSession 运行在当前 Gradio 进程内，通过代理对象统一暴露接口。
 """
 
 import logging

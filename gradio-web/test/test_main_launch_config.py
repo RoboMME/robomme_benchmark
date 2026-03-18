@@ -14,6 +14,7 @@ class _FakeDemo:
     def __init__(self):
         self.launch_kwargs = None
         self.theme = "default"
+        self.css = "#app{}"
         self.head = "<script>window.__robommeForceLightTheme=()=>{};</script>"
 
     def launch(self, **kwargs):
@@ -21,12 +22,13 @@ class _FakeDemo:
         return None
 
 
-def test_main_launch_passes_ui_css_and_forces_cpu_runtime(monkeypatch, reload_module):
-    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
+def test_main_launch_passes_ui_css_and_uses_local_cpu_fallback(monkeypatch, reload_module):
+    monkeypatch.delenv("SPACE_ID", raising=False)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "2")
     monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
     monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
-    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "compute,utility,graphics")
-    monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/nvidia_icd.json")
+    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "graphics")
+    monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/another_nvidia_icd.json")
     monkeypatch.setenv("MUJOCO_GL", "egl")
 
     main = reload_module("main")
@@ -38,20 +40,16 @@ def test_main_launch_passes_ui_css_and_forces_cpu_runtime(monkeypatch, reload_mo
 
     monkeypatch.setitem(sys.modules, "ui_layout", fake_ui_layout)
     monkeypatch.setenv("PORT", "7861")
-    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "2")
-    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
-    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
-    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "graphics")
-    monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/another_nvidia_icd.json")
-    monkeypatch.setenv("MUJOCO_GL", "egl")
 
-    main.main()
+    built_demo = main.build_app()
+    main.main(demo=built_demo)
 
+    assert built_demo is fake_demo
     assert fake_demo.launch_kwargs is not None
     assert fake_demo.launch_kwargs["server_name"] == "0.0.0.0"
     assert fake_demo.launch_kwargs["server_port"] == 7861
     assert fake_demo.launch_kwargs["theme"] == fake_demo.theme
-    assert fake_demo.launch_kwargs["css"] == fake_ui_layout.CSS
+    assert fake_demo.launch_kwargs["css"] == fake_demo.css
     assert fake_demo.launch_kwargs["head"] == fake_demo.head
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
@@ -62,7 +60,7 @@ def test_main_launch_passes_ui_css_and_forces_cpu_runtime(monkeypatch, reload_mo
     assert "MUJOCO_GL" not in os.environ
 
 
-def test_configure_cpu_only_runtime_autosets_llvmpipe_icd(monkeypatch, reload_module):
+def test_configure_runtime_autosets_llvmpipe_icd(monkeypatch, reload_module):
     original_exists = Path.exists
 
     def fake_exists(self):
@@ -71,6 +69,7 @@ def test_configure_cpu_only_runtime_autosets_llvmpipe_icd(monkeypatch, reload_mo
         return original_exists(self)
 
     monkeypatch.setattr(Path, "exists", fake_exists)
+    monkeypatch.delenv("SPACE_ID", raising=False)
     monkeypatch.delenv("VK_ICD_FILENAMES", raising=False)
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "3")
     monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
@@ -81,7 +80,7 @@ def test_configure_cpu_only_runtime_autosets_llvmpipe_icd(monkeypatch, reload_mo
     main = reload_module("main")
     monkeypatch.delenv("VK_ICD_FILENAMES", raising=False)
 
-    main.configure_cpu_only_runtime()
+    main.configure_runtime()
 
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
@@ -92,16 +91,8 @@ def test_configure_cpu_only_runtime_autosets_llvmpipe_icd(monkeypatch, reload_mo
     assert "MUJOCO_GL" not in os.environ
 
 
-def test_configure_cpu_only_runtime_preserves_existing_vk_icd(monkeypatch, reload_module):
-    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "4")
-    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
-    monkeypatch.setenv("ROBOMME_RENDER_BACKEND", "pci:9")
-    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
-    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "graphics")
-    monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/custom_icd.json")
-    monkeypatch.setenv("MUJOCO_GL", "egl")
-
-    main = reload_module("main")
+def test_configure_runtime_preserves_gpu_env_on_spaces(monkeypatch, reload_module):
+    monkeypatch.setenv("SPACE_ID", "user/demo")
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "5")
     monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
     monkeypatch.setenv("ROBOMME_RENDER_BACKEND", "pci:7")
@@ -110,28 +101,16 @@ def test_configure_cpu_only_runtime_preserves_existing_vk_icd(monkeypatch, reloa
     monkeypatch.setenv("VK_ICD_FILENAMES", "/tmp/preserved_icd.json")
     monkeypatch.setenv("MUJOCO_GL", "egl")
 
-    main.configure_cpu_only_runtime()
-
-    assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
-    assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
-    assert os.environ["ROBOMME_RENDER_BACKEND"] == "pci:0"
-    assert os.environ["VK_ICD_FILENAMES"] == "/tmp/preserved_icd.json"
-    assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
-    assert "SAPIEN_RENDER_DEVICE" not in os.environ
-    assert "MUJOCO_GL" not in os.environ
-
-
-def test_configure_cpu_only_runtime_clears_stale_sapien_render_device(monkeypatch, reload_module):
-    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cpu")
-    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "7")
-    monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
-
     main = reload_module("main")
-    monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda:0")
 
-    main.configure_cpu_only_runtime()
+    result = main.configure_runtime()
 
-    assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
-    assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
-    assert os.environ["ROBOMME_RENDER_BACKEND"] == DEFAULT_CPU_RENDER_BACKEND
-    assert "SAPIEN_RENDER_DEVICE" not in os.environ
+    assert result["mode"] == "spaces"
+    assert result["cpu_only"] is False
+    assert os.environ["CUDA_VISIBLE_DEVICES"] == "5"
+    assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "all"
+    assert os.environ["ROBOMME_RENDER_BACKEND"] == "pci:7"
+    assert os.environ["SAPIEN_RENDER_DEVICE"] == "cuda"
+    assert os.environ["NVIDIA_DRIVER_CAPABILITIES"] == "graphics"
+    assert os.environ["VK_ICD_FILENAMES"] == "/tmp/preserved_icd.json"
+    assert os.environ["MUJOCO_GL"] == "egl"
