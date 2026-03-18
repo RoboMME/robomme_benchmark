@@ -24,7 +24,7 @@ uv sync
 uv run python app.py
 ```
 
-Local runs default to CPU fallback rendering. In Hugging Face ZeroGPU environments, GPU is requested only around the heavy environment functions.
+Local runs default to CPU fallback rendering. In Hugging Face ZeroGPU environments, the Space entrypoint remains root `app.py`, GPU is preserved at runtime, and GPU is requested only around the heavy environment functions via `@spaces.GPU`.
 
 Optional metadata override:
 
@@ -34,8 +34,11 @@ ROBOMME_METADATA_ROOT=src/robomme/env_metadata/train uv run python app.py
 
 Notes:
 - The Spaces entrypoint is root `app.py`.
+- Hugging Face Gradio Spaces install Python dependencies from root `requirements.txt`.
+- Hugging Face Gradio Spaces install Debian/system dependencies from root `packages.txt`.
 - Existing `uv` workflow for training/testing remains unchanged.
 - Space metadata is configured via root `README.md` with `sdk: gradio`.
+- `Dockerfile` and `.dockerignore` are not part of the native Gradio Space startup path.
 
 ## 🚀 Quick Start
 
@@ -137,7 +140,9 @@ A1: Use a physical display or set up a virtual display for GUI rendering (e.g. i
 
 **Q2: Failure related to ManiSkill/SAPIEN rendering initialization.**
 
-A2: This Docker image is configured for CPU-only execution and should not rely on NVIDIA runtime settings. If rendering still fails, first check that no external environment variables are forcing GPU paths, then keep the container on the CPU-only defaults:
+A2: For local development, keep the process on CPU-only defaults unless you are explicitly debugging a GPU path. In Hugging Face ZeroGPU Spaces, do not force `CUDA_VISIBLE_DEVICES=-1`; the Space runtime should preserve GPU visibility and let `@spaces.GPU` allocate hardware only for decorated functions.
+
+Recommended local CPU fallback:
 
 ```python
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'

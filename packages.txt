@@ -1,0 +1,5 @@
+ffmpeg
+libgl1
+libglib2.0-0
+libvulkan1
+mesa-vulkan-drivers
