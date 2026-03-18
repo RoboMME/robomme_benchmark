@@ -20,13 +20,15 @@ DEFAULT_CPU_RENDER_BACKEND = "pci:0"
 CPU_ONLY_ENV_OVERRIDES = {
     "CUDA_VISIBLE_DEVICES": "-1",
     "NVIDIA_VISIBLE_DEVICES": "void",
+}
+RENDER_ENV_OVERRIDES = {
     "ROBOMME_RENDER_BACKEND": DEFAULT_CPU_RENDER_BACKEND,
 }
-CPU_ONLY_ENV_CLEAR_KEYS = (
-    "NVIDIA_DRIVER_CAPABILITIES",
+RENDER_ENV_CLEAR_KEYS = (
     "SAPIEN_RENDER_DEVICE",
     "MUJOCO_GL",
 )
+LOCAL_ONLY_ENV_CLEAR_KEYS = ("NVIDIA_DRIVER_CAPABILITIES",)
 
 
 if str(PROJECT_ROOT) not in sys.path:
@@ -48,15 +50,25 @@ def configure_runtime(logger: logging.Logger | None = None):
     Hugging Face Spaces runs preserve the GPU environment so ZeroGPU can
     allocate hardware on decorated functions.
     """
-    if is_spaces_runtime():
-        if logger is not None:
-            logger.info("Detected Spaces runtime; preserving GPU environment for ZeroGPU")
-        return {"mode": "spaces", "cpu_only": False}
-
     cleared = {}
-    for key, value in CPU_ONLY_ENV_OVERRIDES.items():
+    for key, value in RENDER_ENV_OVERRIDES.items():
         os.environ[key] = value
-    for key in CPU_ONLY_ENV_CLEAR_KEYS:
+
+    if is_spaces_runtime():
+        runtime_mode = "spaces"
+        cpu_only = False
+        if logger is not None:
+            logger.info(
+                "Detected Spaces runtime; preserving GPU visibility for ZeroGPU while forcing CPU Vulkan rendering"
+            )
+    else:
+        runtime_mode = "local"
+        cpu_only = True
+        for key, value in CPU_ONLY_ENV_OVERRIDES.items():
+            os.environ[key] = value
+
+    clear_keys = RENDER_ENV_CLEAR_KEYS + (LOCAL_ONLY_ENV_CLEAR_KEYS if cpu_only else ())
+    for key in clear_keys:
         previous = os.environ.pop(key, None)
         if previous is not None:
             cleared[key] = previous
@@ -69,13 +81,16 @@ def configure_runtime(logger: logging.Logger | None = None):
             vk_icd_status = "unavailable"
     if logger is not None:
         logger.info(
-            "Configured local CPU fallback overrides=%s cleared=%s vk_icd_status=%s vk_icd=%s",
-            CPU_ONLY_ENV_OVERRIDES,
+            "Configured runtime mode=%s cpu_only=%s render_overrides=%s compute_overrides=%s cleared=%s vk_icd_status=%s vk_icd=%s",
+            runtime_mode,
+            cpu_only,
+            RENDER_ENV_OVERRIDES,
+            CPU_ONLY_ENV_OVERRIDES if cpu_only else {},
             cleared,
             vk_icd_status,
             os.environ.get("VK_ICD_FILENAMES"),
         )
-    return {"mode": "local", "cpu_only": True, "cleared": cleared}
+    return {"mode": runtime_mode, "cpu_only": cpu_only, "cleared": cleared}
 
 
 def configure_cpu_only_runtime(logger: logging.Logger | None = None):
