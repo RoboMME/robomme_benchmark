@@ -17,12 +17,10 @@ TEMP_DEMOS_DIR = PROJECT_ROOT / "temp_demos"
 CWD_TEMP_DEMOS_DIR = Path.cwd() / "temp_demos"
 DEFAULT_LLVMPipe_ICD = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 DEFAULT_CPU_RENDER_BACKEND = "cpu"
+DEFAULT_ZEROGPU_RENDER_BACKEND = "cuda"
 CPU_ONLY_ENV_OVERRIDES = {
     "CUDA_VISIBLE_DEVICES": "-1",
     "NVIDIA_VISIBLE_DEVICES": "void",
-}
-RENDER_ENV_OVERRIDES = {
-    "ROBOMME_RENDER_BACKEND": DEFAULT_CPU_RENDER_BACKEND,
 }
 RENDER_ENV_CLEAR_KEYS = (
     "SAPIEN_RENDER_DEVICE",
@@ -42,6 +40,13 @@ def is_spaces_runtime() -> bool:
     return bool(os.getenv("SPACE_ID") or os.getenv("SPACE_HOST"))
 
 
+def resolve_render_backend_for_runtime(*, spaces_runtime: bool) -> str:
+    """Return the default render backend for the active runtime."""
+    return (
+        DEFAULT_ZEROGPU_RENDER_BACKEND if spaces_runtime else DEFAULT_CPU_RENDER_BACKEND
+    )
+
+
 def configure_runtime(logger: logging.Logger | None = None):
     """
     Configure runtime defaults.
@@ -51,19 +56,29 @@ def configure_runtime(logger: logging.Logger | None = None):
     allocate hardware on decorated functions.
     """
     cleared = {}
-    for key, value in RENDER_ENV_OVERRIDES.items():
-        os.environ[key] = value
+    spaces_runtime = is_spaces_runtime()
+    default_render_backend = resolve_render_backend_for_runtime(
+        spaces_runtime=spaces_runtime
+    )
 
-    if is_spaces_runtime():
+    if spaces_runtime:
         runtime_mode = "spaces"
         cpu_only = False
+        render_backend = (
+            str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip()
+            or default_render_backend
+        )
+        os.environ["ROBOMME_RENDER_BACKEND"] = render_backend
         if logger is not None:
             logger.info(
-                "Detected Spaces runtime; preserving GPU visibility for ZeroGPU while forcing CPU Vulkan rendering"
+                "Detected Spaces runtime; preserving GPU visibility for ZeroGPU and defaulting render backend to %s",
+                render_backend,
             )
     else:
         runtime_mode = "local"
         cpu_only = True
+        render_backend = default_render_backend
+        os.environ["ROBOMME_RENDER_BACKEND"] = render_backend
         for key, value in CPU_ONLY_ENV_OVERRIDES.items():
             os.environ[key] = value
 
@@ -73,24 +88,31 @@ def configure_runtime(logger: logging.Logger | None = None):
         if previous is not None:
             cleared[key] = previous
     vk_icd_status = "preserved"
-    if "VK_ICD_FILENAMES" not in os.environ:
+    if cpu_only and "VK_ICD_FILENAMES" not in os.environ:
         if DEFAULT_LLVMPipe_ICD.exists():
             os.environ["VK_ICD_FILENAMES"] = str(DEFAULT_LLVMPipe_ICD)
             vk_icd_status = "auto-set"
         else:
             vk_icd_status = "unavailable"
+    elif not cpu_only and "VK_ICD_FILENAMES" not in os.environ:
+        vk_icd_status = "not-set"
     if logger is not None:
         logger.info(
             "Configured runtime mode=%s cpu_only=%s render_overrides=%s compute_overrides=%s cleared=%s vk_icd_status=%s vk_icd=%s",
             runtime_mode,
             cpu_only,
-            RENDER_ENV_OVERRIDES,
+            {"ROBOMME_RENDER_BACKEND": render_backend},
             CPU_ONLY_ENV_OVERRIDES if cpu_only else {},
             cleared,
             vk_icd_status,
             os.environ.get("VK_ICD_FILENAMES"),
         )
-    return {"mode": runtime_mode, "cpu_only": cpu_only, "cleared": cleared}
+    return {
+        "mode": runtime_mode,
+        "cpu_only": cpu_only,
+        "cleared": cleared,
+        "render_backend": render_backend,
+    }
 
 
 def configure_cpu_only_runtime(logger: logging.Logger | None = None):

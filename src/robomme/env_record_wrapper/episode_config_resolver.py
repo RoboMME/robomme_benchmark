@@ -15,6 +15,7 @@ DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
 _ALLOWED_DATASETS = {"train", "test"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "waypoint", "multi_choice"}
 _DEFAULT_CPU_RENDER_BACKEND = "cpu"
+_DEFAULT_ZEROGPU_RENDER_BACKEND = "cuda"
 _DEFAULT_TASK_LIST = [
     "PickXtimes",
     "StopCube",
@@ -33,6 +34,18 @@ _DEFAULT_TASK_LIST = [
     "PatternLock",
     "RouteStick",
 ]
+
+
+def is_spaces_runtime() -> bool:
+    """Best-effort detection of Hugging Face Spaces runtime."""
+    return bool(os.getenv("SPACE_ID") or os.getenv("SPACE_HOST"))
+
+
+def resolve_default_render_backend() -> str:
+    """Pick runtime default render backend when no explicit override is set."""
+    if is_spaces_runtime():
+        return _DEFAULT_ZEROGPU_RENDER_BACKEND
+    return _DEFAULT_CPU_RENDER_BACKEND
 
 
 def load_episode_metadata(metadata_path: Union[str, Path, None]) -> Dict[Tuple[str, int], Dict[str, object]]:
@@ -88,12 +101,10 @@ def get_episode_metadata(
     return metadata_index.get((task, episode))
 
 
-def resolve_render_backend(default: str = _DEFAULT_CPU_RENDER_BACKEND) -> str:
-    """Resolve the render backend for CPU-only execution.
-
-    Default to SAPIEN's CPU renderer. PCI-style Vulkan device strings remain
-    supported as explicit overrides for environments that require them.
-    """
+def resolve_render_backend(default: Optional[str] = None) -> str:
+    """Resolve the active render backend, honoring explicit env overrides."""
+    if default is None:
+        default = resolve_default_render_backend()
     value = str(os.environ.get("ROBOMME_RENDER_BACKEND", default)).strip()
     return value or default
 

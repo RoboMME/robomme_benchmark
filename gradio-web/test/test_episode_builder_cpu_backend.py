@@ -71,6 +71,47 @@ def test_builder_make_env_for_episode_forces_cpu_backends(monkeypatch, reload_mo
     assert _FakeFailAwareWrapper.last_env is env.env
 
 
+def test_builder_make_env_for_episode_defaults_to_gpu_render_backend_on_spaces(
+    monkeypatch, reload_module
+):
+    monkeypatch.setenv("SPACE_ID", "user/demo")
+    monkeypatch.delenv("ROBOMME_RENDER_BACKEND", raising=False)
+    resolver = reload_module("robomme.env_record_wrapper.episode_config_resolver")
+    captured = {}
+
+    monkeypatch.setitem(
+        sys.modules,
+        "robomme.env_record_wrapper.DemonstrationWrapper",
+        types.SimpleNamespace(DemonstrationWrapper=_FakeDemonstrationWrapper),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "robomme.env_record_wrapper.FailAwareWrapper",
+        types.SimpleNamespace(FailAwareWrapper=_FakeFailAwareWrapper),
+    )
+
+    def fake_make(env_id, **kwargs):
+        captured["env_id"] = env_id
+        captured["kwargs"] = kwargs
+        return _FakeEnv()
+
+    monkeypatch.setattr(resolver.gym, "make", fake_make)
+
+    builder = resolver.BenchmarkEnvBuilder(
+        env_id="BinFill",
+        dataset="train",
+        action_space="joint_angle",
+        gui_render=False,
+    )
+    monkeypatch.setattr(builder, "resolve_episode", lambda episode_idx: (None, None))
+
+    builder.make_env_for_episode(3)
+
+    assert captured["env_id"] == "BinFill"
+    assert captured["kwargs"]["sim_backend"] == "physx_cpu"
+    assert captured["kwargs"]["render_backend"] == "cuda"
+
+
 def test_builder_make_env_for_episode_honors_render_backend_override(monkeypatch, reload_module):
     resolver = reload_module("robomme.env_record_wrapper.episode_config_resolver")
     captured = {}
