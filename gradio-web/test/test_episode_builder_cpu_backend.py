@@ -142,6 +142,19 @@ def test_resolve_render_backend_candidates_skips_gpu_when_worker_lacks_graphics(
     assert candidates == ["cpu"]
 
 
+def test_resolve_render_backend_candidates_prefers_software_render_candidates_when_forced(
+    monkeypatch, reload_module
+):
+    monkeypatch.setenv("SPACE_ID", "user/demo")
+    monkeypatch.setenv("ROBOMME_FORCE_SOFTWARE_RENDER_MODE", "1")
+    monkeypatch.delenv("ROBOMME_RENDER_BACKEND", raising=False)
+    resolver = reload_module("robomme.env_record_wrapper.episode_config_resolver")
+
+    candidates = resolver.resolve_render_backend_candidates()
+
+    assert candidates == ["pci:0000:00:00.0", "cpu"]
+
+
 def test_builder_make_env_for_episode_retries_spaces_render_backend_candidates(
     monkeypatch, reload_module
 ):

@@ -40,28 +40,37 @@ That means the worker can execute CUDA workloads, but it does not expose the gra
    - Mark runtime-injected render backend defaults with `ROBOMME_RENDER_BACKEND_AUTO=1` so downstream code can still treat them as fallbackable defaults rather than hard user overrides.
 
 2. `src/robomme/env_record_wrapper/episode_config_resolver.py`
-   - Make environment creation default to `cuda` rendering in Spaces even if the builder is used outside the normal `main.py` startup path.
-   - Keep local default behavior as `cpu`.
-   - Configure the runtime Vulkan ICD per render attempt:
-     - GPU candidates use NVIDIA Vulkan/EGL ICDs
-     - CPU fallback uses llvmpipe
-   - Retry render backend candidates in Spaces in this order:
-     - `cuda`
-     - `pci:...` derived from the CUDA device when available
+   - Preserve the existing local default behavior.
+   - Add a dedicated software-render mode via `ROBOMME_FORCE_SOFTWARE_RENDER_MODE=1`.
+   - In software-render mode, force llvmpipe and bind SAPIEN candidates in this order:
+     - `pci:0000:00:00.0`
      - `cpu`
-   - On workers without graphics capability, skip the GPU candidates and go straight to the CPU software-render fallback to avoid poisoning the process with a failed Vulkan GPU initialization.
+   - In compute-only Spaces workers, skip GPU Vulkan render candidates entirely.
 
-3. Tests
+3. `gradio-web/software_render_session.py`
+   - Add a clean spawned subprocess backend for software rendering.
+   - The subprocess sets `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json` before importing `oracle_logic`, `robomme`, `sapien`, or `mani_skill`.
+   - It runs a small SAPIEN software-render self-test first, then owns the real `OracleSession`.
+   - The parent process talks to it over a simple RPC pipe and receives state snapshots after each call.
+
+4. `gradio-web/process_session.py`
+   - Split `ProcessSessionProxy` into two runtime modes:
+     - local/in-process session
+     - software-render subprocess session for compute-only ZeroGPU Spaces
+   - Keep the public proxy interface unchanged for callbacks/UI.
+   - Return a clear unsupported message when even llvmpipe software rendering is unavailable.
+
+5. Tests
    - Updated runtime tests to verify:
      - local runs still force CPU fallback
      - Spaces preserve explicit render backend overrides
      - Spaces default to `cuda` render backend when unset
-   - Added an environment-builder test for the Spaces default render backend.
-   - Added a retry-path test covering `cuda` failure followed by successful fallback to the next candidate.
+   - Added environment-builder coverage for forced software-render mode.
+   - Added `ProcessSessionProxy` coverage for compute-only Spaces selecting the software-render subprocess backend and returning explicit unsupported messages.
 
-4. `gradio-web/zerogpu_runtime.py`
+6. `gradio-web/zerogpu_runtime.py`
    - Log the effective ZeroGPU worker runtime once per worker process.
-   - Log SAPIEN's device summary from inside the actual `@spaces.GPU` worker so deployment logs show what render devices were really visible after GPU allocation.
+   - Defer any SAPIEN render probing so the worker does not poison Vulkan initialization before the chosen render runtime is configured.
 
 ## Local Verification
 
@@ -80,6 +89,7 @@ uv run python app.py
 ## Expected ZeroGPU Behavior
 
 - Local development: CPU fallback rendering remains the default.
-- Hugging Face ZeroGPU: heavy environment calls wrapped by `@spaces.GPU` now reconfigure the graphics runtime inside the worker process before environment creation.
-- Spaces first try GPU rendering, then a PCI-address render device when available, and only fall back to software Vulkan if the GPU render path is not actually usable by SAPIEN.
-- On current Hugging Face ZeroGPU MIG workers, logs indicate Vulkan graphics are unavailable, so successful rendering is expected to come from the software fallback path rather than true GPU Vulkan rendering.
+- Hugging Face ZeroGPU compute-only workers no longer attempt SAPIEN GPU Vulkan rendering.
+- Instead, they use a clean llvmpipe software-render subprocess that owns the real `OracleSession`.
+- If llvmpipe works, the Space runs in the requested "ZeroGPU for compute + CPU software rendering for images" mode.
+- If llvmpipe still fails, the UI now returns an explicit unsupported-environment error instead of only surfacing the raw SAPIEN device exception.

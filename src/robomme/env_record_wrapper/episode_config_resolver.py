@@ -13,6 +13,8 @@ from ..logging_utils import logger
 DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
 _DEFAULT_LLVMPipe_ICD = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 _RENDER_BACKEND_AUTO_ENV = "ROBOMME_RENDER_BACKEND_AUTO"
+_FORCE_SOFTWARE_RENDER_MODE_ENV = "ROBOMME_FORCE_SOFTWARE_RENDER_MODE"
+_SOFTWARE_RENDER_CANDIDATES = ["pci:0000:00:00.0", "cpu"]
 
 _ALLOWED_DATASETS = {"train", "test"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "waypoint", "multi_choice"}
@@ -96,6 +98,10 @@ def _gpu_vulkan_rendering_supported() -> bool:
     return "graphics" in capabilities or "all" in capabilities
 
 
+def _forced_software_render_mode() -> bool:
+    return str(os.environ.get(_FORCE_SOFTWARE_RENDER_MODE_ENV) or "").strip() == "1"
+
+
 def _configure_gpu_vulkan_runtime() -> None:
     """Configure Vulkan/EGL ICDs after ZeroGPU has allocated a real GPU worker."""
     vulkan_dir = _resolve_sapien_vulkan_library_dir()
@@ -134,7 +140,7 @@ def _configure_cpu_vulkan_runtime() -> None:
 
 def _apply_render_backend_runtime_env(render_backend: str) -> None:
     normalized = str(render_backend).strip()
-    if normalized == _DEFAULT_CPU_RENDER_BACKEND:
+    if _forced_software_render_mode() or normalized == _DEFAULT_CPU_RENDER_BACKEND:
         _configure_cpu_vulkan_runtime()
         return
     _configure_gpu_vulkan_runtime()
@@ -170,6 +176,10 @@ def resolve_render_backend_candidates(default: Optional[str] = None) -> List[str
     configured = str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip()
     if _is_explicit_render_backend_configured() and configured:
         return [configured]
+
+    if _forced_software_render_mode():
+        _configure_cpu_vulkan_runtime()
+        return _dedupe_render_backends(list(_SOFTWARE_RENDER_CANDIDATES))
 
     if configured:
         default = configured
