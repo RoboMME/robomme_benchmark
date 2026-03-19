@@ -8,18 +8,6 @@ Basically, You need to implement the `step` and `reset` methods.
 
 import numpy as np
 
-BASE_ACTION = np.array(
-    [0.0, 0.0, 0.0, -np.pi / 2, 0.0, np.pi / 2, np.pi / 4, 1.0],
-    dtype=np.float32,
-)
-
-def add_small_noise(
-    action: np.ndarray, noise_level: float = 0.1
-) -> np.ndarray:
-    noise = np.random.normal(0, noise_level, action.shape)
-    noise[..., -1:] = 0.0
-    return action + noise
-
 
 class Policy:
     def infer(self, inputs: dict) -> dict:
@@ -59,6 +47,16 @@ class DummyPolicy(Policy):
     # A random policy that saves video for debugging
     def __init__(self):
         self.chunk_size = 10
+        self.base_action = np.array(
+            [0.0, 0.0, 0.0, -np.pi / 2, 0.0, np.pi / 2, np.pi / 4, 1.0],
+            dtype=np.float32,
+        )
+
+    def _add_small_noise(self, action: np.ndarray, noise_level: float = 0.1) -> np.ndarray:
+        noise = np.random.normal(0, noise_level, action.shape)
+        noise[..., -1:] = 0.0
+        return action + noise
+
 
     def infer(self, inputs: dict):
         """
@@ -68,9 +66,9 @@ class DummyPolicy(Policy):
         """
         if inputs["is_first_step"]:
             self.exec_start_idx = len(inputs["front_rgb_list"]) - 1 # sample id < self.exec_id is the conditioned video frames
-        action_chunk = np.concatenate([BASE_ACTION] * self.chunk_size, axis=0).reshape(-1, 8)
+        action_chunk = np.concatenate([self.base_action] * self.chunk_size, axis=0).reshape(-1, 8)
         
-        return {"actions": add_small_noise(action_chunk)}
+        return {"actions": self._add_small_noise(action_chunk)}
 
     def reset(self):
         self.exec_start_idx = 0
