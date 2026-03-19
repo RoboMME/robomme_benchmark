@@ -1,6 +1,6 @@
 # RoboMME Challenge @ CVPR 2026 FMEA Workshop
 
-### [FMEA Workshop](https://foundation-models-meet-embodied-agents.github.io/cvpr2026/) | [Submission Portal]() | [Submission Example]()
+### [FMEA Workshop](https://foundation-models-meet-embodied-agents.github.io/cvpr2026/) | [Submission Portal]() | [Submission Example](https://github.com/RoboMME/robomme_policy_learning/tree/main?tab=readme-ov-file#robomme-challenge)
 
 
 The RoboMME challenge is part of the **Foundation Models Meet Embodied Agents** workshop at CVPR 2026. Submissions are hosted on [EvalAI](https://eval.ai/).
@@ -22,10 +22,12 @@ challenge_interface/
 2. Implement the `Policy` [class](https://github.com/RoboMME/robomme_benchmark/blob/edc8e8008718d9bf545cfcc2dd3dc2264c903239/src/remote_evaluation/policy.py#L23) by overriding **`infer`** and **`reset`**, and adapt `challenge_interface/scripts/deploy.py` to your needs.
 3. Verify your policy locally:
 ```
+uv sync --group server
+
 # terminal 0
-uv run python -m  challenge_interface.scripts.deploy
+uv run python -m  challenge_interface.scripts.deploy --port 8001
 # terminal 1
-uv run python -m  challenge_interface.scripts.phase1_eval
+uv run python -m  challenge_interface.scripts.phase1_eval --port 8001
 ```
 4. Submit your policy
 

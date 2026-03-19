@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 import argparse
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
-from challenge_inteface.client import PolicyClient
+from challenge_interface.client import PolicyClient
 
 
 

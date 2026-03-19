@@ -4,8 +4,8 @@ This is used by participants to serve their policy.
 Participants may need to modify this file to adapt to their own policy. for example, loading multiple model ckpts.
 """
 
-from challenge_inteface.server import PolicyServer
-from challenge_inteface.policy import DummyPolicy
+from challenge_interface.server import PolicyServer
+from challenge_interface.policy import DummyPolicy
 import argparse
 
 
