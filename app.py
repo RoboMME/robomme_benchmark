@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SRC_DIR = ROOT / "src"
 GRADIO_DIR = ROOT / "gradio-web"
+SKIP_APP_BOOTSTRAP_ENV = "ROBOMME_SKIP_APP_BOOTSTRAP"
 
 for path in (ROOT, SRC_DIR, GRADIO_DIR):
     path_str = str(path)
@@ -22,7 +23,7 @@ os.environ.setdefault("GRADIO_SSR_MODE", "false")
 from main import build_app, main  # noqa: E402
 
 
-demo = build_app()
+demo = None if os.getenv(SKIP_APP_BOOTSTRAP_ENV) == "1" else build_app()
 
 
 if __name__ == "__main__":

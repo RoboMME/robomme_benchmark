@@ -13,6 +13,7 @@ LOGGER = logging.getLogger("robomme.software_render")
 DEFAULT_SOFTWARE_VULKAN_ICD = "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
 SOFTWARE_RENDER_MODE_ENV = "ROBOMME_FORCE_SOFTWARE_RENDER_MODE"
 RENDER_BACKEND_AUTO_ENV = "ROBOMME_RENDER_BACKEND_AUTO"
+SKIP_APP_BOOTSTRAP_ENV = "ROBOMME_SKIP_APP_BOOTSTRAP"
 SOFTWARE_RENDER_CANDIDATES = ["pci:0000:00:00.0", "cpu"]
 
 
@@ -234,12 +235,20 @@ class SoftwareRenderSessionClient:
 
     def _start(self):
         parent_conn, child_conn = self._ctx.Pipe()
+        previous_skip_bootstrap = os.environ.get(SKIP_APP_BOOTSTRAP_ENV)
+        os.environ[SKIP_APP_BOOTSTRAP_ENV] = "1"
         proc = self._ctx.Process(
             target=_software_render_worker_main,
             args=(child_conn, self.dataset_root, self.gui_render),
             daemon=True,
         )
-        proc.start()
+        try:
+            proc.start()
+        finally:
+            if previous_skip_bootstrap is None:
+                os.environ.pop(SKIP_APP_BOOTSTRAP_ENV, None)
+            else:
+                os.environ[SKIP_APP_BOOTSTRAP_ENV] = previous_skip_bootstrap
         child_conn.close()
 
         if not parent_conn.poll(60):
