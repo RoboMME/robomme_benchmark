@@ -114,8 +114,8 @@ for task in TASKS:
             recorder.add_step_obs(obs)
         
         env.close()
-        os.makedirs("saved_videos", exist_ok=True)
-        recorder.save(file_path=f"saved_videos/{task}_ep_{episode}_{outcome}_{task_goal}.mp4")
+        os.makedirs("runs/saved_videos", exist_ok=True)
+        recorder.save(file_path=f"runs/saved_videos/{task}_ep_{episode}_{outcome}_{task_goal}.mp4")
         
 print(f"Evaluation completed.")
 print(f"Success rate: {sum(total_success) / len(total_success)}")

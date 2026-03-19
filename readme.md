@@ -7,17 +7,37 @@
 
 ## 📢 Announcements
 
+[03/2026] We add docker support for installation.  
 [03/2026] We release [wechat](doc/WechatIMG365.jpg) and [discord](https://discord.gg/xbmSqMd4) channel for people to discuss and study.   
 [03/2026] 🎉 We are thrilled to release RoboMME, the first large-scale robotic benchmark dedicated to memory-augmented manipulation! Spanning 4 cognitively motivated task suites with 16 carefully designed tasks, RoboMME pushes robots to remember 🧠, reason 💭, and act ⚡.
 
 ## 📦 Installation
 
-After cloning the repo, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+(1) Using UV  
+After cloning the repo, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
 ```bash
 uv sync
 uv pip install -e .
 ```
+
+(2) Using docker  
+Build the image:
+
+```bash
+docker build -t robomme:cuda12.8 .
+```
+
+Run an interactive shell (videos/logs will be written to host `./runs`):
+
+```bash
+docker run --rm -it --gpus all \
+  -e NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility,video \
+  -v "$PWD/runs:/app/runs" \
+  robomme:cuda12.8
+```
+
+More Docker options (mounting datasets, troubleshooting, etc.) are in [doc/docker_installation.md](doc/docker_installation.md).
 
 ## 🚀 Quick Start
 
@@ -125,6 +145,7 @@ A2: Please refer to the ManiSkill [solution](https://maniskill.readthedocs.io/en
 os.environ['SAPIEN_RENDER_DEVICE'] = 'cpu'
 os.environ['MUJOCO_GL'] = 'osmesa'
 ```
+Alternatively, you can also try to install RoboMME via Docker following the [instruction](doc/docker_installation.md).
 
 
 ## 🙏 Acknowledgements
