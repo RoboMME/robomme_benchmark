@@ -103,13 +103,16 @@ def _configure_software_render_env() -> None:
 def _probe_software_render_backend():
     import sapien
 
-    device_summary = sapien.render.get_device_summary()
     attempts = []
     for backend in SOFTWARE_RENDER_CANDIDATES:
         try:
             device = sapien.Device(backend)
             render_system = sapien.render.RenderSystem(device)
             del render_system
+            try:
+                device_summary = sapien.render.get_device_summary()
+            except Exception as exc:
+                device_summary = f"<unavailable: {exc}>"
             return {
                 "backend": backend,
                 "device_name": getattr(device, "name", None),
@@ -120,10 +123,12 @@ def _probe_software_render_backend():
             attempts.append(f"{backend}: {exc}")
 
     attempts_text = "; ".join(attempts) if attempts else "no candidates tried"
+    vk_icd = os.environ.get("VK_ICD_FILENAMES")
+    vk_icd_exists = Path(vk_icd).exists() if vk_icd else False
     raise SoftwareRenderUnsupportedError(
         "Current Hugging Face ZeroGPU Space only provides compute access, and "
         "SAPIEN software Vulkan rendering is unavailable. Please use a standard GPU Space. "
-        f"Details: {attempts_text}"
+        f"Details: attempts={attempts_text}; VK_ICD_FILENAMES={vk_icd}; icd_exists={vk_icd_exists}"
     )
 
 

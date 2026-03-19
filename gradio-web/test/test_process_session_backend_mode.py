@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import sys
+import types
+
 
 class _FakeSoftwareRenderClient:
     def __init__(self, dataset_root=None, gui_render=False):
@@ -113,3 +116,36 @@ def test_process_session_proxy_load_episode_returns_explicit_software_render_err
     assert img is None
     assert "ZeroGPU Space only provides compute access" in message
     assert "llvmpipe unavailable" in message
+
+
+def test_software_render_probe_does_not_require_device_summary_before_success(
+    monkeypatch, reload_module
+):
+    runtime = reload_module("software_render_session")
+
+    class _FakeDevice:
+        def __init__(self, alias):
+            self.alias = alias
+            self.name = "llvmpipe"
+            self.pci_string = "0000:00:00.0"
+
+    class _FakeRenderModule:
+        @staticmethod
+        def RenderSystem(device):
+            assert device.alias == "pci:0000:00:00.0"
+            return object()
+
+        @staticmethod
+        def get_device_summary():
+            raise RuntimeError("summary unavailable")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "sapien",
+        types.SimpleNamespace(Device=_FakeDevice, render=_FakeRenderModule),
+    )
+
+    result = runtime._probe_software_render_backend()
+
+    assert result["backend"] == "pci:0000:00:00.0"
+    assert result["device_summary"] == "<unavailable: summary unavailable>"
