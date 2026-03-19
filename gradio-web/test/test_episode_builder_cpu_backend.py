@@ -128,6 +128,20 @@ def test_resolve_render_backend_candidates_treats_auto_spaces_default_as_fallbac
     assert candidates == ["cuda", "cpu"]
 
 
+def test_resolve_render_backend_candidates_skips_gpu_when_worker_lacks_graphics(
+    monkeypatch, reload_module
+):
+    monkeypatch.setenv("SPACE_ID", "user/demo")
+    monkeypatch.setenv("ROBOMME_RENDER_BACKEND", "cuda")
+    monkeypatch.setenv("ROBOMME_RENDER_BACKEND_AUTO", "1")
+    monkeypatch.setenv("NVIDIA_DRIVER_CAPABILITIES", "compute,utility")
+    resolver = reload_module("robomme.env_record_wrapper.episode_config_resolver")
+
+    candidates = resolver.resolve_render_backend_candidates()
+
+    assert candidates == ["cpu"]
+
+
 def test_builder_make_env_for_episode_retries_spaces_render_backend_candidates(
     monkeypatch, reload_module
 ):

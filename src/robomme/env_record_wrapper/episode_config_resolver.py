@@ -88,6 +88,14 @@ def _resolve_sapien_vulkan_library_dir() -> Optional[Path]:
     return Path(sapien.__file__).resolve().parent / "vulkan_library"
 
 
+def _gpu_vulkan_rendering_supported() -> bool:
+    capabilities_raw = str(os.environ.get("NVIDIA_DRIVER_CAPABILITIES") or "").strip()
+    if not capabilities_raw:
+        return True
+    capabilities = {token.strip().lower() for token in capabilities_raw.split(",") if token.strip()}
+    return "graphics" in capabilities or "all" in capabilities
+
+
 def _configure_gpu_vulkan_runtime() -> None:
     """Configure Vulkan/EGL ICDs after ZeroGPU has allocated a real GPU worker."""
     vulkan_dir = _resolve_sapien_vulkan_library_dir()
@@ -168,6 +176,12 @@ def resolve_render_backend_candidates(default: Optional[str] = None) -> List[str
 
     candidates = [default]
     if is_spaces_runtime():
+        if default in {"cuda", "gpu"} and not _gpu_vulkan_rendering_supported():
+            logger.warning(
+                "Skipping GPU render backends because NVIDIA_DRIVER_CAPABILITIES=%s does not include graphics",
+                os.environ.get("NVIDIA_DRIVER_CAPABILITIES"),
+            )
+            return [_DEFAULT_CPU_RENDER_BACKEND]
         _apply_render_backend_runtime_env(default)
         if default in {"cuda", "gpu"}:
             pci_backend = _resolve_cuda_pci_render_backend()

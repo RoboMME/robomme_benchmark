@@ -28,6 +28,7 @@ That means the worker can execute CUDA workloads, but it does not expose the gra
 
 - use ZeroGPU for the heavy compute section
 - automatically fall back to software Vulkan rendering when GPU Vulkan is unavailable
+- skip GPU Vulkan attempts entirely when the worker advertises only `compute,utility` without `graphics`
 
 ## Adjustments
 
@@ -48,6 +49,7 @@ That means the worker can execute CUDA workloads, but it does not expose the gra
      - `cuda`
      - `pci:...` derived from the CUDA device when available
      - `cpu`
+   - On workers without graphics capability, skip the GPU candidates and go straight to the CPU software-render fallback to avoid poisoning the process with a failed Vulkan GPU initialization.
 
 3. Tests
    - Updated runtime tests to verify:
