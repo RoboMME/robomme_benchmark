@@ -18,6 +18,17 @@ RuntimeError: Failed to find a supported physical device "cuda:0"
 
 That exposed a second issue specific to ZeroGPU: the app imports RoboMME and SAPIEN in the main Space process before `@spaces.GPU` allocates a real GPU worker. Hugging Face ZeroGPU officially targets "most PyTorch-based GPU Spaces" and warns that compatibility can be limited. In this project, SAPIEN also needs Vulkan/EGL runtime configuration in the worker process, not just PyTorch CUDA access.
 
+From the deployed Space logs, the allocated ZeroGPU worker exposes:
+
+- `CUDA_VISIBLE_DEVICES=MIG-...`
+- `NVIDIA_DRIVER_CAPABILITIES=compute,utility`
+- SAPIEN error: `Your GPU driver does not support Vulkan`
+
+That means the worker can execute CUDA workloads, but it does not expose the graphics/Vulkan capability SAPIEN needs for true GPU rendering. So the practical fix is:
+
+- use ZeroGPU for the heavy compute section
+- automatically fall back to software Vulkan rendering when GPU Vulkan is unavailable
+
 ## Adjustments
 
 1. `gradio-web/main.py`
@@ -25,6 +36,7 @@ That exposed a second issue specific to ZeroGPU: the app imports RoboMME and SAP
    - In Hugging Face Spaces, default `ROBOMME_RENDER_BACKEND` to `cuda` instead of `cpu`.
    - Preserve explicit render backend overrides such as `pci:...`.
    - Stop auto-injecting the `llvmpipe` CPU Vulkan ICD in Spaces when `VK_ICD_FILENAMES` is unset.
+   - Mark runtime-injected render backend defaults with `ROBOMME_RENDER_BACKEND_AUTO=1` so downstream code can still treat them as fallbackable defaults rather than hard user overrides.
 
 2. `src/robomme/env_record_wrapper/episode_config_resolver.py`
    - Make environment creation default to `cuda` rendering in Spaces even if the builder is used outside the normal `main.py` startup path.
@@ -68,3 +80,4 @@ uv run python app.py
 - Local development: CPU fallback rendering remains the default.
 - Hugging Face ZeroGPU: heavy environment calls wrapped by `@spaces.GPU` now reconfigure the graphics runtime inside the worker process before environment creation.
 - Spaces first try GPU rendering, then a PCI-address render device when available, and only fall back to software Vulkan if the GPU render path is not actually usable by SAPIEN.
+- On current Hugging Face ZeroGPU MIG workers, logs indicate Vulkan graphics are unavailable, so successful rendering is expected to come from the software fallback path rather than true GPU Vulkan rendering.

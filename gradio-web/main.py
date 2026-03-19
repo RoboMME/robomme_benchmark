@@ -18,6 +18,7 @@ CWD_TEMP_DEMOS_DIR = Path.cwd() / "temp_demos"
 DEFAULT_LLVMPipe_ICD = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 DEFAULT_CPU_RENDER_BACKEND = "cpu"
 DEFAULT_ZEROGPU_RENDER_BACKEND = "cuda"
+RENDER_BACKEND_AUTO_ENV = "ROBOMME_RENDER_BACKEND_AUTO"
 CPU_ONLY_ENV_OVERRIDES = {
     "CUDA_VISIBLE_DEVICES": "-1",
     "NVIDIA_VISIBLE_DEVICES": "void",
@@ -64,11 +65,13 @@ def configure_runtime(logger: logging.Logger | None = None):
     if spaces_runtime:
         runtime_mode = "spaces"
         cpu_only = False
-        render_backend = (
-            str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip()
-            or default_render_backend
-        )
+        explicit_render_backend = str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip()
+        render_backend = explicit_render_backend or default_render_backend
         os.environ["ROBOMME_RENDER_BACKEND"] = render_backend
+        if explicit_render_backend:
+            os.environ.pop(RENDER_BACKEND_AUTO_ENV, None)
+        else:
+            os.environ[RENDER_BACKEND_AUTO_ENV] = "1"
         if logger is not None:
             logger.info(
                 "Detected Spaces runtime; preserving GPU visibility for ZeroGPU and defaulting render backend to %s",
@@ -77,8 +80,13 @@ def configure_runtime(logger: logging.Logger | None = None):
     else:
         runtime_mode = "local"
         cpu_only = True
+        explicit_render_backend = str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip()
         render_backend = default_render_backend
         os.environ["ROBOMME_RENDER_BACKEND"] = render_backend
+        if explicit_render_backend:
+            os.environ.pop(RENDER_BACKEND_AUTO_ENV, None)
+        else:
+            os.environ[RENDER_BACKEND_AUTO_ENV] = "1"
         for key, value in CPU_ONLY_ENV_OVERRIDES.items():
             os.environ[key] = value
 

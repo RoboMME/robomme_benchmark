@@ -112,6 +112,22 @@ def test_builder_make_env_for_episode_defaults_to_gpu_render_backend_on_spaces(
     assert captured["kwargs"]["render_backend"] == "cuda"
 
 
+def test_resolve_render_backend_candidates_treats_auto_spaces_default_as_fallbackable(
+    monkeypatch, reload_module
+):
+    monkeypatch.setenv("SPACE_ID", "user/demo")
+    monkeypatch.setenv("ROBOMME_RENDER_BACKEND", "cuda")
+    monkeypatch.setenv("ROBOMME_RENDER_BACKEND_AUTO", "1")
+    resolver = reload_module("robomme.env_record_wrapper.episode_config_resolver")
+
+    monkeypatch.setattr(resolver, "_apply_render_backend_runtime_env", lambda render_backend: None)
+    monkeypatch.setattr(resolver, "_resolve_cuda_pci_render_backend", lambda: None)
+
+    candidates = resolver.resolve_render_backend_candidates()
+
+    assert candidates == ["cuda", "cpu"]
+
+
 def test_builder_make_env_for_episode_retries_spaces_render_backend_candidates(
     monkeypatch, reload_module
 ):

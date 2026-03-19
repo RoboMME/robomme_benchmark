@@ -9,6 +9,7 @@ from pathlib import Path
 DEFAULT_LLVMPipe_ICD = "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
 DEFAULT_CPU_RENDER_BACKEND = "cpu"
 DEFAULT_ZEROGPU_RENDER_BACKEND = "cuda"
+RENDER_BACKEND_AUTO_ENV = "ROBOMME_RENDER_BACKEND_AUTO"
 
 
 class _FakeDemo:
@@ -25,6 +26,8 @@ class _FakeDemo:
 
 def test_main_launch_passes_ui_css_and_uses_local_cpu_fallback(monkeypatch, reload_module):
     monkeypatch.delenv("SPACE_ID", raising=False)
+    monkeypatch.delenv("ROBOMME_RENDER_BACKEND", raising=False)
+    monkeypatch.delenv(RENDER_BACKEND_AUTO_ENV, raising=False)
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "2")
     monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
     monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
@@ -55,6 +58,7 @@ def test_main_launch_passes_ui_css_and_uses_local_cpu_fallback(monkeypatch, relo
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
     assert os.environ["ROBOMME_RENDER_BACKEND"] == DEFAULT_CPU_RENDER_BACKEND
+    assert os.environ[RENDER_BACKEND_AUTO_ENV] == "1"
     assert os.environ["VK_ICD_FILENAMES"] == "/tmp/another_nvidia_icd.json"
     assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
     assert "SAPIEN_RENDER_DEVICE" not in os.environ
@@ -71,6 +75,8 @@ def test_configure_runtime_autosets_llvmpipe_icd(monkeypatch, reload_module):
 
     monkeypatch.setattr(Path, "exists", fake_exists)
     monkeypatch.delenv("SPACE_ID", raising=False)
+    monkeypatch.delenv("ROBOMME_RENDER_BACKEND", raising=False)
+    monkeypatch.delenv(RENDER_BACKEND_AUTO_ENV, raising=False)
     monkeypatch.delenv("VK_ICD_FILENAMES", raising=False)
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "3")
     monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
@@ -86,6 +92,7 @@ def test_configure_runtime_autosets_llvmpipe_icd(monkeypatch, reload_module):
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "-1"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "void"
     assert os.environ["ROBOMME_RENDER_BACKEND"] == DEFAULT_CPU_RENDER_BACKEND
+    assert os.environ[RENDER_BACKEND_AUTO_ENV] == "1"
     assert os.environ["VK_ICD_FILENAMES"] == DEFAULT_LLVMPipe_ICD
     assert "NVIDIA_DRIVER_CAPABILITIES" not in os.environ
     assert "SAPIEN_RENDER_DEVICE" not in os.environ
@@ -94,6 +101,7 @@ def test_configure_runtime_autosets_llvmpipe_icd(monkeypatch, reload_module):
 
 def test_configure_runtime_preserves_gpu_env_on_spaces(monkeypatch, reload_module):
     monkeypatch.setenv("SPACE_ID", "user/demo")
+    monkeypatch.delenv(RENDER_BACKEND_AUTO_ENV, raising=False)
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "5")
     monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
     monkeypatch.setenv("ROBOMME_RENDER_BACKEND", "pci:7")
@@ -112,6 +120,7 @@ def test_configure_runtime_preserves_gpu_env_on_spaces(monkeypatch, reload_modul
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "5"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "all"
     assert os.environ["ROBOMME_RENDER_BACKEND"] == "pci:7"
+    assert RENDER_BACKEND_AUTO_ENV not in os.environ
     assert "SAPIEN_RENDER_DEVICE" not in os.environ
     assert os.environ["NVIDIA_DRIVER_CAPABILITIES"] == "graphics"
     assert os.environ["VK_ICD_FILENAMES"] == "/tmp/preserved_icd.json"
@@ -120,6 +129,7 @@ def test_configure_runtime_preserves_gpu_env_on_spaces(monkeypatch, reload_modul
 
 def test_configure_runtime_spaces_defaults_to_gpu_render_backend(monkeypatch, reload_module):
     monkeypatch.setenv("SPACE_ID", "user/demo")
+    monkeypatch.delenv(RENDER_BACKEND_AUTO_ENV, raising=False)
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "6")
     monkeypatch.setenv("NVIDIA_VISIBLE_DEVICES", "all")
     monkeypatch.setenv("SAPIEN_RENDER_DEVICE", "cuda")
@@ -137,6 +147,7 @@ def test_configure_runtime_spaces_defaults_to_gpu_render_backend(monkeypatch, re
     assert os.environ["CUDA_VISIBLE_DEVICES"] == "6"
     assert os.environ["NVIDIA_VISIBLE_DEVICES"] == "all"
     assert os.environ["ROBOMME_RENDER_BACKEND"] == DEFAULT_ZEROGPU_RENDER_BACKEND
+    assert os.environ[RENDER_BACKEND_AUTO_ENV] == "1"
     assert "VK_ICD_FILENAMES" not in os.environ
     assert "SAPIEN_RENDER_DEVICE" not in os.environ
     assert "MUJOCO_GL" not in os.environ

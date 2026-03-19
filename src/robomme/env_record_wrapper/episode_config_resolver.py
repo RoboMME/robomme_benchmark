@@ -12,6 +12,7 @@ from ..logging_utils import logger
 
 DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
 _DEFAULT_LLVMPipe_ICD = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
+_RENDER_BACKEND_AUTO_ENV = "ROBOMME_RENDER_BACKEND_AUTO"
 
 _ALLOWED_DATASETS = {"train", "test"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "waypoint", "multi_choice"}
@@ -50,6 +51,8 @@ def resolve_default_render_backend() -> str:
 
 
 def _is_explicit_render_backend_configured() -> bool:
+    if str(os.environ.get(_RENDER_BACKEND_AUTO_ENV) or "").strip() == "1":
+        return False
     return bool(str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip())
 
 
@@ -156,9 +159,12 @@ def resolve_render_backend_candidates(default: Optional[str] = None) -> List[str
     if default is None:
         default = resolve_default_render_backend()
 
-    explicit = str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip()
-    if explicit:
-        return [explicit]
+    configured = str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip()
+    if _is_explicit_render_backend_configured() and configured:
+        return [configured]
+
+    if configured:
+        default = configured
 
     candidates = [default]
     if is_spaces_runtime():
@@ -237,6 +243,10 @@ def _is_render_device_error(exc: BaseException) -> bool:
     return (
         'Failed to find a supported physical device "' in message
         or 'failed to find device "cuda"' in message
+        or "failed to find a rendering device" in message
+        or "Your GPU driver does not support Vulkan" in message
+        or "vk::createInstanceUnique: ErrorIncompatibleDriver" in message
+        or "ErrorIncompatibleDriver" in message
     )
 
 
