@@ -55,13 +55,9 @@ def _prepare_zerogpu_worker_runtime() -> None:
         "ROBOMME_RENDER_BACKEND": os.getenv("ROBOMME_RENDER_BACKEND"),
     }
     LOGGER.info("ZeroGPU worker runtime snapshot: %s", snapshot)
-
-    try:
-        import sapien
-
-        LOGGER.info("ZeroGPU worker SAPIEN device summary:\n%s", sapien.render.get_device_summary())
-    except Exception as exc:
-        LOGGER.debug("Failed to query SAPIEN device summary in ZeroGPU worker: %s", exc)
+    LOGGER.debug(
+        "Deferring SAPIEN render-device probing until the render backend runtime is configured"
+    )
 
     _WORKER_RUNTIME_LOGGED = True
 
