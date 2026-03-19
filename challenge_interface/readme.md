@@ -7,7 +7,7 @@ The RoboMME challenge is part of the **Foundation Models Meet Embodied Agents** 
 
 All challenge-related files are stored in the current directory.
 ```
-challenge_inteface/
+challenge_interface/
 ├── client.py               Used by organizers
 ├── msgpack_numpy.py        Used by participants
 ├── policy.py               Used by participants (participants must modify the Policy class)
@@ -18,14 +18,14 @@ challenge_inteface/
 ```
 
 ## What participants will do
-1. Copy the `challenge_inteface/` directory into your policy repository.
-2. Implement the `Policy` [class](https://github.com/RoboMME/robomme_benchmark/blob/edc8e8008718d9bf545cfcc2dd3dc2264c903239/src/remote_evaluation/policy.py#L23) by overriding **`infer`** and **`reset`**, and adapt `challenge_inteface/scripts/deploy.py` to your needs.
+1. Copy the `challenge_interface/` directory into your policy repository.
+2. Implement the `Policy` [class](https://github.com/RoboMME/robomme_benchmark/blob/edc8e8008718d9bf545cfcc2dd3dc2264c903239/src/remote_evaluation/policy.py#L23) by overriding **`infer`** and **`reset`**, and adapt `challenge_interface/scripts/deploy.py` to your needs.
 3. Verify your policy locally:
 ```
 # terminal 0
-uv run python -m  challenge_inteface.scripts.deploy
+uv run python -m  challenge_interface.scripts.deploy
 # terminal 1
-uv run python -m  challenge_inteface.scripts.phase1_eval
+uv run python -m  challenge_interface.scripts.phase1_eval
 ```
 4. Submit your policy
 
@@ -55,7 +55,7 @@ Participants need to deploy their policy on their own machine as a server with a
 
 1. Get familiar with the [RoboMME benchmark](https://github.com/RoboMME/robomme_benchmark) and the [MME-VLA policy learning](https://github.com/RoboMME/robomme_policy_learning) repo.
 2. Use the open-source [**val/test set**](https://github.com/RoboMME/robomme_benchmark/blob/0ac6cba0cbfe8ed1612dfbf37b7bedeb4b15a90c/scripts/evaluation.py#L83) as a testbed to develop and debug your models.
-3. Wrap up your policy following the [challenge interface](challenge_inteface/policy.py) and test the policy server locally via `challenge_inteface/scripts`.
+3. Wrap up your policy following the [challenge interface](challenge_interface/policy.py) and test the policy server locally via `challenge_interface/scripts`.
 4. Submit on EvalAI.
 
 
