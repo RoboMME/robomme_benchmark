@@ -1,10 +1,11 @@
 """
 This is used by participants to serve their policy. 
+
 Participants may need to modify this file to adapt to their own policy. for example, loading multiple model ckpts.
 """
 
-from remote_evaluation.server import PolicyServer
-from remote_evaluation.policy import DummyPolicy
+from challenge_inteface.server import PolicyServer
+from challenge_inteface.policy import DummyPolicy
 import argparse
 
 
@@ -13,7 +14,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument(
         "--host",
-        default="141.212.115.116",
+        default="0.0.0.0",
         help="Host/IP to bind the policy server (default: %(default)s).",
     )
     parser.add_argument(

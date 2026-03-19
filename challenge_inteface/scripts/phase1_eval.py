@@ -1,7 +1,8 @@
 """
 Sample script to evaluate participant's remote policy for the challenge.
 
-This is used by RoboMME challenge organizers to evaluate the policy.
+This is used by RoboMME challenge organizers to evaluate the policy for Phase 1.
+
 """
 import collections
 import os
@@ -11,7 +12,10 @@ import cv2
 import numpy as np
 import argparse
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
-from remote_evaluation.client import PolicyClient
+from challenge_inteface.client import PolicyClient
+
+
+
 
 # Participant parameters (you will need to submit this parameters at eval.ai)
 def parse_args() -> argparse.Namespace:
@@ -28,8 +32,9 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Whether to use camera parameters.",
     )
-    parser.add_argument("--host", type=str, default="141.212.115.116", help="Host/IP to connect to the policy server.")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host/IP to connect to the policy server.")
     parser.add_argument("--port", type=int, default=8001, help="Port to connect to the policy server.")
+    parser.add_argument("--team_id", type=str, default="team_0000", help="Team ID.")
     return parser.parse_args()
 
 
@@ -74,6 +79,7 @@ def run_episode(
     use_depth: bool,
     use_camera_params: bool,
     action_space: str,
+    team_id: str,
 ):
     """Run one episode: reset env, stream obs to policy, step until done."""
     
@@ -125,8 +131,9 @@ def run_episode(
     outcome = info.get("status", "unknown")
     env.close()
     del env
-    os.makedirs("test_videos", exist_ok=True)
-    imageio.mimsave(f"test_videos/{env_id}_ep_{episode_idx}_{outcome}.mp4", video_frames, fps=30)
+    VIDEO_OUTPUT_DIR = f"challenge_results/{team_id}"
+    os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
+    imageio.mimsave(f"{VIDEO_OUTPUT_DIR}/{env_id}_ep_{episode_idx}_{outcome}.mp4", video_frames, fps=30)
     return outcome
 
 
@@ -143,7 +150,7 @@ def main() -> None:
             dataset="test",
             action_space=args.action_space,
             gui_render=False,
-            max_steps=1500, # We set 1500 in RoboMME Challenge, should be sufficient enough for all tasks
+            max_steps=200, # We set 1500 in RoboMME Challenge, should be sufficient enough for all tasks
         )
         
         for episode_idx in range(10):
@@ -155,6 +162,7 @@ def main() -> None:
                 use_depth=args.use_depth,
                 use_camera_params=args.use_camera_params,
                 action_space=args.action_space,
+                team_id=args.team_id,
             )
             print(f"Outcome: {outcome}")
 

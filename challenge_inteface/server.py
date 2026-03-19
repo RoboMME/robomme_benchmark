@@ -1,7 +1,7 @@
 """
 Adapted from https://github.com/Physical-Intelligence/openpi/blob/main/src/openpi/serving/websocket_policy_server.py
 
-This is used by participants to serve their policy.
+Participant do not need to modify this file
 """
 
 import asyncio
@@ -34,6 +34,8 @@ class PolicyServer:
         self._metadata = metadata or {}
 
     def serve_forever(self) -> None:
+        print(f"Serving policy on {self._host}:{self._port}...")
+        print("Waiting for client to connect...")
         asyncio.run(self.run())
 
     async def run(self):
