@@ -1,5 +1,6 @@
 """
-This is used by participants to serve their policy.
+This is used by participants to serve their policy. 
+Participants may need to modify this file to adapt to their own policy. for example, loading multiple model ckpts.
 """
 
 from remote_evaluation.server import PolicyServer
