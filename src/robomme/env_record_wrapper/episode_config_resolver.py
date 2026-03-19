@@ -11,6 +11,7 @@ import gymnasium as gym
 from ..logging_utils import logger
 
 DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
+_DEFAULT_LLVMPipe_ICD = Path("/usr/share/vulkan/icd.d/lvp_icd.x86_64.json")
 
 _ALLOWED_DATASETS = {"train", "test"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "waypoint", "multi_choice"}
@@ -46,6 +47,128 @@ def resolve_default_render_backend() -> str:
     if is_spaces_runtime():
         return _DEFAULT_ZEROGPU_RENDER_BACKEND
     return _DEFAULT_CPU_RENDER_BACKEND
+
+
+def _is_explicit_render_backend_configured() -> bool:
+    return bool(str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip())
+
+
+def _normalize_pci_render_backend(pci_string: Optional[str]) -> Optional[str]:
+    if not pci_string:
+        return None
+    pci_string = str(pci_string).strip()
+    if not pci_string:
+        return None
+    if pci_string.startswith("pci:"):
+        return pci_string
+    return f"pci:{pci_string}"
+
+
+def _dedupe_render_backends(backends: List[str]) -> List[str]:
+    deduped: List[str] = []
+    seen = set()
+    for backend in backends:
+        normalized = str(backend).strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(normalized)
+    return deduped
+
+
+def _resolve_sapien_vulkan_library_dir() -> Optional[Path]:
+    try:
+        import sapien
+    except Exception as exc:
+        logger.debug(f"Failed to import SAPIEN while resolving Vulkan library dir: {exc}")
+        return None
+    return Path(sapien.__file__).resolve().parent / "vulkan_library"
+
+
+def _configure_gpu_vulkan_runtime() -> None:
+    """Configure Vulkan/EGL ICDs after ZeroGPU has allocated a real GPU worker."""
+    vulkan_dir = _resolve_sapien_vulkan_library_dir()
+    candidate_vk_icd_paths = [
+        Path("/usr/share/vulkan/icd.d/nvidia_icd.json"),
+        vulkan_dir / "nvidia_icd.json" if vulkan_dir is not None else None,
+    ]
+    for path in candidate_vk_icd_paths:
+        if path is not None and path.exists():
+            os.environ["VK_ICD_FILENAMES"] = str(path)
+            logger.debug(f"Configured GPU Vulkan ICD: {path}")
+            break
+
+    candidate_egl_icd_paths = [
+        Path("/usr/share/glvnd/egl_vendor.d/10_nvidia.json"),
+        Path("/etc/glvnd/egl_vendor.d/10_nvidia.json"),
+        vulkan_dir / "10_nvidia.json" if vulkan_dir is not None else None,
+    ]
+    for path in candidate_egl_icd_paths:
+        if path is not None and path.exists():
+            os.environ["__EGL_VENDOR_LIBRARY_FILENAMES"] = str(path)
+            logger.debug(f"Configured GPU EGL ICD: {path}")
+            break
+
+
+def _configure_cpu_vulkan_runtime() -> None:
+    """Force software Vulkan for CPU rendering fallback."""
+    if _DEFAULT_LLVMPipe_ICD.exists():
+        os.environ["VK_ICD_FILENAMES"] = str(_DEFAULT_LLVMPipe_ICD)
+        logger.debug(f"Configured CPU Vulkan ICD: {_DEFAULT_LLVMPipe_ICD}")
+    else:
+        logger.debug(
+            f"CPU Vulkan ICD not found at {_DEFAULT_LLVMPipe_ICD}; cpu render fallback may still fail"
+        )
+
+
+def _apply_render_backend_runtime_env(render_backend: str) -> None:
+    normalized = str(render_backend).strip()
+    if normalized == _DEFAULT_CPU_RENDER_BACKEND:
+        _configure_cpu_vulkan_runtime()
+        return
+    _configure_gpu_vulkan_runtime()
+
+
+def _resolve_cuda_pci_render_backend() -> Optional[str]:
+    try:
+        import sapien
+    except Exception as exc:
+        logger.debug(f"Failed to import SAPIEN while resolving CUDA PCI backend: {exc}")
+        return None
+
+    try:
+        cuda_device = sapien.Device("cuda")
+    except Exception as exc:
+        logger.debug(f"Failed to construct SAPIEN CUDA device while resolving PCI backend: {exc}")
+        return None
+
+    pci_backend = _normalize_pci_render_backend(getattr(cuda_device, "pci_string", None))
+    if pci_backend:
+        logger.debug(
+            f"Resolved SAPIEN CUDA device name={getattr(cuda_device, 'name', '?')} "
+            f"cuda_id={getattr(cuda_device, 'cuda_id', '?')} pci_backend={pci_backend}"
+        )
+    return pci_backend
+
+
+def resolve_render_backend_candidates(default: Optional[str] = None) -> List[str]:
+    """Return ordered render backend candidates for the active runtime."""
+    if default is None:
+        default = resolve_default_render_backend()
+
+    explicit = str(os.environ.get("ROBOMME_RENDER_BACKEND") or "").strip()
+    if explicit:
+        return [explicit]
+
+    candidates = [default]
+    if is_spaces_runtime():
+        _apply_render_backend_runtime_env(default)
+        if default in {"cuda", "gpu"}:
+            pci_backend = _resolve_cuda_pci_render_backend()
+            if pci_backend is not None:
+                candidates.append(pci_backend)
+        candidates.append(_DEFAULT_CPU_RENDER_BACKEND)
+    return _dedupe_render_backends(candidates)
 
 
 def load_episode_metadata(metadata_path: Union[str, Path, None]) -> Dict[Tuple[str, int], Dict[str, object]]:
@@ -107,6 +230,14 @@ def resolve_render_backend(default: Optional[str] = None) -> str:
         default = resolve_default_render_backend()
     value = str(os.environ.get("ROBOMME_RENDER_BACKEND", default)).strip()
     return value or default
+
+
+def _is_render_device_error(exc: BaseException) -> bool:
+    message = str(exc)
+    return (
+        'Failed to find a supported physical device "' in message
+        or 'failed to find device "cuda"' in message
+    )
 
 
 class BenchmarkEnvBuilder:
@@ -218,7 +349,6 @@ class BenchmarkEnvBuilder:
             render_mode=self.render_mode,
             reward_mode="dense",
             sim_backend="physx_cpu",
-            render_backend=resolve_render_backend(),
         )
         if seed is not None:
             env_kwargs["seed"] = seed
@@ -227,8 +357,39 @@ class BenchmarkEnvBuilder:
         seed_desc = seed if seed is not None else "default"
         difficulty_str = f", difficulty={difficulty_hint}" if difficulty_hint else ""
         logger.debug(f"[{self.env_id}] Episode {episode_idx}: seed={seed_desc}{difficulty_str}")
+        render_backends = resolve_render_backend_candidates()
+        logger.debug(
+            f"[{self.env_id}] Episode {episode_idx}: render backend candidates={render_backends} "
+            f"explicit_override={_is_explicit_render_backend_configured()} "
+            f"vk_icd={os.environ.get('VK_ICD_FILENAMES')} "
+            f"egl_icd={os.environ.get('__EGL_VENDOR_LIBRARY_FILENAMES')}"
+        )
 
-        env = gym.make(self.env_id, **env_kwargs)
+        env = None
+        last_render_exc: Optional[RuntimeError] = None
+        for render_backend in render_backends:
+            attempt_kwargs = dict(env_kwargs, render_backend=render_backend)
+            _apply_render_backend_runtime_env(render_backend)
+            try:
+                env = gym.make(self.env_id, **attempt_kwargs)
+                if render_backend != render_backends[0]:
+                    logger.warning(
+                        f"[{self.env_id}] Episode {episode_idx}: switched render backend "
+                        f"from {render_backends[0]} to {render_backend}"
+                    )
+                break
+            except RuntimeError as exc:
+                if not _is_render_device_error(exc) or _is_explicit_render_backend_configured():
+                    raise
+                last_render_exc = exc
+                logger.warning(
+                    f"[{self.env_id}] Episode {episode_idx}: render backend {render_backend} failed: {exc}"
+                )
+                continue
+        if env is None:
+            assert last_render_exc is not None
+            raise last_render_exc
+
         force_front_camera_params = self.action_space == "multi_choice"
         include_front_camera_extrinsic_effective = (
             include_front_camera_extrinsic or force_front_camera_params

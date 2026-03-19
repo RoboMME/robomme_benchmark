@@ -112,6 +112,54 @@ def test_builder_make_env_for_episode_defaults_to_gpu_render_backend_on_spaces(
     assert captured["kwargs"]["render_backend"] == "cuda"
 
 
+def test_builder_make_env_for_episode_retries_spaces_render_backend_candidates(
+    monkeypatch, reload_module
+):
+    monkeypatch.setenv("SPACE_ID", "user/demo")
+    monkeypatch.delenv("ROBOMME_RENDER_BACKEND", raising=False)
+    resolver = reload_module("robomme.env_record_wrapper.episode_config_resolver")
+    attempts = []
+
+    monkeypatch.setitem(
+        sys.modules,
+        "robomme.env_record_wrapper.DemonstrationWrapper",
+        types.SimpleNamespace(DemonstrationWrapper=_FakeDemonstrationWrapper),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "robomme.env_record_wrapper.FailAwareWrapper",
+        types.SimpleNamespace(FailAwareWrapper=_FakeFailAwareWrapper),
+    )
+
+    monkeypatch.setattr(
+        resolver,
+        "resolve_render_backend_candidates",
+        lambda default=None: ["cuda", "pci:0000:65:00.0", "cpu"],
+    )
+    monkeypatch.setattr(resolver, "_apply_render_backend_runtime_env", lambda render_backend: None)
+
+    def fake_make(env_id, **kwargs):
+        attempts.append(kwargs["render_backend"])
+        if kwargs["render_backend"] == "cuda":
+            raise RuntimeError('Failed to find a supported physical device "cuda:0"')
+        return _FakeEnv()
+
+    monkeypatch.setattr(resolver.gym, "make", fake_make)
+
+    builder = resolver.BenchmarkEnvBuilder(
+        env_id="BinFill",
+        dataset="train",
+        action_space="joint_angle",
+        gui_render=False,
+    )
+    monkeypatch.setattr(builder, "resolve_episode", lambda episode_idx: (None, None))
+
+    env = builder.make_env_for_episode(9)
+
+    assert attempts == ["cuda", "pci:0000:65:00.0"]
+    assert _FakeFailAwareWrapper.last_env is env.env
+
+
 def test_builder_make_env_for_episode_honors_render_backend_override(monkeypatch, reload_module):
     resolver = reload_module("robomme.env_record_wrapper.episode_config_resolver")
     captured = {}
