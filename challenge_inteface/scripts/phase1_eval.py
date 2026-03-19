@@ -35,6 +35,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host/IP to connect to the policy server.")
     parser.add_argument("--port", type=int, default=8001, help="Port to connect to the policy server.")
     parser.add_argument("--team_id", type=str, default="team_0000", help="Team ID.")
+    parser.add_argument("--max_steps", type=int, default=1500, help="Maximum number of steps per episode. We set 1500 for RoboMME Challenge.")
+    parser.add_argument("--num_episodes", type=int, default=10, help="Number of episodes to evaluate. We will use 10 for RoboMME Challenge Phase 1 evaluation")
     return parser.parse_args()
 
 
@@ -46,14 +48,18 @@ EXPECTED_ACTION_SHAPES = {
 }
 
 
-def _build_inputs(obs, task_goal):
+def _build_inputs(obs, info, use_camera_params):
     """Build the observation buffer sent to the remote policy server."""
     buffer = {
-        "task_goal": task_goal,
+        "task_goal": info["task_goal"],
         "is_first_step": True,
     }
     for key in obs:
         buffer[key] = obs[key]
+        
+    if use_camera_params:
+        buffer["front_camera_intrinsic"] = info["front_camera_intrinsic"]
+        buffer["wrist_camera_intrinsic"] = info["wrist_camera_intrinsic"]
     return buffer
 
 
@@ -99,8 +105,7 @@ def run_episode(
     )
     action_plan = collections.deque()
     obs, info = env.reset()
-    task_goal = info["task_goal"]
-    inputs = _build_inputs(obs, task_goal)
+    inputs = _build_inputs(obs, info, use_camera_params)
     expected_shape = EXPECTED_ACTION_SHAPES[action_space]
     
     video_frames = []
@@ -149,11 +154,10 @@ def main() -> None:
             env_id=env_id,
             dataset="test",
             action_space=args.action_space,
-            gui_render=False,
-            max_steps=200, # We set 1500 in RoboMME Challenge, should be sufficient enough for all tasks
+            max_steps=args.max_steps,
         )
         
-        for episode_idx in range(10):
+        for episode_idx in range(args.num_episodes):
             outcome = run_episode(
                 client,
                 env_builder,

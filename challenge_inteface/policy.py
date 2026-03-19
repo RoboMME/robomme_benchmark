@@ -22,23 +22,23 @@ def add_small_noise(
 
 
 class Policy:
-    def infer(self, inputs: dict):
+    def infer(self, inputs: dict) -> dict:
         """
         The `inputs` is a dict of observations, which includes:
-        - task_goal: the goal of the task
-        - is_first_step: whether the current step is the first step
-        - front_rgb_list: the list of front camera RGB frames
-        - wrist_rgb_list: the list of wrist camera RGB frames
-        - joint_state_list: the list of joint states
-        - eef_state_list: the list of end-effector states
-        - gripper_state_list: the list of gripper states
+        - task_goal (list[str]): a list of the possible task goals
+        - is_first_step (bool): whether the current step is the first step
+        - front_rgb_list (list[np.ndarray]): the list of front camera RGB frames
+        - wrist_rgb_list (list[np.ndarray]): the list of wrist camera RGB frames
+        - joint_state_list (list[np.ndarray]): the list of joint states
+        - eef_state_list (list[np.ndarray]): the list of end-effector states
+        - gripper_state_list (list[np.ndarray]): the list of gripper states
             
-        - (optional) front_depth_list: the list of front camera depth frames. return only when you select `use_depth` in EvalAI.
-        - (optional) wrist_depth_list: the list of wrist camera depth frames. return only when you select `use_depth` in EvalAI.
-        - (optional) front_camera_intrinsic: the intrinsic matrix of the front camera. return only when you select `use_camera_params` in EvalAI.
-        - (optional) wrist_camera_intrinsic: the intrinsic matrix of the wrist camera. return only when you select `use_camera_params` in EvalAI.
-        - (optional) front_camera_extrinsic_list: the list of extrinsic matrix of the front camera. return only when you select `use_camera_params` in EvalAI.
-        - (optional) wrist_camera_extrinsic_list: the list of extrinsic matrix of the wrist camera. return only when you select `use_camera_params` in EvalAI.
+        - (optional) front_depth_list (list[np.ndarray]): the list of front camera depth frames. return only when you select `use_depth` in EvalAI.
+        - (optional) wrist_depth_list (list[np.ndarray]): the list of wrist camera depth frames. return only when you select `use_depth` in EvalAI.
+        - (optional) front_camera_intrinsic (np.ndarray): the intrinsic matrix of the front camera. return only when you select `use_camera_params` in EvalAI.
+        - (optional) wrist_camera_intrinsic (np.ndarray): the intrinsic matrix of the wrist camera. return only when you select `use_camera_params` in EvalAI.
+        - (optional) front_camera_extrinsic_list (list[np.ndarray]): the list of extrinsic matrix of the front camera. return only when you select `use_camera_params` in EvalAI.
+        - (optional) wrist_camera_extrinsic_list (list[np.ndarray]): the list of extrinsic matrix of the wrist camera. return only when you select `use_camera_params` in EvalAI.
         
         
         The output is a dict of action chunk: {"actions": np.ndarray}
@@ -51,7 +51,7 @@ class Policy:
     def reset(self) -> None:
         """
         Reset the policy. If your policy is stateful, you need to reset your model state here.
-        The organizers will call this at the beginning of each episode.
+        The organizers will call this at the beginning of each test episode.
         """
         raise NotImplementedError
  
@@ -69,6 +69,7 @@ class DummyPolicy(Policy):
         if inputs["is_first_step"]:
             self.exec_start_idx = len(inputs["front_rgb_list"]) - 1 # sample id < self.exec_id is the conditioned video frames
         action_chunk = np.concatenate([BASE_ACTION] * self.chunk_size, axis=0).reshape(-1, 8)
+        
         return {"actions": add_small_noise(action_chunk)}
 
     def reset(self):

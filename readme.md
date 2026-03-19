@@ -7,6 +7,7 @@
 
 ## 📢 Announcements
 
+[03/2026] 🚀 RoboMME Challenge is live at CVPR 2026! 🤖 Check our [website](https://robomme.github.io/challenge.html) and the [`challenge_inteface`](challenge_inteface) directory for all the details. Let’s build sharper memory-augmented robotic generalists together! 💪
 [03/2026] We add docker support for installation.  
 [03/2026] We release [wechat](doc/WechatIMG365.jpg) and [discord](https://discord.gg/xbmSqMd4) channel for people to discuss and study.   
 [03/2026] 🎉 We are thrilled to release RoboMME, the first large-scale robotic benchmark dedicated to memory-augmented manipulation! Spanning 4 cognitively motivated task suites with 16 carefully designed tasks, RoboMME pushes robots to remember 🧠, reason 💭, and act ⚡.
