@@ -32,7 +32,7 @@ ENV UV_LINK_MODE=copy \
 
 RUN mkdir -p "${XDG_RUNTIME_DIR}" /runs
 
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock LICENSE ./
 RUN uv sync --frozen --no-dev --group server --no-install-project --python 3.11
 
 COPY src ./src
