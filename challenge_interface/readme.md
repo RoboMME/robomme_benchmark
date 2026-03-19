@@ -33,11 +33,11 @@ uv run python -m  challenge_interface.scripts.phase1_eval --port 8001
 
 Go to the [EvalAI website]() to provide the required participant information (deadline May 15). We provide two options for hosting your policy:
 
-Way 1: via Docker (recommended)  
-Participants need to build a Docker image to package their policy. The organizers will pull the image and host it on their machine. We provide a submission example [here](https://github.com/RoboMME/robomme_policy_learning/tree/main?tab=readme-ov-file#robomme-challenge) using the MME-VLA model.
+Option 1: via Docker (recommended)  
+Participants need to build a Docker image to package their policy. The organizers will pull the image and host it on their machine. We provide a submission example [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_docker.md) using the MME-VLA model.
 
-Way 2: via remote API  
-Participants need to deploy their policy on their own machine as a server with a public IP. The organizers will query the hostname and evaluate remotely. This approach is used for more complicated systems that are difficult to package into a single Docker image.
+Option 2: via remote API  
+Participants need to deploy their policy on their own machine as a server with a public IP. The organizers will query the hostname and evaluate remotely. This approach is used for more complicated systems that are difficult to package into a single Docker image. We provide a submission example [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_remote.md) using the MME-VLA model.
 
 
 ## Timeline
