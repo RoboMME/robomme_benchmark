@@ -145,6 +145,7 @@ A2: Please refer to the ManiSkill [solution](https://maniskill.readthedocs.io/en
 os.environ['SAPIEN_RENDER_DEVICE'] = 'cpu'
 os.environ['MUJOCO_GL'] = 'osmesa'
 ```
+Alternatively, you can also try to install RoboMME via Docker following the [instruction](doc/docker_installation.md).
 
 
 ## 🙏 Acknowledgements
