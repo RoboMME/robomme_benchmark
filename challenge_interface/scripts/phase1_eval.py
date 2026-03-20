@@ -5,6 +5,8 @@ This is used by RoboMME challenge organizers to evaluate the policy for Phase 1.
 
 """
 import collections
+import hashlib
+import json
 import os
 import time
 import imageio
@@ -47,6 +49,37 @@ EXPECTED_ACTION_SHAPES = {
     "waypoint": (7,),
 }
 
+def _is_success(outcome: object) -> bool:
+    """
+    Best-effort success detection across possible status strings.
+    """
+    if outcome is None:
+        return False
+    s = str(outcome).strip().lower()
+    return s == "success" or ("success" in s and "fail" not in s)
+
+
+def _config_fingerprint(config: dict) -> str:
+    normalized = json.dumps(config, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(normalized).hexdigest()
+
+
+def _load_json(path: str) -> dict | None:
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _save_json_atomic(path: str, obj: dict) -> None:
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, indent=2, ensure_ascii=False)
+    os.replace(tmp_path, path)
+
 
 def _build_inputs(obs, info, use_camera_params):
     """Build the observation buffer sent to the remote policy server."""
@@ -85,7 +118,6 @@ def run_episode(
     use_depth: bool,
     use_camera_params: bool,
     action_space: str,
-    team_id: str,
 ):
     """Run one episode: reset env, stream obs to policy, step until done."""
     
@@ -136,10 +168,7 @@ def run_episode(
     outcome = info.get("status", "unknown")
     env.close()
     del env
-    VIDEO_OUTPUT_DIR = f"challenge_results/{team_id}"
-    os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
-    imageio.mimsave(f"{VIDEO_OUTPUT_DIR}/{env_id}_ep_{episode_idx}_{outcome}.mp4", video_frames, fps=30)
-    return outcome
+    return outcome, video_frames, info["task_goal"][0]
 
 
 def main() -> None:
@@ -148,17 +177,70 @@ def main() -> None:
         f"ACTION_SPACE must be one of {VALID_ACTION_SPACES}"
     )
     client = PolicyClient(host=args.host, port=args.port)
-    
-    for env_id in BenchmarkEnvBuilder.get_task_list():
+
+    output_dir = f"challenge_results/{args.team_id}"
+    os.makedirs(output_dir, exist_ok=True)
+
+    video_output_dir = os.path.join(output_dir, "videos")
+    os.makedirs(video_output_dir, exist_ok=True)
+
+    progress_path = os.path.join(output_dir, "progress.json")
+    metrics_path = os.path.join(output_dir, "metrics.json")
+
+    config = {
+        "action_space": args.action_space,
+        "use_depth": bool(args.use_depth),
+        "use_camera_params": bool(args.use_camera_params),
+        "num_episodes": int(args.num_episodes),
+        "max_steps": int(args.max_steps),
+        "host": args.host,
+        "port": int(args.port),
+        "dataset": "test",
+    }
+    config_fp = _config_fingerprint(config)
+
+    progress = _load_json(progress_path)
+    if progress is None or progress.get("config_fingerprint") != config_fp:
+        progress = {
+            "team_id": args.team_id,
+            "config": config,
+            "config_fingerprint": config_fp,
+            "completed": {},  # {task_id: {episode_idx(str): {"outcome": str, "video_path": str}}}
+            "current": {"task_id": None, "episode_idx": None, "outcome": None},
+            "finished": False,
+            "metrics": None,
+            "updated_at": time.time(),
+        }
+        _save_json_atomic(progress_path, progress)
+
+    task_list = BenchmarkEnvBuilder.get_task_list()
+    for env_id in task_list:
         env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
             dataset="test",
             action_space=args.action_space,
             max_steps=args.max_steps,
         )
-        
+
         for episode_idx in range(args.num_episodes):
-            outcome = run_episode(
+            completed_for_task = progress["completed"].setdefault(env_id, {})
+            ep_key = str(episode_idx)
+            if ep_key in completed_for_task:
+                progress["current"] = {
+                    "task_id": env_id,
+                    "episode_idx": episode_idx,
+                    "outcome": completed_for_task[ep_key].get("outcome", None),
+                }
+                progress["updated_at"] = time.time()
+                _save_json_atomic(progress_path, progress)
+                print(f"[SKIP] {env_id} episode {episode_idx} already completed.")
+                continue
+
+            progress["current"] = {"task_id": env_id, "episode_idx": episode_idx, "outcome": None}
+            progress["updated_at"] = time.time()
+            _save_json_atomic(progress_path, progress)
+
+            outcome, video_frames, task_goal = run_episode(
                 client,
                 env_builder,
                 episode_idx,
@@ -166,9 +248,71 @@ def main() -> None:
                 use_depth=args.use_depth,
                 use_camera_params=args.use_camera_params,
                 action_space=args.action_space,
-                team_id=args.team_id,
             )
-            print(f"Outcome: {outcome}")
+
+            video_path = os.path.join(
+                video_output_dir,
+                f"{env_id}_ep_{episode_idx}_{outcome}_{task_goal}.mp4",
+            )
+            imageio.mimsave(video_path, video_frames, fps=30)
+            print(f"Outcome: {outcome} (task={env_id}, episode={episode_idx})")
+
+            completed_for_task[ep_key] = {"outcome": outcome, "video_path": video_path}
+            progress["current"]["outcome"] = outcome
+            progress["updated_at"] = time.time()
+            _save_json_atomic(progress_path, progress)
+
+    # When all tasks/episodes are done, write metrics.
+    all_done = True
+    for env_id in task_list:
+        completed_for_task = progress.get("completed", {}).get(env_id, {})
+        for episode_idx in range(args.num_episodes):
+            if str(episode_idx) not in completed_for_task:
+                all_done = False
+                break
+        if not all_done:
+            break
+
+    if all_done:
+        per_task_metrics = {}
+        total_success = 0
+        total_episodes = len(task_list) * args.num_episodes
+
+        for env_id in task_list:
+            completed_for_task = progress["completed"].get(env_id, {})
+            success_count = 0
+            for episode_idx in range(args.num_episodes):
+                outcome = completed_for_task[str(episode_idx)].get("outcome", None)
+                if _is_success(outcome):
+                    success_count += 1
+            avg_success = success_count / max(1, args.num_episodes)
+            per_task_metrics[env_id] = {
+                "avg_success": avg_success,
+                "success_count": success_count,
+                "num_episodes": args.num_episodes,
+            }
+            total_success += success_count
+
+        overall_avg_success = total_success / max(1, total_episodes)
+        metrics = {
+            "team_id": args.team_id,
+            "config": config,
+            "per_task": per_task_metrics,
+            "overall": {
+                "avg_success": overall_avg_success,
+                "total_success": total_success,
+                "total_episodes": total_episodes,
+            },
+            "updated_at": time.time(),
+        }
+
+        _save_json_atomic(metrics_path, metrics)
+        progress["finished"] = True
+        progress["metrics"] = metrics
+        progress["updated_at"] = time.time()
+        _save_json_atomic(progress_path, progress)
+    else:
+        print("Evaluation not finished yet; metrics.json will be written once all tasks/episodes are complete.")
 
 
 if __name__ == "__main__":

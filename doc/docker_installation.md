@@ -65,10 +65,10 @@ docker run --rm -it --gpus all \
   robomme:cuda12.8
 ```
 `-e` sets an environment variable inside the container (e.g., `NVIDIA_DRIVER_CAPABILITIES`).  
-`-v` mounts a host path into the container (volume mount).    
+`-v` mounts a host path into the container (a volume mount). Here we mount the host directories `./runs` and `$robomme_data_path` to the container paths `/app/runs` and `/app/data/robomme_data_h5` (read-only via `:ro` when specified).  
+You can adapt these parameters to your needs. Inside the container, `/app` is the main directory of the repo.  
 
-
-Run sample scripts
+Run sample scripts to check
 ```
 uv run ./scripts/run_example.py
 ```

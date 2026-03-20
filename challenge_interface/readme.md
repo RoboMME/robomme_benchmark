@@ -3,7 +3,8 @@
 ### [FMEA Workshop](https://foundation-models-meet-embodied-agents.github.io/cvpr2026/) | [Submission Portal]() | [Submission Example](https://github.com/RoboMME/robomme_policy_learning/tree/main?tab=readme-ov-file#robomme-challenge)
 
 
-The RoboMME challenge is part of the **Foundation Models Meet Embodied Agents** workshop at CVPR 2026. Submissions are hosted on [EvalAI](https://eval.ai/).
+The RoboMME challenge is part of the **Foundation Models Meet Embodied Agents** workshop at CVPR 2026.   
+Submissions are hosted on [EvalAI](https://eval.ai/).
 
 All challenge-related files are stored in the current directory.
 ```
@@ -29,15 +30,21 @@ uv run python -m  challenge_interface.scripts.deploy --port 8001
 # terminal 1
 uv run python -m  challenge_interface.scripts.phase1_eval --port 8001
 ```
-4. Submit your policy
+4. Submit your policy.
 
-Go to the [EvalAI website]() to provide the required participant information (deadline May 15). We provide two options for hosting your policy:
+Go to the [EvalAI website]() to provide the required participant information (deadline May 15). We provide two options for hosting your policy.
 
-Option 1: via Docker (recommended)  
-Participants need to build a Docker image to package their policy. The organizers will pull the image and host it on their machine. We provide a submission example [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_docker.md) using the MME-VLA model.
+**Choose one way to host your policy:**
 
-Option 2: via remote API  
-Participants need to deploy their policy on their own machine as a server with a public IP. The organizers will query the hostname and evaluate remotely. This approach is used for more complicated systems that are difficult to package into a single Docker image. We provide a submission example [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_remote.md) using the MME-VLA model.
+**Option 1 (Recommended): via Docker**
+- Participants build a Docker image packaging their policy.
+- Organizers pull the image and host it on their machine.
+- Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_docker.md) (MME-VLA model).
+
+**Option 2: via remote API**
+- Participants deploy their policy on their own machine as a server with a public IP.
+- Organizers query the hostname and run evaluation remotely.
+- Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_remote.md) (MME-VLA model).
 
 
 ## Timeline
