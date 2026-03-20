@@ -68,6 +68,12 @@ Go to the [EvalAI website]() to provide the required participant information (de
 4. Submit on EvalAI.
 
 
+
 ## Acknowledgement
 
 We greatly appreciate the Foundation Models Meet Embodied Agents workshop at CVPR 2026 for hosting our challenge, and we thank Figure AI for sponsoring it!
+
+
+## Contact
+
+If you have anything to ask, please email hongzefu@umich.edu  and cc daiyp@umich.edu. We also provide wechat and discord channel link on our project website, you can join for latest news.

@@ -2,6 +2,11 @@
 This is used by participants to serve their policy. 
 
 Participants may need to modify this file to adapt to their own policy. for example, loading multiple model ckpts.
+
+Provide an example usage here if using docker submission:
+
+...
+
 """
 
 from challenge_interface.server import PolicyServer
