@@ -50,11 +50,11 @@ Go to the [EvalAI website]() to provide the required participant information (de
 ## Timeline
 - **March-May 15**: Develop your policy and test the policy server locally.
 - **May 15**: Deadline to submit the required information on the EvalAI portal.
-- **May 15–May 25**: Phase 1 partial evaluation (stability & correctness).
+- **May 15–May 25**: Phase 1 partial evaluation (check stability & correctness).
   - We verify that your Docker image / remote server is stable and runs as expected.
-  - If we find issues, we will contact you. You are allowed to update your models or Docker images at most three times during this period.
+  - If we find issues, we will contact you. You are allowed to update your models or Docker images.
   - We will choose the top 5-10 teams to move on, depending on the total number of participants.
-- **May 26**: Deadline to finalize fixes for your models and deployment.
+- **May 26**: Deadline to finalize your models and deployment.
 - **May 26–June 2**: Phase 2 full evaluation.
   - We evaluate on held-out episodes for selected teams.
 - **June 3**: Winner announcement at the FMEA workshop.
@@ -64,7 +64,7 @@ Go to the [EvalAI website]() to provide the required participant information (de
 
 1. Get familiar with the [RoboMME benchmark](https://github.com/RoboMME/robomme_benchmark) and the [MME-VLA policy learning](https://github.com/RoboMME/robomme_policy_learning) repo.
 2. Use the open-source [**val/test set**](https://github.com/RoboMME/robomme_benchmark/blob/0ac6cba0cbfe8ed1612dfbf37b7bedeb4b15a90c/scripts/evaluation.py#L83) as a testbed to develop and debug your models.
-3. Wrap up your policy following the [challenge interface](challenge_interface/policy.py) and test the policy server locally via `challenge_interface/scripts`.
+3. Wrap up your policy following the [challenge interface](https://github.com/RoboMME/robomme_benchmark/challenge_interface/policy.py) and test the policy server locally via `challenge_interface/scripts`.
 4. Submit on EvalAI.
 
 
