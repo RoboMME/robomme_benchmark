@@ -15,6 +15,7 @@ import numpy as np
 import argparse
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
 from challenge_interface.client import PolicyClient
+from challenge_interface.client_http import PolicyHTTPClient
 
 
 
@@ -23,6 +24,13 @@ from challenge_interface.client import PolicyClient
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Evaluate a policy for the CVPR challenge.")
+    parser.add_argument(
+        "--transport",
+        type=str,
+        choices=("websocket", "http"),
+        default="websocket",
+        help="Transport used by policy server (default: %(default)s).",
+    )
     parser.add_argument("--action_space", type=str, default="joint_angle", help="Action space to use.")
     parser.add_argument(
         "--use_depth",
@@ -176,7 +184,10 @@ def main() -> None:
     assert args.action_space in VALID_ACTION_SPACES, (
         f"ACTION_SPACE must be one of {VALID_ACTION_SPACES}"
     )
-    client = PolicyClient(host=args.host, port=args.port)
+    if args.transport == "http":
+        client = PolicyHTTPClient(host=args.host, port=args.port)
+    else:
+        client = PolicyClient(host=args.host, port=args.port)
 
     output_dir = f"challenge_results/{args.team_id}"
     os.makedirs(output_dir, exist_ok=True)
@@ -188,6 +199,7 @@ def main() -> None:
     metrics_path = os.path.join(output_dir, "metrics.json")
 
     config = {
+        "transport": args.transport,
         "action_space": args.action_space,
         "use_depth": bool(args.use_depth),
         "use_camera_params": bool(args.use_camera_params),

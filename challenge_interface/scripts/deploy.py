@@ -10,12 +10,20 @@ Provide an example usage here if using docker submission:
 """
 
 from challenge_interface.server import PolicyServer
+from challenge_interface.server_http import PolicyHTTPServer
 from challenge_interface.policy import DummyPolicy
 import argparse
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Serve a policy for the CVPR challenge.")
+    parser.add_argument(
+        "--transport",
+        type=str,
+        choices=("websocket", "http"),
+        default="websocket",
+        help="Server transport to use (default: %(default)s).",
+    )
 
     parser.add_argument(
         "--host",
@@ -34,7 +42,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     policy = DummyPolicy()
-    server = PolicyServer(policy, host=args.host, port=args.port)
+    if args.transport == "http":
+        server = PolicyHTTPServer(policy, host=args.host, port=args.port)
+    else:
+        server = PolicyServer(policy, host=args.host, port=args.port)
     server.serve_forever()
 
 if __name__ == "__main__":

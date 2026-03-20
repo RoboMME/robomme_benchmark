@@ -32,7 +32,7 @@ uv run python -m  challenge_interface.scripts.phase1_eval --port 8001
 ```
 4. Submit your policy.
 
-Go to the [EvalAI website]() to provide the required participant information (deadline May 15). We provide two options for hosting your policy.
+Go to the [EvalAI website]() to submit the required JSON file to participant (deadline May 15). We provide two options for hosting your policy.
 
 **Choose one way to host your policy:**
 
