@@ -5,7 +5,7 @@ Participants may need to modify this file to adapt to their own policy. for exam
 
 Provide an example usage here if using docker submission:
 
-...
+... (this can be mulitiple commands if you need to run multiple models in parallels)
 
 """
 
