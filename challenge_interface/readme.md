@@ -9,10 +9,12 @@ Submissions are hosted on [EvalAI](https://eval.ai/).
 All challenge-related files are stored in the current directory.
 ```
 challenge_interface/
-├── client.py               Used by organizers
+├── client.py               Used by organizers (websocket version)
+├── client_http.py          Used by organizers (http version)
 ├── msgpack_numpy.py        Used by participants
 ├── policy.py               Used by participants (participants must modify the Policy class)
-├── server.py               Used by participants
+├── server.py               Used by participants (websocket version)
+├── server_http.py          Used by participants (http version)
 └── scripts
     ├── deploy.py           Used by participants
     └── phase1_eval.py      Used by organizers
@@ -41,7 +43,7 @@ Go to the [EvalAI website]() to submit the required JSON file to participant (de
 - Organizers pull the image and host it on their machine.
 - Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_docker.md) (MME-VLA model).
 
-> In this option, organizers run your model on our servers. We can provide at most 80 GB of GPU memory; if your model requires more, please choose Option 2.
+> In this option, we run your model on our servers. We can provide at most 80 GB of GPU memory; if your total system requires more, please choose Option 2.
 
 **Option 2: via remote API**
 - Participants deploy their policy on their own machine as a server with a public IP.
