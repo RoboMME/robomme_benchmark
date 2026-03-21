@@ -1,3 +1,10 @@
+"""
+This is used by RoboMME challenge organizers to query the policy via HTTP.
+
+Participants do not need to modify this file.
+"""
+
+
 import requests
 from typing import Dict, Optional
 

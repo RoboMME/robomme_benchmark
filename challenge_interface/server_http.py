@@ -1,11 +1,7 @@
 """
 HTTP version of challenge policy server.
 
-This mirrors the websocket interface:
-- POST /infer  -> returns msgpack output of policy.infer(inputs)
-- POST /reset  -> returns {"reset_finished": True}
-- GET  /healthz
-- GET  /metadata
+Participants do not need to modify this file
 """
 
 import traceback

@@ -1,7 +1,7 @@
 """
 Adapted from https://github.com/Physical-Intelligence/openpi/blob/main/src/openpi/serving/websocket_policy_server.py
 
-Participant do not need to modify this file
+Participants do not need to modify this file
 """
 
 import asyncio
