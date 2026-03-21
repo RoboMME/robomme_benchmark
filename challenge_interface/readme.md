@@ -41,22 +41,24 @@ Go to the [EvalAI website]() to submit the required JSON file to participant (de
 - Organizers pull the image and host it on their machine.
 - Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_docker.md) (MME-VLA model).
 
+> In this option, organizers run your model on our servers. We can provide at most 80 GB of GPU memory; if your model requires more, please choose Option 2.
+
 **Option 2: via remote API**
 - Participants deploy their policy on their own machine as a server with a public IP.
 - Organizers query the hostname and run evaluation remotely.
 - Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_remote.md) (MME-VLA model).
 
-> This option may experience unstable or dropped connections. We have three evaluation nodes located in the US, mainland China, and Singapore. We will choose the closest on to reduce the latency. For the the transport type, you can choose  based on your setup; WebSocket is recommended.
+> This option may have unstable connections; we route to the closest node (US, mainland China, or Singapore) to reduce latency. Choose the `transport` type based on your setup; WebSocket is recommended.
 
 ## Timeline
 - **March-May 25**: Develop your policy and test the policy server.
   - **May 15**: Deadline to submit the required information on the EvalAI portal.
-  - **May 15–May 25**: Phase 1 partial evaluation (check stability & correctness).
+  - **May 15–May 25**: Phase 1 Valiation (check stability & correctness).
     - We verify that your Docker image / remote server is stable and runs as expected.
-    - If we find issues, we will contact you. You are allowed to update your models or Docker images.
+    - If we find issues, we will contact you immediately. You are allowed to update your models or Docker images during this period.
     - We will choose the top 5-10 teams to move on, depending on the total number of participants.
 - **May 26**: Deadline to finalize your models and deployment.
-- **May 26–June 2**: Phase 2 full evaluation.
+- **May 26–June 2**: Phase 2 Full Evaluation.
   - We evaluate on held-out episodes for selected teams.
 - **June 3**: Winner announcement at the FMEA workshop.
 
@@ -77,4 +79,4 @@ We greatly appreciate the Foundation Models Meet Embodied Agents workshop at CVP
 
 ## Contact
 
-If you have anything to ask, please email hongzefu@umich.edu  and cc daiyp@umich.edu. We also provide wechat and discord channel link on our project website, you can join for latest news.
+If you have anything to ask, please email robomme2026@gmail.com. We also provide wechat, discord channel, and google group link on our [website](https://robomme.github.io/challenge.html), you can join for latest news and discussion.
