@@ -147,6 +147,10 @@ os.environ['MUJOCO_GL'] = 'osmesa'
 ```
 Alternatively, you can also try to install RoboMME via Docker following the [instruction](doc/docker_installation.md).
 
+**Q3: I want to participant RoboMME Challenge, how should I start?** 
+
+A3: We are finalizing the submission instructions and will announce details by the end of March. In the meantime, you can get started by exploring the benchmark repository and the [MME-VLA policy learning repo](https://github.com/RoboMME/robomme_policy_learning/tree/main); the challenge will use held-out test episodes similar to the standard [test episodes](https://github.com/RoboMME/robomme_benchmark/tree/main/src/robomme/env_metadata/test), but not publicly accessible during the competition.
+
 
 ## 🙏 Acknowledgements
 
