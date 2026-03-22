@@ -76,7 +76,7 @@ Go to the [EvalAI website]() to submit the required JSON file to participant (de
 
 ## Acknowledgement
 
-We greatly appreciate the Foundation Models Meet Embodied Agents workshop at CVPR 2026 for hosting our challenge, and we thank Figure AI for sponsoring it!
+We greatly appreciate the Foundation Models Meet Embodied Agents workshop at CVPR 2026 for hosting our challenge!
 
 
 ## Contact
