@@ -210,3 +210,6 @@ __marimo__/
 .agent/
 .cursor/
 .agents/
+
+# Local run outputs (replays, videos, logs)
+runs/

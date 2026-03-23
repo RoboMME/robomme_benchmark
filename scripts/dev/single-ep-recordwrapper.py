@@ -40,6 +40,20 @@ DATASET_SCREW_MAX_ATTEMPTS = 3
 DATASET_RRT_MAX_ATTEMPTS = 3
 
 
+def _latest_recorded_mp4(
+    output_root: Path, env_id: str, episode: int, seed: int
+) -> Optional[Path]:
+    """Resolve the mp4 written by RobommeRecordWrapper for this run (newest match by mtime)."""
+    videos_dir = output_root / "videos"
+    if not videos_dir.is_dir():
+        return None
+    tag = f"{env_id}_ep{episode}_seed{seed}"
+    candidates = [p for p in videos_dir.glob("*.mp4") if tag in p.name]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
 def _tensor_to_bool(value) -> bool:
     if value is None:
         return False
@@ -57,28 +71,28 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--env",
         "-e",
-        required=True,
+        default="ButtonUnmaskSwap",
         choices=sorted(VALID_ENVS),
-        help="Environment ID to run.",
+        help="Environment ID to run (default: ButtonUnmaskSwap).",
     )
     parser.add_argument(
         "--episode",
         type=int,
-        required=True,
-        help="Episode index to run.",
+        default=1,
+        help="Episode index to run (default: 0).",
     )
     parser.add_argument(
         "--seed",
         type=int,
-        required=True,
-        help="Environment seed to use.",
+        default=0,
+        help="Environment seed to use (default: 0).",
     )
     parser.add_argument(
         "--difficulty",
         type=str,
-        required=True,
+        default="hard",
         choices=sorted(VALID_DIFFICULTIES),
-        help="Episode difficulty.",
+        help="Episode difficulty (default: easy).",
     )
     parser.add_argument(
         "--gpu",
@@ -307,6 +321,15 @@ def main() -> None:
         difficulty=args.difficulty,
         output_dir=output_dir,
     )
+
+    mp4_path = _latest_recorded_mp4(output_dir, args.env, args.episode, args.seed)
+    if mp4_path is not None:
+        print(f"Final MP4: {mp4_path.resolve()}")
+    else:
+        print(
+            f"No MP4 matched under {output_dir / 'videos'} "
+            f"(expected filename fragment '{args.env}_ep{args.episode}_seed{args.seed}')."
+        )
 
     if success:
         print("Replay finished successfully.")

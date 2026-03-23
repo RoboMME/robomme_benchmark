@@ -32,7 +32,6 @@ from .utils.difficulty import normalize_robomme_difficulty
 from .utils.swap_selection import select_dynamic_swap_pair
 from ..logging_utils import logger
 
-
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
 capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
@@ -48,8 +47,9 @@ capabilities can be simulated and trained properly. Hence there is extra code fo
 """
 
 
-@register_env("VideoUnmaskSwap")
-class VideoUnmaskSwap(BaseEnv):
+@register_env("ButtonUnmaskSwap")
+class ButtonUnmaskSwap(BaseEnv):
+
 
     _sample_video_link = "https://github.com/haosulab/ManiSkill/raw/main/figures/environment_demos/PickCube-v1_rt.mp4"
     SUPPORTED_ROBOTS = [
@@ -92,7 +92,7 @@ class VideoUnmaskSwap(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
-
+    
 
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
@@ -140,7 +140,7 @@ class VideoUnmaskSwap(BaseEnv):
                 self.difficulty = "medium"
             else:  # seed_mod == 2
                 self.difficulty = "hard"
-
+        #self.difficulty = "hard"
         # Use seed to randomly determine number of repetitions (1-5)
         self.swap_times = torch.randint(
             self.configs[self.difficulty]["swap_min"],
@@ -159,9 +159,24 @@ class VideoUnmaskSwap(BaseEnv):
         ).item()
         logger.debug(f"Task will pick {self.pick_times} times")
 
-
-
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
+    
+    def _refresh_swap_schedule(self):
+        if self.swap_times == 1:
+            self.swap_schedule = [
+                (None, None, 64, 64 + 50),
+            ]
+        elif self.swap_times == 2:
+            self.swap_schedule = [
+                (None, None, 64, 64 + 50),
+                (None, None, 64 + 50, 64 + 50 * 2),
+            ]
+        elif self.swap_times == 3:
+            self.swap_schedule = [
+                (None, None, 64, 64 + 50),
+                (None, None, 64 + 50, 64 + 50 * 2),
+                (None, None, 64 + 50 * 2, 64 + 50 * 3),
+            ]
 
     @property
     def _default_sensor_configs(self):
@@ -195,12 +210,62 @@ class VideoUnmaskSwap(BaseEnv):
 
         avoid=[]
 
+        avoid=[]
+        button_obb_1 = build_button(
+            self,
+            center_xy=(-0.2, -0.1),
+            scale=1.5,
+            generator=generator,
+            name="button_left",
+            randomize=True,
+            randomize_range=(0.05, 0.05)
+        )
+        # Store first button before building second one
+        self.button_left = self.button
+        self.button_joint_1 = self.button_joint
 
-          # Generate 3 bins
+        avoid = [button_obb_1]
+
+        button_obb_2 = build_button(
+            self,
+            center_xy=(-0.2, 0.1),
+            scale=1.5,
+            generator=generator,
+            name="button_right",
+            randomize=True,
+            randomize_range=(0.05, 0.05)
+        )
+        # Store first button before building second one
+        self.button_right = self.button
+        self.button_joint_2 = self.button_joint
+
+         # Generate 3 bins
         self.spawned_bins = []
-        region4=[[-0.05,-0.1],[-0.05,0.1],[0.1,0.1],[0.1,-0.1]]
-        region3_tri=[[-0.05,-0.1],[-0.05,0.1],[0.1,0]]
-        region3_line=[[0,-0.15],[0,0.15],[0,0]]
+        # Generate y offsets for region4 using torch generator
+        y_offset_1 = (torch.rand(1, generator=generator).item()) * 0.1  # for first two points
+        y_offset_2 = (torch.rand(1, generator=generator).item()) * 0.1  # for last two points
+
+        region4=[[0, -0.1 + y_offset_1],
+                 [0, 0.1 + y_offset_1],
+                 [0.1, 0.1 + y_offset_2],
+                 [0.1, -0.1 + y_offset_2]]
+
+
+        # Generate independent random x offsets for each point using torch generator
+        x_offset_tri_1 = (torch.rand(1, generator=generator).item()) * 0.1
+        x_offset_tri_2 = (torch.rand(1, generator=generator).item()) * 0.1
+        x_offset_tri_3 = (torch.rand(1, generator=generator).item()) * 0.1
+
+        x_offset_line_1 = (torch.rand(1, generator=generator).item()) * 0.1
+        x_offset_line_2 = (torch.rand(1, generator=generator).item()) * 0.1
+        x_offset_line_3 = (torch.rand(1, generator=generator).item()) * 0.1
+
+        region3_tri=[[-0.05 + x_offset_tri_1, -0.15],
+                     [-0.05 + x_offset_tri_2, 0.15],
+                     [0.05 + x_offset_tri_3, 0]]
+        region3_line=[[-0.05 + x_offset_line_1, -0.15],
+                      [-0.05 + x_offset_line_2, 0.15],
+                      [-0.05 + x_offset_line_3, 0]]
 
         # Use generator to randomly select region3_tri or region3_line
         region3_choice = torch.randint(0, 2, (1,), generator=generator).item()
@@ -210,8 +275,13 @@ class VideoUnmaskSwap(BaseEnv):
             region=region4
         else:
              region=region3
-        angle, region = rotate_points_random(region,(0,180),generator)
-        
+        #angle, region = rotate_points_random(region,(0,180),generator)
+
+        # # Safety check: ensure x coordinates are not less than 0
+        # for i in range(len(region)):
+        #     if region[i][0] < -0:
+        #         region[i][0] = 0
+
         for i in range(self.configs[self.difficulty]['bin']):
             try:
                 bin_actor = spawn_random_bin(
@@ -234,7 +304,7 @@ class VideoUnmaskSwap(BaseEnv):
             avoid.append(bin_actor)
 
 
-        # Generate 3 dynamic cubes under each bin (use fixed position, colors red, green, blue)
+        # Generate 3 dynamic cubes under each bin (using fixed position, colors red, green, blue)
         spawned_dynamic_cubes = []
         self.cube_bin_pairs = []
         self.bin_to_cube = {}
@@ -252,7 +322,7 @@ class VideoUnmaskSwap(BaseEnv):
         # Store color_names for RecordWrapper access
         self.color_names = color_names
 
-        # Randomly select 3 bins from all bins to generate cube
+        # Randomly select 3 bins from all bins to spawn cube
         num_bins_to_select = min(3, len(self.spawned_bins))
         selected_bin_indices = torch.randperm(3, generator=generator)[:num_bins_to_select].tolist()
         selected_bins = [self.spawned_bins[idx] for idx in selected_bin_indices]
@@ -278,7 +348,7 @@ class VideoUnmaskSwap(BaseEnv):
             )
 
             spawned_dynamic_cubes.append(cube_actor)
-            # Assign cube to attributes like self.target_cube_red, self.target_cube_green, etc.
+            # Assign cube to self.target_cube_red, self.target_cube_green, self.target_cube_blue etc. attributes
             setattr(self, f"target_cube_{color_names[i]}", cube_actor)
             # Also store using numeric index for easy access
             setattr(self, f"target_cube_{i}", cube_actor)
@@ -334,12 +404,12 @@ class VideoUnmaskSwap(BaseEnv):
             self.target_label = "target"
 
        # Randomly select 2 unique bins as target_bin_1 and target_bin_2
-        # target_indices are indices into selected_bin_indices (0, 1, 2)
+        # target_indices is index to selected_bin_indices (0, 1, 2)
         target_indices = torch.randperm(len(selected_bin_indices), generator=generator)[:2]
         # Use selected_bins to get correct bin (corresponding to color_names order)
         self.target_bin_1=self.selected_bins[target_indices[0]]
         self.target_bin_2=self.selected_bins[target_indices[1]]
-        # Record cube colors for these two bins, using color_names direct indexing
+        # Record cube colors corresponding to these two bins, index directly using color_names
         self.target_bin_1_cube_color = color_names[target_indices[0].item()]
         self.target_bin_2_cube_color = color_names[target_indices[1].item()]
         # swap_indices must include target_indices, then select 1 from remaining indices
@@ -350,30 +420,48 @@ class VideoUnmaskSwap(BaseEnv):
         else:
             swap_indices = target_indices
         self._refresh_swap_schedule()
+
+        self.button_list= [self.button_left, self.button_right]
         self._last_swap_pair_key = None
 
+    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        with torch.device(self.device):
+            b = len(env_idx)
+            self.table_scene.initialize(env_idx)
+            qpos=reset_panda.get_reset_panda_param("qpos")
+            self.agent.reset(qpos)
         tasks = [
-             {
-                        "func": lambda: static_check(self, timestep=int(self.elapsed_steps), static_steps=self.swap_schedule[-1][3]),
-                        "name": "static",
-                        "subgoal_segment": "static",
-                        "choice_label": "static",
-                        "demonstration": True,
-                        "failure_func": None,
-                        "solve": lambda env, planner: solve_hold_obj(env, planner, static_steps=self.swap_schedule[-1][3]),
-                        },
+            {
+                "func": lambda: is_any_button_pressed_removelist(self, button_list=self.button_list),
+                "name": "press the first button",
+                "subgoal_segment":"press the first button at <>",
+                "choice_label": "press the first button",
+                "demonstration": False,
+                "failure_func":None,
+                "solve": lambda env, planner: solve_button(env, planner, obj=self.button_right),
+                "segment":self.cap_links["button_right"]
+            },
+                  {
+                "func": lambda: is_any_button_pressed_removelist(self, button_list=self.button_list),
+                "name": "press the second button",
+                "subgoal_segment":"press the second button at <>",
+                "choice_label": "press the second button",
+                "demonstration": False,
+                "failure_func":None,
+                "solve": lambda env, planner: solve_button(env, planner, obj=self.button_left),
+                "segment":self.cap_links["button_left"]
+            },
 
-            
             {
                 "func": (lambda: is_bin_pickup(self, obj=self.selected_bins[0])),
                 "name": f"pick up the container that hides the {self.color_names[0]} cube",
                 "subgoal_segment":f"pick up the container at <> that hides the {self.color_names[0]} cube",
                 "choice_label": "pick up the container",
                 "demonstration": False,
-                "failure_func": lambda: is_any_bin_pickup(self, [bin for bin in self.spawned_bins if bin != self.selected_bins[0]]),
-                "solve": lambda env, planner: solve_pickup_bin(env, planner, obj=self.selected_bins[0]),
-                "segment":self.selected_bins[0],
-            },
+                "failure_func": lambda: is_any_bin_pickup(self,[bin for bin in self.spawned_bins if bin != self.selected_bins[0]]),
+                "solve": lambda env, planner: [solve_pickup_bin(env, planner, obj=self.selected_bins[0])],
+                "segment":self.selected_bins[0]
+            }
         ]
         if self.pick_times==2:
             tasks.append({
@@ -383,20 +471,24 @@ class VideoUnmaskSwap(BaseEnv):
                     "choice_label": "put down the container",
                     "demonstration": False,
                     "failure_func": lambda:is_any_bin_pickup(self,[bin for bin in self.spawned_bins if bin != self.selected_bins[0]]),
-                    "solve": lambda env, planner: solve_putdown_whenhold(env, planner,),
-
+                    "solve": lambda env, planner: solve_putdown_whenhold(env, planner),
                 })
             tasks.append(
                 {
                     "func": (lambda: is_bin_pickup(self, obj=self.selected_bins[1])),
-                    "name": f"pick up the container that hides the {self.color_names[1]} cube",
-                    "subgoal_segment":f"pick up the container at <> that hides the {self.color_names[1]} cube",
+                        "name": f"pick up the container that hides the {self.color_names[1]} cube",
+                        "subgoal_segment":f"pick up the container at <> that hides the {self.color_names[1]} cube",
                     "choice_label": "pick up the container",
                     "demonstration": False,
                     "failure_func": lambda: is_any_bin_pickup(self,[bin for bin in self.spawned_bins if bin != self.selected_bins[1]]),
                     "solve": lambda env, planner: solve_pickup_bin(env, planner, obj=self.selected_bins[1]),
                     "segment":self.selected_bins[1],
                 })
+
+        
+
+
+
 
         # Store task list for RecordWrapper use
         self.task_list = tasks
@@ -407,20 +499,12 @@ class VideoUnmaskSwap(BaseEnv):
             # Only inject an intentional failed grasp when recovery mode is enabled
             self.fail_grasp_task_index = inject_fail_grasp(
                 self.task_list,
-                generator=generator,
+                generator=self.generator,
                 mode=self.robomme_failure_recovery_mode,
             )
         else:
             self.fail_grasp_task_index = None
-
-    def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
-        with torch.device(self.device):
-            b = len(env_idx)
-            self.table_scene.initialize(env_idx)
-            qpos=reset_panda.get_reset_panda_param("qpos")
-            self.agent.reset(qpos)
-
-
+            
     def _get_obs_extra(self, info: Dict):
         return dict()
 
@@ -429,6 +513,14 @@ class VideoUnmaskSwap(BaseEnv):
     def evaluate(self,solve_complete_eval=False):
         self.successflag=torch.tensor([False])
         self.failureflag = torch.tensor([False])
+        target_color = getattr(self, "target_cube_color", None)
+        if target_color is None and getattr(self, "color_names", None):
+            target_color = self.color_names[0]
+        if target_color is None:
+            target_color = getattr(self, "target_label", None)
+        if target_color is None:
+            target_color = "target"
+        self.target_label = target_color
 
 
         # Use encapsulated sequence task check function
@@ -442,16 +534,19 @@ class VideoUnmaskSwap(BaseEnv):
                 allow_subgoal_change_this_timestep=True
             else:
                 allow_subgoal_change_this_timestep=False
-        all_tasks_completed, current_task_name, task_failed,self.current_task_specialflag = sequential_task_check(self, self.task_list,allow_subgoal_change_this_timestep=allow_subgoal_change_this_timestep)
+        all_tasks_completed, current_task_name, task_failed ,self.current_task_specialflag= sequential_task_check(self, self.task_list,allow_subgoal_change_this_timestep=allow_subgoal_change_this_timestep)
 
         # If task failed, mark as failed immediately
         if task_failed:
             self.failureflag = torch.tensor([True])
             logger.debug(f"Task failed: {current_task_name}")
+        else:
+            self.failureflag = torch.tensor([False])
 
         # If static_check succeeds or all tasks completed, set success flag
         if all_tasks_completed and not task_failed:
             self.successflag = torch.tensor([True])
+    
 
         return {
             "success": self.successflag,
@@ -471,24 +566,29 @@ class VideoUnmaskSwap(BaseEnv):
     ):
         return self.compute_dense_reward(obs=obs, action=action, info=info) / 5
 
+    def _get_other_bins_for_pair(self, idx_a: int, idx_b: int):
+        """Return bins that are not part of the provided pair indices."""
+        if not hasattr(self, "spawned_bins"):
+            return []
 
+        total_bins = len(self.spawned_bins)
+        if idx_a >= total_bins or idx_b >= total_bins:
+            return []
 
-    def _refresh_swap_schedule(self):
-        if self.swap_times == 1:
-            self.swap_schedule = [
-                (None, None, 64, 64 + 50),
+        # Prefer precomputed lists when available
+        if hasattr(self, "otherbins") and idx_a < len(self.otherbins):
+            other_candidates = [
+                bin_actor
+                for bin_actor in self.otherbins[idx_a]
+                if bin_actor is not self.spawned_bins[idx_b]
             ]
-        elif self.swap_times == 2:
-            self.swap_schedule = [
-                (None, None, 64, 64 + 50),
-                (None, None, 64 + 50, 64 + 50 * 2),
-            ]
-        elif self.swap_times == 3:
-            self.swap_schedule = [
-                (None, None, 64, 64 + 50),
-                (None, None, 64 + 50, 64 + 50 * 2),
-                (None, None, 64 + 50 * 2, 64 + 50 * 3),
-            ]
+            return other_candidates
+
+        return [
+            bin_actor
+            for i, bin_actor in enumerate(self.spawned_bins)
+            if i not in (idx_a, idx_b)
+        ]
 
     def _resolve_swap_schedule_slot(self, slot_idx: int):
         idx_a, idx_b, start_step, end_step = self.swap_schedule[slot_idx]
@@ -509,12 +609,13 @@ class VideoUnmaskSwap(BaseEnv):
         self._last_swap_pair_key = selection["pair_key"]
 
 
-
 #Robomme
     def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
 
 
-        timestep = self.elapsed_steps        
+
+        timestep = self.elapsed_steps
+        
         # Keep all spawned bins in their original placement during the pre-swap window
         for bin_actor in getattr(self, "spawned_bins", []):
             lift_and_drop_objects_back_to_original(
@@ -524,16 +625,12 @@ class VideoUnmaskSwap(BaseEnv):
                 end_step=32*2,
                 cur_step=timestep,
             )
-
         for i in range(len(self.swap_schedule)):
             start = self.swap_schedule[i][2]
             end = self.swap_schedule[i][3]
             if timestep in range (start,end):
                 self._resolve_swap_schedule_slot(i)
-
-
-
-
+        
         for idx_a, idx_b, start_step, end_step in self.swap_schedule:
             
             if idx_a is None or idx_b is None:
@@ -546,11 +643,12 @@ class VideoUnmaskSwap(BaseEnv):
                 start_step=start_step,
                 end_step=end_step,
                 cur_step=timestep,
-                lane_offset=0.05,
+                lane_offset=0.07,
                 smooth=True,
                 keep_upright=True,
                 other_cube=[b for b in self.spawned_bins if b not in (idx_a, idx_b)],  # Keep all other bins in place to prevent collision during swap
             )
+
 
         for cube_actor, bin_actor in getattr(self, "cube_bin_pairs", []):
             if cube_actor is None or bin_actor is None:
@@ -560,11 +658,10 @@ class VideoUnmaskSwap(BaseEnv):
                 self,
                 obj_a=cube_actor,
                 obj_b=bin_actor,
-                start_step=32*2,
+                start_step=64,
                 end_step=self.swap_schedule[-1][3],
                 cur_step=timestep,
             )
 
         obs, reward, terminated, truncated, info = super().step(action)
-
         return obs, reward, terminated, truncated, info
