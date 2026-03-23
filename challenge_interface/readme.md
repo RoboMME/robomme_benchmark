@@ -1,10 +1,10 @@
 # RoboMME Challenge @ CVPR 2026 FMEA Workshop
 
-### [FMEA Workshop](https://foundation-models-meet-embodied-agents.github.io/cvpr2026/) | [Submission Portal]() | [Submission Example](https://github.com/RoboMME/robomme_policy_learning/tree/main?tab=readme-ov-file#robomme-challenge)
+### [FMEA Workshop](https://foundation-models-meet-embodied-agents.github.io/cvpr2026/) | [Submission Example](https://github.com/RoboMME/robomme_policy_learning/tree/main?tab=readme-ov-file#robomme-challenge) | [Evaluate Your Policy](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor) 
 
 
 The RoboMME challenge is part of the **Foundation Models Meet Embodied Agents** workshop at CVPR 2026.   
-Submissions are hosted on [EvalAI](https://eval.ai/).
+Evaluate your policy by filling this [Google Form](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor).
 
 All challenge-related files are stored in the current directory.
 ```
@@ -34,7 +34,7 @@ uv run python -m  challenge_interface.scripts.phase1_eval --port 8001
 ```
 4. Submit your policy.
 
-Go to the [EvalAI website]() to submit the required JSON file to participant (deadline May 15). We provide two options for hosting your policy.
+Submit the required information via this [link](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor) (deadline May 15). We provide three options for evaluating your policy.
 
 **Choose one way to host your policy:**
 
@@ -52,16 +52,21 @@ Go to the [EvalAI website]() to submit the required JSON file to participant (de
 
 > This option may have unstable connections; we route to the closest node (US, mainland China, or Singapore) to reduce latency. Choose the `transport` type based on your setup; WebSocket is recommended.
 
+**Option 3: via GitHub Repo**
+- Participants provide a link to their code repo.
+- Organizers `git clone` the repo and follow the instructions to launch your policy server locally.
+- Your server must follow the challenge interface (implement `Policy` with `infer()` and `reset()`).
+
+> Like Option 1, your model runs on our servers (<= 80 GB GPU memory). If you need more GPU memory, or your system is very complex (e.g., multiple-model pipelines running simultaneously), choose Option 2 (remote API).
+
+
 ## Timeline
-- **March-May 25**: Develop your policy and test the policy server.
-  - **May 15**: Deadline to submit the required information on the EvalAI portal.
-  - **May 15–May 25**: Phase 1 Valiation (check stability & correctness).
-    - We verify that your Docker image / remote server is stable and runs as expected.
-    - If we find issues, we will contact you immediately. You are allowed to update your models or Docker images during this period.
-    - We will choose the top 5-10 teams to move on, depending on the total number of participants.
-- **May 26**: Deadline to finalize your models and deployment.
-- **May 26–June 2**: Phase 2 Full Evaluation.
-  - We evaluate on held-out episodes for selected teams.
+- **March–May 15**: Develop your policy and test your policy server.
+- **May 15**: Deadline to submit your participant information.
+- **May 15–May 22 (Phase 1 Validation)**: We verify stability & correctness for your Docker image / remote server / code repo.
+  - If we find issues, we will contact you, and you can update your models/deployment during this window (up to **3 times**).
+- **May 23**: Deadline to finalize your models and deployment.
+- **May 23–June 2 (Phase 2 Full Evaluation)**: We evaluate on held-out episodes for teams that passed Phase 1.
 - **June 3**: Winner announcement at the FMEA workshop.
 
 
@@ -70,8 +75,7 @@ Go to the [EvalAI website]() to submit the required JSON file to participant (de
 1. Get familiar with the [RoboMME benchmark](https://github.com/RoboMME/robomme_benchmark) and the [MME-VLA policy learning](https://github.com/RoboMME/robomme_policy_learning) repo.
 2. Use the open-source [**val/test set**](https://github.com/RoboMME/robomme_benchmark/blob/0ac6cba0cbfe8ed1612dfbf37b7bedeb4b15a90c/scripts/evaluation.py#L83) as a testbed to develop and debug your models.
 3. Wrap up your policy following the [challenge interface](https://github.com/RoboMME/robomme_benchmark/challenge_interface/policy.py) and test the policy server locally via `challenge_interface/scripts`.
-4. Submit on EvalAI.
-
+4. [Submit your policy](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor).
 
 
 ## Acknowledgement
