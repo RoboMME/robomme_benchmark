@@ -31,6 +31,7 @@ from .utils.subgoal_evaluate_func import static_check
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
+from .utils.swap_selection import select_dynamic_swap_pair
 
 from ..logging_utils import logger
 
@@ -118,6 +119,8 @@ class VideoPlaceOrder(BaseEnv):
         self.seed = seed
         self.generator = torch.Generator()
         self.generator.manual_seed(seed)
+        self._last_swap_pair_key = None
+        self.swap_schedule = []
 
         self.robomme_failure_recovery = bool(
             kwargs.pop("robomme_failure_recovery", False)
@@ -313,25 +316,8 @@ class VideoPlaceOrder(BaseEnv):
             self.non_target_cubes = [cube for cube in self.all_cubes if cube != self.target_cube]
             logger.debug(f"Non-target cubes: {len(self.non_target_cubes)}")
 
-            self.swap_target_a = None
-            self.swap_target_b = None
-            self.swap_target_other = []
-
-            if self.configs[self.difficulty]['swap']==True:
-                if len(self.targets) >= 2:
-                    perm = torch.randperm(len(self.targets), generator=self.generator)
-                    swap_idx_a = perm[0].item()
-                    swap_idx_b = perm[1].item()
-                    self.swap_target_a = self.targets[swap_idx_a]
-                    self.swap_target_b = self.targets[swap_idx_b]
-                    self.swap_target_other = [
-                        target
-                        for idx, target in enumerate(self.targets)
-                        if idx not in (swap_idx_a, swap_idx_b)
-                    ]
-                    logger.debug(
-                        f"Swap targets selected: target_{swap_idx_a} <-> target_{swap_idx_b}"
-                    )
+            self.swap_schedule = []
+            self._last_swap_pair_key = None
             num_targets_to_pick = torch.randint(2, len(self.targets) + 1, (1,), generator=self.generator).item()
 
             indices = torch.randperm(len(self.targets), generator=self.generator)[:num_targets_to_pick]
@@ -536,7 +522,7 @@ class VideoPlaceOrder(BaseEnv):
                 allow_subgoal_change_this_timestep=True
             else:
                 allow_subgoal_change_this_timestep=False
-        all_tasks_completed, current_task_name, task_failed ,self.current_task_specialflags= sequential_task_check(self, self.task_list,allow_subgoal_change_this_timestep=allow_subgoal_change_this_timestep)
+        all_tasks_completed, current_task_name, task_failed ,self.current_task_specialflag= sequential_task_check(self, self.task_list,allow_subgoal_change_this_timestep=allow_subgoal_change_this_timestep)
 
         # If task failed, mark as failed immediately
         if task_failed:
@@ -572,31 +558,50 @@ class VideoPlaceOrder(BaseEnv):
     def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
 
 
-
+        timestep = (
+            int(self.elapsed_steps.item())
+            if isinstance(self.elapsed_steps, torch.Tensor)
+            else int(self.elapsed_steps)
+        )
 
         # highlight_obj(self,self.target_cube, start_step=0, end_step=100, cur_step=timestep)
         
-        if self.current_task_specialflag=="swap":
+        if self.configs[self.difficulty]["swap"] and self.current_task_specialflag=="swap":
             if self.onto_goalsite==False:
                 self.onto_goalsite=True
-                self.start_step=int(self.elapsed_steps.item())
-                self.end_step=int(self.elapsed_steps.item())+50
+                self.start_step=timestep
+                self.end_step=timestep+50
+                self.swap_schedule = [(None, None, self.start_step, self.end_step)]
 
+        if self.swap_schedule:
+            idx_a, idx_b, start_step, end_step = self.swap_schedule[0]
+            if idx_a is None and idx_b is None and timestep in range(start_step, end_step):
+                selection = select_dynamic_swap_pair(
+                    self.targets,
+                    generator=self.generator,
+                    previous_pair=self._last_swap_pair_key,
+                )
+                if selection is not None:
+                    idx_a = self.targets[selection["idx1"]]
+                    idx_b = self.targets[selection["idx2"]]
+                    self.swap_schedule[0] = (idx_a, idx_b, start_step, end_step)
+                    self._last_swap_pair_key = selection["pair_key"]
 
-        if self.swap_target_a is not None and self.swap_target_b is not None:
-            other_bins = self.swap_target_other if self.swap_target_other else None
-            swap_flat_two_lane(
-                self,
-                cube_a=self.swap_target_a,
-                cube_b=self.swap_target_b,
-                start_step=self.start_step,
-                end_step=self.end_step,
-                cur_step=self.elapsed_steps,
-                lane_offset=0.1,
-                smooth=True,
-                keep_upright=True,
-                other_cube=other_bins,
-            )
+        if self.swap_schedule:
+            idx_a, idx_b, start_step, end_step = self.swap_schedule[0]
+            if idx_a is not None and idx_b is not None:
+                other_bins = [target for target in self.targets if target not in (idx_a, idx_b)] or None
+                swap_flat_two_lane(
+                    self,
+                    cube_a=idx_a,
+                    cube_b=idx_b,
+                    start_step=start_step,
+                    end_step=end_step,
+                    cur_step=self.elapsed_steps,
+                    lane_offset=0.1,
+                    smooth=True,
+                    keep_upright=True,
+                    other_cube=other_bins,
+                )
         obs, reward, terminated, truncated, info = super().step(action)
         return obs, reward, terminated, truncated, info
-

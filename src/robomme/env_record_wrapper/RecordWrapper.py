@@ -80,8 +80,16 @@ class RobommeRecordWrapper(gym.Wrapper):
     2. Generate composite video including base/wrist camera views, segmentation masks, and visualization results.
     3. Handle segmentation logic, including object recognition and center calculation.
     """
-    def __init__(self, env,
-     dataset=None,env_id=None,episode=None,seed=None,save_video=False):
+    def __init__(
+        self,
+        env,
+        dataset=None,
+        env_id=None,
+        episode=None,
+        seed=None,
+        save_video=False,
+        record_hdf5=True,
+    ):
         # Initialize parent first to ensure self.env exists
         super().__init__(env)
         self.unwrapped.use_demonstrationwrapper=False
@@ -94,6 +102,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         self.env_id = env_id
         self.seed = seed
         self.save_video = save_video
+        self.record_hdf5 = record_hdf5
 
 
 
@@ -131,41 +140,46 @@ class RobommeRecordWrapper(gym.Wrapper):
         self.h5_file = None
 
         if not self.dataset:
-            raise ValueError("RobommeRecord=True requires dataset path")
+            raise ValueError("RobommeRecordWrapper requires dataset/output path")
 
-        # Create HDF5 folder; allow user to pass single h5 file or parent directory, automatically deduce output path
+        # Create output root; allow user to pass single h5 file or parent directory.
         base_path = Path(self.dataset).resolve()
         if base_path.suffix == '.h5' or base_path.suffix == '.hdf5':
-            # If file path provided, use its parent directory
             self.output_root = base_path.parent
             hdf5_folder_name = base_path.stem + "_hdf5_files"
         else:
-            # If directory path provided, use directly
             self.output_root = base_path
             hdf5_folder_name = "hdf5_files"
 
-        # Create folder to save HDF5 file
-        self.hdf5_dir = self.output_root / hdf5_folder_name
-        self.hdf5_dir.mkdir(parents=True, exist_ok=True)
+        self.output_root.mkdir(parents=True, exist_ok=True)
+        self.hdf5_dir = None
+        self.dataset_path = None
 
-        # HDF5 file saved in new created folder
-        h5_filename = f"{self.env_id}_ep{self.episode}_seed{self.seed}.h5"
-        self.dataset_path = self.hdf5_dir / h5_filename
+        if self.record_hdf5:
+            # Create folder to save HDF5 file
+            self.hdf5_dir = self.output_root / hdf5_folder_name
+            self.hdf5_dir.mkdir(parents=True, exist_ok=True)
 
-        # Generate unique filename by env/episode/seed convention for batch analysis
-        # Open in 'a' mode, delete and recreate if file corrupted
-        try:
-            self.h5_file = h5py.File(self.dataset_path, "a")
-        except OSError as exc:
-            if self.dataset_path.exists():
-                # Delete truncated/corrupted file and recreate a clean one
-                logger.debug(f"Failed to open existing dataset ({exc}); recreating file.")
-                self.dataset_path.unlink()
-                self.h5_file = h5py.File(self.dataset_path, "w")
-            else:
-                raise
-        logger.debug(f"Recording data to {self.dataset_path}")
-        logger.debug(f"HDF5 files will be saved in folder: {self.hdf5_dir}")
+            # HDF5 file saved in new created folder
+            h5_filename = f"{self.env_id}_ep{self.episode}_seed{self.seed}.h5"
+            self.dataset_path = self.hdf5_dir / h5_filename
+
+            # Generate unique filename by env/episode/seed convention for batch analysis
+            # Open in 'a' mode, delete and recreate if file corrupted
+            try:
+                self.h5_file = h5py.File(self.dataset_path, "a")
+            except OSError as exc:
+                if self.dataset_path.exists():
+                    # Delete truncated/corrupted file and recreate a clean one
+                    logger.debug(f"Failed to open existing dataset ({exc}); recreating file.")
+                    self.dataset_path.unlink()
+                    self.h5_file = h5py.File(self.dataset_path, "w")
+                else:
+                    raise
+            logger.debug(f"Recording data to {self.dataset_path}")
+            logger.debug(f"HDF5 files will be saved in folder: {self.hdf5_dir}")
+        else:
+            logger.debug(f"Recording videos only under {self.output_root}")
 
         # Color lookup table generated once at initialization, avoid repeated construction in step
         # Used to assign fixed color to different segmentation IDs
@@ -1148,8 +1162,8 @@ class RobommeRecordWrapper(gym.Wrapper):
                 fail_recover_suffix = "_FailRecover"
         video_prefix = f"{self.env_id}_ep{self.episode}_seed{self.seed}{fail_recover_suffix}"
 
-        # Write data to HDF5 only when episode successful
-        if self.episode_success:
+        # Write data to HDF5 only when enabled and episode successful
+        if self.record_hdf5 and self.episode_success:
             logger.debug(f"Writing {len(self.buffer)} records to HDF5...")
 
             # HDF5 hierarchy: episode_xxx / timestep_xxx, convenient for retrieval by environment and round
@@ -1390,7 +1404,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             )
 
             logger.debug(f"Successfully saved episode {self.episode}")
-        else:
+        elif self.record_hdf5:
             logger.debug(f"Episode {self.episode} failed, discarding {len(self.buffer)} records")
 
             # Save failure video (if enabled), but do not write HDF5
@@ -1406,6 +1420,17 @@ class RobommeRecordWrapper(gym.Wrapper):
             if episode_group_name in self.h5_file:
                 del self.h5_file[episode_group_name]
                 logger.debug(f"Deleted episode group: {episode_group_name}")
+
+        else:
+            logger.debug(
+                f"Episode {self.episode} closed in video-only mode "
+                f"({'success' if self.episode_success else 'failed'})."
+            )
+            self._video_flush_episode_files(
+                success=self.episode_success,
+                video_prefix=video_prefix,
+                filename_suffix=filename_suffix,
+            )
 
         # Clear buffer to prevent repeated writing if close called multiple times
         self.buffer.clear()
