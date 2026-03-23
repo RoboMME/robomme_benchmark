@@ -47,10 +47,10 @@ Submit the required information via this [link](https://docs.google.com/forms/d/
 
 **Option 2: via remote API**
 - Participants deploy their policy on their own machine as a server with a public IP.
-- Organizers query the hostname and run evaluation remotely.
+- Organizers query the host machine and run evaluation remotely.
 - Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_remote.md) (MME-VLA model).
 
-> This option may have unstable connections; we route to the closest node (US, mainland China, or Singapore) to reduce latency. Choose the `transport` type based on your setup; WebSocket is recommended.
+> This option may have unstable connections; we route to the closest node (US, mainland China, or Singapore) to reduce latency. Choose the `transport` type based on your setup; WebSocket with direct numeric IP access is recommended.
 
 **Option 3: via GitHub Repo**
 - Participants provide a link to their code repo.
