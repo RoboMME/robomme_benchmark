@@ -130,7 +130,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--env",
         "-e",
-        default="ButtonUnmaskSwap,VideoUnmaskSwap",
+        default="ButtonUnmaskSwap,VideoUnmaskSwap,VideoRepick",
         type=str,
         help=(
             "Environment ID(s), comma-separated for multiple. "
@@ -166,7 +166,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-start",
         type=int,
-        default=1,
+        default=0,
         help="Episode index for the first run; run i uses episode-start + i (default: 1).",
     )
     parser.add_argument(
