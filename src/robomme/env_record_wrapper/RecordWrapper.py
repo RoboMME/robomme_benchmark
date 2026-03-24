@@ -1587,27 +1587,21 @@ class RobommeRecordWrapper(gym.Wrapper):
             return
 
         unwrapped = self.env.unwrapped
-        get_object_log = getattr(unwrapped, "get_episode_object_log", None)
-        difficulty = getattr(unwrapped, "difficulty", None)
 
-        payload = None
-        if callable(get_object_log):
-            try:
-                payload = get_object_log()
-            except Exception as exc:
-                logger.debug(
-                    f"Warning: failed to collect episode object log for "
-                    f"{self.env_id} ep={self.episode} seed={self.seed}: {exc}"
-                )
+        try:
+            record = build_episode_object_log_record(
+                unwrapped,
+                env_id=self.env_id,
+                episode=self.episode,
+                seed=self.seed,
+            )
+        except Exception as exc:
+            logger.debug(
+                f"Warning: failed to build episode object log for "
+                f"{self.env_id} ep={self.episode} seed={self.seed}: {exc}"
+            )
+            return
 
-        record = build_episode_object_log_record(
-            env=self.env_id,
-            episode=self.episode,
-            seed=self.seed,
-            difficulty=difficulty,
-            episode_success=self.episode_success,
-            object_log=payload,
-        )
         append_episode_object_log_record(self.output_root, record)
         self._episode_object_log_flushed = True
 

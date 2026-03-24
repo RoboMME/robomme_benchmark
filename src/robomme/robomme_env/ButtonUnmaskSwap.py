@@ -36,10 +36,9 @@ from .utils.swap_contact_monitoring import (
     reset_swap_contact_state,
 )
 from ..env_record_wrapper.episode_object_logging import (
-    build_cube_bin_entry,
-    build_object_descriptor,
-    empty_episode_object_log,
-    normalize_episode_object_log,
+    append_episode_object_swap_event,
+    init_episode_object_log_state,
+    record_reset_objects,
 )
 from ..logging_utils import logger
 
@@ -170,7 +169,7 @@ class ButtonUnmaskSwap(BaseEnv):
         ).item()
         logger.debug(f"Task will pick {self.pick_times} times")
         self.swap_contact_state = new_swap_contact_state()
-        self._episode_object_log = empty_episode_object_log()
+        init_episode_object_log_state(self)
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
     
@@ -191,75 +190,19 @@ class ButtonUnmaskSwap(BaseEnv):
                 (None, None, 64 + 50 * 2, 64 + 50 * 3),
             ]
 
-    def _reset_episode_object_log_swap_events(self):
-        if not isinstance(getattr(self, "_episode_object_log", None), dict):
-            self._episode_object_log = empty_episode_object_log()
-        self._episode_object_log["swap_events"] = []
-
-    def _build_episode_object_log_static(self):
-        object_log = empty_episode_object_log()
-        selected_bin_indices = list(getattr(self, "selected_bin_indices", []) or [])
-
-        for idx_i, (cube_actor, bin_actor) in enumerate(
-            getattr(self, "cube_bin_pairs", []) or []
-        ):
-            bin_index = selected_bin_indices[idx_i] if idx_i < len(selected_bin_indices) else None
-            color = (getattr(self, "bin_to_color", {}) or {}).get(bin_index)
-            object_log["cube_bins"].append(
-                build_cube_bin_entry(
-                    bin_actor=bin_actor,
-                    cube_actor=cube_actor,
-                    color=color,
-                    bin_index=bin_index,
-                )
-            )
-
-        target_cube_actor = getattr(self, "target_cube", None)
-        if target_cube_actor is not None:
-            object_log["target_cube"] = build_object_descriptor(
-                actor=target_cube_actor,
-                object_type="cube",
-                name=getattr(self, "target_cube_name", None),
-                color=getattr(self, "target_cube_color", None),
-                bin_index=getattr(self, "target_bin_index", None),
-            )
-
-        self._episode_object_log = object_log
-        self._reset_episode_object_log_swap_events()
-
     def _append_episode_object_swap_event(
         self,
         *,
-        slot_idx: int,
-        bin_idx_a: int,
-        bin_idx_b: int,
-        actor_a,
-        actor_b,
+        swap_index: int,
+        object_a,
+        object_b,
     ):
-        if not isinstance(getattr(self, "_episode_object_log", None), dict):
-            self._episode_object_log = empty_episode_object_log()
-        swap_events = self._episode_object_log.setdefault("swap_events", [])
-        bin_to_color = getattr(self, "bin_to_color", {}) or {}
-        swap_events.append(
-            {
-                "swap_index": int(slot_idx),
-                "object_a": build_object_descriptor(
-                    actor=actor_a,
-                    object_type="bin",
-                    color=bin_to_color.get(bin_idx_a),
-                    bin_index=bin_idx_a,
-                ),
-                "object_b": build_object_descriptor(
-                    actor=actor_b,
-                    object_type="bin",
-                    color=bin_to_color.get(bin_idx_b),
-                    bin_index=bin_idx_b,
-                ),
-            }
+        append_episode_object_swap_event(
+            self,
+            swap_index=swap_index,
+            object_a=object_a,
+            object_b=object_b,
         )
-
-    def get_episode_object_log(self):
-        return normalize_episode_object_log(getattr(self, "_episode_object_log", None))
 
     @property
     def _default_sensor_configs(self):
@@ -506,7 +449,6 @@ class ButtonUnmaskSwap(BaseEnv):
 
         self.button_list= [self.button_left, self.button_right]
         self._last_swap_pair_key = None
-        self._build_episode_object_log_static()
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
         with torch.device(self.device):
@@ -515,7 +457,31 @@ class ButtonUnmaskSwap(BaseEnv):
             qpos=reset_panda.get_reset_panda_param("qpos")
             self.agent.reset(qpos)
         reset_swap_contact_state(self.swap_contact_state)
-        self._reset_episode_object_log_swap_events()
+        selected_bin_indices = list(getattr(self, "selected_bin_indices", []) or [])
+        bin_list = []
+        cube_list = []
+        for idx_i, (cube_actor, bin_actor) in enumerate(
+            getattr(self, "cube_bin_pairs", []) or []
+        ):
+            bin_index = selected_bin_indices[idx_i] if idx_i < len(selected_bin_indices) else None
+            color = (getattr(self, "bin_to_color", {}) or {}).get(bin_index)
+            bin_list.append({"actor": bin_actor, "color": color})
+            cube_list.append({"actor": cube_actor, "color": color})
+        target_cube_list = []
+        target_cube_actor = getattr(self, "target_cube", None)
+        if target_cube_actor is not None:
+            target_cube_list.append(
+                {
+                    "actor": target_cube_actor,
+                    "color": getattr(self, "target_cube_color", None),
+                }
+            )
+        record_reset_objects(
+            self,
+            bin_list=bin_list,
+            cube_list=cube_list,
+            target_cube_list=target_cube_list,
+        )
         tasks = [
             {
                 "func": lambda: is_any_button_pressed_removelist(self, button_list=self.button_list),
@@ -694,11 +660,9 @@ class ButtonUnmaskSwap(BaseEnv):
         self.swap_schedule[slot_idx] = (idx_a, idx_b, start_step, end_step)
         self._last_swap_pair_key = selection["pair_key"]
         self._append_episode_object_swap_event(
-            slot_idx=slot_idx,
-            bin_idx_a=selection["idx1"],
-            bin_idx_b=selection["idx2"],
-            actor_a=idx_a,
-            actor_b=idx_b,
+            swap_index=slot_idx,
+            object_a=idx_a,
+            object_b=idx_b,
         )
 
 #Robomme

@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -8,8 +8,8 @@ import torch
 from ..logging_utils import logger
 
 
-EPISODE_OBJECT_LOG_SCHEMA_VERSION = 1
 EPISODE_OBJECT_LOG_FILENAME = "episode_object_logs.jsonl"
+_EPISODE_OBJECT_LOG_STATE_ATTR = "_episode_object_log_state"
 
 
 def _to_python_scalar(value: Any) -> Any:
@@ -33,12 +33,25 @@ def _to_jsonable(value: Any) -> Any:
     return _to_python_scalar(value)
 
 
-def empty_episode_object_log() -> Dict[str, Any]:
+def _empty_episode_object_log_state() -> dict[str, list[Any]]:
     return {
-        "cube_bins": [],
-        "target_cube": None,
+        "bin_list": [],
+        "cube_list": [],
+        "target_cube_list": [],
         "swap_events": [],
     }
+
+
+def _get_episode_object_log_state(env: Any) -> dict[str, list[Any]]:
+    state = getattr(env, _EPISODE_OBJECT_LOG_STATE_ATTR, None)
+    if not isinstance(state, dict):
+        state = _empty_episode_object_log_state()
+        setattr(env, _EPISODE_OBJECT_LOG_STATE_ATTR, state)
+    return state
+
+
+def init_episode_object_log_state(env: Any) -> None:
+    setattr(env, _EPISODE_OBJECT_LOG_STATE_ATTR, _empty_episode_object_log_state())
 
 
 def extract_actor_world_position(actor: Any) -> Optional[list[float]]:
@@ -64,100 +77,81 @@ def extract_actor_world_position(actor: Any) -> Optional[list[float]]:
     return [float(position[0]), float(position[1]), float(position[2])]
 
 
-def build_object_descriptor(
-    *,
-    actor: Any = None,
-    object_type: Optional[str],
-    name: Optional[str] = None,
-    actor_name: Optional[str] = None,
-    color: Optional[str] = None,
-    bin_index: Optional[int] = None,
-    position_key: str = "world_position",
-) -> Dict[str, Any]:
-    resolved_actor_name = actor_name or getattr(actor, "name", None)
-    resolved_name = name or resolved_actor_name
-    resolved_bin_index = None if bin_index is None else int(bin_index)
-    descriptor = {
-        "type": object_type,
-        "name": resolved_name,
-        "actor_name": resolved_actor_name,
-        "color": color,
-        "bin_index": resolved_bin_index,
-        position_key: extract_actor_world_position(actor),
-    }
-    return descriptor
-
-
-def build_cube_bin_entry(
-    *,
-    bin_actor: Any,
-    cube_actor: Any,
-    color: Optional[str],
-    bin_index: Optional[int],
-) -> Dict[str, Any]:
+def _serialize_actor_item(item: Any) -> Optional[dict[str, Any]]:
+    if not isinstance(item, dict):
+        return None
+    actor = item.get("actor")
     return {
-        "bin_index": None if bin_index is None else int(bin_index),
-        "color": color,
-        "bin": build_object_descriptor(
-            actor=bin_actor,
-            object_type="bin",
-            bin_index=bin_index,
-        ),
-        "cube": build_object_descriptor(
-            actor=cube_actor,
-            object_type="cube",
-            color=color,
-            bin_index=bin_index,
-        ),
-        "bin_world_position": extract_actor_world_position(bin_actor),
-        "cube_world_position": extract_actor_world_position(cube_actor),
+        "name": getattr(actor, "name", None),
+        "position": extract_actor_world_position(actor),
+        "color": item.get("color"),
     }
 
 
-def normalize_episode_object_log(payload: Any) -> Dict[str, Any]:
-    normalized = empty_episode_object_log()
-    if not isinstance(payload, dict):
-        return normalized
+def _serialize_actor_list(items: Any) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    serialized = []
+    for item in items:
+        payload = _serialize_actor_item(item)
+        if payload is not None:
+            serialized.append(payload)
+    return serialized
 
-    cube_bins = payload.get("cube_bins", [])
-    if isinstance(cube_bins, list):
-        normalized["cube_bins"] = _to_jsonable(cube_bins)
 
-    target_cube = payload.get("target_cube", None)
-    if target_cube is None or isinstance(target_cube, dict):
-        normalized["target_cube"] = _to_jsonable(target_cube)
+def record_reset_objects(
+    env: Any,
+    *,
+    bin_list: list[dict[str, Any]],
+    cube_list: list[dict[str, Any]],
+    target_cube_list: list[dict[str, Any]],
+) -> None:
+    state = _get_episode_object_log_state(env)
+    state["bin_list"] = _serialize_actor_list(bin_list)
+    state["cube_list"] = _serialize_actor_list(cube_list)
+    state["target_cube_list"] = _serialize_actor_list(target_cube_list)
+    state["swap_events"] = []
 
-    swap_events = payload.get("swap_events", [])
-    if isinstance(swap_events, list):
-        normalized["swap_events"] = _to_jsonable(swap_events)
 
-    return normalized
+def append_episode_object_swap_event(
+    env: Any,
+    *,
+    swap_index: int,
+    object_a: Any,
+    object_b: Any,
+) -> None:
+    state = _get_episode_object_log_state(env)
+    state["swap_events"].append(
+        {
+            "swap_index": int(swap_index),
+            "object_a": getattr(object_a, "name", None),
+            "object_b": getattr(object_b, "name", None),
+        }
+    )
 
 
 def build_episode_object_log_record(
+    env: Any,
     *,
-    env: Optional[str],
+    env_id: Optional[str],
     episode: Optional[int],
     seed: Optional[int],
-    difficulty: Optional[str],
-    episode_success: bool,
-    object_log: Any,
-) -> Dict[str, Any]:
-    record = {
-        "schema_version": EPISODE_OBJECT_LOG_SCHEMA_VERSION,
-        "env": env,
+) -> dict[str, Any]:
+    state = _get_episode_object_log_state(env)
+    return {
+        "env": env_id,
         "episode": None if episode is None else int(episode),
         "seed": None if seed is None else int(seed),
-        "difficulty": difficulty,
-        "episode_success": bool(episode_success),
-        "object_log": normalize_episode_object_log(object_log),
+        "bin_list": _to_jsonable(state.get("bin_list", [])),
+        "cube_list": _to_jsonable(state.get("cube_list", [])),
+        "target_cube_list": _to_jsonable(state.get("target_cube_list", [])),
+        "swap_events": _to_jsonable(state.get("swap_events", [])),
     }
-    return record
 
 
 def append_episode_object_log_record(
     output_root: Any,
-    record: Dict[str, Any],
+    record: dict[str, Any],
 ) -> Optional[Path]:
     jsonl_path = Path(output_root) / EPISODE_OBJECT_LOG_FILENAME
     try:

@@ -78,6 +78,15 @@ def _expected_swap_times(env_id: str, *, seed: int, difficulty: str | None) -> i
         env.close()
 
 
+def _assert_object_list_shape(items):
+    assert isinstance(items, list)
+    for item in items:
+        assert set(item.keys()) == {"name", "position", "color"}
+        assert isinstance(item["name"], (str, type(None)))
+        assert isinstance(item["color"], (str, type(None)))
+        assert item["position"] is None or len(item["position"]) == 3
+
+
 @pytest.mark.parametrize("env_id,episode", TEST_CASES)
 def test_swap_env_episode_object_log(dataset_factory, env_id: str, episode: int):
     case = _build_case(env_id, episode)
@@ -92,36 +101,43 @@ def test_swap_env_episode_object_log(dataset_factory, env_id: str, episode: int)
         episode=episode,
         seed=generated.used_seed,
     )
-    assert record["schema_version"] == 1
-    assert record["episode_success"] is True
+    assert set(record.keys()) == {
+        "env",
+        "episode",
+        "seed",
+        "bin_list",
+        "cube_list",
+        "target_cube_list",
+        "swap_events",
+    }
+    assert "schema_version" not in record
+    assert "difficulty" not in record
+    assert "episode_success" not in record
+    assert "object_log" not in record
 
-    object_log = record["object_log"]
-    cube_bins = object_log["cube_bins"]
-    assert len(cube_bins) == 3
-    for entry in cube_bins:
-        assert len(entry["bin_world_position"]) == 3
-        assert len(entry["cube_world_position"]) == 3
-        assert entry["bin"]["type"] == "bin"
-        assert entry["cube"]["type"] == "cube"
-
-    target_cube = object_log["target_cube"]
-    assert target_cube is not None
-    assert target_cube["type"] == "cube"
-    assert len(target_cube["world_position"]) == 3
+    bin_list = record["bin_list"]
+    cube_list = record["cube_list"]
+    target_cube_list = record["target_cube_list"]
+    assert len(bin_list) == 3
+    assert len(cube_list) == 3
+    assert len(target_cube_list) == 1
+    _assert_object_list_shape(bin_list)
+    _assert_object_list_shape(cube_list)
+    _assert_object_list_shape(target_cube_list)
 
     expected_swap_times = _expected_swap_times(
         env_id,
         seed=generated.used_seed,
         difficulty=case.difficulty,
     )
-    swap_events = object_log["swap_events"]
+    swap_events = record["swap_events"]
     assert len(swap_events) == expected_swap_times
     assert len({event["swap_index"] for event in swap_events}) == expected_swap_times
     for event in swap_events:
-        assert event["object_a"]["type"] == "bin"
-        assert event["object_b"]["type"] == "bin"
-        assert len(event["object_a"]["world_position"]) == 3
-        assert len(event["object_b"]["world_position"]) == 3
+        assert set(event.keys()) == {"swap_index", "object_a", "object_b"}
+        assert isinstance(event["swap_index"], int)
+        assert isinstance(event["object_a"], (str, type(None)))
+        assert isinstance(event["object_b"], (str, type(None)))
 
 
 if __name__ == "__main__":
