@@ -103,7 +103,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--total-episodes",
         type=int,
-        default=20,
+        default=40,
         help="Number of episodes to run per environment (default: 20).",
     )
     parser.add_argument(
