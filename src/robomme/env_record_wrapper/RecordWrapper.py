@@ -47,6 +47,10 @@ from ..robomme_env.utils.choice_action_mapping import (
     project_world_to_pixel,
 )
 from ..robomme_env.utils.swap_contact_monitoring import get_swap_contact_summary
+from .episode_object_logging import (
+    append_episode_object_log_record,
+    build_episode_object_log_record,
+)
 
 from ..logging_utils import logger
 
@@ -174,6 +178,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         self.no_object_video_frames = []  # Save separately when target missing in video frame, for debugging
         self._video_target_frame_size = None
         self._last_written_video_path: Optional[Path] = None  # Track main video path for contact renaming
+        self._episode_object_log_flushed = False
 
         # 末端执行器姿态连续性缓存：
         # build_endeffector_pose_dict 会做四元数符号对齐和 RPY 展开，这里保留上一步结果，
@@ -719,6 +724,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         self._current_waypoint_action = None  # Persist waypoint_action (7D ndarray)
         self._failsafe_triggered = False
         self._video_target_frame_size = None
+        self._episode_object_log_flushed = False
         # choice_action 相关状态也要按 episode 重置。
         self._current_choice_action_text = ""
         self._current_choice_label = ""
@@ -1576,6 +1582,35 @@ class RobommeRecordWrapper(gym.Wrapper):
 
         self._h5_write_setup_group(episode_group, language_goal_list, difficulty)
 
+    def _episode_object_log_flush(self) -> None:
+        if self._episode_object_log_flushed:
+            return
+
+        unwrapped = self.env.unwrapped
+        get_object_log = getattr(unwrapped, "get_episode_object_log", None)
+        difficulty = getattr(unwrapped, "difficulty", None)
+
+        payload = None
+        if callable(get_object_log):
+            try:
+                payload = get_object_log()
+            except Exception as exc:
+                logger.debug(
+                    f"Warning: failed to collect episode object log for "
+                    f"{self.env_id} ep={self.episode} seed={self.seed}: {exc}"
+                )
+
+        record = build_episode_object_log_record(
+            env=self.env_id,
+            episode=self.episode,
+            seed=self.seed,
+            difficulty=difficulty,
+            episode_success=self.episode_success,
+            object_log=payload,
+        )
+        append_episode_object_log_record(self.output_root, record)
+        self._episode_object_log_flushed = True
+
     def _contact_check_flush(self) -> None:
         """
         若当前环境具有 swap_contact_state，则：
@@ -1654,6 +1689,8 @@ class RobommeRecordWrapper(gym.Wrapper):
             else:
                 fail_recover_suffix = "_FailRecover"
         video_prefix = f"{self.env_id}_ep{self.episode}_seed{self.seed}{fail_recover_suffix}"
+
+        self._episode_object_log_flush()
 
         # 只有成功 episode 才保留 HDF5；失败时仍可能需要视频做排查。
         if self.record_hdf5 and self.episode_success:
