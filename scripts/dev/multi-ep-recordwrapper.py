@@ -66,7 +66,6 @@ DEFAULT_ENVS = [
     "RouteStick",
 ]
 VALID_ENVS: Set[str] = set(DEFAULT_ENVS)
-VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
 DATASET_SCREW_MAX_ATTEMPTS = 3
 DATASET_RRT_MAX_ATTEMPTS = 3
 
@@ -141,20 +140,24 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--difficulty",
         type=str,
-        default="hard",
-        choices=sorted(VALID_DIFFICULTIES),
-        help="Episode difficulty (default: hard).",
+        nargs="+",
+        default=["easy", "medium", "hard"],
+        help=(
+            "Difficulty sequence for episode assignment. "
+            "Episodes cycle through the provided list in order, "
+            'for example: --difficulty easy medium hard.'
+        ),
     )
     parser.add_argument(
         "--workers",
         type=int,
-        default=32,
+        default=20,
         help="Max parallel worker processes (default: 20).",
     )
     parser.add_argument(
         "--total-episodes",
         type=int,
-        default=64,
+        default=20,
         help="Number of episodes to run per environment (default: 40). Uses --episode-start and --seed-start.",
     )
     parser.add_argument(
@@ -409,7 +412,11 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Environment(s) ({len(env_ids)}): {', '.join(env_ids)}")
-    print(f"Difficulty: {args.difficulty}")
+    print(
+        "Difficulty schedule: "
+        + " -> ".join(args.difficulty)
+        + " (cycled by episode progression)"
+    )
     print(f"Video output root: {output_dir}")
 
     if args.total_episodes < 1:
@@ -436,9 +443,10 @@ def main() -> None:
         for i in range(args.total_episodes):
             episode = args.episode_start + i
             seed = args.seed_start + i
+            difficulty = args.difficulty[i % len(args.difficulty)]
             cuda_vis = gpu_list[i % len(gpu_list)]
             jobs.append(
-                (env_id, episode, seed, args.difficulty, out_str, cuda_vis)
+                (env_id, episode, seed, difficulty, out_str, cuda_vis)
             )
 
         print(
