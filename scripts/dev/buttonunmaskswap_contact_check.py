@@ -83,13 +83,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--workers",
         type=int,
-        default=5,
+        default=20,
         help="Max parallel worker processes (default: 32).",
     )
     parser.add_argument(
         "--total-episodes",
         type=int,
-        default=5,
+        default=20,
         help="Number of episodes to run (default: 64).",
     )
     parser.add_argument(
@@ -167,6 +167,23 @@ def _build_episode_record(
         },
         "video_path": str(video_path.resolve()) if video_path is not None else None,
     }
+
+
+def _maybe_prefix_video_with_swapcontact(
+    video_path: Optional[Path],
+    swap_contact_detected: bool,
+) -> Optional[Path]:
+    if video_path is None or not swap_contact_detected:
+        return video_path
+    if not video_path.exists():
+        return video_path
+    if video_path.name.startswith("swapcontact_"):
+        return video_path
+
+    renamed_path = video_path.with_name(f"swapcontact_{video_path.name}")
+    video_path.rename(renamed_path)
+    print(f"[SwapContact] prefixed video filename: {renamed_path.resolve()}")
+    return renamed_path
 
 
 def _run_episode(
@@ -373,6 +390,10 @@ def _run_episode(
                 )
 
     video_path = _latest_recorded_mp4(output_dir, episode, seed)
+    video_path = _maybe_prefix_video_with_swapcontact(
+        video_path,
+        bool(contact_summary.get("swap_contact_detected", False)),
+    )
     record = _build_episode_record(
         episode=episode,
         seed=seed,

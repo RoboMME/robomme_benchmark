@@ -73,3 +73,27 @@ def test_main_single_worker_writes_jsonl_record(tmp_path, monkeypatch):
     assert len(lines) == 1
     payload = json.loads(lines[0])
     assert payload == fake_record
+
+
+def test_maybe_prefix_video_with_swapcontact_renames_only_detected_video(tmp_path):
+    video_path = tmp_path / "ButtonUnmaskSwap_ep3_seed4_demo.mp4"
+    video_path.write_bytes(b"demo")
+
+    renamed_path = script_mod._maybe_prefix_video_with_swapcontact(video_path, True)
+
+    assert renamed_path == tmp_path / "swapcontact_ButtonUnmaskSwap_ep3_seed4_demo.mp4"
+    assert renamed_path.exists()
+    assert not video_path.exists()
+
+    untouched_path = script_mod._maybe_prefix_video_with_swapcontact(renamed_path, False)
+    assert untouched_path == renamed_path
+
+
+def test_maybe_prefix_video_with_swapcontact_avoids_double_prefix(tmp_path):
+    video_path = tmp_path / "swapcontact_ButtonUnmaskSwap_ep3_seed4_demo.mp4"
+    video_path.write_bytes(b"demo")
+
+    result_path = script_mod._maybe_prefix_video_with_swapcontact(video_path, True)
+
+    assert result_path == video_path
+    assert result_path.exists()
