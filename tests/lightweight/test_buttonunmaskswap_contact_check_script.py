@@ -22,8 +22,8 @@ def _load_module(module_name: str, relative_path: str):
 
 
 script_mod = _load_module(
-    "button_unmask_swap_contact_script_under_test",
-    "scripts/dev/buttonunmaskswap_contact_check.py",
+    "contact_check_script_under_test",
+    "scripts/dev/contact_check.py",
 )
 
 
@@ -52,7 +52,9 @@ def test_main_single_worker_writes_jsonl_record(tmp_path, monkeypatch):
         sys,
         "argv",
         [
-            "buttonunmaskswap_contact_check.py",
+            "contact_check.py",
+            "--env",
+            "ButtonUnmaskSwap",
             "--workers",
             "1",
             "--total-episodes",
@@ -126,3 +128,10 @@ def test_current_swap_contact_summary_reads_shared_state():
         "max_force_step": 14,
         "pair_max_force": {"bin_0<->bin_1": 3.5},
     }
+
+
+def test_difficulty_for_episode_cycles_easy_medium_hard():
+    assert script_mod._difficulty_for_episode(1) == "easy"
+    assert script_mod._difficulty_for_episode(2) == "medium"
+    assert script_mod._difficulty_for_episode(3) == "hard"
+    assert script_mod._difficulty_for_episode(4) == "easy"

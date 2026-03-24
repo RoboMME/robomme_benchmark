@@ -5,7 +5,7 @@
 # [tool.uv.sources]
 # robomme = { path = "../..", editable = true }
 # ///
-"""Batch-run ButtonUnmaskSwap and record swap-window bin contact summaries to JSONL."""
+"""Batch-run swap-contact checks for selected Robomme environments."""
 
 import argparse
 import json
@@ -27,23 +27,22 @@ from robomme.robomme_env.utils.planner_fail_safe import (
     FailAwarePandaStickMotionPlanningSolver,
     ScrewPlanFailure,
 )
-from robomme.robomme_env.utils.swap_contact_monitoring import (
-    get_swap_contact_summary,
-)
+from robomme.robomme_env.utils.swap_contact_monitoring import get_swap_contact_summary
 
-ENV_ID = "ButtonUnmaskSwap"
-VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+VALID_DIFFICULTIES = ("easy", "medium", "hard")
 DATASET_SCREW_MAX_ATTEMPTS = 3
 DATASET_RRT_MAX_ATTEMPTS = 3
 
-RunJob = Tuple[int, int, str, str, str]
+RunJob = Tuple[str, int, int, str, str]
 
 
-def _latest_recorded_mp4(output_root: Path, episode: int, seed: int) -> Optional[Path]:
+def _latest_recorded_mp4(
+    output_root: Path, env_id: str, episode: int, seed: int
+) -> Optional[Path]:
     videos_dir = output_root / "videos"
     if not videos_dir.is_dir():
         return None
-    tag = f"{ENV_ID}_ep{episode}_seed{seed}"
+    tag = f"{env_id}_ep{episode}_seed{seed}"
     candidates = [p for p in videos_dir.glob("*.mp4") if tag in p.name]
     if not candidates:
         return None
@@ -69,31 +68,43 @@ def _parse_gpu_list(gpus_arg: Optional[str], gpu_fallback: int) -> List[str]:
     return [str(gpu_fallback)]
 
 
+def _parse_env_list(raw: str) -> List[str]:
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if not parts:
+        raise SystemExit("--env must list at least one environment ID.")
+    return parts
+
+
+def _difficulty_for_episode(episode: int) -> str:
+    return VALID_DIFFICULTIES[(int(episode) - 1) % len(VALID_DIFFICULTIES)]
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Run ButtonUnmaskSwap episode(s), detect swap-window bin contacts, "
-            "and append one JSONL record per episode."
+            "Run contact-check episode(s) for ButtonUnmaskSwap, VideoUnmaskSwap, "
+            "and VideoRepick. Difficulty is assigned automatically by episode order: "
+            "easy, medium, hard repeating."
         )
     )
     parser.add_argument(
-        "--difficulty",
+        "--env",
+        "-e",
+        default="ButtonUnmaskSwap,VideoUnmaskSwap,VideoRepick",
         type=str,
-        default="hard",
-        choices=sorted(VALID_DIFFICULTIES),
-        help="Episode difficulty (default: hard).",
+        help="Environment ID(s), comma-separated.",
     )
     parser.add_argument(
         "--workers",
         type=int,
         default=20,
-        help="Max parallel worker processes (default: 32).",
+        help="Max parallel worker processes (default: 20).",
     )
     parser.add_argument(
         "--total-episodes",
         type=int,
         default=20,
-        help="Number of episodes to run (default: 64).",
+        help="Number of episodes to run per environment (default: 20).",
     )
     parser.add_argument(
         "--seed-start",
@@ -130,10 +141,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--jsonl-path",
         type=Path,
         default=None,
-        help=(
-            "JSONL output path. Defaults to "
-            "OUTPUT_DIR/buttonunmaskswap_contact_results.jsonl."
-        ),
+        help="JSONL output path. Defaults to OUTPUT_DIR/contact_check_results.jsonl.",
     )
     return parser
 
@@ -150,6 +158,7 @@ def _append_jsonl_record(jsonl_path: Path, record: Dict) -> None:
 
 
 def _build_episode_record(
+    env_id: str,
     episode: int,
     seed: int,
     difficulty: str,
@@ -158,7 +167,7 @@ def _build_episode_record(
     video_path: Optional[Path],
 ) -> Dict:
     return {
-        "env": ENV_ID,
+        "env": env_id,
         "episode": int(episode),
         "seed": int(seed),
         "difficulty": difficulty,
@@ -195,13 +204,14 @@ def _maybe_prefix_video_with_swapcontact(
 
 
 def _run_episode(
+    env_id: str,
     episode: int,
     seed: int,
-    difficulty: str,
     output_dir: Path,
 ) -> Dict:
+    difficulty = _difficulty_for_episode(episode)
     print(
-        f"--- Running env={ENV_ID} episode={episode} seed={seed} difficulty={difficulty} ---"
+        f"--- Running env={env_id} episode={episode} seed={seed} difficulty={difficulty} ---"
     )
 
     env: Optional[gym.Env] = None
@@ -233,24 +243,24 @@ def _run_episode(
             else:
                 env_kwargs["robomme_failure_recovery_mode"] = "xy"
 
-        env = gym.make(ENV_ID, **env_kwargs)
+        env = gym.make(env_id, **env_kwargs)
         env = RobommeRecordWrapper(
             env,
             dataset=str(output_dir),
-            env_id=ENV_ID,
+            env_id=env_id,
             episode=episode,
             seed=seed,
             save_video=True,
             record_hdf5=False,
         )
         env.unwrapped.swap_contact_log_context = {
-            "env": ENV_ID,
+            "env": env_id,
             "episode": episode,
             "seed": seed,
         }
         env.reset()
 
-        if ENV_ID in {"PatternLock", "RouteStick"}:
+        if env_id in {"PatternLock", "RouteStick"}:
             planner = FailAwarePandaStickMotionPlanningSolver(
                 env,
                 debug=False,
@@ -324,7 +334,7 @@ def _run_episode(
 
         env.unwrapped.evaluate()
         tasks = list(getattr(env.unwrapped, "task_list", []) or [])
-        print(f"{ENV_ID}: Task list has {len(tasks)} tasks")
+        print(f"{env_id}: Task list has {len(tasks)} tasks")
 
         for idx, task_entry in enumerate(tasks):
             task_name = task_entry.get("name", f"Task {idx}")
@@ -376,7 +386,7 @@ def _run_episode(
         contact_summary = _current_swap_contact_summary(env.unwrapped)
     except SceneGenerationError as exc:
         print(
-            f"Scene generation failed for env {ENV_ID}, episode {episode}, seed {seed}: {exc}"
+            f"Scene generation failed for env {env_id}, episode {episode}, seed {seed}: {exc}"
         )
         episode_successful = False
     finally:
@@ -396,12 +406,13 @@ def _run_episode(
                     f"seed {seed}: {close_exc}"
                 )
 
-    video_path = _latest_recorded_mp4(output_dir, episode, seed)
+    video_path = _latest_recorded_mp4(output_dir, env_id, episode, seed)
     video_path = _maybe_prefix_video_with_swapcontact(
         video_path,
         bool(contact_summary.get("swap_contact_detected", False)),
     )
     record = _build_episode_record(
+        env_id=env_id,
         episode=episode,
         seed=seed,
         difficulty=difficulty,
@@ -412,7 +423,7 @@ def _run_episode(
 
     status_text = "SUCCESS" if episode_successful else "FAILED"
     print(
-        f"--- Finished env={ENV_ID} episode={episode} seed={seed} "
+        f"--- Finished env={env_id} episode={episode} seed={seed} "
         f"difficulty={difficulty} [{status_text}] "
         f"swap_contact_detected={record['swap_contact_detected']} ---"
     )
@@ -420,11 +431,11 @@ def _run_episode(
 
 
 def _run_episode_worker(job: RunJob) -> Dict:
-    episode, seed, difficulty, output_dir_str, cuda_visible = job
+    env_id, episode, seed, output_dir_str, cuda_visible = job
     os.environ["CUDA_VISIBLE_DEVICES"] = cuda_visible
     output_dir = Path(output_dir_str).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    return _run_episode(episode, seed, difficulty, output_dir)
+    return _run_episode(env_id, episode, seed, output_dir)
 
 
 def _spawn_context() -> BaseContext:
@@ -435,6 +446,7 @@ def _spawn_context() -> BaseContext:
 
 def main() -> None:
     args = _build_parser().parse_args()
+    env_ids = _parse_env_list(args.env)
     gpu_list = _parse_gpu_list(args.gpus, args.gpu)
 
     output_dir = args.output_dir.resolve()
@@ -442,11 +454,11 @@ def main() -> None:
     jsonl_path = (
         args.jsonl_path.resolve()
         if args.jsonl_path is not None
-        else (output_dir / "buttonunmaskswap_contact_results.jsonl").resolve()
+        else (output_dir / "contact_check_results.jsonl").resolve()
     )
 
-    print(f"Environment: {ENV_ID}")
-    print(f"Difficulty: {args.difficulty}")
+    print(f"Environment(s) ({len(env_ids)}): {', '.join(env_ids)}")
+    print("Difficulty cycle by episode: easy -> medium -> hard")
     print(f"Video output root: {output_dir}")
     print(f"JSONL output: {jsonl_path}")
 
@@ -461,43 +473,61 @@ def main() -> None:
             "or slowdown; consider --gpus 0,1,... to spread jobs across devices."
         )
 
-    jobs: List[RunJob] = []
-    for i in range(args.total_episodes):
-        episode = args.episode_start + i
-        seed = args.seed_start + i
-        cuda_vis = gpu_list[i % len(gpu_list)]
-        jobs.append((episode, seed, args.difficulty, str(output_dir), cuda_vis))
-
-    print(
-        f"Batch: {args.total_episodes} episodes, episode {args.episode_start}.."
-        f"{args.episode_start + args.total_episodes - 1}, "
-        f"seed {args.seed_start}..{args.seed_start + args.total_episodes - 1}, "
-        f"{args.workers} workers, GPUs (round-robin): {','.join(gpu_list)}"
-    )
-
     results: List[Dict] = []
-    if args.workers == 1:
-        for job in jobs:
-            record = _run_episode_worker(job)
-            _append_jsonl_record(jsonl_path, record)
-            results.append(record)
-    else:
-        ctx = _spawn_context()
-        with ProcessPoolExecutor(max_workers=args.workers, mp_context=ctx) as executor:
-            future_map = {
-                executor.submit(_run_episode_worker, job): job for job in jobs
-            }
-            for future in as_completed(future_map):
-                record = future.result()
-                _append_jsonl_record(jsonl_path, record)
-                results.append(record)
+    out_str = str(output_dir)
 
-    results.sort(key=lambda record: (record["episode"], record["seed"]))
+    for env_idx, env_id in enumerate(env_ids):
+        print(f"\n=== Environment {env_idx + 1}/{len(env_ids)}: {env_id} ===\n")
+
+        jobs: List[RunJob] = []
+        for i in range(args.total_episodes):
+            episode = args.episode_start + i
+            seed = args.seed_start + i
+            cuda_vis = gpu_list[i % len(gpu_list)]
+            jobs.append((env_id, episode, seed, out_str, cuda_vis))
+
+        print(
+            f"Batch: {args.total_episodes} episodes, episode {args.episode_start}.."
+            f"{args.episode_start + args.total_episodes - 1}, "
+            f"seed {args.seed_start}..{args.seed_start + args.total_episodes - 1}, "
+            f"{args.workers} workers, GPUs (round-robin): {','.join(gpu_list)}"
+        )
+
+        env_results: List[Dict] = []
+        if args.workers == 1:
+            for job in jobs:
+                record = _run_episode_worker(job)
+                _append_jsonl_record(jsonl_path, record)
+                env_results.append(record)
+                results.append(record)
+        else:
+            ctx = _spawn_context()
+            with ProcessPoolExecutor(max_workers=args.workers, mp_context=ctx) as executor:
+                future_map = {
+                    executor.submit(_run_episode_worker, job): job for job in jobs
+                }
+                for future in as_completed(future_map):
+                    record = future.result()
+                    _append_jsonl_record(jsonl_path, record)
+                    env_results.append(record)
+                    results.append(record)
+
+        env_results.sort(key=lambda record: (record["episode"], record["seed"]))
+        ok_count = sum(1 for record in env_results if record["episode_success"])
+        collision_count = sum(
+            1 for record in env_results if record["swap_contact_detected"]
+        )
+        print(
+            f"Batch finished [{env_id}]: {ok_count}/{len(env_results)} succeeded, "
+            f"{collision_count}/{len(env_results)} swap-contact episodes detected."
+        )
+
+    results.sort(key=lambda record: (record["env"], record["episode"], record["seed"]))
     ok_count = sum(1 for record in results if record["episode_success"])
     collision_count = sum(1 for record in results if record["swap_contact_detected"])
 
     print(
-        f"Batch finished: {ok_count}/{len(results)} succeeded, "
+        f"\nAll batches finished: {ok_count}/{len(results)} succeeded, "
         f"{collision_count}/{len(results)} swap-contact episodes detected."
     )
 
