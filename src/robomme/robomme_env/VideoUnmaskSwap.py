@@ -29,6 +29,11 @@ from .utils.subgoal_evaluate_func import static_check
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
+from .utils.swap_contact_monitoring import (
+    detect_swap_contacts,
+    new_swap_contact_state,
+    reset_swap_contact_state,
+)
 from .utils.swap_selection import select_dynamic_swap_pair
 from ..logging_utils import logger
 
@@ -159,6 +164,7 @@ class VideoUnmaskSwap(BaseEnv):
         ).item()
         logger.debug(f"Task will pick {self.pick_times} times")
 
+        self.swap_contact_state = new_swap_contact_state()
 
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -419,6 +425,7 @@ class VideoUnmaskSwap(BaseEnv):
             self.table_scene.initialize(env_idx)
             qpos=reset_panda.get_reset_panda_param("qpos")
             self.agent.reset(qpos)
+        reset_swap_contact_state(self.swap_contact_state)
 
 
     def _get_obs_extra(self, info: Dict):
@@ -566,5 +573,24 @@ class VideoUnmaskSwap(BaseEnv):
             )
 
         obs, reward, terminated, truncated, info = super().step(action)
+        detect_swap_contacts(
+            scene=getattr(self, "scene", None),
+            actors=getattr(self, "spawned_bins", None),
+            swap_schedule=getattr(self, "swap_schedule", []),
+            timestep=timestep,
+            state=self.swap_contact_state,
+            log_context={
+                "env": (getattr(self, "swap_contact_log_context", {}) or {}).get(
+                    "env", type(self).__name__
+                ),
+                "episode": (getattr(self, "swap_contact_log_context", {}) or {}).get(
+                    "episode"
+                ),
+                "seed": (getattr(self, "swap_contact_log_context", {}) or {}).get(
+                    "seed", getattr(self, "seed", None)
+                ),
+            },
+            default_env_name=type(self).__name__,
+        )
 
         return obs, reward, terminated, truncated, info

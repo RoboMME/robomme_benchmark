@@ -4,6 +4,7 @@ import sys
 
 import pytest
 
+from robomme.robomme_env.utils.swap_contact_monitoring import new_swap_contact_state
 from tests._shared.repo_paths import find_repo_root
 
 
@@ -97,3 +98,31 @@ def test_maybe_prefix_video_with_swapcontact_avoids_double_prefix(tmp_path):
 
     assert result_path == video_path
     assert result_path.exists()
+
+
+def test_current_swap_contact_summary_reads_shared_state():
+    state = new_swap_contact_state()
+    state.swap_contact_detected = True
+    state.first_contact_step = 14
+    state.contact_pairs.append("bin_0<->bin_1")
+    state.max_force_norm = 3.5
+    state.max_force_pair = "bin_0<->bin_1"
+    state.max_force_step = 14
+    state.pair_max_force["bin_0<->bin_1"] = 3.5
+
+    class _Env:
+        pass
+
+    env = _Env()
+    env.unwrapped = _Env()
+    env.unwrapped.swap_contact_state = state
+
+    assert script_mod._current_swap_contact_summary(env) == {
+        "swap_contact_detected": True,
+        "first_contact_step": 14,
+        "contact_pairs": ["bin_0<->bin_1"],
+        "max_force_norm": 3.5,
+        "max_force_pair": "bin_0<->bin_1",
+        "max_force_step": 14,
+        "pair_max_force": {"bin_0<->bin_1": 3.5},
+    }

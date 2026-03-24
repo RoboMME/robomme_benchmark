@@ -27,6 +27,9 @@ from robomme.robomme_env.utils.planner_fail_safe import (
     FailAwarePandaStickMotionPlanningSolver,
     ScrewPlanFailure,
 )
+from robomme.robomme_env.utils.swap_contact_monitoring import (
+    get_swap_contact_summary,
+)
 
 ENV_ID = "ButtonUnmaskSwap"
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
@@ -133,6 +136,11 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     return parser
+
+
+def _current_swap_contact_summary(env) -> Dict:
+    unwrapped = getattr(env, "unwrapped", env)
+    return get_swap_contact_summary(getattr(unwrapped, "swap_contact_state", None))
 
 
 def _append_jsonl_record(jsonl_path: Path, record: Dict) -> None:
@@ -365,7 +373,7 @@ def _run_episode(
         episode_successful = episode_successful or _tensor_to_bool(
             getattr(env, "episode_success", False)
         )
-        contact_summary = env.unwrapped.get_swap_contact_summary()
+        contact_summary = _current_swap_contact_summary(env.unwrapped)
     except SceneGenerationError as exc:
         print(
             f"Scene generation failed for env {ENV_ID}, episode {episode}, seed {seed}: {exc}"
@@ -374,8 +382,7 @@ def _run_episode(
     finally:
         if env is not None:
             try:
-                if hasattr(env.unwrapped, "get_swap_contact_summary"):
-                    contact_summary = env.unwrapped.get_swap_contact_summary()
+                contact_summary = _current_swap_contact_summary(env.unwrapped)
             except Exception as summary_exc:
                 print(
                     f"Warning: Exception while collecting swap contact summary for "

@@ -1,4 +1,3 @@
-from itertools import combinations
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -31,6 +30,11 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 from .utils.swap_selection import select_dynamic_swap_pair
+from .utils.swap_contact_monitoring import (
+    detect_swap_contacts,
+    new_swap_contact_state,
+    reset_swap_contact_state,
+)
 from ..logging_utils import logger
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
@@ -46,9 +50,6 @@ capabilities can be simulated and trained properly. Hence there is extra code fo
 - the cube position is within `goal_thresh` (default 0.025m) euclidean distance of the goal position
 - the robot is static (q velocity < 0.2)
 """
-
-
-SWAP_CONTACT_FORCE_EPS = 1e-6
 
 
 @register_env("ButtonUnmaskSwap")
@@ -162,7 +163,7 @@ class ButtonUnmaskSwap(BaseEnv):
             generator=self.generator,
         ).item()
         logger.debug(f"Task will pick {self.pick_times} times")
-        self._reset_swap_contact_monitoring()
+        self.swap_contact_state = new_swap_contact_state()
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
     
@@ -435,7 +436,7 @@ class ButtonUnmaskSwap(BaseEnv):
             self.table_scene.initialize(env_idx)
             qpos=reset_panda.get_reset_panda_param("qpos")
             self.agent.reset(qpos)
-        self._reset_swap_contact_monitoring()
+        reset_swap_contact_state(self.swap_contact_state)
         tasks = [
             {
                 "func": lambda: is_any_button_pressed_removelist(self, button_list=self.button_list),
@@ -614,115 +615,6 @@ class ButtonUnmaskSwap(BaseEnv):
         self.swap_schedule[slot_idx] = (idx_a, idx_b, start_step, end_step)
         self._last_swap_pair_key = selection["pair_key"]
 
-    def _reset_swap_contact_monitoring(self):
-        self.swap_contact_detected = False
-        self.first_contact_step = None
-        self.contact_pairs = []
-        self.max_force_norm = 0.0
-        self.max_force_pair = None
-        self.max_force_step = None
-        self.pair_max_force = {}
-        self.printed_pairs = set()
-
-    def _is_swap_contact_monitoring_active(self, timestep: int) -> bool:
-        for _, _, start_step, end_step in getattr(self, "swap_schedule", []):
-            if int(start_step) <= int(timestep) <= int(end_step):
-                return True
-        return False
-
-    def _format_bin_pair_name(self, idx_a: int, idx_b: int) -> str:
-        bin_a = self.spawned_bins[idx_a]
-        bin_b = self.spawned_bins[idx_b]
-        name_a = getattr(bin_a, "name", f"bin_{idx_a}")
-        name_b = getattr(bin_b, "name", f"bin_{idx_b}")
-        return f"{name_a}<->{name_b}"
-
-    def _get_swap_contact_log_context(self):
-        context = getattr(self, "swap_contact_log_context", {}) or {}
-        env_name = context.get("env") or type(self).__name__
-        episode = context.get("episode")
-        seed = context.get("seed", getattr(self, "seed", None))
-        return env_name, episode, seed
-
-    def _detect_swap_bin_contacts(self, timestep: int):
-        if not self._is_swap_contact_monitoring_active(timestep):
-            return
-
-        if not hasattr(self, "scene") or len(getattr(self, "spawned_bins", [])) < 2:
-            return
-
-        for idx_a, idx_b in combinations(range(len(self.spawned_bins)), 2):
-            bin_a = self.spawned_bins[idx_a]
-            bin_b = self.spawned_bins[idx_b]
-            pair_name = self._format_bin_pair_name(idx_a, idx_b)
-
-            try:
-                force_tensor = self.scene.get_pairwise_contact_forces(bin_a, bin_b)
-            except Exception as exc:
-                logger.debug(
-                    "Failed to query swap contact force for %s at step %s: %s",
-                    pair_name,
-                    timestep,
-                    exc,
-                )
-                continue
-
-            if isinstance(force_tensor, torch.Tensor):
-                if force_tensor.numel() == 0:
-                    continue
-                force_vector = force_tensor.reshape(-1, 3)[0].detach().cpu().to(torch.float64)
-                force_norm = float(torch.linalg.vector_norm(force_vector).item())
-            else:
-                force_array = np.asarray(force_tensor, dtype=np.float64)
-                if force_array.size == 0:
-                    continue
-                force_norm = float(np.linalg.norm(force_array.reshape(-1, 3)[0]))
-
-            if force_norm <= SWAP_CONTACT_FORCE_EPS:
-                continue
-
-            previous_pair_max = self.pair_max_force.get(pair_name, 0.0)
-            if force_norm > previous_pair_max:
-                self.pair_max_force[pair_name] = force_norm
-
-            if not self.swap_contact_detected:
-                self.swap_contact_detected = True
-                self.first_contact_step = int(timestep)
-
-            if pair_name not in self.contact_pairs:
-                self.contact_pairs.append(pair_name)
-
-            if force_norm > self.max_force_norm:
-                self.max_force_norm = force_norm
-                self.max_force_pair = pair_name
-                self.max_force_step = int(timestep)
-
-            if pair_name in self.printed_pairs:
-                continue
-
-            env_name, episode, seed = self._get_swap_contact_log_context()
-            print(
-                "[SwapContact] "
-                f"env={env_name} episode={episode} seed={seed} "
-                f"step={int(timestep)} pair={pair_name} force={force_norm:.6f}"
-            )
-            self.printed_pairs.add(pair_name)
-
-    def get_swap_contact_summary(self):
-        return {
-            "swap_contact_detected": bool(self.swap_contact_detected),
-            "first_contact_step": self.first_contact_step,
-            "contact_pairs": list(self.contact_pairs),
-            "max_force_norm": float(self.max_force_norm),
-            "max_force_pair": self.max_force_pair,
-            "max_force_step": self.max_force_step,
-            "pair_max_force": {
-                pair_name: float(force_norm)
-                for pair_name, force_norm in sorted(self.pair_max_force.items())
-            },
-        }
-
-
 #Robomme
     def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
 
@@ -778,5 +670,23 @@ class ButtonUnmaskSwap(BaseEnv):
             )
 
         obs, reward, terminated, truncated, info = super().step(action)
-        self._detect_swap_bin_contacts(timestep)
+        detect_swap_contacts(
+            scene=getattr(self, "scene", None),
+            actors=getattr(self, "spawned_bins", None),
+            swap_schedule=getattr(self, "swap_schedule", []),
+            timestep=timestep,
+            state=self.swap_contact_state,
+            log_context={
+                "env": (getattr(self, "swap_contact_log_context", {}) or {}).get(
+                    "env", type(self).__name__
+                ),
+                "episode": (getattr(self, "swap_contact_log_context", {}) or {}).get(
+                    "episode"
+                ),
+                "seed": (getattr(self, "swap_contact_log_context", {}) or {}).get(
+                    "seed", getattr(self, "seed", None)
+                ),
+            },
+            default_env_name=type(self).__name__,
+        )
         return obs, reward, terminated, truncated, info

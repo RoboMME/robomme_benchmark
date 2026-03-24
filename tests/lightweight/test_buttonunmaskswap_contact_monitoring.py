@@ -1,12 +1,16 @@
-import importlib
-
 import pytest
 import torch
 
+from robomme.robomme_env.utils.swap_contact_monitoring import (
+    DEFAULT_SWAP_CONTACT_FORCE_EPS,
+    detect_swap_contacts,
+    get_swap_contact_summary,
+    new_swap_contact_state,
+    reset_swap_contact_state,
+)
+
+
 pytestmark = [pytest.mark.lightweight]
-
-
-button_mod = importlib.import_module("robomme.robomme_env.ButtonUnmaskSwap")
 
 
 class _Actor:
@@ -26,37 +30,48 @@ class _Scene:
         return torch.tensor([force], dtype=torch.float32)
 
 
-def _build_env(scene):
-    env = button_mod.ButtonUnmaskSwap.__new__(button_mod.ButtonUnmaskSwap)
-    env.seed = 13
-    env.scene = scene
-    env.spawned_bins = [_Actor("bin_0"), _Actor("bin_1"), _Actor("bin_2")]
-    env.swap_schedule = [(None, None, 10, 20)]
-    env.swap_contact_log_context = {
+def _build_inputs(scene):
+    actors = [_Actor("bin_0"), _Actor("bin_1"), _Actor("bin_2")]
+    swap_schedule = [(None, None, 10, 20)]
+    log_context = {
         "env": "ButtonUnmaskSwap",
         "episode": 7,
         "seed": 13,
     }
-    env._reset_swap_contact_monitoring()
-    return env
+    state = new_swap_contact_state()
+    return actors, swap_schedule, log_context, state
 
 
-def test_detect_swap_bin_contacts_only_during_swap_window():
+def test_detect_swap_contacts_only_during_swap_window():
     scene = _Scene({("bin_0", "bin_2"): (0.0, 0.0, 2.5)})
-    env = _build_env(scene)
+    actors, swap_schedule, log_context, state = _build_inputs(scene)
 
-    env._detect_swap_bin_contacts(9)
+    detect_swap_contacts(
+        scene=scene,
+        actors=actors,
+        swap_schedule=swap_schedule,
+        timestep=9,
+        state=state,
+        log_context=log_context,
+    )
     assert scene.calls == []
-    assert env.get_swap_contact_summary()["swap_contact_detected"] is False
+    assert get_swap_contact_summary(state)["swap_contact_detected"] is False
 
-    env._detect_swap_bin_contacts(10)
+    detect_swap_contacts(
+        scene=scene,
+        actors=actors,
+        swap_schedule=swap_schedule,
+        timestep=10,
+        state=state,
+        log_context=log_context,
+    )
 
     assert scene.calls == [
         ("bin_0", "bin_1"),
         ("bin_0", "bin_2"),
         ("bin_1", "bin_2"),
     ]
-    summary = env.get_swap_contact_summary()
+    summary = get_swap_contact_summary(state)
     assert summary["swap_contact_detected"] is True
     assert summary["first_contact_step"] == 10
     assert summary["contact_pairs"] == ["bin_0<->bin_2"]
@@ -65,23 +80,37 @@ def test_detect_swap_bin_contacts_only_during_swap_window():
     assert summary["max_force_step"] == 10
 
 
-def test_detect_swap_bin_contacts_threshold_max_update_and_single_print(monkeypatch):
+def test_detect_swap_contacts_threshold_max_update_and_single_print(monkeypatch):
     printed = []
     monkeypatch.setattr("builtins.print", lambda *args, **kwargs: printed.append(args[0]))
 
     scene = _Scene(
         {
-            ("bin_0", "bin_1"): (0.0, 0.0, button_mod.SWAP_CONTACT_FORCE_EPS),
+            ("bin_0", "bin_1"): (0.0, 0.0, DEFAULT_SWAP_CONTACT_FORCE_EPS),
             ("bin_0", "bin_2"): (0.0, 3.0, 4.0),
         }
     )
-    env = _build_env(scene)
+    actors, swap_schedule, log_context, state = _build_inputs(scene)
 
-    env._detect_swap_bin_contacts(10)
+    detect_swap_contacts(
+        scene=scene,
+        actors=actors,
+        swap_schedule=swap_schedule,
+        timestep=10,
+        state=state,
+        log_context=log_context,
+    )
     scene.forces[("bin_0", "bin_2")] = (0.0, 6.0, 8.0)
-    env._detect_swap_bin_contacts(11)
+    detect_swap_contacts(
+        scene=scene,
+        actors=actors,
+        swap_schedule=swap_schedule,
+        timestep=11,
+        state=state,
+        log_context=log_context,
+    )
 
-    summary = env.get_swap_contact_summary()
+    summary = get_swap_contact_summary(state)
     assert summary["contact_pairs"] == ["bin_0<->bin_2"]
     assert summary["pair_max_force"]["bin_0<->bin_2"] == pytest.approx(10.0)
     assert summary["max_force_norm"] == pytest.approx(10.0)
@@ -91,15 +120,22 @@ def test_detect_swap_bin_contacts_threshold_max_update_and_single_print(monkeypa
     assert "episode=7 seed=13 step=10 pair=bin_0<->bin_2" in printed[0]
 
 
-def test_reset_swap_contact_monitoring_clears_previous_state():
+def test_reset_swap_contact_state_clears_previous_state():
     scene = _Scene({("bin_1", "bin_2"): (1.0, 2.0, 2.0)})
-    env = _build_env(scene)
+    actors, swap_schedule, log_context, state = _build_inputs(scene)
 
-    env._detect_swap_bin_contacts(12)
-    assert env.get_swap_contact_summary()["swap_contact_detected"] is True
+    detect_swap_contacts(
+        scene=scene,
+        actors=actors,
+        swap_schedule=swap_schedule,
+        timestep=12,
+        state=state,
+        log_context=log_context,
+    )
+    assert get_swap_contact_summary(state)["swap_contact_detected"] is True
 
-    env._reset_swap_contact_monitoring()
-    summary = env.get_swap_contact_summary()
+    reset_swap_contact_state(state)
+    summary = get_swap_contact_summary(state)
     assert summary == {
         "swap_contact_detected": False,
         "first_contact_step": None,
@@ -109,4 +145,4 @@ def test_reset_swap_contact_monitoring_clears_previous_state():
         "max_force_step": None,
         "pair_max_force": {},
     }
-    assert env.printed_pairs == set()
+    assert state.printed_pairs == set()
