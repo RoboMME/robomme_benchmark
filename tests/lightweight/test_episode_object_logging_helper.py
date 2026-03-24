@@ -14,6 +14,7 @@ from tests._shared.repo_paths import ensure_src_on_path
 ensure_src_on_path(__file__)
 
 from robomme.env_record_wrapper.episode_object_logging import (
+    append_episode_object_collision_event,
     append_episode_object_swap_event,
     build_episode_object_log_record,
     extract_actor_world_position,
@@ -84,6 +85,7 @@ def test_record_reset_objects_writes_only_name_position_color():
         }
     ]
     assert record["swap_events"] == []
+    assert record["collision_events"] == []
 
 
 def test_append_swap_event_writes_only_swap_index_and_actor_names():
@@ -110,6 +112,7 @@ def test_append_swap_event_writes_only_swap_index_and_actor_names():
             "object_b": "bin_1",
         }
     ]
+    assert record["collision_events"] == []
     assert set(record.keys()) == {
         "env",
         "episode",
@@ -118,7 +121,44 @@ def test_append_swap_event_writes_only_swap_index_and_actor_names():
         "cube_list",
         "target_cube_list",
         "swap_events",
+        "collision_events",
     }
+
+
+def test_append_collision_event_writes_contact_summary_fields():
+    env = SimpleNamespace()
+    init_episode_object_log_state(env)
+
+    append_episode_object_collision_event(
+        env,
+        contact_summary={
+            "swap_contact_detected": True,
+            "first_contact_step": 224,
+            "contact_pairs": ["bin_1<->bin_2"],
+            "max_force_norm": 0.010015421144429798,
+            "max_force_pair": "bin_1<->bin_2",
+            "max_force_step": 224,
+            "pair_max_force": {"bin_1<->bin_2": 0.010015421144429798},
+        },
+    )
+
+    record = build_episode_object_log_record(
+        env,
+        env_id="DummyEnv",
+        episode=5,
+        seed=12,
+    )
+    assert record["collision_events"] == [
+        {
+            "swap_contact_detected": True,
+            "first_contact_step": 224,
+            "contact_pairs": ["bin_1<->bin_2"],
+            "max_force_norm": 0.010015421144429798,
+            "max_force_pair": "bin_1<->bin_2",
+            "max_force_step": 224,
+            "pair_max_force": {"bin_1<->bin_2": 0.010015421144429798},
+        }
+    ]
 
 
 if __name__ == "__main__":

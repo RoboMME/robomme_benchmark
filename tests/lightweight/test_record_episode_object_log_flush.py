@@ -23,6 +23,7 @@ from robomme.env_record_wrapper.episode_object_logging import (
     init_episode_object_log_state,
     record_reset_objects,
 )
+from robomme.robomme_env.utils.swap_contact_monitoring import new_swap_contact_state
 
 
 pytestmark = [pytest.mark.lightweight]
@@ -67,7 +68,6 @@ def test_record_wrapper_close_writes_minimal_episode_object_log_jsonl(
     record_wrapper_mod = importlib.import_module("robomme.env_record_wrapper.RecordWrapper")
     monkeypatch.setattr(record_wrapper_mod.task_goal, "get_language_goal", lambda *args, **kwargs: [])
     monkeypatch.setattr(RobommeRecordWrapper, "_video_flush_episode_files", lambda *args, **kwargs: None)
-    monkeypatch.setattr(RobommeRecordWrapper, "_contact_check_flush", lambda *args, **kwargs: None)
 
     env = _DummyEnv()
     if populate_state:
@@ -118,7 +118,101 @@ def test_record_wrapper_close_writes_minimal_episode_object_log_jsonl(
             else []
         ),
         "swap_events": [],
+        "collision_events": [],
     }
+
+
+def test_record_wrapper_close_writes_collision_summary_into_episode_object_log(
+    tmp_path,
+    monkeypatch,
+):
+    record_wrapper_mod = importlib.import_module("robomme.env_record_wrapper.RecordWrapper")
+    monkeypatch.setattr(record_wrapper_mod.task_goal, "get_language_goal", lambda *args, **kwargs: [])
+    monkeypatch.setattr(RobommeRecordWrapper, "_video_flush_episode_files", lambda *args, **kwargs: None)
+
+    env = _DummyEnv()
+    env.swap_contact_state = new_swap_contact_state()
+    env.swap_contact_state.swap_contact_detected = True
+    env.swap_contact_state.first_contact_step = 224
+    env.swap_contact_state.contact_pairs.append("bin_1<->bin_2")
+    env.swap_contact_state.max_force_norm = 0.010015421144429798
+    env.swap_contact_state.max_force_pair = "bin_1<->bin_2"
+    env.swap_contact_state.max_force_step = 224
+    env.swap_contact_state.pair_max_force["bin_1<->bin_2"] = 0.010015421144429798
+
+    wrapper = RobommeRecordWrapper(
+        env,
+        dataset=str(tmp_path),
+        env_id="DummyEnv",
+        episode=7,
+        seed=11,
+        save_video=False,
+        record_hdf5=False,
+    )
+    wrapper.close()
+
+    jsonl_path = tmp_path / EPISODE_OBJECT_LOG_FILENAME
+    records = [
+        json.loads(line)
+        for line in jsonl_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(records) == 1
+    record = records[0]
+    assert record["collision_events"] == [
+        {
+            "swap_contact_detected": True,
+            "first_contact_step": 224,
+            "contact_pairs": ["bin_1<->bin_2"],
+            "max_force_norm": 0.010015421144429798,
+            "max_force_pair": "bin_1<->bin_2",
+            "max_force_step": 224,
+            "pair_max_force": {"bin_1<->bin_2": 0.010015421144429798},
+        }
+    ]
+    assert not (tmp_path / "contact_check_results.jsonl").exists()
+
+
+def test_record_wrapper_does_not_prefix_video_filename_when_collision_detected(
+    tmp_path,
+    monkeypatch,
+):
+    record_wrapper_mod = importlib.import_module("robomme.env_record_wrapper.RecordWrapper")
+    monkeypatch.setattr(record_wrapper_mod.task_goal, "get_language_goal", lambda *args, **kwargs: [])
+
+    def _fake_video_write(self, frames, output_path):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"video")
+
+    monkeypatch.setattr(RobommeRecordWrapper, "_video_write_mp4", _fake_video_write)
+
+    env = _DummyEnv()
+    env.swap_contact_state = new_swap_contact_state()
+    env.swap_contact_state.swap_contact_detected = True
+    env.swap_contact_state.first_contact_step = 12
+    env.swap_contact_state.contact_pairs.append("bin_0<->bin_1")
+    env.swap_contact_state.max_force_norm = 1.5
+    env.swap_contact_state.max_force_pair = "bin_0<->bin_1"
+    env.swap_contact_state.max_force_step = 13
+    env.swap_contact_state.pair_max_force["bin_0<->bin_1"] = 1.5
+
+    wrapper = RobommeRecordWrapper(
+        env,
+        dataset=str(tmp_path),
+        env_id="DummyEnv",
+        episode=7,
+        seed=11,
+        save_video=True,
+        record_hdf5=False,
+    )
+    wrapper.episode_success = True
+    wrapper.video_frames.append(np.zeros((8, 8, 3), dtype=np.uint8))
+    wrapper.close()
+
+    videos_dir = tmp_path / "videos"
+    expected_video = videos_dir / "DummyEnv_ep7_seed11_no_goal.mp4"
+    assert expected_video.exists()
+    assert not (videos_dir / f"swapcontact_{expected_video.name}").exists()
 
 
 if __name__ == "__main__":

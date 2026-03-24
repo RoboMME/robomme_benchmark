@@ -48,6 +48,7 @@ from ..robomme_env.utils.choice_action_mapping import (
 )
 from ..robomme_env.utils.swap_contact_monitoring import get_swap_contact_summary
 from .episode_object_logging import (
+    append_episode_object_collision_event,
     append_episode_object_log_record,
     build_episode_object_log_record,
 )
@@ -177,7 +178,6 @@ class RobommeRecordWrapper(gym.Wrapper):
         self.video_frames = []  # Store combined video frames
         self.no_object_video_frames = []  # Save separately when target missing in video frame, for debugging
         self._video_target_frame_size = None
-        self._last_written_video_path: Optional[Path] = None  # Track main video path for contact renaming
         self._episode_object_log_flushed = False
 
         # 末端执行器姿态连续性缓存：
@@ -562,14 +562,12 @@ class RobommeRecordWrapper(gym.Wrapper):
                 if success:
                     combined_video_path = videos_dir / f"{video_prefix}_{filename_suffix}.mp4"
                     self._video_write_mp4(self.video_frames, combined_video_path)
-                    self._last_written_video_path = combined_video_path
                     logger.debug(f"Saved combined video to {combined_video_path}")
                 else:
                     combined_video_path = (
                         videos_dir / f"FAILED_{video_prefix}_{filename_suffix}.mp4"
                     )
                     self._video_write_mp4(self.video_frames, combined_video_path)
-                    self._last_written_video_path = combined_video_path
                     logger.debug(f"Saved failed episode video to {combined_video_path}")
             except Exception as e:
                 if success:
@@ -1587,6 +1585,14 @@ class RobommeRecordWrapper(gym.Wrapper):
             return
 
         unwrapped = self.env.unwrapped
+        swap_contact_state = getattr(unwrapped, "swap_contact_state", None)
+        if swap_contact_state is not None:
+            contact_summary = get_swap_contact_summary(swap_contact_state)
+            if contact_summary.get("swap_contact_detected", False):
+                append_episode_object_collision_event(
+                    unwrapped,
+                    contact_summary=contact_summary,
+                )
 
         try:
             record = build_episode_object_log_record(
@@ -1604,56 +1610,6 @@ class RobommeRecordWrapper(gym.Wrapper):
 
         append_episode_object_log_record(self.output_root, record)
         self._episode_object_log_flushed = True
-
-    def _contact_check_flush(self) -> None:
-        """
-        若当前环境具有 swap_contact_state，则：
-        1. 收集 swap contact 摘要；
-        2. 若检测到 swap contact，将主视频重命名为 swapcontact_ 前缀；
-        3. 将结果追加写入 JSONL。
-        非 swap 环境（无 swap_contact_state 属性）直接跳过，无副作用。
-        """
-        unwrapped = self.env.unwrapped
-        swap_contact_state = getattr(unwrapped, "swap_contact_state", None)
-        if swap_contact_state is None:
-            return
-
-        contact_summary = get_swap_contact_summary(swap_contact_state)
-
-        video_path = self._last_written_video_path
-        if video_path is not None and video_path.exists():
-            if contact_summary.get("swap_contact_detected") and not video_path.name.startswith("swapcontact_"):
-                renamed = video_path.with_name(f"swapcontact_{video_path.name}")
-                video_path.rename(renamed)
-                video_path = renamed
-                logger.debug(f"[SwapContact] prefixed video: {renamed}")
-
-        difficulty = getattr(unwrapped, "difficulty", None)
-        record = {
-            "env": self.env_id,
-            "episode": int(self.episode),
-            "seed": int(self.seed),
-            "difficulty": difficulty,
-            "episode_success": bool(self.episode_success),
-            "swap_contact_detected": bool(contact_summary.get("swap_contact_detected", False)),
-            "first_contact_step": contact_summary.get("first_contact_step"),
-            "contact_pairs": list(contact_summary.get("contact_pairs", [])),
-            "max_force_norm": float(contact_summary.get("max_force_norm", 0.0)),
-            "max_force_pair": contact_summary.get("max_force_pair"),
-            "max_force_step": contact_summary.get("max_force_step"),
-            "pair_max_force": {
-                str(k): float(v)
-                for k, v in contact_summary.get("pair_max_force", {}).items()
-            },
-            "video_path": str(video_path.resolve()) if video_path is not None else None,
-        }
-        jsonl_path = self.output_root / "contact_check_results.jsonl"
-        try:
-            jsonl_path.parent.mkdir(parents=True, exist_ok=True)
-            with jsonl_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-        except Exception as exc:
-            logger.debug(f"Warning: failed to write contact JSONL for episode {self.episode}: {exc}")
 
     def close(self):
         """
@@ -1732,8 +1688,6 @@ class RobommeRecordWrapper(gym.Wrapper):
                 video_prefix=video_prefix,
                 filename_suffix=filename_suffix,
             )
-
-        self._contact_check_flush()
 
         # Clear buffer to prevent repeated writing if close called multiple times
         self.buffer.clear()

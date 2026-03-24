@@ -39,6 +39,7 @@ def _empty_episode_object_log_state() -> dict[str, list[Any]]:
         "cube_list": [],
         "target_cube_list": [],
         "swap_events": [],
+        "collision_events": [],
     }
 
 
@@ -130,6 +131,35 @@ def append_episode_object_swap_event(
     )
 
 
+def build_episode_object_collision_event(
+    contact_summary: Optional[dict[str, Any]],
+) -> dict[str, Any]:
+    summary = contact_summary or {}
+    return {
+        "swap_contact_detected": bool(summary.get("swap_contact_detected", False)),
+        "first_contact_step": summary.get("first_contact_step"),
+        "contact_pairs": _to_jsonable(summary.get("contact_pairs", [])),
+        "max_force_norm": float(summary.get("max_force_norm", 0.0)),
+        "max_force_pair": summary.get("max_force_pair"),
+        "max_force_step": summary.get("max_force_step"),
+        "pair_max_force": {
+            str(key): float(value)
+            for key, value in (summary.get("pair_max_force", {}) or {}).items()
+        },
+    }
+
+
+def append_episode_object_collision_event(
+    env: Any,
+    *,
+    contact_summary: Optional[dict[str, Any]],
+) -> None:
+    state = _get_episode_object_log_state(env)
+    state["collision_events"].append(
+        build_episode_object_collision_event(contact_summary)
+    )
+
+
 def build_episode_object_log_record(
     env: Any,
     *,
@@ -146,6 +176,7 @@ def build_episode_object_log_record(
         "cube_list": _to_jsonable(state.get("cube_list", [])),
         "target_cube_list": _to_jsonable(state.get("target_cube_list", [])),
         "swap_events": _to_jsonable(state.get("swap_events", [])),
+        "collision_events": _to_jsonable(state.get("collision_events", [])),
     }
 
 
