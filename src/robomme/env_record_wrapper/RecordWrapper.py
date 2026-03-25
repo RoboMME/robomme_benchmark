@@ -1577,6 +1577,21 @@ class RobommeRecordWrapper(gym.Wrapper):
         self._h5_write_setup_group(episode_group, language_goal_list, difficulty)
 
     def _episode_object_log_flush(self) -> None:
+        """
+        Episode object logging 的收口并落盘：把 env 内累积的 object-log 状态写成
+        episode_object_logs.jsonl 中的一行（定义见 doc/episode_object_logging_mechanism.md）。
+
+        管线位置（最后一跳）：初始化空 _episode_object_log_state → reset 写入
+        bin_list / cube_list / target_cube_list → step 中追加 swap_events 并在
+        swap_contact_state 累计碰撞 → close 时调用本方法收拢为 JSONL。
+
+        步骤简述：
+        1. 若 _episode_object_log_flushed 已置位则返回，避免重复写入。
+        2. 从 swap_contact_state 取摘要；若本 episode 检测到 contact，则调用
+           objectlog.append_episode_object_collision_event 写入碰撞摘要。
+        3. objectlog.build_episode_object_log_record 组装 record，再经
+           objectlog.append_episode_object_log_record 追加落盘。
+        """
         if self._episode_object_log_flushed:
             return
 
