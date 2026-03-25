@@ -50,7 +50,8 @@ docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu24.04 nvidia-smi
 From the repository root:
 
 ```bash
-docker build -t robomme:cuda12.8 .
+docker build -t <image_name>:<tag> .
+# e.g., run `docker build -t robomme:cuda12.8 .`
 ```
 Enter the docker 
 ```bash
@@ -63,21 +64,27 @@ docker run --rm -it --gpus all \
   -v "$robomme_data_path:/app/data/robomme_data_h5:ro" \
   robomme:cuda12.8
 ```
-Run sample scripts
+`-e` sets an environment variable inside the container (e.g., `NVIDIA_DRIVER_CAPABILITIES`).  
+`-v` mounts a host path into the container (a volume mount). Here we mount the host directories `./runs` and `$robomme_data_path` to the container paths `/app/runs` and `/app/data/robomme_data_h5` (read-only via `:ro` when specified).  
+You can adapt these parameters to your needs. Inside the container, `/app` is the main directory of the repo.  
+
+Run sample scripts to check
 ```
 uv run ./scripts/run_example.py
 ```
 
-
-## 4) Others
+## 4) Other Hints
 
 To stop the docker
 ```bash
 docker ps
 docker stop <container_id_or_name>
 ```
+Alternatively, inside the container shell you can stop the session with `exit` (or `Ctrl-D`).
 
 To rebuild the docker image
 ```bash
-docker build --no-cache -t robomme:cuda12.8 .
+docker build --no-cache -t <image_name>:<tag> .
 ```
+
+To detach from the running container (without stopping it), press `Ctrl-p` then `Ctrl-q`.

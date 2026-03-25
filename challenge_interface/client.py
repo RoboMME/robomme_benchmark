@@ -1,5 +1,7 @@
 """
-This is used by RoboMME challenge organizers to evaluate the policy.
+This is used by RoboMME challenge organizers to query the policy via websocket.
+
+Participants do not need to modify this file.
 """
 
 
