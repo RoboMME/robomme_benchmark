@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 import torch
 
-from ...logging_utils import logger
+from ....logging_utils import logger
 
 
 DEFAULT_SWAP_CONTACT_FORCE_EPS = 1e-6

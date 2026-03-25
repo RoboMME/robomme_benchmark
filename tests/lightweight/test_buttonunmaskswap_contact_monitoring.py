@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from robomme.robomme_env.utils import swap_contact_monitoring as swapContact
+from robomme.robomme_env.utils.logging import swap_contact_monitoring as swapContact
 
 
 pytestmark = [pytest.mark.lightweight]

@@ -18,8 +18,8 @@ from tests._shared.repo_paths import ensure_src_on_path
 ensure_src_on_path(__file__)
 
 from robomme.env_record_wrapper.RecordWrapper import RobommeRecordWrapper
-from robomme.env_record_wrapper import object_log as objectlog
-from robomme.robomme_env.utils import swap_contact_monitoring as swapContact
+from robomme.robomme_env.utils.logging import object_log as objectlog
+from robomme.robomme_env.utils.logging import swap_contact_monitoring as swapContact
 
 
 pytestmark = [pytest.mark.lightweight]

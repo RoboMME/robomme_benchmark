@@ -46,8 +46,8 @@ from ..robomme_env.utils.choice_action_mapping import (
     extract_actor_position_xyz,
     project_world_to_pixel,
 )
-from ..robomme_env.utils import swap_contact_monitoring as swapContact
-from ..env_record_wrapper import object_log as objectlog
+from ..robomme_env.utils.logging import swap_contact_monitoring as swapContact
+from ..robomme_env.utils.logging import object_log as objectlog
 
 from ..logging_utils import logger
 

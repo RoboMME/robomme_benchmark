@@ -31,7 +31,7 @@ def test_swap_envs_import_shared_selector():
 def test_swap_contact_monitoring_envs_import_shared_monitoring():
     for relative_path in ENV_FILES[:3]:
         source = _source(relative_path)
-        assert "from .utils import swap_contact_monitoring as swapContact" in source
+        assert "from .utils.logging import swap_contact_monitoring as swapContact" in source
         assert "swapContact.detect_swap_contacts(" in source
         assert "swap_contact_state" in source
 

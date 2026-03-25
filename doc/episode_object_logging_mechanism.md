@@ -1,6 +1,6 @@
 # 当前 object log 机制说明
 
-本文解释 `/runs/replay_videos/episode_object_logs.jsonl` 对应的当前 logging 机制。这里的 logging 不是普通文本 logger，而是一套 episode 级别的结构化 JSONL 输出。当前统一入口模块是 `src/robomme/env_record_wrapper/object_log.py`。
+本文解释 `/runs/replay_videos/episode_object_logs.jsonl` 对应的当前 logging 机制。这里的 logging 不是普通文本 logger，而是一套 episode 级别的结构化 JSONL 输出。当前统一入口模块是 `src/robomme/robomme_env/utils/logging/object_log.py`。
 
 ## 0. 最小总结
 
@@ -23,12 +23,12 @@
 ## 0.1 `swap_contact_monitoring.py` 用到了哪些接口
 
 `swap_contact_monitoring.py` 统一使用：
-- env 侧 import：`from .utils import swap_contact_monitoring as swapContact`
+- env 侧 import：`from .utils.logging import swap_contact_monitoring as swapContact`
   - 位置：
     - `src/robomme/robomme_env/ButtonUnmaskSwap.py:33`
     - `src/robomme/robomme_env/VideoUnmaskSwap.py:32`
     - `src/robomme/robomme_env/VideoRepick.py:33`
-- wrapper 侧 import：`from ..robomme_env.utils import swap_contact_monitoring as swapContact`
+- wrapper 侧 import：`from ..robomme_env.utils.logging import swap_contact_monitoring as swapContact`
   - 位置：`src/robomme/env_record_wrapper/RecordWrapper.py:49`
 
 当前源码里实际用到的对外接口有 4 个：
@@ -61,7 +61,7 @@
 ## 0.2 `RecordWrapper.py` 用到了哪些接口
 
 `RecordWrapper.py` 统一使用：
-- import：`from ..env_record_wrapper import object_log as objectlog`
+- import：`from ..robomme_env.utils.logging import object_log as objectlog`
   - 位置：`src/robomme/env_record_wrapper/RecordWrapper.py:50`
 
 实际调用的对外接口集中在 `_episode_object_log_flush()`：
@@ -82,7 +82,7 @@
 ### `ButtonUnmaskSwap`
 
 统一 import：
-- `from ..env_record_wrapper import object_log as objectlog`
+- `from .utils.logging import object_log as objectlog`
   - 位置：`src/robomme/robomme_env/ButtonUnmaskSwap.py:38`
 
 用到的接口：
@@ -101,7 +101,7 @@
 ### `VideoUnmaskSwap`
 
 统一 import：
-- `from ..env_record_wrapper import object_log as objectlog`
+- `from .utils.logging import object_log as objectlog`
   - 位置：`src/robomme/robomme_env/VideoUnmaskSwap.py:38`
 
 用到的接口：

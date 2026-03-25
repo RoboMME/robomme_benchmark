@@ -30,8 +30,8 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 from .utils.swap_selection import select_dynamic_swap_pair
-from .utils import swap_contact_monitoring as swapContact
-from ..env_record_wrapper import object_log as objectlog
+from .utils.logging import swap_contact_monitoring as swapContact
+from .utils.logging import object_log as objectlog
 from ..logging_utils import logger
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
