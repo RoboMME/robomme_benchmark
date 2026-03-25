@@ -30,9 +30,9 @@ class _Actor:
         self.pose = _Pose(position)
 
 
-def test_record_reset_objects_writes_only_name_position_color():
+def test_record_object_reset_writes_only_name_position_color():
     env = SimpleNamespace()
-    objectlog.init_episode_object_log_state(env)
+    objectlog.init_episode_log(env)
 
     bin_actor = _Actor("bin_0", torch.tensor([[0.2, 0.0, 0.04]], dtype=torch.float32))
     cube_actor = _Actor("target_cube_red", [0.2, 0.0, 0.02])
@@ -40,8 +40,9 @@ def test_record_reset_objects_writes_only_name_position_color():
 
     assert objectlog.extract_actor_world_position(bin_actor) == pytest.approx([0.2, 0.0, 0.04])
 
-    objectlog.record_reset_objects(
+    objectlog.record_object(
         env,
+        event="reset",
         bin_list=[{"actor": bin_actor, "color": "red"}],
         cube_list=[{"actor": cube_actor, "color": "red"}],
         target_cube_list=[{"actor": target_actor, "color": "green"}],
@@ -81,11 +82,11 @@ def test_record_reset_objects_writes_only_name_position_color():
     assert record["collision_events"] == []
 
 
-def test_append_swap_event_writes_only_swap_index_and_actor_names():
+def test_record_swap_writes_only_swap_index_and_actor_names():
     env = SimpleNamespace()
-    objectlog.init_episode_object_log_state(env)
+    objectlog.init_episode_log(env)
 
-    objectlog.append_episode_object_swap_event(
+    objectlog.record_swap(
         env,
         swap_index=1,
         object_a=_Actor("bin_0", [0.0, 0.0, 0.0]),
@@ -118,11 +119,11 @@ def test_append_swap_event_writes_only_swap_index_and_actor_names():
     }
 
 
-def test_append_collision_event_writes_contact_summary_fields():
+def test_record_collision_writes_contact_summary_fields():
     env = SimpleNamespace()
-    objectlog.init_episode_object_log_state(env)
+    objectlog.init_episode_log(env)
 
-    objectlog.append_episode_object_collision_event(
+    objectlog.record_collision(
         env,
         contact_summary={
             "swap_contact_detected": True,
@@ -154,17 +155,17 @@ def test_append_collision_event_writes_contact_summary_fields():
     ]
 
 
-def test_record_reset_objects_resets_previous_swap_and_collision_events():
+def test_record_object_reset_resets_previous_swap_and_collision_events():
     env = SimpleNamespace()
-    objectlog.init_episode_object_log_state(env)
+    objectlog.init_episode_log(env)
 
-    objectlog.append_episode_object_swap_event(
+    objectlog.record_swap(
         env,
         swap_index=1,
         object_a=_Actor("bin_0", [0.0, 0.0, 0.0]),
         object_b=_Actor("bin_1", [0.1, 0.0, 0.0]),
     )
-    objectlog.append_episode_object_collision_event(
+    objectlog.record_collision(
         env,
         contact_summary={
             "swap_contact_detected": True,
@@ -172,8 +173,9 @@ def test_record_reset_objects_resets_previous_swap_and_collision_events():
         },
     )
 
-    objectlog.record_reset_objects(
+    objectlog.record_object(
         env,
+        event="reset",
         bin_list=[{"actor": _Actor("bin_2", [0.2, 0.0, 0.04]), "color": "blue"}],
         cube_list=[{"actor": _Actor("cube_blue", [0.2, 0.0, 0.02]), "color": "blue"}],
         target_cube_list=[],
@@ -201,6 +203,20 @@ def test_record_reset_objects_resets_previous_swap_and_collision_events():
     ]
     assert record["swap_events"] == []
     assert record["collision_events"] == []
+
+
+def test_record_object_rejects_unsupported_event():
+    env = SimpleNamespace()
+    objectlog.init_episode_log(env)
+
+    with pytest.raises(ValueError, match="Unsupported object-log event"):
+        objectlog.record_object(
+            env,
+            event="swap",
+            bin_list=[],
+            cube_list=[],
+            target_cube_list=[],
+        )
 
 
 if __name__ == "__main__":

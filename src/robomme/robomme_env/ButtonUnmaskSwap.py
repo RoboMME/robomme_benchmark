@@ -161,7 +161,7 @@ class ButtonUnmaskSwap(BaseEnv):
         ).item()
         logger.debug(f"Task will pick {self.pick_times} times")
         self.swap_contact_state = swapContact.new_swap_contact_state()
-        objectlog.init_episode_object_log_state(self)
+        objectlog.init_episode_log(self)
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
     
@@ -182,14 +182,14 @@ class ButtonUnmaskSwap(BaseEnv):
                 (None, None, 64 + 50 * 2, 64 + 50 * 3),
             ]
 
-    def _append_episode_object_swap_event(
+    def _record_swap(
         self,
         *,
         swap_index: int,
         object_a,
         object_b,
     ):
-        objectlog.append_episode_object_swap_event(
+        objectlog.record_swap(
             self,
             swap_index=swap_index,
             object_a=object_a,
@@ -468,8 +468,9 @@ class ButtonUnmaskSwap(BaseEnv):
                     "color": getattr(self, "target_cube_color", None),
                 }
             )
-        objectlog.record_reset_objects(
+        objectlog.record_object(
             self,
+            event="reset",
             bin_list=bin_list,
             cube_list=cube_list,
             target_cube_list=target_cube_list,
@@ -651,7 +652,7 @@ class ButtonUnmaskSwap(BaseEnv):
         idx_b = self.spawned_bins[selection["idx2"]]
         self.swap_schedule[slot_idx] = (idx_a, idx_b, start_step, end_step)
         self._last_swap_pair_key = selection["pair_key"]
-        self._append_episode_object_swap_event(
+        self._record_swap(
             swap_index=slot_idx,
             object_a=idx_a,
             object_b=idx_b,

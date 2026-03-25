@@ -34,7 +34,7 @@ class _DummyEnv(gym.Env):
         super().__init__()
         self.use_demonstrationwrapper = False
         self.spec = SimpleNamespace(id="DummyEnv")
-        objectlog.init_episode_object_log_state(self)
+        objectlog.init_episode_log(self)
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
@@ -67,8 +67,9 @@ def test_record_wrapper_close_writes_minimal_episode_object_log_jsonl(
 
     env = _DummyEnv()
     if populate_state:
-        objectlog.record_reset_objects(
+        objectlog.record_object(
             env,
+            event="reset",
             bin_list=[{"actor": _Actor("bin_0", [0.1, 0.0, 0.04]), "color": "red"}],
             cube_list=[{"actor": _Actor("cube_red", [0.1, 0.0, 0.02]), "color": "red"}],
             target_cube_list=[{"actor": _Actor("cube_green", [0.0, 0.1, 0.02]), "color": "green"}],
@@ -176,16 +177,17 @@ def test_record_wrapper_close_writes_collision_summary_into_episode_object_log(
     assert not (tmp_path / "contact_check_results.jsonl").exists()
 
 
-def test_flush_episode_object_log_appends_collision_summary_without_mutating_env_state(tmp_path):
+def test_flush_episode_log_appends_collision_summary_without_mutating_env_state(tmp_path):
     env = _DummyEnv()
-    objectlog.record_reset_objects(
+    objectlog.record_object(
         env,
+        event="reset",
         bin_list=[{"actor": _Actor("bin_0", [0.1, 0.0, 0.04]), "color": "red"}],
         cube_list=[],
         target_cube_list=[],
     )
 
-    jsonl_path = objectlog.flush_episode_object_log(
+    jsonl_path = objectlog.flush_episode_log(
         env,
         output_root=tmp_path,
         env_id="DummyEnv",

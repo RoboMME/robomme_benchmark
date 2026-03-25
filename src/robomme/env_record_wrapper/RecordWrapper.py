@@ -1588,7 +1588,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         步骤简述：
         1. 若 _episode_object_log_flushed 已置位则返回，避免重复写入。
         2. 从 swap_contact_state 取摘要，并把 summary 作为 close 阶段的补充信息。
-        3. objectlog.flush_episode_object_log 组装 record 并追加落盘。
+        3. objectlog.flush_episode_log 组装 record 并追加落盘。
         """
         if self._episode_object_log_flushed:
             return
@@ -1599,7 +1599,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         if swap_contact_state is not None:
             contact_summary = swapContact.get_swap_contact_summary(swap_contact_state)
 
-        objectlog.flush_episode_object_log(
+        objectlog.flush_episode_log(
             unwrapped,
             output_root=self.output_root,
             env_id=self.env_id,

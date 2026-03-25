@@ -89,7 +89,7 @@ def _get_episode_object_log_state(env: Any) -> dict[str, list[Any]]:
     return state
 
 
-def init_episode_object_log_state(env: Any) -> None:
+def init_episode_log(env: Any) -> None:
     """显式重置 env 上的 episode 对象日志 state。"""
     setattr(env, _EPISODE_OBJECT_LOG_STATE_ATTR, _empty_episode_object_log_state())
 
@@ -160,37 +160,39 @@ def _serialize_actor_list(items: Any) -> list[dict[str, Any]]:
     return serialized
 
 
-def record_reset_objects(
+def record_object(
     env: Any,
     *,
+    event: str,
     bin_list: list[dict[str, Any]],
     cube_list: list[dict[str, Any]],
     target_cube_list: list[dict[str, Any]],
 ) -> None:
-    """记录 episode reset 后的对象布局快照。
+    """记录对象相关的 episode 级事件。
 
-    这个函数通常在环境 `_initialize_episode()` 里调用，语义上表示：
-    “本 episode 的初始对象配置已经确定，可以把之后做分析需要的最小快照保存下来。”
-
-    这里把 reset 视为新的 episode 边界，因此会先重建整份 state，
+    当前仅定义 `event="reset"`：
+    reset 被视为新的 episode 边界，因此会先重建整份 state，
     再写入本轮 episode 的初始对象快照。这样可以保证上一轮 episode 的
     swap / collision 记录不会泄漏到当前 episode。
     """
-    init_episode_object_log_state(env)
+    if event != "reset":
+        raise ValueError(f"Unsupported object-log event: {event}")
+
+    init_episode_log(env)
     state = _get_episode_object_log_state(env)
     state["bin_list"] = _serialize_actor_list(bin_list)
     state["cube_list"] = _serialize_actor_list(cube_list)
     state["target_cube_list"] = _serialize_actor_list(target_cube_list)
 
 
-def append_episode_object_swap_event(
+def record_swap(
     env: Any,
     *,
     swap_index: int,
     object_a: Any,
     object_b: Any,
 ) -> None:
-    """追加一条 swap 事件。
+    """记录一条 swap 事件。
 
     这里记录的是“实际 resolve 出来的交换对象”，不是配置里的抽象 slot。
     因此 object_a / object_b 只存 actor.name，避免把完整 actor 结构带进日志。
@@ -228,7 +230,7 @@ def build_episode_object_collision_event(
     }
 
 
-def append_episode_object_collision_event(
+def record_collision(
     env: Any,
     *,
     contact_summary: Optional[dict[str, Any]],
@@ -298,7 +300,7 @@ def append_episode_object_log_record(
     return jsonl_path
 
 
-def flush_episode_object_log(
+def flush_episode_log(
     env: Any,
     *,
     output_root: Any,
