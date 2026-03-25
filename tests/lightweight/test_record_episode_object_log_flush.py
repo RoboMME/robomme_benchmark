@@ -19,7 +19,7 @@ ensure_src_on_path(__file__)
 
 from robomme.env_record_wrapper.RecordWrapper import RobommeRecordWrapper
 from robomme.env_record_wrapper import object_log as objectlog
-from robomme.robomme_env.utils.swap_contact_monitoring import new_swap_contact_state
+from robomme.robomme_env.utils import swap_contact_monitoring as swapContact
 
 
 pytestmark = [pytest.mark.lightweight]
@@ -127,7 +127,7 @@ def test_record_wrapper_close_writes_collision_summary_into_episode_object_log(
     monkeypatch.setattr(RobommeRecordWrapper, "_video_flush_episode_files", lambda *args, **kwargs: None)
 
     env = _DummyEnv()
-    env.swap_contact_state = new_swap_contact_state()
+    env.swap_contact_state = swapContact.new_swap_contact_state()
     env.swap_contact_state.swap_contact_detected = True
     env.swap_contact_state.first_contact_step = 224
     env.swap_contact_state.contact_pairs.append("bin_1<->bin_2")
@@ -183,7 +183,7 @@ def test_record_wrapper_does_not_prefix_video_filename_when_collision_detected(
     monkeypatch.setattr(RobommeRecordWrapper, "_video_write_mp4", _fake_video_write)
 
     env = _DummyEnv()
-    env.swap_contact_state = new_swap_contact_state()
+    env.swap_contact_state = swapContact.new_swap_contact_state()
     env.swap_contact_state.swap_contact_detected = True
     env.swap_contact_state.first_contact_step = 12
     env.swap_contact_state.contact_pairs.append("bin_0<->bin_1")

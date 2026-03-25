@@ -46,7 +46,7 @@ from ..robomme_env.utils.choice_action_mapping import (
     extract_actor_position_xyz,
     project_world_to_pixel,
 )
-from ..robomme_env.utils.swap_contact_monitoring import get_swap_contact_summary
+from ..robomme_env.utils import swap_contact_monitoring as swapContact
 from ..env_record_wrapper import object_log as objectlog
 
 from ..logging_utils import logger
@@ -1583,7 +1583,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         unwrapped = self.env.unwrapped
         swap_contact_state = getattr(unwrapped, "swap_contact_state", None)
         if swap_contact_state is not None:
-            contact_summary = get_swap_contact_summary(swap_contact_state)
+            contact_summary = swapContact.get_swap_contact_summary(swap_contact_state)
             if contact_summary.get("swap_contact_detected", False):
                 objectlog.append_episode_object_collision_event(
                     unwrapped,

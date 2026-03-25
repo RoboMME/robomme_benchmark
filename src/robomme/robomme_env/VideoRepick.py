@@ -30,11 +30,7 @@ from .utils.subgoal_evaluate_func import static_check
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
-from .utils.swap_contact_monitoring import (
-    detect_swap_contacts,
-    new_swap_contact_state,
-    reset_swap_contact_state,
-)
+from .utils import swap_contact_monitoring as swapContact
 from .utils.swap_selection import select_dynamic_swap_pair
 
 from ..logging_utils import logger
@@ -152,7 +148,7 @@ class VideoRepick(BaseEnv):
         self.swap_times = torch.randint(self.configs[self.difficulty]['swap_min'], self.configs[self.difficulty]['swap_max']+1, (1,), generator=self.generator).item()
         logger.debug(f"Task will swap {self.swap_times} times")
 
-        self.swap_contact_state = new_swap_contact_state()
+        self.swap_contact_state = swapContact.new_swap_contact_state()
 
         self.static_flag=False
         self.start_step=99999
@@ -317,7 +313,7 @@ class VideoRepick(BaseEnv):
             self.table_scene.initialize(env_idx)
             qpos=reset_panda.get_reset_panda_param("qpos")
             self.agent.reset(qpos)
-            reset_swap_contact_state(self.swap_contact_state)
+            swapContact.reset_swap_contact_state(self.swap_contact_state)
             tasks = [
             {
                 "func": (lambda: is_obj_pickup(self, obj=self.target_cube_1)),
@@ -588,7 +584,7 @@ class VideoRepick(BaseEnv):
 
 
         obs, reward, terminated, truncated, info = super().step(action)
-        detect_swap_contacts(
+        swapContact.detect_swap_contacts(
             scene=getattr(self, "scene", None),
             actors=getattr(self, "spawned_cubes", None),
             swap_schedule=getattr(self, "swap_schedule", []),

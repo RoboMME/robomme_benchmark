@@ -30,11 +30,7 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 from .utils.swap_selection import select_dynamic_swap_pair
-from .utils.swap_contact_monitoring import (
-    detect_swap_contacts,
-    new_swap_contact_state,
-    reset_swap_contact_state,
-)
+from .utils import swap_contact_monitoring as swapContact
 from ..env_record_wrapper import object_log as objectlog
 from ..logging_utils import logger
 
@@ -164,7 +160,7 @@ class ButtonUnmaskSwap(BaseEnv):
             generator=self.generator,
         ).item()
         logger.debug(f"Task will pick {self.pick_times} times")
-        self.swap_contact_state = new_swap_contact_state()
+        self.swap_contact_state = swapContact.new_swap_contact_state()
         objectlog.init_episode_object_log_state(self)
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -452,7 +448,7 @@ class ButtonUnmaskSwap(BaseEnv):
             self.table_scene.initialize(env_idx)
             qpos=reset_panda.get_reset_panda_param("qpos")
             self.agent.reset(qpos)
-        reset_swap_contact_state(self.swap_contact_state)
+        swapContact.reset_swap_contact_state(self.swap_contact_state)
         selected_bin_indices = list(getattr(self, "selected_bin_indices", []) or [])
         bin_list = []
         cube_list = []
@@ -716,7 +712,7 @@ class ButtonUnmaskSwap(BaseEnv):
             )
 
         obs, reward, terminated, truncated, info = super().step(action)
-        detect_swap_contacts(
+        swapContact.detect_swap_contacts(
             scene=getattr(self, "scene", None),
             actors=getattr(self, "spawned_bins", None),
             swap_schedule=getattr(self, "swap_schedule", []),

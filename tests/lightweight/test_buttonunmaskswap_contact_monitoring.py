@@ -1,13 +1,7 @@
 import pytest
 import torch
 
-from robomme.robomme_env.utils.swap_contact_monitoring import (
-    DEFAULT_SWAP_CONTACT_FORCE_EPS,
-    detect_swap_contacts,
-    get_swap_contact_summary,
-    new_swap_contact_state,
-    reset_swap_contact_state,
-)
+from robomme.robomme_env.utils import swap_contact_monitoring as swapContact
 
 
 pytestmark = [pytest.mark.lightweight]
@@ -38,7 +32,7 @@ def _build_inputs(scene):
         "episode": 7,
         "seed": 13,
     }
-    state = new_swap_contact_state()
+    state = swapContact.new_swap_contact_state()
     return actors, swap_schedule, log_context, state
 
 
@@ -46,7 +40,7 @@ def test_detect_swap_contacts_only_during_swap_window():
     scene = _Scene({("bin_0", "bin_2"): (0.0, 0.0, 2.5)})
     actors, swap_schedule, log_context, state = _build_inputs(scene)
 
-    detect_swap_contacts(
+    swapContact.detect_swap_contacts(
         scene=scene,
         actors=actors,
         swap_schedule=swap_schedule,
@@ -55,9 +49,9 @@ def test_detect_swap_contacts_only_during_swap_window():
         log_context=log_context,
     )
     assert scene.calls == []
-    assert get_swap_contact_summary(state)["swap_contact_detected"] is False
+    assert swapContact.get_swap_contact_summary(state)["swap_contact_detected"] is False
 
-    detect_swap_contacts(
+    swapContact.detect_swap_contacts(
         scene=scene,
         actors=actors,
         swap_schedule=swap_schedule,
@@ -71,7 +65,7 @@ def test_detect_swap_contacts_only_during_swap_window():
         ("bin_0", "bin_2"),
         ("bin_1", "bin_2"),
     ]
-    summary = get_swap_contact_summary(state)
+    summary = swapContact.get_swap_contact_summary(state)
     assert summary["swap_contact_detected"] is True
     assert summary["first_contact_step"] == 10
     assert summary["contact_pairs"] == ["bin_0<->bin_2"]
@@ -86,13 +80,13 @@ def test_detect_swap_contacts_threshold_max_update_and_single_print(monkeypatch)
 
     scene = _Scene(
         {
-            ("bin_0", "bin_1"): (0.0, 0.0, DEFAULT_SWAP_CONTACT_FORCE_EPS),
+            ("bin_0", "bin_1"): (0.0, 0.0, swapContact.DEFAULT_SWAP_CONTACT_FORCE_EPS),
             ("bin_0", "bin_2"): (0.0, 3.0, 4.0),
         }
     )
     actors, swap_schedule, log_context, state = _build_inputs(scene)
 
-    detect_swap_contacts(
+    swapContact.detect_swap_contacts(
         scene=scene,
         actors=actors,
         swap_schedule=swap_schedule,
@@ -101,7 +95,7 @@ def test_detect_swap_contacts_threshold_max_update_and_single_print(monkeypatch)
         log_context=log_context,
     )
     scene.forces[("bin_0", "bin_2")] = (0.0, 6.0, 8.0)
-    detect_swap_contacts(
+    swapContact.detect_swap_contacts(
         scene=scene,
         actors=actors,
         swap_schedule=swap_schedule,
@@ -110,7 +104,7 @@ def test_detect_swap_contacts_threshold_max_update_and_single_print(monkeypatch)
         log_context=log_context,
     )
 
-    summary = get_swap_contact_summary(state)
+    summary = swapContact.get_swap_contact_summary(state)
     assert summary["contact_pairs"] == ["bin_0<->bin_2"]
     assert summary["pair_max_force"]["bin_0<->bin_2"] == pytest.approx(10.0)
     assert summary["max_force_norm"] == pytest.approx(10.0)
@@ -124,7 +118,7 @@ def test_reset_swap_contact_state_clears_previous_state():
     scene = _Scene({("bin_1", "bin_2"): (1.0, 2.0, 2.0)})
     actors, swap_schedule, log_context, state = _build_inputs(scene)
 
-    detect_swap_contacts(
+    swapContact.detect_swap_contacts(
         scene=scene,
         actors=actors,
         swap_schedule=swap_schedule,
@@ -132,10 +126,10 @@ def test_reset_swap_contact_state_clears_previous_state():
         state=state,
         log_context=log_context,
     )
-    assert get_swap_contact_summary(state)["swap_contact_detected"] is True
+    assert swapContact.get_swap_contact_summary(state)["swap_contact_detected"] is True
 
-    reset_swap_contact_state(state)
-    summary = get_swap_contact_summary(state)
+    swapContact.reset_swap_contact_state(state)
+    summary = swapContact.get_swap_contact_summary(state)
     assert summary == {
         "swap_contact_detected": False,
         "first_contact_step": None,
