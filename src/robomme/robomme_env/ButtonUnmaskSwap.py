@@ -196,6 +196,55 @@ class ButtonUnmaskSwap(BaseEnv):
             object_b=object_b,
         )
 
+    def _build_object_log_payload(self):
+        selected_bin_indices = list(getattr(self, "selected_bin_indices", []) or [])
+        bin_list = []
+        cube_list = []
+        for idx_i, (cube_actor, bin_actor) in enumerate(
+            getattr(self, "cube_bin_pairs", []) or []
+        ):
+            bin_index = selected_bin_indices[idx_i] if idx_i < len(selected_bin_indices) else None
+            color = (getattr(self, "bin_to_color", {}) or {}).get(bin_index)
+            bin_list.append(
+                {
+                    "name": getattr(bin_actor, "name", None),
+                    "position": objectlog.extract_actor_world_position(bin_actor),
+                    "color": color,
+                }
+            )
+            cube_list.append(
+                {
+                    "name": getattr(cube_actor, "name", None),
+                    "position": objectlog.extract_actor_world_position(cube_actor),
+                    "color": color,
+                }
+            )
+
+        target_cube_list = []
+        target_cube_actor = getattr(self, "target_cube", None)
+        if target_cube_actor is not None:
+            target_cube_list.append(
+                {
+                    "name": getattr(target_cube_actor, "name", None),
+                    "position": objectlog.extract_actor_world_position(target_cube_actor),
+                    "color": getattr(self, "target_cube_color", None),
+                }
+            )
+
+        return {
+            "bin_list": bin_list,
+            "cube_list": cube_list,
+            "target_cube_list": target_cube_list,
+        }
+
+    def _bin_falldown_log_step(self) -> int:
+        start_step = 0
+        end_step = 32 * 2
+        duration = max(1, end_step - start_step)
+        half_window = max(1, duration // 2)
+        drop_step = min(end_step, start_step + half_window)
+        return drop_step + 1
+
     @property
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(
@@ -449,46 +498,11 @@ class ButtonUnmaskSwap(BaseEnv):
             qpos=reset_panda.get_reset_panda_param("qpos")
             self.agent.reset(qpos)
         swapContact.reset_swap_contact_state(self.swap_contact_state)
-        selected_bin_indices = list(getattr(self, "selected_bin_indices", []) or [])
-        bin_list = []
-        cube_list = []
-        for idx_i, (cube_actor, bin_actor) in enumerate(
-            getattr(self, "cube_bin_pairs", []) or []
-        ):
-            bin_index = selected_bin_indices[idx_i] if idx_i < len(selected_bin_indices) else None
-            color = (getattr(self, "bin_to_color", {}) or {}).get(bin_index)
-            bin_list.append(
-                {
-                    "name": getattr(bin_actor, "name", None),
-                    "position": objectlog.extract_actor_world_position(bin_actor),
-                    "color": color,
-                }
-            )
-            cube_list.append(
-                {
-                    "name": getattr(cube_actor, "name", None),
-                    "position": objectlog.extract_actor_world_position(cube_actor),
-                    "color": color,
-                }
-            )
-        target_cube_list = []
-        target_cube_actor = getattr(self, "target_cube", None)
-        if target_cube_actor is not None:
-            target_cube_list.append(
-                {
-                    "name": getattr(target_cube_actor, "name", None),
-                    "position": objectlog.extract_actor_world_position(target_cube_actor),
-                    "color": getattr(self, "target_cube_color", None),
-                }
-            )
+        self._bin_falldown_logged = False
         objectlog.record_object(
             self,
             event="init",
-            payload={
-                "bin_list": bin_list,
-                "cube_list": cube_list,
-                "target_cube_list": target_cube_list,
-            },
+            payload=self._build_object_log_payload(),
         )
         tasks = [
             {
@@ -689,6 +703,16 @@ class ButtonUnmaskSwap(BaseEnv):
                 end_step=32*2,
                 cur_step=timestep,
             )
+        if (
+            not getattr(self, "_bin_falldown_logged", False)
+            and timestep == self._bin_falldown_log_step()
+        ):
+            objectlog.record_object(
+                self,
+                event="bin-falldown",
+                payload=self._build_object_log_payload(),
+            )
+            self._bin_falldown_logged = True
         for i in range(len(self.swap_schedule)):
             start = self.swap_schedule[i][2]
             end = self.swap_schedule[i][3]
