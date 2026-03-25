@@ -105,9 +105,7 @@ def test_swap_env_episode_object_log(dataset_factory, env_id: str, episode: int)
         "env",
         "episode",
         "seed",
-        "bin_list",
-        "cube_list",
-        "target_cube_list",
+        "object_events",
         "swap_events",
         "collision_events",
     }
@@ -116,9 +114,16 @@ def test_swap_env_episode_object_log(dataset_factory, env_id: str, episode: int)
     assert "episode_success" not in record
     assert "object_log" not in record
 
-    bin_list = record["bin_list"]
-    cube_list = record["cube_list"]
-    target_cube_list = record["target_cube_list"]
+    object_events = record["object_events"]
+    assert isinstance(object_events, dict)
+    boundary_event = "reset" if "reset" in object_events else "init"
+    assert boundary_event in object_events
+    payload = object_events[boundary_event]
+    assert set(payload.keys()) == {"bin_list", "cube_list", "target_cube_list"}
+
+    bin_list = payload["bin_list"]
+    cube_list = payload["cube_list"]
+    target_cube_list = payload["target_cube_list"]
     assert len(bin_list) == 3
     assert len(cube_list) == 3
     assert len(target_cube_list) == 1

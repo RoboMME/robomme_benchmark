@@ -6,7 +6,7 @@
 
 `object_log.py` 提供的是一组 episode 级结构化日志 helper，统一按模块别名调用：
 - env 构造时调用 `objectlog.init_episode_log()`，准备空 state
-- env reset 时调用 `objectlog.record_object(event="reset", ...)`，重置本轮 episode state 并记录初始对象快照
+- env reset/init 时调用 `objectlog.record_object(event=..., payload=...)`，重置本轮 episode state 并记录初始对象快照
 - env step 期间按需调用 `objectlog.record_swap()`，记录实际发生的 swap 对
 - `RecordWrapper.close()` 里调用 `_episode_object_log_flush()`，从 `swap_contact_state` 取 summary 后，统一经 `objectlog.flush_episode_log()` 写入 `episode_object_logs.jsonl`
 
@@ -91,7 +91,7 @@
   - 用途：env 构造时初始化空日志 state
 - `objectlog.record_object()`
   - 调用位置：`src/robomme/robomme_env/ButtonUnmaskSwap.py:475`
-  - 用途：在 `_initialize_episode()` 中通过 `event="reset"` 重置 object-log state，并记录 bin / cube / target cube 的初始快照
+  - 用途：在 `_initialize_episode()` 中通过边界 event 写入 `object_events[event]`，并记录 bin / cube / target cube 的初始快照
 - `objectlog.record_swap()`
   - 间接调用封装：`src/robomme/robomme_env/ButtonUnmaskSwap.py:189`
   - 真正 helper 调用：`src/robomme/robomme_env/ButtonUnmaskSwap.py:196`
@@ -110,7 +110,25 @@
   - 用途：env 构造时初始化空日志 state
 - `objectlog.record_object()`
   - 调用位置：`src/robomme/robomme_env/VideoUnmaskSwap.py:464`
-  - 用途：在 `_initialize_episode()` 中通过 `event="reset"` 重置 object-log state，并记录 bin / cube / target cube 的初始快照
+  - 用途：在 `_initialize_episode()` 中通过边界 event 写入 `object_events[event]`，并记录 bin / cube / target cube 的初始快照
+
+## 0.4 `object_log.py` 当前 schema
+
+当前 episode state 和最终 JSONL record 使用如下结构：
+- `object_events: dict[str, dict[str, Any]]`
+  - 用于保存对象相关事件，key 是 event 名
+  - 同名 event 再次写入时会覆盖旧 payload
+  - `reset` / `init` 属于边界事件，写入前会先清空整份 state
+- `swap_events: list[dict]`
+- `collision_events: list[dict]`
+
+当前两个 swap env 在边界 event 的 payload 中都会记录：
+- `bin_list`
+- `cube_list`
+- `target_cube_list`
+
+这些列表都由 env 在外部先整理成干净的纯 Python 结构，例如：
+`{"name": ..., "position": [x, y, z] | None, "color": ...}`
 - `objectlog.record_swap()`
   - 间接调用封装：`src/robomme/robomme_env/VideoUnmaskSwap.py:196`
   - 真正 helper 调用：`src/robomme/robomme_env/VideoUnmaskSwap.py:203`

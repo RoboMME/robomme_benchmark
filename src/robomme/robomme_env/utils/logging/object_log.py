@@ -18,6 +18,7 @@ from ....logging_utils import logger
 # 3. 所有值在最终写盘前都转成 json-able 的纯 Python 结构，避免 tensor / ndarray 泄漏到 json.dumps。
 EPISODE_OBJECT_LOG_FILENAME = "episode_object_logs.jsonl"
 _EPISODE_OBJECT_LOG_STATE_ATTR = "_episode_object_log_state"
+_EPISODE_OBJECT_LOG_BOUNDARY_EVENTS = {"reset", "init"}
 
 
 def _to_python_scalar(value: Any) -> Any:
@@ -57,26 +58,22 @@ def _to_jsonable(value: Any) -> Any:
     return _to_python_scalar(value)
 
 
-def _empty_episode_object_log_state() -> dict[str, list[Any]]:
+def _empty_episode_object_log_state() -> dict[str, Any]:
     """创建一个新的空 episode 日志 state。
 
     每个 episode 都会围绕这几个字段累积信息：
-    - bin_list: reset 后容器对象的静态快照
-    - cube_list: reset 后 cube 对象的静态快照
-    - target_cube_list: reset 后目标 cube 的静态快照
+    - object_events: 按 event 名归档的对象快照或其他对象相关 payload
     - swap_events: episode 运行期间实际发生的 swap 事件
     - collision_events: episode 结束前整理出来的碰撞摘要
     """
     return {
-        "bin_list": [],
-        "cube_list": [],
-        "target_cube_list": [],
+        "object_events": {},
         "swap_events": [],
         "collision_events": [],
     }
 
 
-def _get_episode_object_log_state(env: Any) -> dict[str, list[Any]]:
+def _get_episode_object_log_state(env: Any) -> dict[str, Any]:
     """读取 env 上挂载的日志 state；如果不存在则懒初始化。
 
     这里用“按需创建”而不是假设调用方一定先初始化，
@@ -128,61 +125,32 @@ def extract_actor_world_position(actor: Any) -> Optional[list[float]]:
     return [float(position[0]), float(position[1]), float(position[2])]
 
 
-def _serialize_actor_item(item: Any) -> Optional[dict[str, Any]]:
-    """把单个 `{actor, color, ...}` 项压缩成最小可持久化结构。
-
-    当前只保留三类信息：
-    - name: 后续定位对象最稳定的标识
-    - position: reset 时或记录当下的世界坐标
-    - color: 任务层面可读的语义标签
-
-    其他运行时细节故意不写入，以保持 schema 简单稳定。
-    """
-    if not isinstance(item, dict):
-        return None
-    actor = item.get("actor")
-    return {
-        "name": getattr(actor, "name", None),
-        "position": extract_actor_world_position(actor),
-        "color": item.get("color"),
-    }
-
-
-def _serialize_actor_list(items: Any) -> list[dict[str, Any]]:
-    """批量序列化 actor 列表，并自动跳过非法项。"""
-    if not isinstance(items, list):
-        return []
-    serialized = []
-    for item in items:
-        payload = _serialize_actor_item(item)
-        if payload is not None:
-            serialized.append(payload)
-    return serialized
-
-
 def record_object(
     env: Any,
     *,
     event: str,
-    bin_list: list[dict[str, Any]],
-    cube_list: list[dict[str, Any]],
-    target_cube_list: list[dict[str, Any]],
+    payload: dict[str, Any],
 ) -> None:
     """记录对象相关的 episode 级事件。
 
-    当前仅定义 `event="reset"`：
-    reset 被视为新的 episode 边界，因此会先重建整份 state，
-    再写入本轮 episode 的初始对象快照。这样可以保证上一轮 episode 的
-    swap / collision 记录不会泄漏到当前 episode。
+    当前约定：
+    - `object_events[event] = payload`
+    - 同名 event 再次写入时覆盖旧值
+    - `reset/init` 这类 episode 边界事件会先清空整份 state，再写入当前 event
     """
-    if event != "reset":
-        raise ValueError(f"Unsupported object-log event: {event}")
+    if not isinstance(event, str) or not event:
+        raise ValueError(f"Invalid object-log event: {event!r}")
+    if not isinstance(payload, dict):
+        raise TypeError(f"object-log payload must be a dict, got {type(payload).__name__}")
 
-    init_episode_log(env)
+    if event in _EPISODE_OBJECT_LOG_BOUNDARY_EVENTS:
+        init_episode_log(env)
     state = _get_episode_object_log_state(env)
-    state["bin_list"] = _serialize_actor_list(bin_list)
-    state["cube_list"] = _serialize_actor_list(cube_list)
-    state["target_cube_list"] = _serialize_actor_list(target_cube_list)
+    object_events = state.get("object_events")
+    if not isinstance(object_events, dict):
+        object_events = {}
+        state["object_events"] = object_events
+    object_events[event] = _to_jsonable(payload)
 
 
 def record_swap(
@@ -267,9 +235,7 @@ def build_episode_object_log_record(
         "env": env_id,
         "episode": None if episode is None else int(episode),
         "seed": None if seed is None else int(seed),
-        "bin_list": _to_jsonable(state.get("bin_list", [])),
-        "cube_list": _to_jsonable(state.get("cube_list", [])),
-        "target_cube_list": _to_jsonable(state.get("target_cube_list", [])),
+        "object_events": _to_jsonable(state.get("object_events", {})),
         "swap_events": _to_jsonable(state.get("swap_events", [])),
         "collision_events": _to_jsonable(state.get("collision_events", [])),
     }

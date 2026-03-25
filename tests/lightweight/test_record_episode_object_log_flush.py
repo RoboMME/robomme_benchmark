@@ -70,9 +70,13 @@ def test_record_wrapper_close_writes_minimal_episode_object_log_jsonl(
         objectlog.record_object(
             env,
             event="reset",
-            bin_list=[{"actor": _Actor("bin_0", [0.1, 0.0, 0.04]), "color": "red"}],
-            cube_list=[{"actor": _Actor("cube_red", [0.1, 0.0, 0.02]), "color": "red"}],
-            target_cube_list=[{"actor": _Actor("cube_green", [0.0, 0.1, 0.02]), "color": "green"}],
+            payload={
+                "bin_list": [{"name": "bin_0", "position": [0.1, 0.0, 0.04], "color": "red"}],
+                "cube_list": [{"name": "cube_red", "position": [0.1, 0.0, 0.02], "color": "red"}],
+                "target_cube_list": [
+                    {"name": "cube_green", "position": [0.0, 0.1, 0.02], "color": "green"}
+                ],
+            },
         )
 
     wrapper = RobommeRecordWrapper(
@@ -99,20 +103,18 @@ def test_record_wrapper_close_writes_minimal_episode_object_log_jsonl(
         "env": "DummyEnv",
         "episode": 7,
         "seed": 11,
-        "bin_list": (
-            [{"name": "bin_0", "position": [0.1, 0.0, 0.04], "color": "red"}]
+        "object_events": (
+            {
+                "reset": {
+                    "bin_list": [{"name": "bin_0", "position": [0.1, 0.0, 0.04], "color": "red"}],
+                    "cube_list": [{"name": "cube_red", "position": [0.1, 0.0, 0.02], "color": "red"}],
+                    "target_cube_list": [
+                        {"name": "cube_green", "position": [0.0, 0.1, 0.02], "color": "green"}
+                    ],
+                }
+            }
             if populate_state
-            else []
-        ),
-        "cube_list": (
-            [{"name": "cube_red", "position": [0.1, 0.0, 0.02], "color": "red"}]
-            if populate_state
-            else []
-        ),
-        "target_cube_list": (
-            [{"name": "cube_green", "position": [0.0, 0.1, 0.02], "color": "green"}]
-            if populate_state
-            else []
+            else {}
         ),
         "swap_events": [],
         "collision_events": [],
@@ -182,9 +184,11 @@ def test_flush_episode_log_appends_collision_summary_without_mutating_env_state(
     objectlog.record_object(
         env,
         event="reset",
-        bin_list=[{"actor": _Actor("bin_0", [0.1, 0.0, 0.04]), "color": "red"}],
-        cube_list=[],
-        target_cube_list=[],
+        payload={
+            "bin_list": [{"name": "bin_0", "position": [0.1, 0.0, 0.04], "color": "red"}],
+            "cube_list": [],
+            "target_cube_list": [],
+        },
     )
 
     jsonl_path = objectlog.flush_episode_log(

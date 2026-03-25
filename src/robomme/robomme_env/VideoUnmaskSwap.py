@@ -446,23 +446,38 @@ class VideoUnmaskSwap(BaseEnv):
         ):
             bin_index = selected_bin_indices[idx_i] if idx_i < len(selected_bin_indices) else None
             color = (getattr(self, "bin_to_color", {}) or {}).get(bin_index)
-            bin_list.append({"actor": bin_actor, "color": color})
-            cube_list.append({"actor": cube_actor, "color": color})
+            bin_list.append(
+                {
+                    "name": getattr(bin_actor, "name", None),
+                    "position": objectlog.extract_actor_world_position(bin_actor),
+                    "color": color,
+                }
+            )
+            cube_list.append(
+                {
+                    "name": getattr(cube_actor, "name", None),
+                    "position": objectlog.extract_actor_world_position(cube_actor),
+                    "color": color,
+                }
+            )
         target_cube_list = []
         target_cube_actor = getattr(self, "target_cube", None)
         if target_cube_actor is not None:
             target_cube_list.append(
                 {
-                    "actor": target_cube_actor,
+                    "name": getattr(target_cube_actor, "name", None),
+                    "position": objectlog.extract_actor_world_position(target_cube_actor),
                     "color": getattr(self, "target_cube_color", None),
                 }
             )
         objectlog.record_object(
             self,
             event="reset",
-            bin_list=bin_list,
-            cube_list=cube_list,
-            target_cube_list=target_cube_list,
+            payload={
+                "bin_list": bin_list,
+                "cube_list": cube_list,
+                "target_cube_list": target_cube_list,
+            },
         )
 
 

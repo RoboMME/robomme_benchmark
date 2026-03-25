@@ -1581,8 +1581,8 @@ class RobommeRecordWrapper(gym.Wrapper):
         Episode object logging 的收口并落盘：把 env 内累积的 object-log 状态写成
         episode_object_logs.jsonl 中的一行（定义见 doc/episode_object_logging_mechanism.md）。
 
-        管线位置（最后一跳）：初始化空 _episode_object_log_state → reset 写入
-        bin_list / cube_list / target_cube_list → step 中追加 swap_events 并在
+        管线位置（最后一跳）：初始化空 _episode_object_log_state → 边界 event
+        写入 object_events[event] payload → step 中追加 swap_events 并在
         swap_contact_state 累计碰撞 → close 时调用本方法收拢为 JSONL。
 
         步骤简述：
