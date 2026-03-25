@@ -74,7 +74,7 @@ Submit the required information via this [link](https://docs.google.com/forms/d/
 
 1. Get familiar with the [RoboMME benchmark](https://github.com/RoboMME/robomme_benchmark) and the [MME-VLA policy learning](https://github.com/RoboMME/robomme_policy_learning) repo.
 2. Use the open-source [**val/test set**](https://github.com/RoboMME/robomme_benchmark/blob/0ac6cba0cbfe8ed1612dfbf37b7bedeb4b15a90c/scripts/evaluation.py#L83) as a testbed to develop and debug your models.
-3. Wrap up your policy following the [challenge interface](https://github.com/RoboMME/robomme_benchmark/challenge_interface/policy.py) and test the policy server locally via `challenge_interface/scripts`.
+3. Wrap up your policy following the [challenge interface](https://github.com/RoboMME/robomme_benchmark/blob/main/challenge_interface/policy.py) and test the policy server locally via `challenge_interface/scripts`.
 4. [Submit your policy](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor).
 
 
