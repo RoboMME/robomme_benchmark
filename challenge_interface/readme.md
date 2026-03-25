@@ -57,13 +57,13 @@ Submit the required information via this [link](https://docs.google.com/forms/d/
 - Organizers `git clone` the repo and follow the instructions to launch your policy server locally.
 - Your server must follow the challenge interface (implement `Policy` with `infer()` and `reset()`).
 
-> Like Option 1, your model runs on our servers (<= 80 GB GPU memory). If you need more GPU memory, or your system is very complex (e.g., multiple-model pipelines running simultaneously), choose Option 2 (remote API).
+> Like Option 1, your model runs on our servers (<= 80 GB GPU memory). If you need more GPU memory, or your system is very complex (e.g., multiple-model pipelines running simultaneously), please choose Option 2 (remote API).
 
 
 ## Timeline
 - **March–May 15**: Develop your policy and test your policy server.
 - **May 15**: Deadline to submit your participant information.
-- **May 15–May 22 (Phase 1 Validation)**: We verify stability & correctness for your Docker image / remote server / code repo.
+- **Before May 22 (Phase 1 Validation)**: We verify stability & correctness for your Docker image / remote server / code repo.
   - If we find issues, we will contact you, and you can update your models/deployment during this window (up to **3 times**).
 - **May 23**: Deadline to finalize your models and deployment.
 - **May 23–June 2 (Phase 2 Full Evaluation)**: We evaluate on held-out episodes for teams that passed Phase 1.
@@ -80,7 +80,7 @@ Submit the required information via this [link](https://docs.google.com/forms/d/
 
 ## Acknowledgement
 
-We greatly appreciate the Foundation Models Meet Embodied Agents workshop at CVPR 2026 for hosting our challenge!
+We greatly appreciate the Foundation Models Meet Embodied Agents workshop at CVPR 2026 for hosting our challenge and Figure AI for sponsorship!
 
 
 ## Contact
