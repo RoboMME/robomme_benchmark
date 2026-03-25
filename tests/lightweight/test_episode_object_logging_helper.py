@@ -154,5 +154,54 @@ def test_append_collision_event_writes_contact_summary_fields():
     ]
 
 
+def test_record_reset_objects_resets_previous_swap_and_collision_events():
+    env = SimpleNamespace()
+    objectlog.init_episode_object_log_state(env)
+
+    objectlog.append_episode_object_swap_event(
+        env,
+        swap_index=1,
+        object_a=_Actor("bin_0", [0.0, 0.0, 0.0]),
+        object_b=_Actor("bin_1", [0.1, 0.0, 0.0]),
+    )
+    objectlog.append_episode_object_collision_event(
+        env,
+        contact_summary={
+            "swap_contact_detected": True,
+            "first_contact_step": 10,
+        },
+    )
+
+    objectlog.record_reset_objects(
+        env,
+        bin_list=[{"actor": _Actor("bin_2", [0.2, 0.0, 0.04]), "color": "blue"}],
+        cube_list=[{"actor": _Actor("cube_blue", [0.2, 0.0, 0.02]), "color": "blue"}],
+        target_cube_list=[],
+    )
+
+    record = objectlog.build_episode_object_log_record(
+        env,
+        env_id="DummyEnv",
+        episode=6,
+        seed=13,
+    )
+    assert record["bin_list"] == [
+        {
+            "name": "bin_2",
+            "position": pytest.approx([0.2, 0.0, 0.04]),
+            "color": "blue",
+        }
+    ]
+    assert record["cube_list"] == [
+        {
+            "name": "cube_blue",
+            "position": pytest.approx([0.2, 0.0, 0.02]),
+            "color": "blue",
+        }
+    ]
+    assert record["swap_events"] == []
+    assert record["collision_events"] == []
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

@@ -172,16 +172,15 @@ def record_reset_objects(
     这个函数通常在环境 `_initialize_episode()` 里调用，语义上表示：
     “本 episode 的初始对象配置已经确定，可以把之后做分析需要的最小快照保存下来。”
 
-    注意这里会清空 `swap_events`：
-    reset 意味着新的 episode 开始，之前 episode 的 swap 记录不能残留。
-    `collision_events` 不在这里清空，是因为通常会通过重新初始化整个 state
-    或者只在 close 前追加 collision summary；这里保持最小改动面。
+    这里把 reset 视为新的 episode 边界，因此会先重建整份 state，
+    再写入本轮 episode 的初始对象快照。这样可以保证上一轮 episode 的
+    swap / collision 记录不会泄漏到当前 episode。
     """
+    init_episode_object_log_state(env)
     state = _get_episode_object_log_state(env)
     state["bin_list"] = _serialize_actor_list(bin_list)
     state["cube_list"] = _serialize_actor_list(cube_list)
     state["target_cube_list"] = _serialize_actor_list(target_cube_list)
-    state["swap_events"] = []
 
 
 def append_episode_object_swap_event(
@@ -297,3 +296,31 @@ def append_episode_object_log_record(
         logger.debug(f"Warning: failed to append episode object log to {jsonl_path}: {exc}")
         return None
     return jsonl_path
+
+
+def flush_episode_object_log(
+    env: Any,
+    *,
+    output_root: Any,
+    env_id: Optional[str],
+    episode: Optional[int],
+    seed: Optional[int],
+    contact_summary: Optional[dict[str, Any]] = None,
+) -> Optional[Path]:
+    """把当前 episode state 收口成一条 record 并追加写入 JSONL。
+
+    close 阶段只读取 env 上已累计好的 state，不回写 env state 本身。
+    这样即使 build / append 失败后重试，也不会因为重复追加 collision summary
+    造成 state 污染。
+    """
+    record = build_episode_object_log_record(
+        env,
+        env_id=env_id,
+        episode=episode,
+        seed=seed,
+    )
+    if (contact_summary or {}).get("swap_contact_detected", False):
+        record["collision_events"].append(
+            build_episode_object_collision_event(contact_summary)
+        )
+    return append_episode_object_log_record(output_root, record)

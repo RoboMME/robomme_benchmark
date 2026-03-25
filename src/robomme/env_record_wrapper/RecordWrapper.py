@@ -1587,39 +1587,26 @@ class RobommeRecordWrapper(gym.Wrapper):
 
         步骤简述：
         1. 若 _episode_object_log_flushed 已置位则返回，避免重复写入。
-        2. 从 swap_contact_state 取摘要；若本 episode 检测到 contact，则调用
-           objectlog.append_episode_object_collision_event 写入碰撞摘要。
-        3. objectlog.build_episode_object_log_record 组装 record，再经
-           objectlog.append_episode_object_log_record 追加落盘。
+        2. 从 swap_contact_state 取摘要，并把 summary 作为 close 阶段的补充信息。
+        3. objectlog.flush_episode_object_log 组装 record 并追加落盘。
         """
         if self._episode_object_log_flushed:
             return
 
         unwrapped = self.env.unwrapped
+        contact_summary = None
         swap_contact_state = getattr(unwrapped, "swap_contact_state", None)
         if swap_contact_state is not None:
             contact_summary = swapContact.get_swap_contact_summary(swap_contact_state)
-            if contact_summary.get("swap_contact_detected", False):
-                objectlog.append_episode_object_collision_event(
-                    unwrapped,
-                    contact_summary=contact_summary,
-                )
 
-        try:
-            record = objectlog.build_episode_object_log_record(
-                unwrapped,
-                env_id=self.env_id,
-                episode=self.episode,
-                seed=self.seed,
-            )
-        except Exception as exc:
-            logger.debug(
-                f"Warning: failed to build episode object log for "
-                f"{self.env_id} ep={self.episode} seed={self.seed}: {exc}"
-            )
-            return
-
-        objectlog.append_episode_object_log_record(self.output_root, record)
+        objectlog.flush_episode_object_log(
+            unwrapped,
+            output_root=self.output_root,
+            env_id=self.env_id,
+            episode=self.episode,
+            seed=self.seed,
+            contact_summary=contact_summary,
+        )
         self._episode_object_log_flushed = True
 
     def close(self):

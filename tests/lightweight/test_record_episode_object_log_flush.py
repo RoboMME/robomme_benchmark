@@ -166,7 +166,62 @@ def test_record_wrapper_close_writes_collision_summary_into_episode_object_log(
             "pair_max_force": {"bin_1<->bin_2": 0.010015421144429798},
         }
     ]
+    built_record = objectlog.build_episode_object_log_record(
+        env,
+        env_id="DummyEnv",
+        episode=7,
+        seed=11,
+    )
+    assert built_record["collision_events"] == []
     assert not (tmp_path / "contact_check_results.jsonl").exists()
+
+
+def test_flush_episode_object_log_appends_collision_summary_without_mutating_env_state(tmp_path):
+    env = _DummyEnv()
+    objectlog.record_reset_objects(
+        env,
+        bin_list=[{"actor": _Actor("bin_0", [0.1, 0.0, 0.04]), "color": "red"}],
+        cube_list=[],
+        target_cube_list=[],
+    )
+
+    jsonl_path = objectlog.flush_episode_object_log(
+        env,
+        output_root=tmp_path,
+        env_id="DummyEnv",
+        episode=7,
+        seed=11,
+        contact_summary={
+            "swap_contact_detected": True,
+            "first_contact_step": 224,
+            "contact_pairs": ["bin_1<->bin_2"],
+            "max_force_norm": 0.010015421144429798,
+            "max_force_pair": "bin_1<->bin_2",
+            "max_force_step": 224,
+            "pair_max_force": {"bin_1<->bin_2": 0.010015421144429798},
+        },
+    )
+
+    assert jsonl_path == tmp_path / objectlog.EPISODE_OBJECT_LOG_FILENAME
+    record = json.loads(jsonl_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["collision_events"] == [
+        {
+            "swap_contact_detected": True,
+            "first_contact_step": 224,
+            "contact_pairs": ["bin_1<->bin_2"],
+            "max_force_norm": 0.010015421144429798,
+            "max_force_pair": "bin_1<->bin_2",
+            "max_force_step": 224,
+            "pair_max_force": {"bin_1<->bin_2": 0.010015421144429798},
+        }
+    ]
+    built_record = objectlog.build_episode_object_log_record(
+        env,
+        env_id="DummyEnv",
+        episode=7,
+        seed=11,
+    )
+    assert built_record["collision_events"] == []
 
 
 def test_record_wrapper_does_not_prefix_video_filename_when_collision_detected(
