@@ -41,14 +41,14 @@ Submit the required information via this [link](https://docs.google.com/forms/d/
 **Option 1 (Recommended): via Docker**
 - Participants build a Docker image packaging their policy.
 - Organizers pull the image and host it on their machine.
-- Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_docker.md) (MME-VLA model).
+- Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/blob/main/challenge_interface/docs/submission_guidance_docker.md) (MME-VLA model).
 
 > In this option, we run your model on our servers. We can provide at most 80 GB of GPU memory; if your total system requires more, please choose Option 2.
 
 **Option 2: via remote API**
 - Participants deploy their policy on their own machine as a server with a public IP.
 - Organizers query the host machine and run evaluation remotely.
-- Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/challenge_interface/docs/submission_guidance_remote.md) (MME-VLA model).
+- Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/blob/main/challenge_interface/docs/submission_guidance_remote.md) (MME-VLA model).
 
 > This option may have unstable connections; we route to the closest node (US, mainland China, or Singapore) to reduce latency. Choose the `transport` type based on your setup; WebSocket with direct numeric IP access is highly recommended.
 
