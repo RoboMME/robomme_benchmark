@@ -18,11 +18,7 @@ from tests._shared.repo_paths import ensure_src_on_path
 ensure_src_on_path(__file__)
 
 from robomme.env_record_wrapper.RecordWrapper import RobommeRecordWrapper
-from robomme.env_record_wrapper.episode_object_logging import (
-    EPISODE_OBJECT_LOG_FILENAME,
-    init_episode_object_log_state,
-    record_reset_objects,
-)
+from robomme.env_record_wrapper import object_log as objectlog
 from robomme.robomme_env.utils.swap_contact_monitoring import new_swap_contact_state
 
 
@@ -38,7 +34,7 @@ class _DummyEnv(gym.Env):
         super().__init__()
         self.use_demonstrationwrapper = False
         self.spec = SimpleNamespace(id="DummyEnv")
-        init_episode_object_log_state(self)
+        objectlog.init_episode_object_log_state(self)
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
@@ -71,7 +67,7 @@ def test_record_wrapper_close_writes_minimal_episode_object_log_jsonl(
 
     env = _DummyEnv()
     if populate_state:
-        record_reset_objects(
+        objectlog.record_reset_objects(
             env,
             bin_list=[{"actor": _Actor("bin_0", [0.1, 0.0, 0.04]), "color": "red"}],
             cube_list=[{"actor": _Actor("cube_red", [0.1, 0.0, 0.02]), "color": "red"}],
@@ -89,7 +85,7 @@ def test_record_wrapper_close_writes_minimal_episode_object_log_jsonl(
     )
     wrapper.close()
 
-    jsonl_path = tmp_path / EPISODE_OBJECT_LOG_FILENAME
+    jsonl_path = tmp_path / objectlog.EPISODE_OBJECT_LOG_FILENAME
     assert jsonl_path.exists()
     records = [
         json.loads(line)
@@ -151,7 +147,7 @@ def test_record_wrapper_close_writes_collision_summary_into_episode_object_log(
     )
     wrapper.close()
 
-    jsonl_path = tmp_path / EPISODE_OBJECT_LOG_FILENAME
+    jsonl_path = tmp_path / objectlog.EPISODE_OBJECT_LOG_FILENAME
     records = [
         json.loads(line)
         for line in jsonl_path.read_text(encoding="utf-8").splitlines()

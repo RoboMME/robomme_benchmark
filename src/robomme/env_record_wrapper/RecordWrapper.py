@@ -47,11 +47,7 @@ from ..robomme_env.utils.choice_action_mapping import (
     project_world_to_pixel,
 )
 from ..robomme_env.utils.swap_contact_monitoring import get_swap_contact_summary
-from .episode_object_logging import (
-    append_episode_object_collision_event,
-    append_episode_object_log_record,
-    build_episode_object_log_record,
-)
+from ..env_record_wrapper import object_log as objectlog
 
 from ..logging_utils import logger
 
@@ -1589,13 +1585,13 @@ class RobommeRecordWrapper(gym.Wrapper):
         if swap_contact_state is not None:
             contact_summary = get_swap_contact_summary(swap_contact_state)
             if contact_summary.get("swap_contact_detected", False):
-                append_episode_object_collision_event(
+                objectlog.append_episode_object_collision_event(
                     unwrapped,
                     contact_summary=contact_summary,
                 )
 
         try:
-            record = build_episode_object_log_record(
+            record = objectlog.build_episode_object_log_record(
                 unwrapped,
                 env_id=self.env_id,
                 episode=self.episode,
@@ -1608,7 +1604,7 @@ class RobommeRecordWrapper(gym.Wrapper):
             )
             return
 
-        append_episode_object_log_record(self.output_root, record)
+        objectlog.append_episode_object_log_record(self.output_root, record)
         self._episode_object_log_flushed = True
 
     def close(self):

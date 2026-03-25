@@ -15,7 +15,7 @@ from tests._shared.repo_paths import ensure_src_on_path
 ensure_src_on_path(__file__)
 
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
-from robomme.env_record_wrapper.episode_object_logging import EPISODE_OBJECT_LOG_FILENAME
+from robomme.env_record_wrapper import object_log as objectlog
 
 
 pytestmark = pytest.mark.dataset
@@ -92,7 +92,7 @@ def test_swap_env_episode_object_log(dataset_factory, env_id: str, episode: int)
     case = _build_case(env_id, episode)
     generated = dataset_factory(case)
 
-    jsonl_path = generated.work_dir / EPISODE_OBJECT_LOG_FILENAME
+    jsonl_path = generated.work_dir / objectlog.EPISODE_OBJECT_LOG_FILENAME
     assert jsonl_path.exists(), f"Missing episode object log JSONL: {jsonl_path}"
 
     record = _load_matching_record(
@@ -109,6 +109,7 @@ def test_swap_env_episode_object_log(dataset_factory, env_id: str, episode: int)
         "cube_list",
         "target_cube_list",
         "swap_events",
+        "collision_events",
     }
     assert "schema_version" not in record
     assert "difficulty" not in record
@@ -138,6 +139,26 @@ def test_swap_env_episode_object_log(dataset_factory, env_id: str, episode: int)
         assert isinstance(event["swap_index"], int)
         assert isinstance(event["object_a"], (str, type(None)))
         assert isinstance(event["object_b"], (str, type(None)))
+
+    collision_events = record["collision_events"]
+    assert isinstance(collision_events, list)
+    for event in collision_events:
+        assert set(event.keys()) == {
+            "swap_contact_detected",
+            "first_contact_step",
+            "contact_pairs",
+            "max_force_norm",
+            "max_force_pair",
+            "max_force_step",
+            "pair_max_force",
+        }
+        assert isinstance(event["swap_contact_detected"], bool)
+        assert event["first_contact_step"] is None or isinstance(event["first_contact_step"], int)
+        assert isinstance(event["contact_pairs"], list)
+        assert isinstance(event["max_force_norm"], float)
+        assert isinstance(event["max_force_pair"], (str, type(None)))
+        assert event["max_force_step"] is None or isinstance(event["max_force_step"], int)
+        assert isinstance(event["pair_max_force"], dict)
 
 
 if __name__ == "__main__":

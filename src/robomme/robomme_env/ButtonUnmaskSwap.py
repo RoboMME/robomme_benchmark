@@ -35,11 +35,7 @@ from .utils.swap_contact_monitoring import (
     new_swap_contact_state,
     reset_swap_contact_state,
 )
-from ..env_record_wrapper.episode_object_logging import (
-    append_episode_object_swap_event,
-    init_episode_object_log_state,
-    record_reset_objects,
-)
+from ..env_record_wrapper import object_log as objectlog
 from ..logging_utils import logger
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
@@ -169,7 +165,7 @@ class ButtonUnmaskSwap(BaseEnv):
         ).item()
         logger.debug(f"Task will pick {self.pick_times} times")
         self.swap_contact_state = new_swap_contact_state()
-        init_episode_object_log_state(self)
+        objectlog.init_episode_object_log_state(self)
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
     
@@ -197,7 +193,7 @@ class ButtonUnmaskSwap(BaseEnv):
         object_a,
         object_b,
     ):
-        append_episode_object_swap_event(
+        objectlog.append_episode_object_swap_event(
             self,
             swap_index=swap_index,
             object_a=object_a,
@@ -476,7 +472,7 @@ class ButtonUnmaskSwap(BaseEnv):
                     "color": getattr(self, "target_cube_color", None),
                 }
             )
-        record_reset_objects(
+        objectlog.record_reset_objects(
             self,
             bin_list=bin_list,
             cube_list=cube_list,
