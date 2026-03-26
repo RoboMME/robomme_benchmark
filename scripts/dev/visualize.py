@@ -1,21 +1,24 @@
-"""把 snapshot JSON 各渲染成一张 PNG。
+"""把 snapshot JSON 按 env 聚合成多张总览图。
 
-默认读取 `runs/replay_videos/snapshots/*.json`，每个 JSON 输出为同目录下 `{文件名}.png`。
-俯视角 (x, y) 展示：
+默认读取 `runs/replay_videos/snapshots/*.json`，每个 env_id 输出一张 PNG，
+同一 env 的多个 JSON 会出现在同一张图里作为多个子图。
+每个子图使用俯视角 (x, y) 展示：
 - `bin` 位置：方框。
 - `cube` 位置：带颜色的圆点。
 
 运行示例：
     uv run python scripts/dev/visualize.py
-    uv run python scripts/dev/visualize.py --output-dir runs/replay_videos/snapshots
+    uv run python scripts/dev/visualize.py --output runs/replay_videos/snapshots/overview.png
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
+from collections import defaultdict
 
 import matplotlib
 
@@ -27,7 +30,7 @@ from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
 
 DEFAULT_INPUT_DIR = Path("runs/replay_videos/snapshots")
-DEFAULT_OUTPUT_DIR = DEFAULT_INPUT_DIR
+DEFAULT_OUTPUT_PATH = DEFAULT_INPUT_DIR / "overview.png"
 
 BIN_EDGE_COLOR = "#111827"
 BIN_FILLED_FACE_COLOR = "#d1d5db"
@@ -93,7 +96,7 @@ class SceneSnapshot:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Read snapshot JSON files and save one PNG per file (bin/cube top-down view)."
+            "Read snapshot JSON files and write one overview figure per env."
         )
     )
     parser.add_argument(
@@ -103,10 +106,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Directory containing snapshot JSON files.",
     )
     parser.add_argument(
-        "--output-dir",
+        "--output",
         type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Directory to write PNGs (one per JSON: <stem>.png).",
+        default=DEFAULT_OUTPUT_PATH,
+        help=(
+            "Output directory, or a .png path used as filename prefix. "
+            "Example: --output foo/overview.png -> foo/overview_ButtonUnmask.png"
+        ),
     )
     parser.add_argument(
         "--dpi",
@@ -189,6 +195,13 @@ def _load_snapshots(snapshot_paths: list[Path]) -> list[SceneSnapshot]:
     return scenes
 
 
+def _group_scenes_by_env(scenes: list[SceneSnapshot]) -> dict[str, list[SceneSnapshot]]:
+    grouped: dict[str, list[SceneSnapshot]] = defaultdict(list)
+    for scene in scenes:
+        grouped[scene.env_id].append(scene)
+    return dict(sorted(grouped.items()))
+
+
 def _resolve_cube_color(color_name: str | None, fallback_index: int) -> str:
     if color_name:
         lowered = color_name.strip().lower()
@@ -197,6 +210,14 @@ def _resolve_cube_color(color_name: str | None, fallback_index: int) -> str:
         if mcolors.is_color_like(color_name):
             return color_name
     return FALLBACK_CUBE_COLORS[fallback_index % len(FALLBACK_CUBE_COLORS)]
+
+
+def _subplot_shape(num_plots: int) -> tuple[int, int]:
+    if num_plots <= 1:
+        return 1, 1
+    ncols = min(3, math.ceil(math.sqrt(num_plots)))
+    nrows = math.ceil(num_plots / ncols)
+    return nrows, ncols
 
 
 def _axis_limits(scenes: list[SceneSnapshot]) -> tuple[tuple[float, float], tuple[float, float], float, float]:
@@ -351,26 +372,47 @@ def _plot_snapshot(
     ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
 
 
-def _save_scene_png(scene: SceneSnapshot, output_path: Path, dpi: int) -> None:
-    x_limits, y_limits, x_pad, y_pad = _axis_limits([scene])
-    fig, ax = plt.subplots(figsize=(6.4, 5.8), constrained_layout=True)
-    _plot_snapshot(
-        ax,
-        scene,
-        x_limits=x_limits,
-        y_limits=y_limits,
-        x_pad=x_pad,
-        y_pad=y_pad,
+def _save_figure(scenes: list[SceneSnapshot], output_path: Path, dpi: int, env_id: str) -> None:
+    nrows, ncols = _subplot_shape(len(scenes))
+    x_limits, y_limits, x_pad, y_pad = _axis_limits(scenes)
+    fig, axes = plt.subplots(
+        nrows=nrows,
+        ncols=ncols,
+        figsize=(6.4 * ncols, 5.8 * nrows),
+        squeeze=False,
+        constrained_layout=True,
     )
+    axes_flat = axes.ravel()
+
+    for axis, scene in zip(axes_flat, scenes, strict=False):
+        _plot_snapshot(
+            axis,
+            scene,
+            x_limits=x_limits,
+            y_limits=y_limits,
+            x_pad=x_pad,
+            y_pad=y_pad,
+        )
+
+    for axis in axes_flat[len(scenes) :]:
+        axis.axis("off")
+
+    fig.suptitle(f"Snapshot Overview: {env_id}", fontsize=15)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=dpi)
     plt.close(fig)
 
 
+def _env_output_path(output_path: Path, env_id: str) -> Path:
+    if output_path.suffix.lower() == ".png":
+        return output_path.with_name(f"{output_path.stem}_{env_id}.png")
+    return output_path / f"{env_id}.png"
+
+
 def main() -> None:
     args = _build_parser().parse_args()
     input_dir = args.input_dir.resolve()
-    output_dir = args.output_dir.resolve()
+    output_path = args.output.resolve()
 
     if not input_dir.is_dir():
         raise SystemExit(f"Input directory does not exist: {input_dir}")
@@ -380,15 +422,17 @@ def main() -> None:
         raise SystemExit(f"No snapshot JSON files found in: {input_dir}")
 
     scenes = _load_snapshots(snapshot_paths)
-    written: list[Path] = []
-    for scene in scenes:
-        out = output_dir / f"{scene.path.stem}.png"
-        _save_scene_png(scene, out, dpi=args.dpi)
-        written.append(out)
+    grouped_scenes = _group_scenes_by_env(scenes)
+    saved_paths: list[Path] = []
+    for env_id, env_scenes in grouped_scenes.items():
+        env_output_path = _env_output_path(output_path, env_id)
+        _save_figure(env_scenes, output_path=env_output_path, dpi=args.dpi, env_id=env_id)
+        saved_paths.append(env_output_path)
 
     print(f"Loaded {len(snapshot_paths)} snapshot JSON files from {input_dir}")
-    for path in written:
-        print(f"Saved {path}")
+    print(f"Saved {len(saved_paths)} overview figures:")
+    for path in saved_paths:
+        print(f"- {path}")
 
 
 if __name__ == "__main__":
