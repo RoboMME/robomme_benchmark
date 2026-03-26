@@ -112,7 +112,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["ButtonUnmaskSwap","ButtonUnmask","VideoUnmaskSwap","VideoUnmask"],
+        default=["VideoUnmaskSwap",],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help=(

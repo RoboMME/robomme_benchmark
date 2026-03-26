@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -28,7 +29,33 @@ class _FakeActor:
         )
 
 
-def test_collect_button_unmask_swap_snapshot_shape() -> None:
+class _FakeScene:
+    def __init__(self, env, colliding_steps: set[int] | None = None):
+        self.env = env
+        self.colliding_steps = set(colliding_steps or set())
+
+    def get_pairwise_contact_forces(self, actor_a, actor_b):
+        if self.env.elapsed_steps in self.colliding_steps:
+            return np.asarray([[0.0, 0.0, 0.1]], dtype=np.float32)
+        return np.zeros((1, 3), dtype=np.float32)
+
+
+class _ErrorScene:
+    def get_pairwise_contact_forces(self, actor_a, actor_b):
+        raise RuntimeError("pairwise query failed")
+
+
+class _FakeEnv:
+    def __init__(self, base_env):
+        self.unwrapped = base_env
+        self._base_env = base_env
+
+    def step(self, action):
+        self._base_env.elapsed_steps += 1
+        return ("obs", 0.0, False, False, {"action": action})
+
+
+def _make_base_env(*, colliding_steps: set[int] | None = None):
     bin_0 = _FakeActor("bin_0", [0.10, -0.10, 0.052])
     bin_1 = _FakeActor("bin_1", [0.00, 0.15, 0.052])
     bin_2 = _FakeActor("bin_2", [0.13, 0.16, 0.052])
@@ -39,6 +66,7 @@ def test_collect_button_unmask_swap_snapshot_shape() -> None:
     cube_green = _FakeActor("target_cube_green", [0.00, 0.15, 0.0167])
 
     base_env = SimpleNamespace(
+        elapsed_steps=0,
         spawned_bins=[bin_0, bin_1, bin_2, bin_3],
         cube_bin_pairs=[
             (cube_blue, bin_0),
@@ -48,6 +76,12 @@ def test_collect_button_unmask_swap_snapshot_shape() -> None:
         color_names=["blue", "red", "green"],
         bin_to_color={0: "blue", 2: "red", 1: "green"},
     )
+    base_env.scene = _FakeScene(base_env, colliding_steps=colliding_steps)
+    return base_env
+
+
+def test_collect_button_unmask_swap_snapshot_shape() -> None:
+    base_env = _make_base_env()
 
     payload = snapshot_utils._collect_snapshot(
         base_env=base_env,
@@ -56,11 +90,13 @@ def test_collect_button_unmask_swap_snapshot_shape() -> None:
         seed=0,
         difficulty="hard",
         capture_elapsed_steps=33,
+        collision=True,
     )
 
     assert payload["env_id"] == "ButtonUnmaskSwap"
     assert payload["inspect_this_timestep"] == 33
     assert payload["capture_elapsed_steps"] == 33
+    assert payload["collision"] is True
 
     cubes = payload["cubes"]
     bins = payload["bins"]
@@ -95,3 +131,79 @@ def test_snapshot_json_path_location() -> None:
 
 def test_button_unmask_swap_inspect_this_timestep_value() -> None:
     assert snapshot_utils.SNAPSHOT_ENVS["ButtonUnmaskSwap"] == 33
+
+
+def test_install_snapshot_tracks_collision_across_steps(tmp_path, monkeypatch) -> None:
+    base_env = _make_base_env(colliding_steps={2})
+    env = _FakeEnv(base_env)
+    monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 3)
+
+    state = snapshot_utils.install_snapshot_for_step(
+        env=env,
+        env_id="ButtonUnmask",
+        episode=4,
+        seed=1580400,
+        difficulty="hard",
+        output_dir=tmp_path,
+    )
+
+    for _ in range(3):
+        env.step(None)
+
+    assert state["collision_detected"] is True
+    assert state["snapshot_written"] is True
+
+    payload = json.loads(state["snapshot_json_path"].read_text(encoding="utf-8"))
+    assert payload["capture_elapsed_steps"] == 3
+    assert payload["collision"] is True
+
+
+def test_install_snapshot_writes_false_when_no_collision(tmp_path, monkeypatch) -> None:
+    base_env = _make_base_env()
+    env = _FakeEnv(base_env)
+    monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 2)
+
+    state = snapshot_utils.install_snapshot_for_step(
+        env=env,
+        env_id="ButtonUnmask",
+        episode=1,
+        seed=7,
+        difficulty="easy",
+        output_dir=tmp_path,
+    )
+
+    for _ in range(2):
+        env.step(None)
+
+    assert state["collision_detected"] is False
+    assert state["snapshot_written"] is True
+
+    payload = json.loads(state["snapshot_json_path"].read_text(encoding="utf-8"))
+    assert payload["capture_elapsed_steps"] == 2
+    assert payload["collision"] is False
+
+
+def test_install_snapshot_ignores_contact_query_errors(tmp_path, monkeypatch) -> None:
+    base_env = _make_base_env()
+    base_env.scene = _ErrorScene()
+    env = _FakeEnv(base_env)
+    monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 2)
+
+    state = snapshot_utils.install_snapshot_for_step(
+        env=env,
+        env_id="ButtonUnmask",
+        episode=2,
+        seed=9,
+        difficulty="medium",
+        output_dir=tmp_path,
+    )
+
+    step_result = None
+    for _ in range(2):
+        step_result = env.step(None)
+
+    assert step_result == ("obs", 0.0, False, False, {"action": None})
+    assert state["collision_detected"] is False
+
+    payload = json.loads(state["snapshot_json_path"].read_text(encoding="utf-8"))
+    assert payload["collision"] is False

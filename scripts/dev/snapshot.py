@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+from itertools import combinations
 from pathlib import Path
 
 import gymnasium as gym
@@ -21,6 +22,7 @@ import numpy as np
 import torch
 
 DEFAULT_CAPTURE_STEP: int = 33
+DEFAULT_COLLISION_FORCE_EPS: float = 1e-6
 
 # `env_id -> capture step` 的映射表。
 # 目前这几个环境都在同一个时间点抓 after-drop 快照，但保留成字典，
@@ -93,6 +95,45 @@ def _actor_position_xyz(actor) -> list[float]:
     return [float(position_np[0]), float(position_np[1]), float(position_np[2])]
 
 
+def _force_norm(force_tensor) -> float | None:
+    """把 contact force 统一规整成一个标量范数。"""
+    if force_tensor is None:
+        return None
+    if isinstance(force_tensor, torch.Tensor):
+        if force_tensor.numel() == 0:
+            return None
+        force_vector = force_tensor.reshape(-1, 3)[0].detach().cpu().to(torch.float64)
+        return float(torch.linalg.vector_norm(force_vector).item())
+
+    force_array = np.asarray(force_tensor, dtype=np.float64)
+    if force_array.size == 0:
+        return None
+    return float(np.linalg.norm(force_array.reshape(-1, 3)[0]))
+
+
+def _step_has_bin_collision(
+    base_env,
+    *,
+    force_eps: float = DEFAULT_COLLISION_FORCE_EPS,
+) -> bool:
+    """检测当前 step 是否存在任意 spawned bin 之间的接触。"""
+    scene = getattr(base_env, "scene", None)
+    spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
+    if scene is None or len(spawned_bins) < 2:
+        return False
+
+    for actor_a, actor_b in combinations(spawned_bins, 2):
+        try:
+            pair_force = scene.get_pairwise_contact_forces(actor_a, actor_b)
+        except Exception:
+            continue
+
+        force_norm = _force_norm(pair_force)
+        if force_norm is not None and force_norm > float(force_eps):
+            return True
+    return False
+
+
 def _snapshot_json_path(output_root: Path, env_id: str, episode: int, seed: int) -> Path:
     """拼出 after-drop 快照 JSON 的标准落盘路径。
 
@@ -161,6 +202,7 @@ def _build_snapshot_payload(
     seed: int,
     difficulty: str,
     capture_elapsed_steps: int,
+    collision: bool,
     cubes: list[dict],
     bins: list[dict],
 ) -> dict:
@@ -177,6 +219,7 @@ def _build_snapshot_payload(
         # 一般等于目标 step，但若外层逻辑跨过目标 step 才首次进入，也允许大于它。
         "capture_elapsed_steps": int(capture_elapsed_steps),
         "capture_phase": "after_drop",
+        "collision": bool(collision),
         "cubes": cubes,
         "bins": bins,
     }
@@ -189,6 +232,7 @@ def _collect_snapshot(
     seed: int,
     difficulty: str,
     capture_elapsed_steps: int,
+    collision: bool,
 ) -> dict:
     """收集 unmask 环境在固定 after-drop 时刻的场景信息。
 
@@ -280,6 +324,7 @@ def _collect_snapshot(
         seed=seed,
         difficulty=difficulty,
         capture_elapsed_steps=capture_elapsed_steps,
+        collision=collision,
         cubes=cubes,
         bins=bins,
     )
@@ -312,6 +357,7 @@ def install_snapshot_for_step(
         "snapshot_written": False,
         "snapshot_json_path": None,
         "capture_phase": "after_drop" if snapshot_enabled else None,
+        "collision_detected": False,
         "expected_capture_step": (
             SNAPSHOT_ENVS[env_id] if snapshot_enabled else None
         ),
@@ -332,6 +378,8 @@ def install_snapshot_for_step(
 
         # 用 `unwrapped` 访问底层环境，避免被 wrapper 层屏蔽内部字段。
         base_env = env.unwrapped
+        if not state["collision_detected"] and _step_has_bin_collision(base_env):
+            state["collision_detected"] = True
         elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
         if elapsed_steps < capture_step:
             # 还没到抓取时机，直接返回。
@@ -344,6 +392,7 @@ def install_snapshot_for_step(
             seed=seed,
             difficulty=difficulty,
             capture_elapsed_steps=elapsed_steps,
+            collision=state["collision_detected"],
         )
         path = _snapshot_json_path(
             output_root=output_dir, env_id=env_id, episode=episode, seed=seed

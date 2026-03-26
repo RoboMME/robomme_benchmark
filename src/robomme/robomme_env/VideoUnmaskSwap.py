@@ -517,7 +517,7 @@ class VideoUnmaskSwap(BaseEnv):
                 start_step=start_step,
                 end_step=end_step,
                 cur_step=timestep,
-                lane_offset=0.07,
+                lane_offset=0.05,
                 smooth=True,
                 keep_upright=True,
                 other_cube=[b for b in self.spawned_bins if b not in (idx_a, idx_b)],  # Keep all other bins in place to prevent collision during swap
