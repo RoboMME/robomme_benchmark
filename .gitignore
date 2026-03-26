@@ -206,6 +206,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Local run outputs (replays, videos, snapshots)
+runs/
+
 # Agent
 .agent/
 .cursor/

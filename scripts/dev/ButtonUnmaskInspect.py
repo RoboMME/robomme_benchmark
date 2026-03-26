@@ -39,8 +39,6 @@ VALID_ENVS: Set[str] = set(DEFAULT_ENVS)
 VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
 DATASET_SCREW_MAX_ATTEMPTS = 3
 DATASET_RRT_MAX_ATTEMPTS = 3
-BUTTON_UNMASK_SWAP_PRE_SWAP_START_STEP = 0
-BUTTON_UNMASK_SWAP_PRE_SWAP_END_STEP = 32 * 2
 
 
 def _latest_recorded_mp4(
@@ -106,17 +104,7 @@ def _snapshot_json_path(output_root: Path, env_id: str, episode: int, seed: int)
     )
 
 
-def _button_unmask_swap_inspect_this_timestep() -> int:
-    duration = max(
-        1,
-        BUTTON_UNMASK_SWAP_PRE_SWAP_END_STEP - BUTTON_UNMASK_SWAP_PRE_SWAP_START_STEP,
-    )
-    half_window = max(1, duration // 2)
-    drop_step = min(
-        BUTTON_UNMASK_SWAP_PRE_SWAP_END_STEP,
-        BUTTON_UNMASK_SWAP_PRE_SWAP_START_STEP + half_window,
-    )
-    return int(drop_step + 1)
+
 
 
 def _collect_button_unmask_swap_snapshot(
@@ -131,8 +119,7 @@ def _collect_button_unmask_swap_snapshot(
     cube_bin_pairs = list(getattr(base_env, "cube_bin_pairs", []) or [])
     color_names = list(getattr(base_env, "color_names", []) or [])
     bin_to_color = dict(getattr(base_env, "bin_to_color", {}) or {})
-    inspect_this_timestep = _button_unmask_swap_inspect_this_timestep()
-
+    inspect_this_timestep = 33 #50 /2 +1
     bin_index_by_id = {id(bin_actor): idx for idx, bin_actor in enumerate(spawned_bins)}
     bins_with_cubes = set()
     cubes = []
