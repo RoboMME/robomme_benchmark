@@ -91,9 +91,14 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--env",
         "-e",
-        default="ButtonUnmaskSwap",
+        nargs="+",
+        default=["ButtonUnmaskSwap","ButtonUnmask","VideoUnmaskSwap","VideoUnmask"],
         choices=sorted(VALID_ENVS),
-        help="Environment ID to run (default: ButtonUnmaskSwap).",
+        metavar="ENV",
+        help=(
+            "One or more environment IDs to run in order (default: ButtonUnmaskSwap). "
+            "Each env runs the same episode range and seeds."
+        ),
     )
     parser.add_argument(
         "--episode-number",
@@ -392,7 +397,7 @@ def main() -> None:
     if n_episodes < 1:
         raise SystemExit("--episode-number must be at least 1 (run episodes 0..N-1).")
     episode_numbers = list(range(0, n_episodes))
-    print(f"Environment: {args.env}")
+    print(f"Environments (in order): {args.env}")
     print(
         f"Episode number N={n_episodes} → running episode indices {episode_numbers} "
         f"(0 .. {n_episodes - 1})"
@@ -404,26 +409,31 @@ def main() -> None:
 
     successes: list[bool] = []
     initial_seed = args.seed
-    for ep in episode_numbers:
-        run_seed = initial_seed + ep
-        success = _run_episode(
-            env_id=args.env,
-            episode=ep,
-            seed=run_seed,
-            difficulty=args.difficulty,
-            output_dir=output_dir,
-        )
-        successes.append(success)
-
-        # 视频文件由 wrapper 异步落盘；这里在每局结束后再去定位最终产物。
-        mp4_path = _latest_recorded_mp4(output_dir, args.env, ep, run_seed)
-        if mp4_path is not None:
-            print(f"Final MP4 (episode {ep}, seed={run_seed}): {mp4_path.resolve()}")
-        else:
-            print(
-                f"No MP4 matched under {output_dir / 'videos'} "
-                f"(expected filename fragment '{args.env}_ep{ep}_seed{run_seed}')."
+    for env_id in args.env:
+        print(f"\n========== env={env_id} ==========")
+        for ep in episode_numbers:
+            run_seed = initial_seed + ep
+            success = _run_episode(
+                env_id=env_id,
+                episode=ep,
+                seed=run_seed,
+                difficulty=args.difficulty,
+                output_dir=output_dir,
             )
+            successes.append(success)
+
+            # 视频文件由 wrapper 异步落盘；这里在每局结束后再去定位最终产物。
+            mp4_path = _latest_recorded_mp4(output_dir, env_id, ep, run_seed)
+            if mp4_path is not None:
+                print(
+                    f"Final MP4 ({env_id} episode {ep}, seed={run_seed}): "
+                    f"{mp4_path.resolve()}"
+                )
+            else:
+                print(
+                    f"No MP4 matched under {output_dir / 'videos'} "
+                    f"(expected filename fragment '{env_id}_ep{ep}_seed{run_seed}')."
+                )
 
     all_success = all(successes)
     if all_success:
