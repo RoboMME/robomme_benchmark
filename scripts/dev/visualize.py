@@ -90,6 +90,14 @@ class ButtonSnapshot:
 
 
 @dataclass(frozen=True)
+class SolvePickupCubeSnapshot:
+    pickup_order: int
+    name: str | None
+    color: str | None
+    position_xyz: tuple[float, float, float]
+
+
+@dataclass(frozen=True)
 class SceneSnapshot:
     path: Path
     env_id: str
@@ -101,6 +109,7 @@ class SceneSnapshot:
     capture_phase: str | None
     bins: tuple[BinSnapshot, ...]
     cubes: tuple[CubeSnapshot, ...]
+    solve_pickup_cubes: tuple[SolvePickupCubeSnapshot, ...]
     buttons: tuple[ButtonSnapshot, ...]
 
 
@@ -145,6 +154,7 @@ def _load_snapshot(path: Path) -> SceneSnapshot:
     env_id = str(payload["env_id"])
     bins_payload = payload.get("bins", [])
     cubes_payload = payload.get("cubes", [])
+    solve_pickup_cubes_payload = payload.get("solve_pickup_cubes", [])
     buttons_payload = payload.get("buttons", [])
 
     bins = tuple(
@@ -178,6 +188,19 @@ def _load_snapshot(path: Path) -> SceneSnapshot:
         )
         for cube_item in cubes_payload
     )
+    solve_pickup_cubes = tuple(
+        SolvePickupCubeSnapshot(
+            pickup_order=int(cube_item.get("pickup_order", 0)),
+            name=cube_item.get("name"),
+            color=cube_item.get("color"),
+            position_xyz=_position_xyz(
+                cube_item["position_xyz"],
+                path=path,
+                field_name="solve_pickup_cubes[].position_xyz",
+            ),
+        )
+        for cube_item in solve_pickup_cubes_payload
+    )
     buttons = tuple(
         ButtonSnapshot(
             name=button_item.get("name"),
@@ -209,6 +232,7 @@ def _load_snapshot(path: Path) -> SceneSnapshot:
         capture_phase=payload.get("capture_phase"),
         bins=bins,
         cubes=cubes,
+        solve_pickup_cubes=solve_pickup_cubes,
         buttons=buttons,
     )
 
@@ -264,6 +288,8 @@ def _snapshot_text(scene: SceneSnapshot) -> str:
         lines.append(f"inspect step: {scene.inspect_this_timestep}")
     if scene.capture_elapsed_steps is not None:
         lines.append(f"captured step: {scene.capture_elapsed_steps}")
+    if scene.solve_pickup_cubes:
+        lines.append(f"solve pickup cubes: {len(scene.solve_pickup_cubes)}")
     return "\n".join(lines)
 
 
@@ -575,6 +601,109 @@ def _save_combined_figure(
     plt.close(fig)
 
 
+def _save_solve_pickup_distribution_figure(
+    scenes: list[SceneSnapshot], output_path: Path, dpi: int, env_id: str
+) -> None:
+    x_limits, y_limits, x_pad, y_pad = _axis_limits()
+    fig, ax = plt.subplots(
+        figsize=(8.8, 7.2),
+        constrained_layout=True,
+    )
+
+    pickup_markers = {
+        1: "o",
+        2: "^",
+        3: "D",
+        4: "P",
+    }
+    color_counts: dict[str, int] = defaultdict(int)
+    pickup_order_counts: dict[int, int] = defaultdict(int)
+    for scene in scenes:
+        for cube_index, cube_item in enumerate(scene.solve_pickup_cubes):
+            x_pos, y_pos, _ = cube_item.position_xyz
+            px, py = _xy_rot_cw_90(x_pos, y_pos)
+            cube_color = _resolve_cube_color(cube_item.color, cube_index)
+            color_label = cube_item.color or cube_item.name or f"cube_{cube_index}"
+            color_counts[color_label] += 1
+            pickup_order_counts[cube_item.pickup_order] += 1
+            ax.scatter(
+                px,
+                py,
+                s=150,
+                marker=pickup_markers.get(cube_item.pickup_order, "o"),
+                c=[cube_color],
+                edgecolors=BIN_EDGE_COLOR,
+                linewidths=0.9,
+                alpha=0.42,
+                zorder=3,
+            )
+
+    total_pickup_cubes = sum(color_counts.values())
+
+    def _format_count_ratio(count: int) -> str:
+        if total_pickup_cubes <= 0:
+            return f"n={count}, 0.0%"
+        return f"n={count}, {count / total_pickup_cubes:.1%}"
+
+    handles = [
+        Line2D(
+            [0],
+            [0],
+            marker=pickup_markers.get(pickup_order, "o"),
+            color="none",
+            markeredgecolor=BIN_EDGE_COLOR,
+            markerfacecolor="#9ca3af",
+            markersize=8,
+            label=f"pickup #{pickup_order} ({_format_count_ratio(count)})",
+        )
+        for pickup_order, count in sorted(pickup_order_counts.items())
+    ]
+    handles.extend(
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markeredgecolor=BIN_EDGE_COLOR,
+            markerfacecolor=_resolve_cube_color(color_name, color_index),
+            markersize=8,
+            label=f"{color_name} ({_format_count_ratio(count)})",
+        )
+        for color_index, (color_name, count) in enumerate(sorted(color_counts.items()))
+    )
+    if handles:
+        ax.legend(handles=handles, fontsize=8, loc="upper left", frameon=True)
+
+    ax.text(
+        0.98,
+        0.02,
+        "\n".join(
+            [
+                f"env: {env_id}",
+                f"episodes: {len(scenes)}",
+                f"solve pickup cubes: {total_pickup_cubes}",
+            ]
+        ),
+        transform=ax.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=8,
+        bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.85},
+    )
+
+    ax.set_title(f"Solve Pickup Cube Color Distribution (All Episodes): {env_id}")
+    ax.set_xlabel("y")
+    ax.set_ylabel("−x")
+    ax.set_xlim(*x_limits)
+    ax.set_ylim(*y_limits)
+    ax.set_aspect("equal", adjustable="box")
+    ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=dpi)
+    plt.close(fig)
+
+
 def _env_output_path(output_path: Path, env_id: str) -> Path:
     if output_path.suffix.lower() == ".png":
         return output_path.with_name(f"{output_path.stem}_{env_id}.png")
@@ -585,6 +714,14 @@ def _env_combined_output_path(output_path: Path, env_id: str) -> Path:
     if output_path.suffix.lower() == ".png":
         return output_path.with_name(f"{output_path.stem}_{env_id}_all_episodes.png")
     return output_path / f"{env_id}_all_episodes.png"
+
+
+def _env_solve_pickup_output_path(output_path: Path, env_id: str) -> Path:
+    if output_path.suffix.lower() == ".png":
+        return output_path.with_name(
+            f"{output_path.stem}_{env_id}_solve_pickup_all_episodes.png"
+        )
+    return output_path / f"{env_id}_solve_pickup_all_episodes.png"
 
 
 def main() -> None:
@@ -615,6 +752,15 @@ def main() -> None:
             env_id=env_id,
         )
         saved_paths.append(combined_output_path)
+    for env_id, env_scenes in grouped_scenes.items():
+        solve_pickup_output_path = _env_solve_pickup_output_path(output_path, env_id)
+        _save_solve_pickup_distribution_figure(
+            env_scenes,
+            output_path=solve_pickup_output_path,
+            dpi=args.dpi,
+            env_id=env_id,
+        )
+        saved_paths.append(solve_pickup_output_path)
 
     print(f"Loaded {len(snapshot_paths)} snapshot JSON files from {input_dir}")
     print(f"Saved {len(saved_paths)} overview figures:")
