@@ -104,6 +104,9 @@ def _snapshot_json_path(output_root: Path, env_id: str, episode: int, seed: int)
     )
 
 
+def _button_unmask_swap_inspect_this_timestep() -> int:
+    """Timestep at which to capture the after-drop snapshot for ButtonUnmaskSwap."""
+    return 33
 
 
 
@@ -119,7 +122,7 @@ def _collect_button_unmask_swap_snapshot(
     cube_bin_pairs = list(getattr(base_env, "cube_bin_pairs", []) or [])
     color_names = list(getattr(base_env, "color_names", []) or [])
     bin_to_color = dict(getattr(base_env, "bin_to_color", {}) or {})
-    inspect_this_timestep = 33 #50 /2 +1
+    inspect_this_timestep = _button_unmask_swap_inspect_this_timestep()
     bin_index_by_id = {id(bin_actor): idx for idx, bin_actor in enumerate(spawned_bins)}
     bins_with_cubes = set()
     cubes = []
@@ -221,6 +224,238 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _build_env_kwargs(episode: int, seed: int, difficulty: str) -> dict:
+    """Construct gymnasium env kwargs, including episode-based failure recovery."""
+    env_kwargs = dict(
+        obs_mode="rgb+depth+segmentation",
+        control_mode="pd_joint_pos",
+        render_mode="rgb_array",
+        reward_mode="dense",
+        seed=seed,
+        difficulty=difficulty,
+    )
+    if episode <= 5:
+        env_kwargs["robomme_failure_recovery"] = True
+        if episode <= 2:
+            env_kwargs["robomme_failure_recovery_mode"] = "z"
+        else:
+            env_kwargs["robomme_failure_recovery_mode"] = "xy"
+    return env_kwargs
+
+
+def _create_env(
+    env_id: str, env_kwargs: dict, output_dir: Path, episode: int, seed: int
+) -> gym.Env:
+    """Create the gymnasium env and wrap it with RobommeRecordWrapper."""
+    env = gym.make(env_id, **env_kwargs)
+    return RobommeRecordWrapper(
+        env,
+        dataset=str(output_dir),
+        env_id=env_id,
+        episode=episode,
+        seed=seed,
+        save_video=True,
+    )
+
+
+def _install_snapshot_instrumentation(
+    env: gym.Env,
+    env_id: str,
+    episode: int,
+    seed: int,
+    difficulty: str,
+    output_dir: Path,
+) -> dict:
+    """Monkey-patch env.step to capture after-drop snapshot for ButtonUnmaskSwap.
+
+    Returns a mutable state dict with keys ``snapshot_written`` and
+    ``snapshot_json_path`` that the instrumented closure updates in place.
+    For non-ButtonUnmaskSwap envs this is a no-op.
+    """
+    state: dict = {"snapshot_written": False, "snapshot_json_path": None}
+    if env_id != "ButtonUnmaskSwap":
+        return state
+
+    original_step = env.step
+
+    def instrumented_step(action):
+        step_result = original_step(action)
+        if state["snapshot_written"]:
+            return step_result
+
+        base_env = env.unwrapped
+        elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
+        if elapsed_steps < _button_unmask_swap_inspect_this_timestep():
+            return step_result
+
+        snapshot_payload = _collect_button_unmask_swap_snapshot(
+            base_env=base_env,
+            env_id=env_id,
+            episode=episode,
+            seed=seed,
+            difficulty=difficulty,
+            capture_elapsed_steps=elapsed_steps,
+        )
+        path = _snapshot_json_path(
+            output_root=output_dir, env_id=env_id, episode=episode, seed=seed
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(snapshot_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        state["snapshot_written"] = True
+        state["snapshot_json_path"] = path
+        print(f"After-drop snapshot JSON: {path.resolve()}")
+        return step_result
+
+    env.step = instrumented_step  # type: ignore[method-assign]
+    return state
+
+
+def _create_planner(env: gym.Env, env_id: str):
+    """Create the appropriate motion planner (stick vs arm) based on env_id."""
+    if env_id in {"PatternLock", "RouteStick"}:
+        return FailAwarePandaStickMotionPlanningSolver(
+            env,
+            debug=False,
+            vis=False,
+            base_pose=env.unwrapped.agent.robot.pose,
+            visualize_target_grasp_pose=False,
+            print_env_info=False,
+            joint_vel_limits=0.3,
+        )
+    return FailAwarePandaArmMotionPlanningSolver(
+        env,
+        debug=False,
+        vis=False,
+        base_pose=env.unwrapped.agent.robot.pose,
+        visualize_target_grasp_pose=False,
+        print_env_info=False,
+    )
+
+
+def _wrap_planner_with_screw_then_rrt_retry(planner) -> None:
+    """Monkey-patch planner.move_to_pose_with_screw with retry + RRT* fallback."""
+    original_screw = planner.move_to_pose_with_screw
+    original_rrt = planner.move_to_pose_with_RRTStar
+
+    def _retry(*args, **kwargs):
+        for attempt in range(1, DATASET_SCREW_MAX_ATTEMPTS + 1):
+            try:
+                result = original_screw(*args, **kwargs)
+            except ScrewPlanFailure as exc:
+                print(
+                    f"[Replay] screw planning failed "
+                    f"(attempt {attempt}/{DATASET_SCREW_MAX_ATTEMPTS}): {exc}"
+                )
+                continue
+            if isinstance(result, int) and result == -1:
+                print(
+                    f"[Replay] screw planning returned -1 "
+                    f"(attempt {attempt}/{DATASET_SCREW_MAX_ATTEMPTS})"
+                )
+                continue
+            return result
+
+        print(
+            "[Replay] screw planning exhausted; "
+            f"fallback to RRT* (max {DATASET_RRT_MAX_ATTEMPTS} attempts)"
+        )
+
+        for attempt in range(1, DATASET_RRT_MAX_ATTEMPTS + 1):
+            try:
+                result = original_rrt(*args, **kwargs)
+            except Exception as exc:
+                print(
+                    f"[Replay] RRT* planning failed "
+                    f"(attempt {attempt}/{DATASET_RRT_MAX_ATTEMPTS}): {exc}"
+                )
+                continue
+            if isinstance(result, int) and result == -1:
+                print(
+                    f"[Replay] RRT* planning returned -1 "
+                    f"(attempt {attempt}/{DATASET_RRT_MAX_ATTEMPTS})"
+                )
+                continue
+            return result
+
+        print("[Replay] screw->RRT* planning exhausted; return -1")
+        return -1
+
+    planner.move_to_pose_with_screw = _retry
+
+
+def _execute_task_list(env: gym.Env, planner, env_id: str) -> bool:
+    """Run the evaluate-solve-check loop over all tasks. Returns True on success."""
+    env.unwrapped.evaluate()
+    tasks = list(getattr(env.unwrapped, "task_list", []) or [])
+    print(f"{env_id}: Task list has {len(tasks)} tasks")
+
+    episode_successful = False
+
+    for idx, task_entry in enumerate(tasks):
+        task_name = task_entry.get("name", f"Task {idx}")
+        print(f"Executing task {idx + 1}/{len(tasks)}: {task_name}")
+
+        solve_callable = task_entry.get("solve")
+        if not callable(solve_callable):
+            raise ValueError(f"Task '{task_name}' must supply a callable 'solve'.")
+
+        env.unwrapped.evaluate(solve_complete_eval=True)
+        screw_failed = False
+        try:
+            solve_result = solve_callable(env, planner)
+            if isinstance(solve_result, int) and solve_result == -1:
+                screw_failed = True
+                print(f"Screw->RRT* planning exhausted during '{task_name}'")
+                env.unwrapped.failureflag = torch.tensor([True])
+                env.unwrapped.successflag = torch.tensor([False])
+                env.unwrapped.current_task_failure = True
+        except ScrewPlanFailure as exc:
+            screw_failed = True
+            print(f"Screw plan failure during '{task_name}': {exc}")
+            env.unwrapped.failureflag = torch.tensor([True])
+            env.unwrapped.successflag = torch.tensor([False])
+            env.unwrapped.current_task_failure = True
+        except FailsafeTimeout as exc:
+            print(f"Failsafe: {exc}")
+            break
+
+        evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
+        fail_flag = evaluation.get("fail", False)
+        success_flag = evaluation.get("success", False)
+
+        if _tensor_to_bool(success_flag):
+            print("All tasks completed successfully.")
+            episode_successful = True
+            break
+
+        if screw_failed or _tensor_to_bool(fail_flag):
+            print("Encountered failure condition; stopping task sequence.")
+            break
+    else:
+        evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
+        episode_successful = _tensor_to_bool(evaluation.get("success", False))
+
+    return episode_successful or _tensor_to_bool(
+        getattr(env, "episode_success", False)
+    )
+
+
+def _close_env(env: Optional[gym.Env], episode: int, seed: int) -> None:
+    """Safely close the environment, logging any exception."""
+    if env is None:
+        return
+    try:
+        env.close()
+    except Exception as close_exc:
+        print(
+            f"Warning: Exception during env.close() for episode {episode}, "
+            f"seed {seed}: {close_exc}"
+        )
+
+
 def _run_episode(
     env_id: str,
     episode: int,
@@ -234,223 +469,32 @@ def _run_episode(
 
     env: Optional[gym.Env] = None
     episode_successful = False
-    snapshot_json_path: Optional[Path] = None
-    snapshot_written = False
+    snapshot_state: dict = {"snapshot_written": False, "snapshot_json_path": None}
 
     try:
-        env_kwargs = dict(
-            obs_mode="rgb+depth+segmentation",
-            control_mode="pd_joint_pos",
-            render_mode="rgb_array",
-            reward_mode="dense",
-            seed=seed,
-            difficulty=difficulty,
+        env_kwargs = _build_env_kwargs(episode, seed, difficulty)
+        env = _create_env(env_id, env_kwargs, output_dir, episode, seed)
+        snapshot_state = _install_snapshot_instrumentation(
+            env, env_id, episode, seed, difficulty, output_dir
         )
-
-        if episode <= 5:
-            env_kwargs["robomme_failure_recovery"] = True
-            if episode <= 2:
-                env_kwargs["robomme_failure_recovery_mode"] = "z"
-            else:
-                env_kwargs["robomme_failure_recovery_mode"] = "xy"
-
-        env = gym.make(env_id, **env_kwargs)
-        env = RobommeRecordWrapper(
-            env,
-            dataset=str(output_dir),
-            env_id=env_id,
-            episode=episode,
-            seed=seed,
-            save_video=True,
-        )
-
-        if env_id == "ButtonUnmaskSwap":
-            original_step = env.step
-
-            def instrumented_step(action):
-                nonlocal snapshot_json_path, snapshot_written
-
-                step_result = original_step(action)
-                if snapshot_written:
-                    return step_result
-
-                base_env = env.unwrapped
-                elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
-                inspect_step = _button_unmask_swap_inspect_this_timestep()
-                if elapsed_steps < inspect_step:
-                    return step_result
-
-                snapshot_payload = _collect_button_unmask_swap_snapshot(
-                    base_env=base_env,
-                    env_id=env_id,
-                    episode=episode,
-                    seed=seed,
-                    difficulty=difficulty,
-                    capture_elapsed_steps=elapsed_steps,
-                )
-                snapshot_json_path = _snapshot_json_path(
-                    output_root=output_dir,
-                    env_id=env_id,
-                    episode=episode,
-                    seed=seed,
-                )
-                snapshot_json_path.parent.mkdir(parents=True, exist_ok=True)
-                snapshot_json_path.write_text(
-                    json.dumps(snapshot_payload, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-                snapshot_written = True
-                print(f"After-drop snapshot JSON: {snapshot_json_path.resolve()}")
-                return step_result
-
-            env.step = instrumented_step  # type: ignore[method-assign]
-
         env.reset()
-
-        if env_id in {"PatternLock", "RouteStick"}:
-            planner = FailAwarePandaStickMotionPlanningSolver(
-                env,
-                debug=False,
-                vis=False,
-                base_pose=env.unwrapped.agent.robot.pose,
-                visualize_target_grasp_pose=False,
-                print_env_info=False,
-                joint_vel_limits=0.3,
-            )
-        else:
-            planner = FailAwarePandaArmMotionPlanningSolver(
-                env,
-                debug=False,
-                vis=False,
-                base_pose=env.unwrapped.agent.robot.pose,
-                visualize_target_grasp_pose=False,
-                print_env_info=False,
-            )
-
-        original_move_to_pose_with_screw = planner.move_to_pose_with_screw
-        original_move_to_pose_with_rrt = planner.move_to_pose_with_RRTStar
-
-        def _move_to_pose_with_screw_then_rrt_retry(*args, **kwargs):
-            for attempt in range(1, DATASET_SCREW_MAX_ATTEMPTS + 1):
-                try:
-                    result = original_move_to_pose_with_screw(*args, **kwargs)
-                except ScrewPlanFailure as exc:
-                    print(
-                        f"[Replay] screw planning failed "
-                        f"(attempt {attempt}/{DATASET_SCREW_MAX_ATTEMPTS}): {exc}"
-                    )
-                    continue
-
-                if isinstance(result, int) and result == -1:
-                    print(
-                        f"[Replay] screw planning returned -1 "
-                        f"(attempt {attempt}/{DATASET_SCREW_MAX_ATTEMPTS})"
-                    )
-                    continue
-
-                return result
-
-            print(
-                "[Replay] screw planning exhausted; "
-                f"fallback to RRT* (max {DATASET_RRT_MAX_ATTEMPTS} attempts)"
-            )
-
-            for attempt in range(1, DATASET_RRT_MAX_ATTEMPTS + 1):
-                try:
-                    result = original_move_to_pose_with_rrt(*args, **kwargs)
-                except Exception as exc:
-                    print(
-                        f"[Replay] RRT* planning failed "
-                        f"(attempt {attempt}/{DATASET_RRT_MAX_ATTEMPTS}): {exc}"
-                    )
-                    continue
-
-                if isinstance(result, int) and result == -1:
-                    print(
-                        f"[Replay] RRT* planning returned -1 "
-                        f"(attempt {attempt}/{DATASET_RRT_MAX_ATTEMPTS})"
-                    )
-                    continue
-
-                return result
-
-            print("[Replay] screw->RRT* planning exhausted; return -1")
-            return -1
-
-        planner.move_to_pose_with_screw = _move_to_pose_with_screw_then_rrt_retry
-
-        env.unwrapped.evaluate()
-        tasks = list(getattr(env.unwrapped, "task_list", []) or [])
-        print(f"{env_id}: Task list has {len(tasks)} tasks")
-
-        for idx, task_entry in enumerate(tasks):
-            task_name = task_entry.get("name", f"Task {idx}")
-            print(f"Executing task {idx + 1}/{len(tasks)}: {task_name}")
-
-            solve_callable = task_entry.get("solve")
-            if not callable(solve_callable):
-                raise ValueError(f"Task '{task_name}' must supply a callable 'solve'.")
-
-            env.unwrapped.evaluate(solve_complete_eval=True)
-            screw_failed = False
-            try:
-                solve_result = solve_callable(env, planner)
-                if isinstance(solve_result, int) and solve_result == -1:
-                    screw_failed = True
-                    print(f"Screw->RRT* planning exhausted during '{task_name}'")
-                    env.unwrapped.failureflag = torch.tensor([True])
-                    env.unwrapped.successflag = torch.tensor([False])
-                    env.unwrapped.current_task_failure = True
-            except ScrewPlanFailure as exc:
-                screw_failed = True
-                print(f"Screw plan failure during '{task_name}': {exc}")
-                env.unwrapped.failureflag = torch.tensor([True])
-                env.unwrapped.successflag = torch.tensor([False])
-                env.unwrapped.current_task_failure = True
-            except FailsafeTimeout as exc:
-                print(f"Failsafe: {exc}")
-                break
-
-            evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
-            fail_flag = evaluation.get("fail", False)
-            success_flag = evaluation.get("success", False)
-
-            if _tensor_to_bool(success_flag):
-                print("All tasks completed successfully.")
-                episode_successful = True
-                break
-
-            if screw_failed or _tensor_to_bool(fail_flag):
-                print("Encountered failure condition; stopping task sequence.")
-                break
-        else:
-            evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
-            episode_successful = _tensor_to_bool(evaluation.get("success", False))
-
-        episode_successful = episode_successful or _tensor_to_bool(
-            getattr(env, "episode_success", False)
-        )
+        planner = _create_planner(env, env_id)
+        _wrap_planner_with_screw_then_rrt_retry(planner)
+        episode_successful = _execute_task_list(env, planner, env_id)
     except SceneGenerationError as exc:
         print(
             f"Scene generation failed for env {env_id}, episode {episode}, seed {seed}: {exc}"
         )
         episode_successful = False
     finally:
-        if env is not None:
-            try:
-                env.close()
-            except Exception as close_exc:
-                print(
-                    f"Warning: Exception during env.close() for episode {episode}, "
-                    f"seed {seed}: {close_exc}"
-                )
+        _close_env(env, episode, seed)
 
     status_text = "SUCCESS" if episode_successful else "FAILED"
     print(
         f"--- Finished env={env_id} episode={episode} seed={seed} "
         f"difficulty={difficulty} [{status_text}] ---"
     )
-    if env_id == "ButtonUnmaskSwap" and not snapshot_written:
+    if env_id == "ButtonUnmaskSwap" and not snapshot_state["snapshot_written"]:
         print(
             "Warning: after-drop snapshot JSON was not captured before the episode ended."
         )
