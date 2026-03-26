@@ -1,4 +1,4 @@
-"""ButtonUnmaskInspect 的快照辅助逻辑。"""
+"""Unmask env 的 after-drop 快照辅助逻辑。"""
 
 from __future__ import annotations
 
@@ -8,6 +8,20 @@ from pathlib import Path
 import gymnasium as gym
 import numpy as np
 import torch
+
+SUPPORTED_AFTER_DROP_ENVS = {
+    "ButtonUnmask",
+    "ButtonUnmaskSwap",
+    "VideoUnmask",
+    "VideoUnmaskSwap",
+}
+AFTER_DROP_CAPTURE_STEP_BY_ENV = {
+    "ButtonUnmask": 33,
+    "ButtonUnmaskSwap": 33,
+    "VideoUnmask": 33,
+    "VideoUnmaskSwap": 33,
+}
+SWAP_ENVS = {"ButtonUnmaskSwap", "VideoUnmaskSwap"}
 
 
 def _to_python_int(value) -> int:
@@ -30,8 +44,6 @@ def _actor_position_xyz(actor) -> list[float]:
     if actor is None:
         return [0.0, 0.0, 0.0]
 
-    # Robomme 中有的对象直接暴露 `pose`，有的通过 `get_pose()` 获取；
-    # 这里兼容两种写法，避免快照代码依赖具体 actor 实现。
     pose = actor.pose if hasattr(actor, "pose") else actor.get_pose()
     position = pose.p
     if isinstance(position, torch.Tensor):
@@ -39,8 +51,6 @@ def _actor_position_xyz(actor) -> list[float]:
 
     position_np = np.asarray(position, dtype=np.float64).reshape(-1)
     if position_np.size < 3:
-        # 某些测试替身对象可能只给了部分坐标；补零后统一输出格式，
-        # 下游 JSON 使用方就不需要处理长度不一致的情况。
         padded = np.zeros(3, dtype=np.float64)
         padded[: position_np.size] = position_np
         position_np = padded
@@ -56,12 +66,75 @@ def _snapshot_json_path(output_root: Path, env_id: str, episode: int, seed: int)
     )
 
 
-def _button_unmask_swap_inspect_this_timestep() -> int:
-    """返回 ButtonUnmaskSwap 需要抓取 after-drop 快照的时间步。"""
-    return 33
+def _inspect_this_timestep_for_env(env_id: str) -> int:
+    """返回指定 env 需要抓取 after-drop 快照的硬编码时间步。"""
+    return AFTER_DROP_CAPTURE_STEP_BY_ENV[env_id]
 
 
-def _collect_button_unmask_swap_snapshot(
+def _build_cube_snapshot(
+    cube_actor,
+    cube_color: str | None,
+    paired_bin_index: int | None,
+    paired_bin_actor,
+) -> dict:
+    return {
+        "name": getattr(cube_actor, "name", None),
+        "color": cube_color,
+        "position_xyz": _actor_position_xyz(cube_actor),
+        "paired_bin_index": (
+            int(paired_bin_index) if paired_bin_index is not None else None
+        ),
+        "paired_bin_name": getattr(paired_bin_actor, "name", None),
+    }
+
+
+def _build_bins_snapshot(spawned_bins: list, bins_with_cubes: set[int]) -> list[dict]:
+    bins = []
+    for idx, bin_actor in enumerate(spawned_bins):
+        bins.append(
+            {
+                "index": idx,
+                "name": getattr(bin_actor, "name", None),
+                "position_xyz": _actor_position_xyz(bin_actor),
+                "has_cube_under_bin": idx in bins_with_cubes,
+            }
+        )
+    return bins
+
+
+def _build_snapshot_payload(
+    *,
+    env_id: str,
+    episode: int,
+    seed: int,
+    difficulty: str,
+    capture_elapsed_steps: int,
+    cubes: list[dict],
+    bins: list[dict],
+) -> dict:
+    return {
+        "env_id": env_id,
+        "episode": int(episode),
+        "seed": int(seed),
+        "difficulty": difficulty,
+        "inspect_this_timestep": _inspect_this_timestep_for_env(env_id),
+        "capture_elapsed_steps": int(capture_elapsed_steps),
+        "capture_phase": "after_drop",
+        "cubes": cubes,
+        "bins": bins,
+    }
+
+
+def _resolve_non_swap_cube_actor(base_env, pair_idx: int, color_names: list[str]):
+    cube_actor = getattr(base_env, f"target_cube_{pair_idx}", None)
+    if cube_actor is not None:
+        return cube_actor
+    if pair_idx < len(color_names):
+        return getattr(base_env, f"target_cube_{color_names[pair_idx]}", None)
+    return None
+
+
+def _collect_non_swap_snapshot(
     base_env,
     env_id: str,
     episode: int,
@@ -69,26 +142,62 @@ def _collect_button_unmask_swap_snapshot(
     difficulty: str,
     capture_elapsed_steps: int,
 ) -> dict:
-    """收集 ButtonUnmaskSwap 在指定时刻的关键场景信息。
+    """收集非 swap unmask 环境在固定 after-drop 时刻的场景信息。"""
+    spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
+    color_names = list(getattr(base_env, "color_names", []) or [])
 
-    这里的目标不是序列化整个环境，而是提取排查这个任务最需要的结构化信息：
-    - 每个 bin 的位置和索引。
-    - 每个 cube 当前的位置、颜色，以及它理论上配对的是哪个 bin。
-    - 哪些 bin 下方确实有 cube，便于判断 drop 后的遮挡/覆盖关系。
-    """
+    bins_with_cubes: set[int] = set()
+    cubes: list[dict] = []
+    pair_count = min(3, len(spawned_bins))
+
+    for pair_idx in range(pair_count):
+        cube_actor = _resolve_non_swap_cube_actor(base_env, pair_idx, color_names)
+        if cube_actor is None:
+            continue
+
+        bin_actor = spawned_bins[pair_idx]
+        bins_with_cubes.add(pair_idx)
+        cube_color = color_names[pair_idx] if pair_idx < len(color_names) else None
+        cubes.append(
+            _build_cube_snapshot(
+                cube_actor=cube_actor,
+                cube_color=cube_color,
+                paired_bin_index=pair_idx,
+                paired_bin_actor=bin_actor,
+            )
+        )
+
+    bins = _build_bins_snapshot(spawned_bins, bins_with_cubes)
+    return _build_snapshot_payload(
+        env_id=env_id,
+        episode=episode,
+        seed=seed,
+        difficulty=difficulty,
+        capture_elapsed_steps=capture_elapsed_steps,
+        cubes=cubes,
+        bins=bins,
+    )
+
+
+def _collect_swap_snapshot(
+    base_env,
+    env_id: str,
+    episode: int,
+    seed: int,
+    difficulty: str,
+    capture_elapsed_steps: int,
+) -> dict:
+    """收集 swap unmask 环境在固定 after-drop 时刻的场景信息。"""
     spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
     cube_bin_pairs = list(getattr(base_env, "cube_bin_pairs", []) or [])
     color_names = list(getattr(base_env, "color_names", []) or [])
     bin_to_color = dict(getattr(base_env, "bin_to_color", {}) or {})
-    inspect_this_timestep = _button_unmask_swap_inspect_this_timestep()
-    # 用对象 id 建一个反查表，后面可以从 `(cube, bin)` 配对直接拿到 bin 序号。
+
     bin_index_by_id = {id(bin_actor): idx for idx, bin_actor in enumerate(spawned_bins)}
-    bins_with_cubes = set()
-    cubes = []
+    bins_with_cubes: set[int] = set()
+    cubes: list[dict] = []
 
     for pair_idx, pair in enumerate(cube_bin_pairs):
-        # 数据集构造阶段如果留下了脏数据，这里直接跳过非法 pair，
-        # 保证快照导出本身不要再因为格式问题崩掉。
         if not isinstance(pair, (tuple, list)) or len(pair) != 2:
             continue
 
@@ -101,46 +210,55 @@ def _collect_button_unmask_swap_snapshot(
         if paired_bin_index is not None:
             cube_color = bin_to_color.get(paired_bin_index)
         if cube_color is None and pair_idx < len(color_names):
-            # 优先使用环境里“bin 索引 -> 颜色”的真值映射；
-            # 如果拿不到，再退回到 pair 的顺序颜色，尽量补全调试信息。
             cube_color = color_names[pair_idx]
 
         cubes.append(
-            {
-                "name": getattr(cube_actor, "name", None),
-                "color": cube_color,
-                "position_xyz": _actor_position_xyz(cube_actor),
-                "paired_bin_index": (
-                    int(paired_bin_index) if paired_bin_index is not None else None
-                ),
-                "paired_bin_name": getattr(bin_actor, "name", None),
-            }
+            _build_cube_snapshot(
+                cube_actor=cube_actor,
+                cube_color=cube_color,
+                paired_bin_index=paired_bin_index,
+                paired_bin_actor=bin_actor,
+            )
         )
 
-    bins = []
-    for idx, bin_actor in enumerate(spawned_bins):
-        # `has_cube_under_bin` 不是视觉检测结果，而是根据配对信息推导出来的，
-        # 用来快速看哪些 bin 理应覆盖着 cube。
-        bins.append(
-            {
-                "index": idx,
-                "name": getattr(bin_actor, "name", None),
-                "position_xyz": _actor_position_xyz(bin_actor),
-                "has_cube_under_bin": idx in bins_with_cubes,
-            }
-        )
+    bins = _build_bins_snapshot(spawned_bins, bins_with_cubes)
+    return _build_snapshot_payload(
+        env_id=env_id,
+        episode=episode,
+        seed=seed,
+        difficulty=difficulty,
+        capture_elapsed_steps=capture_elapsed_steps,
+        cubes=cubes,
+        bins=bins,
+    )
 
-    return {
-        "env_id": env_id,
-        "episode": int(episode),
-        "seed": int(seed),
-        "difficulty": difficulty,
-        "inspect_this_timestep": inspect_this_timestep,
-        "capture_elapsed_steps": int(capture_elapsed_steps),
-        "capture_phase": "after_drop",
-        "cubes": cubes,
-        "bins": bins,
-    }
+
+def _collect_snapshot_for_env(
+    *,
+    base_env,
+    env_id: str,
+    episode: int,
+    seed: int,
+    difficulty: str,
+    capture_elapsed_steps: int,
+) -> dict:
+    if env_id in SWAP_ENVS:
+        return _collect_swap_snapshot(
+            base_env=base_env,
+            env_id=env_id,
+            episode=episode,
+            seed=seed,
+            difficulty=difficulty,
+            capture_elapsed_steps=capture_elapsed_steps,
+        )
+    return _collect_non_swap_snapshot(
+        base_env=base_env,
+        env_id=env_id,
+        episode=episode,
+        seed=seed,
+        difficulty=difficulty,
+        capture_elapsed_steps=capture_elapsed_steps,
+    )
 
 
 def install_snapshot_for_step(
@@ -151,34 +269,34 @@ def install_snapshot_for_step(
     difficulty: str,
     output_dir: Path,
 ) -> dict:
-    """给 `env.step` 打补丁，在合适时机抓取 after-drop 快照。
-
-    返回一个可变状态字典，闭包会原地更新两个字段：
-    - `snapshot_written`: 是否已经成功写过快照。
-    - `snapshot_json_path`: 快照的实际路径。
-
-    只有 `ButtonUnmaskSwap` 需要这段逻辑；其他环境直接返回默认状态。
-    """
-    state: dict = {"snapshot_written": False, "snapshot_json_path": None}
-    if env_id != "ButtonUnmaskSwap":
+    """给支持的 unmask env 打补丁，在固定时机抓 after-drop 快照。"""
+    snapshot_enabled = env_id in SUPPORTED_AFTER_DROP_ENVS
+    state: dict = {
+        "snapshot_enabled": snapshot_enabled,
+        "snapshot_written": False,
+        "snapshot_json_path": None,
+        "capture_phase": "after_drop" if snapshot_enabled else None,
+        "expected_capture_step": (
+            _inspect_this_timestep_for_env(env_id) if snapshot_enabled else None
+        ),
+    }
+    if not snapshot_enabled:
         return state
 
+    capture_step = AFTER_DROP_CAPTURE_STEP_BY_ENV[env_id]
     original_step = env.step
 
     def instrumented_step(action):
-        # 先保持环境原有 step 行为，再根据 step 后的状态决定是否抓快照。
         step_result = original_step(action)
         if state["snapshot_written"]:
-            # 每局只抓一次，避免后续 step 反复覆盖同一份 JSON。
             return step_result
 
         base_env = env.unwrapped
         elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
-        if elapsed_steps < _button_unmask_swap_inspect_this_timestep():
-            # 还没走到关注的“drop 后”时间点，继续执行即可。
+        if elapsed_steps < capture_step:
             return step_result
 
-        snapshot_payload = _collect_button_unmask_swap_snapshot(
+        snapshot_payload = _collect_snapshot_for_env(
             base_env=base_env,
             env_id=env_id,
             episode=episode,
@@ -194,7 +312,6 @@ def install_snapshot_for_step(
             json.dumps(snapshot_payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        # 闭包通过共享状态把结果带回外层，便于 episode 结束时给出明确提示。
         state["snapshot_written"] = True
         state["snapshot_json_path"] = path
         print(f"After-drop snapshot JSON: {path.resolve()}")

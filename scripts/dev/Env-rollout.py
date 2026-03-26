@@ -1,9 +1,9 @@
-"""单次回放 ButtonUnmaskInspect 脚本。
+"""单次回放 Robomme env 并可抓取 unmask after-drop 快照。
 
 这个脚本的职责有三件事：
 1. 按给定环境、关卡编号和随机种子创建 Robomme 环境并依次执行一局或多局任务。
 2. 使用 `RobommeRecordWrapper` 录制回放视频，方便后续人工检查。
-3. 在 `ButtonUnmaskSwap` 的固定时间步额外抓取一次“drop 之后”的场景快照，
+3. 对支持的 unmask env，在固定时间步额外抓取一次“drop 之后”的场景快照，
    把箱子、方块及其对应关系导出为 JSON，便于离线比对状态是否正确。
 
 整体执行链路是：
@@ -109,7 +109,6 @@ def _build_parser() -> argparse.ArgumentParser:
         "--seed",
         type=int,
         default=0,
-        metavar="S0",
         help=(
             "Initial environment seed; episode index k uses seed S0+k (default: 0)."
         ),
@@ -343,7 +342,11 @@ def _run_episode(
 
     env: Optional[gym.Env] = None
     episode_successful = False
-    snapshot_state: dict = {"snapshot_written": False, "snapshot_json_path": None}
+    snapshot_state: dict = {
+        "snapshot_enabled": False,
+        "snapshot_written": False,
+        "snapshot_json_path": None,
+    }
 
     try:
         env_kwargs = _build_env_kwargs(episode, seed, difficulty)
@@ -369,7 +372,7 @@ def _run_episode(
         f"--- Finished env={env_id} episode={episode} seed={seed} "
         f"difficulty={difficulty} [{status_text}] ---"
     )
-    if env_id == "ButtonUnmaskSwap" and not snapshot_state["snapshot_written"]:
+    if snapshot_state.get("snapshot_enabled") and not snapshot_state["snapshot_written"]:
         # 快照缺失本身不一定说明 episode 失败，但通常意味着流程比预期更早结束了。
         print(
             "Warning: after-drop snapshot JSON was not captured before the episode ended."

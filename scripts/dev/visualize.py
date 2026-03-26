@@ -84,6 +84,9 @@ class SceneSnapshot:
     episode: int
     seed: int
     difficulty: str | None
+    inspect_this_timestep: int | None
+    capture_elapsed_steps: int | None
+    capture_phase: str | None
     bins: tuple[BinSnapshot, ...]
     cubes: tuple[CubeSnapshot, ...]
 
@@ -165,6 +168,17 @@ def _load_snapshot(path: Path) -> SceneSnapshot:
         episode=int(payload.get("episode", 0)),
         seed=int(payload.get("seed", 0)),
         difficulty=payload.get("difficulty"),
+        inspect_this_timestep=(
+            None
+            if payload.get("inspect_this_timestep") is None
+            else int(payload["inspect_this_timestep"])
+        ),
+        capture_elapsed_steps=(
+            None
+            if payload.get("capture_elapsed_steps") is None
+            else int(payload["capture_elapsed_steps"])
+        ),
+        capture_phase=payload.get("capture_phase"),
         bins=bins,
         cubes=cubes,
     )
@@ -221,6 +235,12 @@ def _snapshot_text(scene: SceneSnapshot) -> str:
     ]
     if scene.difficulty:
         lines.append(f"difficulty: {scene.difficulty}")
+    if scene.capture_phase:
+        lines.append(f"phase: {scene.capture_phase}")
+    if scene.inspect_this_timestep is not None:
+        lines.append(f"inspect step: {scene.inspect_this_timestep}")
+    if scene.capture_elapsed_steps is not None:
+        lines.append(f"captured step: {scene.capture_elapsed_steps}")
     return "\n".join(lines)
 
 
