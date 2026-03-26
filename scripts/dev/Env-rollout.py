@@ -1,7 +1,7 @@
 """单次回放 ButtonUnmaskInspect 脚本。
 
 这个脚本的职责有三件事：
-1. 按给定环境、关卡编号和随机种子创建 Robomme 环境并执行一局任务。
+1. 按给定环境、关卡编号和随机种子创建 Robomme 环境并依次执行一局或多局任务。
 2. 使用 `RobommeRecordWrapper` 录制回放视频，方便后续人工检查。
 3. 在 `ButtonUnmaskSwap` 的固定时间步额外抓取一次“drop 之后”的场景快照，
    把箱子、方块及其对应关系导出为 JSON，便于离线比对状态是否正确。
@@ -86,7 +86,7 @@ def _tensor_to_bool(value) -> bool:
 def _build_parser() -> argparse.ArgumentParser:
     """定义命令行参数。"""
     parser = argparse.ArgumentParser(
-        description="Run a Robomme episode and record video."
+        description="Run one or more Robomme episodes (sequential) and record video."
     )
     parser.add_argument(
         "--env",
@@ -98,15 +98,21 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=3,
+        default=5,
         metavar="N",
-        help="Episode index to run (default: 3).",
+        help=(
+            "How many consecutive episodes to run starting from index 0: "
+            "episodes 0 .. N-1 (e.g. N=5 runs episodes 0,1,2,3,4). Default: 5."
+        ),
     )
     parser.add_argument(
         "--seed",
         type=int,
         default=0,
-        help="Environment seed to use (default: 0).",
+        metavar="S0",
+        help=(
+            "Initial environment seed; episode index k uses seed S0+k (default: 0)."
+        ),
     )
     parser.add_argument(
         "--difficulty",
@@ -379,36 +385,48 @@ def main() -> None:
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    ep = args.episode_number
+    n_episodes = args.episode_number
+    if n_episodes < 1:
+        raise SystemExit("--episode-number must be at least 1 (run episodes 0..N-1).")
+    episode_numbers = list(range(0, n_episodes))
     print(f"Environment: {args.env}")
-    print(f"Episode number: {ep}")
-    print(f"Seed: {args.seed}")
+    print(
+        f"Episode number N={n_episodes} → running episode indices {episode_numbers} "
+        f"(0 .. {n_episodes - 1})"
+    )
+    print(f"Initial seed S0={args.seed} (episode k uses seed {args.seed}+k)")
     print(f"Difficulty: {args.difficulty}")
     print(f"GPU: {args.gpu}")
     print(f"Video output root: {output_dir}")
 
-    success = _run_episode(
-        env_id=args.env,
-        episode=ep,
-        seed=args.seed,
-        difficulty=args.difficulty,
-        output_dir=output_dir,
-    )
-
-    # 视频文件由 wrapper 异步落盘；这里在 episode 结束后再去定位最终产物。
-    mp4_path = _latest_recorded_mp4(output_dir, args.env, ep, args.seed)
-    if mp4_path is not None:
-        print(f"Final MP4: {mp4_path.resolve()}")
-    else:
-        print(
-            f"No MP4 matched under {output_dir / 'videos'} "
-            f"(expected filename fragment '{args.env}_ep{ep}_seed{args.seed}')."
+    successes: list[bool] = []
+    initial_seed = args.seed
+    for ep in episode_numbers:
+        run_seed = initial_seed + ep
+        success = _run_episode(
+            env_id=args.env,
+            episode=ep,
+            seed=run_seed,
+            difficulty=args.difficulty,
+            output_dir=output_dir,
         )
+        successes.append(success)
 
-    if success:
-        print("Replay finished successfully.")
+        # 视频文件由 wrapper 异步落盘；这里在每局结束后再去定位最终产物。
+        mp4_path = _latest_recorded_mp4(output_dir, args.env, ep, run_seed)
+        if mp4_path is not None:
+            print(f"Final MP4 (episode {ep}, seed={run_seed}): {mp4_path.resolve()}")
+        else:
+            print(
+                f"No MP4 matched under {output_dir / 'videos'} "
+                f"(expected filename fragment '{args.env}_ep{ep}_seed{run_seed}')."
+            )
+
+    all_success = all(successes)
+    if all_success:
+        print("Replay finished successfully (all episodes).")
     else:
-        print("Replay finished with failure status.")
+        print("Replay finished with failure status (one or more episodes failed).")
 
 
 if __name__ == "__main__":
