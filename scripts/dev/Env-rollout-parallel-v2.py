@@ -134,7 +134,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["VideoUnmaskSwap",],
+        default=["VideoUnmaskSwap","ButtonUnmaskSwap","VideoUnmask","ButtonUnmask"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help=(
@@ -146,7 +146,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=20,
+        default=50,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -179,7 +179,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=20,
+        default=25,
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
             "the same env_id. Default: auto=min(os.cpu_count(), episode count)."

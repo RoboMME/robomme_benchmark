@@ -158,6 +158,39 @@ def test_install_snapshot_tracks_collision_across_steps(tmp_path, monkeypatch) -
     assert payload["collision"] is True
 
 
+def test_install_snapshot_rewrites_collision_when_hit_after_capture(
+    tmp_path, monkeypatch
+) -> None:
+    base_env = _make_base_env(colliding_steps={4})
+    env = _FakeEnv(base_env)
+    monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 2)
+
+    state = snapshot_utils.install_snapshot_for_step(
+        env=env,
+        env_id="ButtonUnmask",
+        episode=5,
+        seed=11,
+        difficulty="hard",
+        output_dir=tmp_path,
+    )
+
+    for _ in range(2):
+        env.step(None)
+
+    initial_payload = json.loads(state["snapshot_json_path"].read_text(encoding="utf-8"))
+    assert initial_payload["capture_elapsed_steps"] == 2
+    assert initial_payload["collision"] is False
+
+    for _ in range(2):
+        env.step(None)
+
+    final_payload = json.loads(state["snapshot_json_path"].read_text(encoding="utf-8"))
+    assert state["collision_detected"] is True
+    assert state["snapshot_collision_synced"] is True
+    assert final_payload["capture_elapsed_steps"] == 2
+    assert final_payload["collision"] is True
+
+
 def test_install_snapshot_writes_false_when_no_collision(tmp_path, monkeypatch) -> None:
     base_env = _make_base_env()
     env = _FakeEnv(base_env)
@@ -181,6 +214,40 @@ def test_install_snapshot_writes_false_when_no_collision(tmp_path, monkeypatch) 
     payload = json.loads(state["snapshot_json_path"].read_text(encoding="utf-8"))
     assert payload["capture_elapsed_steps"] == 2
     assert payload["collision"] is False
+
+
+def test_install_snapshot_does_not_rewrite_when_no_collision_after_capture(
+    tmp_path, monkeypatch
+) -> None:
+    base_env = _make_base_env()
+    env = _FakeEnv(base_env)
+    monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 2)
+
+    state = snapshot_utils.install_snapshot_for_step(
+        env=env,
+        env_id="ButtonUnmask",
+        episode=6,
+        seed=12,
+        difficulty="easy",
+        output_dir=tmp_path,
+    )
+
+    for _ in range(2):
+        env.step(None)
+
+    snapshot_path = state["snapshot_json_path"]
+    assert snapshot_path is not None
+    initial_mtime_ns = snapshot_path.stat().st_mtime_ns
+
+    for _ in range(3):
+        env.step(None)
+
+    final_payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    assert state["collision_detected"] is False
+    assert state["snapshot_collision_synced"] is False
+    assert snapshot_path.stat().st_mtime_ns == initial_mtime_ns
+    assert final_payload["capture_elapsed_steps"] == 2
+    assert final_payload["collision"] is False
 
 
 def test_install_snapshot_ignores_contact_query_errors(tmp_path, monkeypatch) -> None:

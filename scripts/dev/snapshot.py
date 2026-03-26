@@ -1,14 +1,16 @@
-"""Unmask 环境 after-drop 场景快照的辅助逻辑。
+"""Unmask 环境 after-drop 场景快照与整局 bin-bin collision 监控逻辑。
 
 这个模块做的事情比较单一：
 1. 针对少数指定的 unmask 环境，在固定 step 抓取一次场景快照；
 2. 从环境对象里提取 cube / bin 的位置和配对关系；
-3. 把这些信息序列化为 JSON，供后续回放、可视化或人工检查使用。
+3. 从 episode 开始持续监控到结束，记录是否出现过有效 bin-bin collision；
+4. 把这些信息序列化为 JSON，供后续回放、可视化或人工检查使用。
 
 设计上尽量保持“旁路接入”：
 - 不改环境内部实现；
 - 只在运行时包一层 `env.step`；
-- 达到目标 step 后写一次文件，之后不再重复写。
+- 达到目标 step 后先写出 after-drop 场景快照；若后续首次检测到 collision，
+  再回写同一路径 JSON 中的 `collision` 字段。
 """
 
 from __future__ import annotations
@@ -150,7 +152,7 @@ def _step_has_bin_collision(
     """检测当前 step 是否存在任意 spawned bin 之间的接触。
 
     这里专门看 bin-bin 碰撞，而不是 cube-bin / cube-table 等其它接触，
-    因为 after-drop 阶段我们主要关心的是“多个 bin 是否因为布局或掉落过程互相顶住”。
+    因为我们关心的是“episode 推进过程中，多个 bin 是否曾互相顶住”。
 
     判定策略保持尽量宽松且稳健：
     1. 从 `base_env.spawned_bins` 取出当前真正生成出来的 bin；
@@ -159,8 +161,8 @@ def _step_has_bin_collision(
 
     这里返回的是“这一帧是否检测到碰撞”。
     外层 `install_snapshot_for_step` 会把它累计成 episode 级状态：
-    一旦某步检测到碰撞，最终写出的快照 `collision=True`，即表示
-    “在抓取快照之前的推进过程中，至少出现过一次 bin-bin 接触”。
+    一旦某步检测到碰撞，最终 JSON 中的 `collision=True`，即表示
+    “本 episode 任意时刻至少出现过一次有效 bin-bin 接触”。
     """
     scene = getattr(base_env, "scene", None)
     spawned_bins = [
@@ -259,7 +261,12 @@ def _build_snapshot_payload(
     cubes: list[dict],
     bins: list[dict],
 ) -> dict:
-    """构造最终写入 JSON 的顶层 payload。"""
+    """构造最终写入 JSON 的顶层 payload。
+
+    注意：
+    - 空间相关字段描述的是 after-drop 抓图时刻；
+    - `collision` 描述的是整局 episode 级结果。
+    """
     return {
         "env_id": env_id,
         "episode": int(episode),
@@ -395,6 +402,29 @@ def _collect_snapshot(
     )
 
 
+def _write_snapshot_payload(path: Path, payload: dict) -> None:
+    """把快照 payload 写到标准 JSON 文件。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def _rewrite_snapshot_collision(path: Path, collision: bool) -> bool:
+    """仅回写已落盘 JSON 中的 `collision` 字段。
+
+    返回值表示文件内容是否真的发生了变化，便于调用方避免重复日志。
+    """
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    target_collision = bool(collision)
+    if bool(payload.get("collision")) == target_collision:
+        return False
+    payload["collision"] = target_collision
+    _write_snapshot_payload(path, payload)
+    return True
+
+
 def install_snapshot_for_step(
     env: gym.Env,
     env_id: str,
@@ -408,11 +438,14 @@ def install_snapshot_for_step(
     这里采用最轻量的接入方式：保存原始 `env.step`，再在外面包一层。
     包装后的流程是：
     1. 先正常执行一步环境；
-    2. 查看当前 `elapsed_steps` 是否达到抓取阈值；
-    3. 若达到且还没写过快照，就收集信息并写入 JSON；
-    4. 无论是否抓取，都把原始 step 的返回值原样交还上层。
+    2. 检测本步是否出现 workspace 内的 bin-bin collision，并累计成 episode 级 sticky flag；
+    3. 若达到抓取阈值且还没写过快照，就立刻写出 after-drop JSON；
+    4. 若快照已写出、但此后第一次观察到 collision，就回写同一路径 JSON 中的 `collision`；
+    5. 无论是否抓取/回写，都把原始 step 的返回值原样交还上层。
 
     返回的 `state` 主要用于外层脚本查询“是否启用快照、文件写到哪里了”。
+    注意：JSON 中的空间字段仍对应 after-drop 抓图时刻，但 `collision`
+    是整局 episode 级布尔值。
     """
     # 只有列在 `SNAPSHOT_ENVS` 中的环境才启用这套逻辑，
     # 这样不会影响其它任务环境。
@@ -423,6 +456,7 @@ def install_snapshot_for_step(
         "snapshot_json_path": None,
         "capture_phase": "after_drop" if snapshot_enabled else None,
         "collision_detected": False,
+        "snapshot_collision_synced": False,
         "expected_capture_step": (
             SNAPSHOT_ENVS[env_id] if snapshot_enabled else None
         ),
@@ -437,47 +471,61 @@ def install_snapshot_for_step(
     def instrumented_step(action):
         # 先让环境正常推进，确保抓取的是“执行完当前动作后的场景”。
         step_result = original_step(action)
-        if state["snapshot_written"]:
-            # 快照只写一次；一旦成功落盘，后续 step 完全透传。
-            return step_result
 
         # 用 `unwrapped` 访问底层环境，避免被 wrapper 层屏蔽内部字段。
         base_env = env.unwrapped
+        collision_just_detected = False
         if not state["collision_detected"] and _step_has_bin_collision(base_env):
             # `collision_detected` 是一个“sticky flag”：
-            # 只要此前任一步观察到 bin-bin 碰撞，就一直保留到最终写快照。
+            # 只要整局任一步观察到 bin-bin 碰撞，就一直保留到 episode 结束。
             state["collision_detected"] = True
+            collision_just_detected = True
         elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
-        if elapsed_steps < capture_step:
-            # 还没到抓取时机，直接返回。
+
+        if not state["snapshot_written"]:
+            if elapsed_steps < capture_step:
+                # 还没到抓取时机，直接返回。
+                return step_result
+
+            # 一旦达到抓取阈值，就立刻基于当前底层环境状态生成 JSON。
+            # 这里故意不等 episode 结束：
+            # after-drop 是一个时点快照，不是 episode summary。
+            snapshot_payload = _collect_snapshot(
+                base_env=base_env,
+                env_id=env_id,
+                episode=episode,
+                seed=seed,
+                difficulty=difficulty,
+                capture_elapsed_steps=elapsed_steps,
+                collision=state["collision_detected"],
+            )
+            path = _snapshot_json_path(
+                output_root=output_dir, env_id=env_id, episode=episode, seed=seed
+            )
+            _write_snapshot_payload(path, snapshot_payload)
+            # 更新状态，供外层脚本记录或日志打印使用。
+            # 注意 `snapshot_json_path` 只有在真正写盘成功后才会填入。
+            state["snapshot_written"] = True
+            state["snapshot_json_path"] = path
+            state["snapshot_collision_synced"] = bool(state["collision_detected"])
+            print(f"After-drop snapshot JSON: {path.resolve()}")
             return step_result
 
-        # 一旦达到抓取阈值，就立刻基于当前底层环境状态生成 JSON。
-        # 这里故意不等 episode 结束：
-        # after-drop 是一个时点快照，不是 episode summary。
-        snapshot_payload = _collect_snapshot(
-            base_env=base_env,
-            env_id=env_id,
-            episode=episode,
-            seed=seed,
-            difficulty=difficulty,
-            capture_elapsed_steps=elapsed_steps,
-            collision=state["collision_detected"],
-        )
-        path = _snapshot_json_path(
-            output_root=output_dir, env_id=env_id, episode=episode, seed=seed
-        )
-        # 自动创建目录，避免调用方还要显式保证 `snapshots/` 已存在。
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps(snapshot_payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        # 更新状态，供外层脚本记录或日志打印使用。
-        # 注意 `snapshot_json_path` 只有在真正写盘成功后才会填入。
-        state["snapshot_written"] = True
-        state["snapshot_json_path"] = path
-        print(f"After-drop snapshot JSON: {path.resolve()}")
+        if (
+            collision_just_detected
+            and not state["snapshot_collision_synced"]
+            and state["snapshot_json_path"] is not None
+        ):
+            updated = _rewrite_snapshot_collision(
+                state["snapshot_json_path"],
+                collision=True,
+            )
+            if updated:
+                state["snapshot_collision_synced"] = True
+                print(
+                    "After-drop snapshot JSON collision flag updated: "
+                    f"{state['snapshot_json_path'].resolve()}"
+                )
         return step_result
 
     # 直接替换实例上的 step 方法，实现运行时插桩。
