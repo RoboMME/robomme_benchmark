@@ -65,7 +65,7 @@ DEFAULT_ENVS = [
 ENV_ID_TO_CODE = {name: idx + 1 for idx, name in enumerate(DEFAULT_ENVS)}
 SEED_OFFSET = 1_500_000
 VALID_ENVS: Set[str] = set(DEFAULT_ENVS)
-VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
+DIFFICULTY_ORDER = ("easy", "medium", "hard")
 DATASET_SCREW_MAX_ATTEMPTS = 3
 DATASET_RRT_MAX_ATTEMPTS = 3
 MAX_SEED_ATTEMPTS = 100
@@ -110,6 +110,20 @@ def _base_seed_for_episode(env_id: str, episode: int) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     """定义命令行参数。"""
+    def parse_difficulty_ratio(value: str) -> list[int]:
+        compact = value.strip().replace(":", "")
+        if len(compact) != 3 or not compact.isdigit():
+            raise argparse.ArgumentTypeError(
+                "difficulty must be a 3-part ratio such as '211' or '2:1:1'."
+            )
+
+        ratios = [int(part) for part in compact]
+        if sum(ratios) <= 0:
+            raise argparse.ArgumentTypeError(
+                "difficulty ratio must contain at least one non-zero part."
+            )
+        return ratios
+
     parser = argparse.ArgumentParser(
         description=(
             "Run one or more Robomme episodes in parallel and record video. "
@@ -124,7 +138,7 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help=(
-            "One or more environment IDs to run in order (default: ButtonUnmaskSwap). "
+            "One or more environment IDs to run in order (default: VideoUnmaskSwap). "
             "Each env runs the same episode range; seeds are derived from "
             "env_id/episode/attempt."
         ),
@@ -136,15 +150,18 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
-            "episodes 0 .. N-1 (e.g. N=5 runs episodes 0,1,2,3,4). Default: 5."
+            "episodes 0 .. N-1 (e.g. N=5 runs episodes 0,1,2,3,4). Default: 20."
         ),
     )
     parser.add_argument(
         "--difficulty",
-        type=str,
-        default="hard",
-        choices=sorted(VALID_DIFFICULTIES),
-        help="Episode difficulty (default: hard).",
+        type=parse_difficulty_ratio,
+        default=[2, 1, 1],
+        help=(
+            "Episode difficulty ratio in easy:medium:hard order, such as "
+            "'2:1:1' or '211'. Parsed into a list like [2, 1, 1]. "
+            "Default: 2:1:1."
+        ),
     )
     parser.add_argument(
         "--gpu",
@@ -456,7 +473,8 @@ def _run_episode_with_retry(
     base_seed = _base_seed_for_episode(env_id, episode)
     print(
         f"[Retry] env={env_id} episode={episode} "
-        f"base_seed={base_seed} max_attempts={MAX_SEED_ATTEMPTS}"
+        f"base_seed={base_seed} difficulty={difficulty} "
+        f"max_attempts={MAX_SEED_ATTEMPTS}"
     )
 
     last_seed = base_seed
@@ -526,8 +544,7 @@ def _print_episode_artifacts(
 
 def _run_env_episodes(
     env_id: str,
-    episode_numbers: list[int],
-    difficulty: str,
+    episode_specs: list[tuple[int, str]],
     output_dir: Path,
     max_workers: int,
 ) -> list[bool]:
@@ -535,7 +552,7 @@ def _run_env_episodes(
     env_successes: list[tuple[int, bool]] = []
 
     if max_workers == 1:
-        for ep in episode_numbers:
+        for ep, difficulty in episode_specs:
             success, used_seed = _run_episode_with_retry(
                 env_id=env_id,
                 episode=ep,
@@ -556,7 +573,7 @@ def _run_env_episodes(
                 difficulty,
                 output_dir,
             ): ep
-            for ep in episode_numbers
+            for ep, difficulty in episode_specs
         }
 
         for future in as_completed(futures):
@@ -604,7 +621,17 @@ def main() -> None:
         "base_seed = 1000000 + env_code * 10000 + episode * 100; "
         f"each episode retries up to {MAX_SEED_ATTEMPTS} seeds."
     )
-    print(f"Difficulty: {args.difficulty}")
+    difficulty_cycle = [
+        difficulty
+        for difficulty, count in zip(DIFFICULTY_ORDER, args.difficulty)
+        for _ in range(count)
+    ]
+    difficulty_preview = [
+        difficulty_cycle[ep % len(difficulty_cycle)] for ep in episode_numbers
+    ]
+    episode_specs = list(zip(episode_numbers, difficulty_preview))
+    print(f"Difficulty ratio [easy, medium, hard]: {args.difficulty}")
+    print(f"Difficulty per episode: {difficulty_preview}")
     print(f"GPU: {args.gpu}")
     worker_count = _resolve_max_workers(args.max_workers, len(episode_numbers))
     print(f"Max workers per env: {worker_count}")
@@ -620,8 +647,7 @@ def main() -> None:
         successes.extend(
             _run_env_episodes(
                 env_id=env_id,
-                episode_numbers=episode_numbers,
-                difficulty=args.difficulty,
+                episode_specs=episode_specs,
                 output_dir=output_dir,
                 max_workers=worker_count,
             )
