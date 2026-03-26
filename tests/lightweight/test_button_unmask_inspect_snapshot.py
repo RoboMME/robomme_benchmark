@@ -55,6 +55,20 @@ class _FakeEnv:
         return ("obs", 0.0, False, False, {"action": action})
 
 
+def _assert_solve_pickup_cube(
+    item: dict,
+    *,
+    pickup_order: int,
+    name: str,
+    color: str,
+    position_xyz: list[float],
+) -> None:
+    assert item["pickup_order"] == pickup_order
+    assert item["name"] == name
+    assert item["color"] == color
+    assert np.allclose(item["position_xyz"], position_xyz)
+
+
 def _make_base_env(*, colliding_steps: set[int] | None = None):
     bin_0 = _FakeActor("bin_0", [0.10, -0.10, 0.052])
     bin_1 = _FakeActor("bin_1", [0.00, 0.15, 0.052])
@@ -80,7 +94,12 @@ def _make_base_env(*, colliding_steps: set[int] | None = None):
     return base_env
 
 
-def _make_non_swap_base_env(*, colliding_steps: set[int] | None = None):
+def _make_non_swap_base_env(
+    *,
+    colliding_steps: set[int] | None = None,
+    difficulty: str = "hard",
+    pick_count: int = 2,
+):
     base_env = _make_base_env(colliding_steps=colliding_steps)
 
     cube_red = _FakeActor("target_cube_red", [0.10, -0.10, 0.0167])
@@ -104,10 +123,17 @@ def _make_non_swap_base_env(*, colliding_steps: set[int] | None = None):
         (cube_blue, base_env.spawned_bins[1]),
     ]
     base_env.bin_to_color = {2: "red", 0: "green", 1: "blue"}
+    base_env.difficulty = difficulty
+    base_env.configs = {difficulty: {"pick": pick_count}}
     return base_env
 
 
-def _make_swap_base_env(*, colliding_steps: set[int] | None = None):
+def _make_swap_base_env(
+    *,
+    colliding_steps: set[int] | None = None,
+    pick_times: int = 2,
+    use_bin_to_cube: bool = True,
+):
     base_env = _make_base_env(colliding_steps=colliding_steps)
 
     cube_blue = _FakeActor("target_cube_blue", [0.10, -0.10, 0.0167])
@@ -123,9 +149,21 @@ def _make_swap_base_env(*, colliding_steps: set[int] | None = None):
     ]
     base_env.color_names = ["blue", "red", "green"]
     base_env.bin_to_color = {2: "blue", 0: "red", 1: "green"}
+    base_env.selected_bins = [base_env.spawned_bins[2], base_env.spawned_bins[0], base_env.spawned_bins[1]]
+    base_env.pick_times = pick_times
+    if use_bin_to_cube:
+        base_env.bin_to_cube = {
+            2: cube_blue,
+            0: cube_red,
+            1: cube_green,
+        }
     base_env.target_cube_0 = _FakeActor("misleading_target_cube_0", [0.50, 0.50, 0.0167])
     base_env.target_cube_1 = _FakeActor("misleading_target_cube_1", [0.55, 0.55, 0.0167])
     base_env.target_cube_2 = _FakeActor("misleading_target_cube_2", [0.60, 0.60, 0.0167])
+    base_env.target_cube = _FakeActor("misleading_target_cube", [0.70, 0.70, 0.0167])
+    base_env.target_cube_color = "misleading-color"
+    base_env.target_bin_1 = base_env.spawned_bins[1]
+    base_env.target_bin_2 = base_env.spawned_bins[2]
     base_env.button_left = button_left
     base_env.button_right = button_right
     return base_env
@@ -145,6 +183,10 @@ def test_collect_button_unmask_snapshot_uses_env_id_non_swap_routing_and_records
     )
 
     assert [cube_item["paired_bin_index"] for cube_item in payload["cubes"]] == [0, 1, 2]
+    assert [item["name"] for item in payload["solve_pickup_cubes"]] == [
+        "target_cube_red",
+        "target_cube_green",
+    ]
     assert "buttons" in payload
     assert len(payload["buttons"]) == 1
     assert payload["buttons"][0]["name"] == "button_left"
@@ -172,6 +214,7 @@ def test_collect_button_unmask_swap_snapshot_shape() -> None:
     cubes = payload["cubes"]
     bins = payload["bins"]
     buttons = payload["buttons"]
+    solve_pickup_cubes = payload["solve_pickup_cubes"]
 
     assert len(cubes) == len(base_env.cube_bin_pairs)
     assert len(bins) == len(base_env.spawned_bins)
@@ -179,6 +222,11 @@ def test_collect_button_unmask_swap_snapshot_shape() -> None:
     assert [button_item["name"] for button_item in buttons] == [
         "button_left",
         "button_right",
+    ]
+    assert [item["pickup_order"] for item in solve_pickup_cubes] == [1, 2]
+    assert [item["name"] for item in solve_pickup_cubes] == [
+        "target_cube_blue",
+        "target_cube_red",
     ]
 
     for cube_item in cubes:
@@ -227,6 +275,108 @@ def test_collect_video_snapshots_do_not_emit_buttons() -> None:
         0,
         1,
     ]
+
+
+def test_collect_non_swap_single_pick_solve_pickup_cubes() -> None:
+    payload = snapshot_utils._collect_snapshot(
+        base_env=_make_non_swap_base_env(difficulty="easy", pick_count=1),
+        env_id="ButtonUnmask",
+        episode=1,
+        seed=0,
+        difficulty="easy",
+        capture_elapsed_steps=33,
+        collision=False,
+    )
+
+    assert len(payload["solve_pickup_cubes"]) == 1
+    _assert_solve_pickup_cube(
+        payload["solve_pickup_cubes"][0],
+        pickup_order=1,
+        name="target_cube_red",
+        color="red",
+        position_xyz=[0.1, -0.1, 0.0167],
+    )
+
+
+def test_collect_non_swap_double_pick_solve_pickup_cubes_use_live_actor_pose() -> None:
+    base_env = _make_non_swap_base_env(difficulty="hard", pick_count=2)
+    base_env.target_cube_0.pose.p = np.asarray([[0.21, -0.22, 0.03]], dtype=np.float32)
+    base_env.target_cube_1.pose.p = np.asarray([[0.04, 0.25, 0.05]], dtype=np.float32)
+
+    payload = snapshot_utils._collect_snapshot(
+        base_env=base_env,
+        env_id="VideoUnmask",
+        episode=1,
+        seed=0,
+        difficulty="hard",
+        capture_elapsed_steps=33,
+        collision=False,
+    )
+
+    assert len(payload["solve_pickup_cubes"]) == 2
+    _assert_solve_pickup_cube(
+        payload["solve_pickup_cubes"][0],
+        pickup_order=1,
+        name="target_cube_red",
+        color="red",
+        position_xyz=[0.21, -0.22, 0.03],
+    )
+    _assert_solve_pickup_cube(
+        payload["solve_pickup_cubes"][1],
+        pickup_order=2,
+        name="target_cube_green",
+        color="green",
+        position_xyz=[0.04, 0.25, 0.05],
+    )
+
+
+def test_collect_swap_single_pick_solve_pickup_cubes_from_selected_bins() -> None:
+    payload = snapshot_utils._collect_snapshot(
+        base_env=_make_swap_base_env(pick_times=1),
+        env_id="ButtonUnmaskSwap",
+        episode=1,
+        seed=0,
+        difficulty="easy",
+        capture_elapsed_steps=33,
+        collision=False,
+    )
+
+    assert len(payload["solve_pickup_cubes"]) == 1
+    _assert_solve_pickup_cube(
+        payload["solve_pickup_cubes"][0],
+        pickup_order=1,
+        name="target_cube_blue",
+        color="blue",
+        position_xyz=[0.1, -0.1, 0.0167],
+    )
+
+
+def test_collect_swap_double_pick_solve_pickup_cubes_ignore_misleading_random_targets() -> None:
+    payload = snapshot_utils._collect_snapshot(
+        base_env=_make_swap_base_env(pick_times=2, use_bin_to_cube=False),
+        env_id="VideoUnmaskSwap",
+        episode=1,
+        seed=0,
+        difficulty="hard",
+        capture_elapsed_steps=33,
+        collision=False,
+    )
+
+    assert len(payload["solve_pickup_cubes"]) == 2
+    _assert_solve_pickup_cube(
+        payload["solve_pickup_cubes"][0],
+        pickup_order=1,
+        name="target_cube_blue",
+        color="blue",
+        position_xyz=[0.1, -0.1, 0.0167],
+    )
+    _assert_solve_pickup_cube(
+        payload["solve_pickup_cubes"][1],
+        pickup_order=2,
+        name="target_cube_red",
+        color="red",
+        position_xyz=[0.13, 0.16, 0.0167],
+    )
 
 
 def test_snapshot_json_path_location() -> None:

@@ -134,7 +134,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["VideoUnmask","ButtonUnmask"],
+        default=["VideoUnmask","ButtonUnmask","VideoUnmaskSwap","ButtonUnmaskSwap"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help=(
@@ -146,7 +146,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=50,
+        default=10,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "

@@ -230,6 +230,21 @@ def _build_cube_snapshot(
     }
 
 
+def _build_solve_pickup_cube_snapshot(
+    *,
+    pickup_order: int,
+    cube_actor,
+    cube_color: str | None,
+) -> dict:
+    """把 solve 实际会 pickup 的 cube 组织成快照字典。"""
+    return {
+        "pickup_order": int(pickup_order),
+        "name": getattr(cube_actor, "name", None),
+        "color": cube_color,
+        "position_xyz": _actor_position_xyz(cube_actor),
+    }
+
+
 def _build_button_snapshot(button_actor, *, fallback_name: str | None = None) -> dict:
     """把单个 button 组织成快照字典。"""
     return {
@@ -257,6 +272,154 @@ def _build_bins_snapshot(spawned_bins: list, bins_with_cubes: set[int]) -> list[
     return bins
 
 
+def _resolve_non_swap_cube_for_pair_index(
+    base_env,
+    pair_idx: int,
+) -> tuple[object | None, str | None]:
+    """解析 non-swap 环境里固定 bin index 对应的 cube actor 和颜色。
+
+    non-swap 类环境里，cube 和 bin 的对应关系通常是“按固定顺序约定”的：
+    - 第 0 个 bin 对第 0 个 cube；
+    - 第 1 个 bin 对第 1 个 cube；
+    - 以此类推。
+
+    但环境内部给 cube 挂属性时，命名方式可能有两种：
+    - `target_cube_0`、`target_cube_1` 这种按索引命名；
+    - `target_cube_red`、`target_cube_blue` 这种按颜色命名。
+
+    这里统一兼容这两种访问方式，返回：
+    - `cube_actor`：实际的 cube 对象；
+    - `cube_color`：该配对对应的颜色名，供 JSON 展示和人工检查。
+    """
+    color_names = list(getattr(base_env, "color_names", []) or [])
+    cube_actor = getattr(base_env, f"target_cube_{pair_idx}", None)
+    if cube_actor is None and pair_idx < len(color_names):
+        cube_actor = getattr(base_env, f"target_cube_{color_names[pair_idx]}", None)
+    cube_color = color_names[pair_idx] if pair_idx < len(color_names) else None
+    return cube_actor, cube_color
+
+
+def _resolve_swap_cube_for_bin_actor(
+    base_env,
+    bin_actor,
+) -> tuple[object | None, str | None, int | None]:
+    """解析 swap 环境里指定 bin actor 对应的 cube actor / color / bin index。
+
+    swap 类环境和 non-swap 的最大区别在于：
+    - bin 的“语义身份”不是固定写死在索引上的；
+    - 同一个物理 bin actor，在这一局里究竟对应哪个 cube / 哪种颜色，
+      需要结合环境运行时维护的映射关系来判断。
+
+    这里按“能拿到多少信息就拿多少”的原则，分层查找：
+    1. 先用 `spawned_bins` 建立 `actor id -> 当前 bin index` 的映射；
+    2. 再查 `bin_to_cube` 和 `bin_to_color` 这类显式映射；
+    3. 若映射中缺字段，则回退到 `cube_bin_pairs` 里做匹配补全。
+
+    返回三元组：
+    - `cube_actor`：与这个 bin 配对的 cube；
+    - `cube_color`：该配对的颜色语义；
+    - `paired_bin_index`：这个 bin 在当前 `spawned_bins` 列表中的索引。
+    """
+    spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
+    color_names = list(getattr(base_env, "color_names", []) or [])
+    bin_index_by_id = {id(actor): idx for idx, actor in enumerate(spawned_bins)}
+    paired_bin_index = bin_index_by_id.get(id(bin_actor))
+    if paired_bin_index is None:
+        return None, None, None
+
+    cube_actor = None
+    cube_color = None
+
+    bin_to_cube = dict(getattr(base_env, "bin_to_cube", {}) or {})
+    if paired_bin_index in bin_to_cube:
+        cube_actor = bin_to_cube[paired_bin_index]
+
+    bin_to_color = dict(getattr(base_env, "bin_to_color", {}) or {})
+    if paired_bin_index in bin_to_color:
+        cube_color = bin_to_color[paired_bin_index]
+
+    for pair_idx, pair in enumerate(list(getattr(base_env, "cube_bin_pairs", []) or [])):
+        if not isinstance(pair, (tuple, list)) or len(pair) != 2:
+            continue
+        pair_cube_actor, pair_bin_actor = pair
+        if id(pair_bin_actor) != id(bin_actor):
+            continue
+        if cube_actor is None:
+            cube_actor = pair_cube_actor
+        if cube_color is None and pair_idx < len(color_names):
+            cube_color = color_names[pair_idx]
+        break
+
+    return cube_actor, cube_color, paired_bin_index
+
+
+def _collect_solve_pickup_cubes(base_env, env_id: str) -> list[dict]:
+    """收集 solve(...) 实际会按顺序 pickup 的 cube。
+
+    这个字段不是“场景里有哪些 cube”的完整枚举，而是一个更偏任务语义的子集：
+    它描述求解器在当前任务配置下，理论上会按什么顺序去抓哪些 cube。
+
+    之所以单独保留这份列表，是因为：
+    - after-drop 场景快照里通常会看到多个 cube / bin；
+    - 但真正与 solve 逻辑直接相关的，往往只有前 1 个或前 2 个 pickup 目标；
+    - 下游分析时，经常需要把“环境全景”与“求解器关注对象”区分开。
+
+    non-swap / swap 两类环境的取法不同：
+    - non-swap：按固定 pair index 推断；
+    - swap：按 `selected_bins` 与 `pick_times` 推断本局真正要抓的目标。
+    """
+    solve_pickup_cubes: list[dict] = []
+
+    if env_id in NON_SWAP_SNAPSHOT_ENVS:
+        # non-swap 的求解顺序由固定配对关系决定。
+        pair_indices = [0]
+        difficulty = getattr(base_env, "difficulty", None)
+        configs = dict(getattr(base_env, "configs", {}) or {})
+        pick_count = _to_python_int(configs.get(difficulty, {}).get("pick", 0))
+        if pick_count > 1:
+            pair_indices.append(1)
+
+        for pickup_order, pair_idx in enumerate(pair_indices, start=1):
+            cube_actor, cube_color = _resolve_non_swap_cube_for_pair_index(base_env, pair_idx)
+            if cube_actor is None:
+                continue
+            solve_pickup_cubes.append(
+                _build_solve_pickup_cube_snapshot(
+                    pickup_order=pickup_order,
+                    cube_actor=cube_actor,
+                    cube_color=cube_color,
+                )
+            )
+        return solve_pickup_cubes
+
+    if env_id in SWAP_SNAPSHOT_ENVS:
+        # swap 环境里，求解器先根据任务采样结果选出若干目标 bin，
+        # 再围绕这些 bin 反查对应 cube。
+        selected_bins = list(getattr(base_env, "selected_bins", []) or [])
+        pickup_bin_indices = [0]
+        if _to_python_int(getattr(base_env, "pick_times", 0)) == 2:
+            pickup_bin_indices.append(1)
+
+        for pickup_order, selected_idx in enumerate(pickup_bin_indices, start=1):
+            if selected_idx >= len(selected_bins):
+                continue
+            cube_actor, cube_color, _ = _resolve_swap_cube_for_bin_actor(
+                base_env, selected_bins[selected_idx]
+            )
+            if cube_actor is None:
+                continue
+            solve_pickup_cubes.append(
+                _build_solve_pickup_cube_snapshot(
+                    pickup_order=pickup_order,
+                    cube_actor=cube_actor,
+                    cube_color=cube_color,
+                )
+            )
+        return solve_pickup_cubes
+
+    raise ValueError(f"Unsupported snapshot env_id: {env_id}")
+
+
 def _build_snapshot_payload(
     *,
     env_id: str,
@@ -267,6 +430,7 @@ def _build_snapshot_payload(
     collision: bool,
     cubes: list[dict],
     bins: list[dict],
+    solve_pickup_cubes: list[dict],
     buttons: list[dict] | None = None,
 ) -> dict:
     """构造最终写入 JSON 的顶层 payload。
@@ -290,6 +454,7 @@ def _build_snapshot_payload(
         "collision": bool(collision),
         "cubes": cubes,
         "bins": bins,
+        "solve_pickup_cubes": solve_pickup_cubes,
     }
     if buttons is not None:
         payload["buttons"] = buttons
@@ -297,7 +462,17 @@ def _build_snapshot_payload(
 
 
 def _collect_swap_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
-    """按 swap 环境的显式 `(cube, bin)` 配对收集 cube/bin 快照。"""
+    """按 swap 环境的显式 `(cube, bin)` 配对收集 cube/bin 快照。
+
+    这里优先相信环境已经显式给出的 `cube_bin_pairs`，因为对于 swap 任务来说，
+    “哪一个 cube 现在属于哪一个 bin”是运行时状态，而不是天然固定关系。
+
+    处理流程：
+    1. 先拿到当前所有 `spawned_bins`，用于建立 actor 到 bin index 的映射；
+    2. 遍历 `cube_bin_pairs`，为每个 `(cube, bin)` 生成一条 cube 快照；
+    3. 同时记录哪些 bin 实际存在“语义上对应的 cube”；
+    4. 最后再统一生成完整的 bins 列表，并给每个 bin 打上 `has_cube_under_bin`。
+    """
     spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
     color_names = list(getattr(base_env, "color_names", []) or [])
     bin_to_color = dict(getattr(base_env, "bin_to_color", {}) or {})
@@ -334,7 +509,15 @@ def _collect_swap_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
 
 
 def _collect_non_swap_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
-    """按 non-swap 环境的固定 index 约定收集 cube/bin 快照。"""
+    """按 non-swap 环境的固定 index 约定收集 cube/bin 快照。
+
+    与 swap 不同，这里不需要依赖运行时随机映射：
+    第 `i` 个 bin 就对应第 `i` 个 cube（或第 `i` 个颜色语义）。
+
+    `pair_count = min(3, len(spawned_bins))` 的意思是：
+    - 当前这类 unmask 任务最多只关心前 3 组候选配对；
+    - 同时又要防止实际生成的 bin 数量少于 3 时越界。
+    """
     spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
     color_names = list(getattr(base_env, "color_names", []) or [])
 
@@ -343,15 +526,12 @@ def _collect_non_swap_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
 
     pair_count = min(3, len(spawned_bins))
     for pair_idx in range(pair_count):
-        cube_actor = getattr(base_env, f"target_cube_{pair_idx}", None)
-        if cube_actor is None and pair_idx < len(color_names):
-            cube_actor = getattr(base_env, f"target_cube_{color_names[pair_idx]}", None)
+        cube_actor, cube_color = _resolve_non_swap_cube_for_pair_index(base_env, pair_idx)
         if cube_actor is None:
             continue
 
         bin_actor = spawned_bins[pair_idx]
         bins_with_cubes.add(pair_idx)
-        cube_color = color_names[pair_idx] if pair_idx < len(color_names) else None
         cubes.append(
             _build_cube_snapshot(
                 cube_actor=cube_actor,
@@ -365,7 +545,17 @@ def _collect_non_swap_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
 
 
 def _collect_buttons_snapshot(base_env, env_id: str) -> list[dict] | None:
-    """按 env_id 采集 button 位置；非 button env 返回 `None`。"""
+    """按 env_id 采集 button 位置；非 button env 返回 `None`。
+
+    只有 Button 系列环境才有 button 这个额外语义对象，因此这里显式分流：
+    - `ButtonUnmask`：通常只有一个 button，历史实现中属性名可能叫
+      `button_left`，也可能直接叫 `button`；
+    - `ButtonUnmaskSwap`：通常同时存在 left / right 两个 button。
+
+    返回 `None` 而不是空列表的原因是：
+    - 在 JSON 顶层可以用“字段不存在”来表达“这个环境压根没有 button 语义”；
+    - 比起 `"buttons": []`，这种表达更容易和 button env 区分。
+    """
     if env_id not in BUTTON_SNAPSHOT_ENVS:
         return None
 
@@ -404,6 +594,10 @@ def _collect_snapshot(
     分派规则只由 `env_id` 决定：
     - `ButtonUnmask` / `VideoUnmask` 走 non-swap 路径；
     - `ButtonUnmaskSwap` / `VideoUnmaskSwap` 走 swap 路径。
+
+    最终返回的是一个“可直接写 JSON”的完整 payload，其中混合了两类信息：
+    - 空间快照：cube / bin / button 在抓图时刻的位姿信息；
+    - 任务语义：solve 将会 pickup 哪些 cube，以及 episode 级 collision 结果。
     """
     if env_id in NON_SWAP_SNAPSHOT_ENVS:
         cubes, bins = _collect_non_swap_cubes_and_bins(base_env)
@@ -421,12 +615,18 @@ def _collect_snapshot(
         collision=collision,
         cubes=cubes,
         bins=bins,
+        solve_pickup_cubes=_collect_solve_pickup_cubes(base_env, env_id),
         buttons=_collect_buttons_snapshot(base_env, env_id),
     )
 
 
 def _write_snapshot_payload(path: Path, payload: dict) -> None:
-    """把快照 payload 写到标准 JSON 文件。"""
+    """把快照 payload 写到标准 JSON 文件。
+
+    这里统一使用：
+    - `ensure_ascii=False`：保留中文，便于直接人工阅读；
+    - `indent=2`：让版本差异和人工 diff 都更友好。
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
@@ -449,7 +649,18 @@ def _rewrite_snapshot_collision(path: Path, collision: bool) -> bool:
 
 
 def _update_collision_sticky_flag(state: dict, base_env) -> bool:
-    """在当前环境状态上执行一次碰撞采样，并更新 sticky flag。"""
+    """在当前环境状态上执行一次碰撞采样，并更新 sticky flag。
+
+    这里的 `collision_detected` 是“粘性”布尔量：
+    - 一旦某一步采样命中碰撞，就永久保持 `True`；
+    - 后续即使 bin 分开了，也不会被重置回 `False`。
+
+    这是因为我们最终关心的是 episode 级问题：
+    “这一整局里是否曾经出现过至少一次有效 bin-bin collision？”
+
+    返回值表示“这一次调用是否首次把状态从 False 推成 True”，
+    方便外层决定是否需要回写磁盘上的 JSON。
+    """
     if state["collision_detected"]:
         return False
     if not _step_has_bin_collision(base_env):
@@ -485,12 +696,19 @@ def install_snapshot_for_step(
     # 这样不会影响其它任务环境。
     snapshot_enabled = env_id in SNAPSHOT_ENVS
     state: dict = {
+        # 是否对当前 env 启用 snapshot 插桩。
         "snapshot_enabled": snapshot_enabled,
+        # 本局是否已经把 after-drop 快照落盘。
         "snapshot_written": False,
+        # 实际写出的 JSON 路径；未写盘前保持为 None。
         "snapshot_json_path": None,
+        # 目前固定只支持 after-drop 这一类抓取阶段。
         "capture_phase": "after_drop" if snapshot_enabled else None,
+        # episode 级碰撞粘性标志，只增不减。
         "collision_detected": False,
+        # 快照文件里的 `collision` 字段是否已经和内存状态同步。
         "snapshot_collision_synced": False,
+        # 计划抓图的目标 step，仅用于外层调试或日志。
         "expected_capture_step": (
             SNAPSHOT_ENVS[env_id] if snapshot_enabled else None
         ),
@@ -516,6 +734,8 @@ def install_snapshot_for_step(
         collision_just_detected = (
             _update_collision_sticky_flag(state, base_env) or collision_just_detected
         )
+        # 这里使用底层环境自己的 `elapsed_steps`，而不是外层脚本手工计数，
+        # 是为了让抓图时机与环境内部状态机保持一致。
         elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
 
         if not state["snapshot_written"]:
@@ -552,6 +772,8 @@ def install_snapshot_for_step(
             and not state["snapshot_collision_synced"]
             and state["snapshot_json_path"] is not None
         ):
+            # 只有在“快照已存在，但文件中的 collision 还没被同步成 True”时，
+            # 才需要回写磁盘，避免每一步都重复读写 JSON。
             updated = _rewrite_snapshot_collision(
                 state["snapshot_json_path"],
                 collision=True,
