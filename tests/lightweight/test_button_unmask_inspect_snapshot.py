@@ -17,7 +17,6 @@ _SCRIPT_DIR_STR = str(_SCRIPT_DIR)
 if _SCRIPT_DIR_STR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR_STR)
 
-import ButtonUnmaskInspect as inspect_script  # noqa: E402
 import snapshot as snapshot_utils  # noqa: E402
 
 
@@ -50,7 +49,7 @@ def test_collect_button_unmask_swap_snapshot_shape() -> None:
         bin_to_color={0: "blue", 2: "red", 1: "green"},
     )
 
-    payload = snapshot_utils._collect_button_unmask_swap_snapshot(
+    payload = snapshot_utils._collect_snapshot(
         base_env=base_env,
         env_id="ButtonUnmaskSwap",
         episode=1,
@@ -95,9 +94,4 @@ def test_snapshot_json_path_location() -> None:
 
 
 def test_button_unmask_swap_inspect_this_timestep_value() -> None:
-    assert snapshot_utils._button_unmask_swap_inspect_this_timestep() == 33
-
-
-def test_button_unmask_inspect_uses_snapshot_alias_import() -> None:
-    assert inspect_script.snapshot_utils is snapshot_utils
-    assert callable(snapshot_utils.install_snapshot_for_step)
+    assert snapshot_utils.SNAPSHOT_ENVS["ButtonUnmaskSwap"] == 33
