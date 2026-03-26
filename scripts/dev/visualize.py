@@ -2,7 +2,7 @@
 
 默认读取 `runs/replay_videos/snapshots/*.json`，每个 env_id 输出一张 PNG，
 同一 env 的多个 JSON 会出现在同一张图里作为多个子图。
-每个子图使用俯视角 (x, y) 展示：
+每个子图使用俯视角展示，数据为 (x, y)，整体相对标准 x–y 图顺时针旋转 90°（横轴为 y，纵轴为 −x）：
 - `bin` 位置：方框。
 - `cube` 位置：带颜色的圆点。
 
@@ -27,6 +27,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import colors as mcolors
 from matplotlib.axes import Axes
+from matplotlib.cm import ScalarMappable
 from matplotlib.lines import Line2D
 
 DEFAULT_INPUT_DIR = Path("runs/replay_videos/snapshots")
@@ -266,6 +267,102 @@ def _snapshot_text(scene: SceneSnapshot) -> str:
     return "\n".join(lines)
 
 
+def _xy_rot_cw_90(x_pos: float, y_pos: float) -> tuple[float, float]:
+    """俯视图顺时针旋转 90°：显示 (y, -x)。"""
+    return y_pos, -x_pos
+
+
+def _draw_scene(
+    ax: Axes,
+    scene: SceneSnapshot,
+    x_limits: tuple[float, float],
+    y_limits: tuple[float, float],
+    x_pad: float,
+    y_pad: float,
+    *,
+    show_bin_labels: bool = True,
+    show_button_labels: bool = True,
+    bin_alpha: float = 0.75,
+    cube_alpha: float = 0.98,
+    button_alpha: float = 0.95,
+) -> dict[str, str]:
+    label_dx = x_pad * 0.12
+    label_dy = y_pad * 0.12
+
+    encountered_colors: dict[str, str] = {}
+
+    for bin_item in scene.bins:
+        x_pos, y_pos, _ = bin_item.position_xyz
+        px, py = _xy_rot_cw_90(x_pos, y_pos)
+        face_color = (
+            BIN_FILLED_FACE_COLOR if bin_item.has_cube_under_bin else BIN_EMPTY_FACE_COLOR
+        )
+        ax.scatter(
+            px,
+            py,
+            s=360,
+            marker="s",
+            facecolors=face_color,
+            edgecolors=BIN_EDGE_COLOR,
+            linewidths=1.2,
+            alpha=bin_alpha,
+            zorder=1,
+        )
+        if show_bin_labels:
+            ax.text(
+                y_pos + label_dy,
+                -x_pos - label_dx,
+                f"B{bin_item.index}",
+                fontsize=7,
+                color=BIN_EDGE_COLOR,
+                zorder=4,
+            )
+
+    for cube_index, cube_item in enumerate(scene.cubes):
+        x_pos, y_pos, _ = cube_item.position_xyz
+        px, py = _xy_rot_cw_90(x_pos, y_pos)
+        cube_color = _resolve_cube_color(cube_item.color, cube_index)
+        label = cube_item.color or cube_item.name or f"cube_{cube_index}"
+        encountered_colors[label] = cube_color
+        ax.scatter(
+            px,
+            py,
+            s=120,
+            marker="o",
+            c=[cube_color],
+            edgecolors=BIN_EDGE_COLOR,
+            linewidths=0.9,
+            alpha=cube_alpha,
+            zorder=3,
+        )
+    if scene.buttons:
+        for button_item in scene.buttons:
+            x_pos, y_pos, _ = button_item.position_xyz
+            px, py = _xy_rot_cw_90(x_pos, y_pos)
+            button_label = button_item.name or "button"
+            ax.scatter(
+                px,
+                py,
+                s=180,
+                marker="X",
+                c=[BUTTON_MARKER_COLOR],
+                edgecolors=BIN_EDGE_COLOR,
+                linewidths=1.0,
+                alpha=button_alpha,
+                zorder=5,
+            )
+            if show_button_labels:
+                ax.text(
+                    y_pos - label_dy,
+                    -x_pos - label_dx,
+                    button_label,
+                    fontsize=7,
+                    color=BUTTON_MARKER_COLOR,
+                    zorder=6,
+                )
+    return encountered_colors
+
+
 def _plot_snapshot(
     ax: Axes,
     scene: SceneSnapshot,
@@ -274,52 +371,14 @@ def _plot_snapshot(
     x_pad: float,
     y_pad: float,
 ) -> None:
-    label_dx = x_pad * 0.12
-    label_dy = y_pad * 0.12
-
-    encountered_colors: dict[str, str] = {}
-
-    for bin_item in scene.bins:
-        x_pos, y_pos, _ = bin_item.position_xyz
-        face_color = (
-            BIN_FILLED_FACE_COLOR if bin_item.has_cube_under_bin else BIN_EMPTY_FACE_COLOR
-        )
-        ax.scatter(
-            x_pos,
-            y_pos,
-            s=360,
-            marker="s",
-            facecolors=face_color,
-            edgecolors=BIN_EDGE_COLOR,
-            linewidths=1.2,
-            alpha=0.75,
-            zorder=1,
-        )
-        ax.text(
-            x_pos + label_dx,
-            y_pos + label_dy,
-            f"B{bin_item.index}",
-            fontsize=7,
-            color=BIN_EDGE_COLOR,
-            zorder=4,
-        )
-
-    for cube_index, cube_item in enumerate(scene.cubes):
-        x_pos, y_pos, _ = cube_item.position_xyz
-        cube_color = _resolve_cube_color(cube_item.color, cube_index)
-        label = cube_item.color or cube_item.name or f"cube_{cube_index}"
-        encountered_colors[label] = cube_color
-        ax.scatter(
-            x_pos,
-            y_pos,
-            s=120,
-            marker="o",
-            c=[cube_color],
-            edgecolors=BIN_EDGE_COLOR,
-            linewidths=0.9,
-            alpha=0.98,
-            zorder=3,
-        )
+    encountered_colors = _draw_scene(
+        ax,
+        scene,
+        x_limits=x_limits,
+        y_limits=y_limits,
+        x_pad=x_pad,
+        y_pad=y_pad,
+    )
 
     marker_handles = [
         Line2D(
@@ -344,28 +403,6 @@ def _plot_snapshot(
         ),
     ]
     if scene.buttons:
-        for button_item in scene.buttons:
-            x_pos, y_pos, _ = button_item.position_xyz
-            button_label = button_item.name or "button"
-            ax.scatter(
-                x_pos,
-                y_pos,
-                s=180,
-                marker="X",
-                c=[BUTTON_MARKER_COLOR],
-                edgecolors=BIN_EDGE_COLOR,
-                linewidths=1.0,
-                alpha=0.95,
-                zorder=5,
-            )
-            ax.text(
-                x_pos + label_dx,
-                y_pos - label_dy,
-                button_label,
-                fontsize=7,
-                color=BUTTON_MARKER_COLOR,
-                zorder=6,
-            )
         marker_handles.append(
             Line2D(
                 [0],
@@ -409,8 +446,8 @@ def _plot_snapshot(
         bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.85},
     )
     ax.set_title(f"{scene.env_id} | ep{scene.episode} | seed{scene.seed}")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
+    ax.set_xlabel("y")
+    ax.set_ylabel("−x")
     ax.set_xlim(*x_limits)
     ax.set_ylim(*y_limits)
     ax.set_aspect("equal", adjustable="box")
@@ -448,10 +485,106 @@ def _save_figure(scenes: list[SceneSnapshot], output_path: Path, dpi: int, env_i
     plt.close(fig)
 
 
+def _save_combined_figure(
+    scenes: list[SceneSnapshot], output_path: Path, dpi: int, env_id: str
+) -> None:
+    x_limits, y_limits, x_pad, y_pad = _axis_limits()
+    fig, ax = plt.subplots(
+        figsize=(8.8, 7.2),
+        constrained_layout=True,
+    )
+
+    episode_values = [scene.episode for scene in scenes]
+    vmin = min(episode_values)
+    vmax = max(episode_values)
+    if vmin == vmax:
+        vmax = vmin + 1
+    cmap = plt.get_cmap("turbo")
+    norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+
+    has_buttons = False
+    for scene in scenes:
+        encountered_buttons = bool(scene.buttons)
+        has_buttons = has_buttons or encountered_buttons
+        _draw_scene(
+            ax,
+            scene,
+            x_limits=x_limits,
+            y_limits=y_limits,
+            x_pad=x_pad,
+            y_pad=y_pad,
+            show_bin_labels=False,
+            show_button_labels=False,
+            bin_alpha=0.18,
+            cube_alpha=0.32,
+            button_alpha=0.4,
+        )
+
+    handles = [
+        Line2D(
+            [0],
+            [0],
+            marker="s",
+            color="none",
+            markeredgecolor=BIN_EDGE_COLOR,
+            markerfacecolor=BIN_FILLED_FACE_COLOR,
+            markersize=10,
+            label="bin",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markeredgecolor=BIN_EDGE_COLOR,
+            markerfacecolor="#9ca3af",
+            markersize=8,
+            label="cube",
+        ),
+    ]
+    if has_buttons:
+        handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker="X",
+                color="none",
+                markeredgecolor=BIN_EDGE_COLOR,
+                markerfacecolor=BUTTON_MARKER_COLOR,
+                markersize=9,
+                label="button",
+            )
+        )
+    ax.legend(handles=handles, fontsize=8, loc="upper left", frameon=True)
+
+    scalar_mappable = ScalarMappable(norm=norm, cmap=cmap)
+    scalar_mappable.set_array([])
+    colorbar = fig.colorbar(scalar_mappable, ax=ax, pad=0.02)
+    colorbar.set_label("episode")
+
+    ax.set_title(f"Snapshot Overview (All Episodes): {env_id}")
+    ax.set_xlabel("y")
+    ax.set_ylabel("−x")
+    ax.set_xlim(*x_limits)
+    ax.set_ylim(*y_limits)
+    ax.set_aspect("equal", adjustable="box")
+    ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=dpi)
+    plt.close(fig)
+
+
 def _env_output_path(output_path: Path, env_id: str) -> Path:
     if output_path.suffix.lower() == ".png":
         return output_path.with_name(f"{output_path.stem}_{env_id}.png")
     return output_path / f"{env_id}.png"
+
+
+def _env_combined_output_path(output_path: Path, env_id: str) -> Path:
+    if output_path.suffix.lower() == ".png":
+        return output_path.with_name(f"{output_path.stem}_{env_id}_all_episodes.png")
+    return output_path / f"{env_id}_all_episodes.png"
 
 
 def main() -> None:
@@ -473,6 +606,15 @@ def main() -> None:
         env_output_path = _env_output_path(output_path, env_id)
         _save_figure(env_scenes, output_path=env_output_path, dpi=args.dpi, env_id=env_id)
         saved_paths.append(env_output_path)
+    for env_id, env_scenes in grouped_scenes.items():
+        combined_output_path = _env_combined_output_path(output_path, env_id)
+        _save_combined_figure(
+            env_scenes,
+            output_path=combined_output_path,
+            dpi=args.dpi,
+            env_id=env_id,
+        )
+        saved_paths.append(combined_output_path)
 
     print(f"Loaded {len(snapshot_paths)} snapshot JSON files from {input_dir}")
     print(f"Saved {len(saved_paths)} overview figures:")
