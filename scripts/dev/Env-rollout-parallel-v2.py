@@ -55,7 +55,7 @@ DEFAULT_ENVS = [
     "RouteStick",
 ]
 ENV_ID_TO_CODE = {name: idx + 1 for idx, name in enumerate(DEFAULT_ENVS)}
-SEED_OFFSET = 1_000_000
+SEED_OFFSET = 1_500_000
 VALID_ENVS: Set[str] = set(DEFAULT_ENVS)
 VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
 DATASET_SCREW_MAX_ATTEMPTS = 3
@@ -124,7 +124,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=5,
+        default=20,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -154,7 +154,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=10,
+        default=20,
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
             "the same env_id. Default: auto=min(os.cpu_count(), episode count)."

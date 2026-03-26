@@ -401,19 +401,23 @@ class ButtonUnmaskSwap(BaseEnv):
         # Record cube colors corresponding to these two bins, index directly using color_names
         self.target_bin_1_cube_color = color_names[target_indices[0].item()]
         self.target_bin_2_cube_color = color_names[target_indices[1].item()]
-        # swap_indices must include target_indices, then select 1 from remaining indices
-        remaining_indices = [i for i in range(len(self.spawned_bins)) if i not in target_indices.tolist()]
-        if remaining_indices:
-            third_idx = remaining_indices[torch.randint(0, len(remaining_indices), (1,), generator=generator).item()]
-            swap_indices = torch.cat([target_indices, torch.tensor([third_idx])])
-        else:
-            swap_indices = target_indices
-        self.swap_pair1_idx1=self.spawned_bins[swap_indices[0]]
-        self.swap_pair2_idx1=self.spawned_bins[swap_indices[1]]
-        self.swap_pair3_idx1=self.spawned_bins[swap_indices[2]]
-        self.swap_pair1_idx2=None
-        self.swap_pair2_idx2=None
-        self.swap_pair3_idx2=None
+
+        for pair_idx in range(1, 4):
+            setattr(self, f"swap_pair{pair_idx}_idx1", None)
+            setattr(self, f"swap_pair{pair_idx}_idx2", None)
+
+        for pair_idx in range(self.swap_times):
+            swap_indices = torch.randperm(len(self.spawned_bins), generator=generator)[:2]
+            setattr(
+                self,
+                f"swap_pair{pair_idx + 1}_idx1",
+                self.spawned_bins[swap_indices[0].item()],
+            )
+            setattr(
+                self,
+                f"swap_pair{pair_idx + 1}_idx2",
+                self.spawned_bins[swap_indices[1].item()],
+            )
 
 
         self._refresh_swap_schedule()
@@ -587,73 +591,6 @@ class ButtonUnmaskSwap(BaseEnv):
             if i not in (idx_a, idx_b)
         ]
 
-    def _get_actor_position(self, actor):
-        """Return actor position as a numpy array."""
-        if actor is None:
-            return np.zeros(3, dtype=np.float32)
-
-        pos = actor.pose.p if hasattr(actor, "pose") else actor.get_pose().p
-        if isinstance(pos, torch.Tensor):
-            pos = pos.detach().cpu().numpy()
-
-        pos = np.asarray(pos, dtype=np.float32).reshape(-1)
-        if pos.size < 3:
-            padded = np.zeros(3, dtype=np.float32)
-            padded[: pos.size] = pos
-            return padded
-        return pos
-
-    def _compute_dynamic_swap_candidates(self, positions):
-        """Compute nearest-neighbour swap candidates using provided positions."""
-        candidate_map = {}
-        num_positions = len(positions)
-        if num_positions <= 1:
-            return candidate_map
-
-        for idx, pos in enumerate(positions):
-            distances = []
-            for other_idx, other_pos in enumerate(positions):
-                if other_idx == idx:
-                    continue
-                dist = np.linalg.norm(pos[:2] - other_pos[:2])
-                distances.append((other_idx, dist))
-
-            distances.sort(key=lambda item: item[1])
-            candidate_map[idx] = [j for j, _ in distances[:2]]
-
-        return candidate_map
-
-    def _select_swap_pair_from_positions(self, positions, generator):
-        """Select one swap pair given current planned positions."""
-        num_bins = len(positions)
-        if num_bins < 2:
-            return None
-
-        candidate_map = self._compute_dynamic_swap_candidates(positions)
-        valid_indices = [idx for idx, cands in candidate_map.items() if cands]
-        if not valid_indices:
-            return None
-
-        if generator is None:
-            generator = torch.Generator()
-            generator.manual_seed(int(self.seed))
-            self._swap_rng = generator
-
-        first_idx = valid_indices[
-            int(torch.randint(0, len(valid_indices), (1,), generator=generator).item())
-        ]
-        candidates = candidate_map[first_idx]
-        second_idx = candidates[
-            int(torch.randint(0, len(candidates), (1,), generator=generator).item())
-        ]
-
-        distance = float(
-            np.linalg.norm(positions[first_idx][:2] - positions[second_idx][:2])
-        )
-
-        return {"idx1": first_idx, "idx2": second_idx, "distance": distance}
-
-
 #Robomme
     def step(self, action: Union[None, np.ndarray, torch.Tensor, Dict]):
 
@@ -670,30 +607,6 @@ class ButtonUnmaskSwap(BaseEnv):
                 end_step=32*2,
                 cur_step=timestep,
             )
-        for i in range(len(self.swap_schedule)):
-            start = self.swap_schedule[i][2]
-            end = self.swap_schedule[i][3]
-            if timestep in range (start,end):
-                # Select corresponding swap pair based on index
-                pair_idx1 = getattr(self, f'swap_pair{i+1}_idx1')
-                pair_idx2 = getattr(self, f'swap_pair{i+1}_idx2')
-
-                if pair_idx2 is None and pair_idx1 is not None:
-                    reference_pos = self._get_actor_position(pair_idx1)
-                    closest_actor = None
-                    closest_dist = float("inf")
-                    for candidate in self.spawned_bins:
-                        if candidate is None or candidate is pair_idx1:
-                            continue
-                        candidate_pos = self._get_actor_position(candidate)
-                        dist = np.linalg.norm(reference_pos[:2] - candidate_pos[:2])
-                        if dist < closest_dist:
-                            closest_dist = dist
-                            closest_actor = candidate
-                    if closest_actor is not None:
-                        setattr(self, f'swap_pair{i+1}_idx2', closest_actor)
-                        self._refresh_swap_schedule()
-        
         for idx_a, idx_b, start_step, end_step in self.swap_schedule:
             
             if idx_a is None or idx_b is None:
