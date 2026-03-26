@@ -13,6 +13,14 @@
 seed 规则采用 legacy 布局：
 base_seed = 1_000_000 + env_code * 10000 + episode * 100
 seed = base_seed + attempt
+
+Episode 级失败时各产物（由 `RobommeRecordWrapper.close()` 与 `snapshot.install_snapshot_for_step` 决定）：
+- MP4：`save_video=True` 时失败分支仍会尽量落盘失败回放视频（wrapper 内 `success=False`）。
+- HDF5：仅在 `RobommeRecordWrapper.episode_success` 为真时写入轨迹；失败时不写 buffer，并删除本 episode
+  对应 HDF5 group；`.h5` 文件可能仍存在但通常不含有效 episode 数据。若失败原因是 bin collision，
+  同样会在 close 前被强制压成失败，从而进入 `seed+1` 重试。
+- after-drop JSON：在达到 `scripts/dev/snapshot.py` 中配置的抓取步（默认第 33 步）时即写入，与后续任务是否
+  成功无关；若在该步之前 rollout 已结束，则可能不产生 JSON（`_run_episode` 会打印相应 warning）。
 """
 
 import argparse
@@ -355,6 +363,24 @@ def _close_env(env: Optional[gym.Env], episode: int, seed: int) -> None:
         )
 
 
+def _mark_episode_failed(env: Optional[gym.Env], reason: str) -> None:
+    """在 close 前把 wrapper 和底层 env 的状态统一压成失败。"""
+    if env is None:
+        return
+
+    if hasattr(env, "episode_success"):
+        env.episode_success = False
+
+    base_env = getattr(env, "unwrapped", None)
+    if base_env is None:
+        return
+
+    base_env.failureflag = torch.tensor([True])
+    base_env.successflag = torch.tensor([False])
+    base_env.current_task_failure = True
+    print(f"[Replay] Episode failure forced before close: {reason}")
+
+
 def _run_episode(
     env_id: str,
     episode: int,
@@ -386,6 +412,19 @@ def _run_episode(
         planner = _create_planner(env, env_id)
         _wrap_planner_with_screw_then_rrt_retry(planner)
         episode_successful = _execute_task_list(env, planner, env_id)
+        if snapshot_state.get("collision_detected"):
+            print(
+                f"[Replay] env={env_id} episode={episode} seed={seed} "
+                "forcing episode failure because bin collision was detected."
+            )
+            _mark_episode_failed(
+                env,
+                reason=(
+                    f"env={env_id} episode={episode} seed={seed} "
+                    "reason=bin_collision"
+                ),
+            )
+            episode_successful = False
     except SceneGenerationError as exc:
         print(
             f"Scene generation failed for env {env_id}, episode {episode}, seed {seed}: {exc}"

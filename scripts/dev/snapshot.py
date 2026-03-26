@@ -96,7 +96,18 @@ def _actor_position_xyz(actor) -> list[float]:
 
 
 def _force_norm(force_tensor) -> float | None:
-    """把 contact force 统一规整成一个标量范数。"""
+    """把 contact force 统一规整成一个标量范数。
+
+    `scene.get_pairwise_contact_forces(...)` 的返回类型在不同后端/封装下
+    可能并不完全一致：
+    - 常见情况是 shape 近似为 `(N, 3)` 的 Tensor / ndarray；
+    - 也可能已经是某种可直接转 numpy 的对象；
+    - 没有接触时，可能返回空数组 / 空 Tensor / None。
+
+    这里的目标不是保留完整接触明细，而是回答一个更简单的问题：
+    “这一对 actor 当前是否发生了足够明显的接触？”
+    因此只取第一个三维力向量并计算 L2 范数，供上层和阈值比较。
+    """
     if force_tensor is None:
         return None
     if isinstance(force_tensor, torch.Tensor):
@@ -116,20 +127,38 @@ def _step_has_bin_collision(
     *,
     force_eps: float = DEFAULT_COLLISION_FORCE_EPS,
 ) -> bool:
-    """检测当前 step 是否存在任意 spawned bin 之间的接触。"""
+    """检测当前 step 是否存在任意 spawned bin 之间的接触。
+
+    这里专门看 bin-bin 碰撞，而不是 cube-bin / cube-table 等其它接触，
+    因为 after-drop 阶段我们主要关心的是“多个 bin 是否因为布局或掉落过程互相顶住”。
+
+    判定策略保持尽量宽松且稳健：
+    1. 从 `base_env.spawned_bins` 取出当前真正生成出来的 bin；
+    2. 两两枚举 bin 组合，向物理场景查询 pairwise contact force；
+    3. 只要任意一对的力范数超过一个很小的 epsilon，就认为当前 step 出现过碰撞。
+
+    这里返回的是“这一帧是否检测到碰撞”。
+    外层 `install_snapshot_for_step` 会把它累计成 episode 级状态：
+    一旦某步检测到碰撞，最终写出的快照 `collision=True`，即表示
+    “在抓取快照之前的推进过程中，至少出现过一次 bin-bin 接触”。
+    """
     scene = getattr(base_env, "scene", None)
     spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
     if scene is None or len(spawned_bins) < 2:
+        # 没有 scene 无法查询接触；bin 少于 2 个时也不存在 bin-bin 碰撞。
         return False
 
     for actor_a, actor_b in combinations(spawned_bins, 2):
         try:
             pair_force = scene.get_pairwise_contact_forces(actor_a, actor_b)
         except Exception:
+            # 某些后端/对象组合可能不支持该查询；这里按“未知即无碰撞”跳过，
+            # 避免单个 pair 的异常中断整次 rollout。
             continue
 
         force_norm = _force_norm(pair_force)
         if force_norm is not None and force_norm > float(force_eps):
+            # 这里不继续统计碰撞对数量，因为最终 JSON 只需要一个布尔结果。
             return True
     return False
 
@@ -244,7 +273,9 @@ def _collect_snapshot(
 
     所以这里分成两条路径，最后再汇总成统一 JSON 结构。
     """
-    # `spawned_bins` / `color_names` 即使缺失，也退化成空列表，避免环境细节差异导致异常。
+    # `spawned_bins` / `color_names` 即使缺失，也退化成空列表。
+    # 这样做的目的不是掩盖错误，而是保证“抓不到完整语义信息”时仍能产出
+    # 一个结构稳定的快照 JSON，便于后续人工检查到底缺了什么字段。
     spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
     color_names = list(getattr(base_env, "color_names", []) or [])
 
@@ -256,6 +287,10 @@ def _collect_snapshot(
     cube_bin_pairs = getattr(base_env, "cube_bin_pairs", None)
     if cube_bin_pairs:
         # ---- swap 路径：显式 (cube, bin) 配对 ----
+        # swap 环境的关键特征是：目标 bin 未必按固定顺序对应某种颜色/某个 cube，
+        # 所以必须优先依赖环境显式给出的配对关系，而不能简单假设
+        # “第 i 个 cube 对第 i 个 bin”。
+        #
         # 某些 swap 环境会额外提供 `bin_to_color`，可以更准确地恢复“这个 bin 对应什么颜色”。
         bin_to_color = dict(getattr(base_env, "bin_to_color", {}) or {})
         # 由于 actor 本身未必可 hash，也不一定适合作为字典键，
@@ -278,6 +313,7 @@ def _collect_snapshot(
                 cube_color = bin_to_color.get(paired_bin_index)
             if cube_color is None and pair_idx < len(color_names):
                 # 如果缺少显式映射，则退回到配对顺序对应的颜色名。
+                # 这个回退不保证 100% 精确，只是尽量保留可读语义。
                 cube_color = color_names[pair_idx]
 
             cubes.append(
@@ -290,6 +326,10 @@ def _collect_snapshot(
             )
     else:
         # ---- non-swap 路径：按 index 隐式配对 ----
+        # non-swap 环境通常没有显式 `cube_bin_pairs`，而是默认：
+        # 第 0 个目标 cube 对第 0 个 spawned bin，第 1 个对第 1 个，依此类推。
+        # 这种约定更脆弱，但在对应环境里通常是稳定成立的。
+        #
         # 当前任务约定最多有 3 组目标 cube/bin，这里同时受 spawned_bins 长度约束。
         pair_count = min(3, len(spawned_bins))
         for pair_idx in range(pair_count):
@@ -301,7 +341,8 @@ def _collect_snapshot(
                     base_env, f"target_cube_{color_names[pair_idx]}", None
                 )
             if cube_actor is None:
-                # 如果连目标 cube 都找不到，说明这组配对无法恢复，直接跳过。
+                # 如果连目标 cube 都找不到，说明这组配对无法恢复。
+                # 这里仍继续尝试后续 pair，避免前面某一组缺失时整份快照为空。
                 continue
 
             bin_actor = spawned_bins[pair_idx]
@@ -379,12 +420,17 @@ def install_snapshot_for_step(
         # 用 `unwrapped` 访问底层环境，避免被 wrapper 层屏蔽内部字段。
         base_env = env.unwrapped
         if not state["collision_detected"] and _step_has_bin_collision(base_env):
+            # `collision_detected` 是一个“sticky flag”：
+            # 只要此前任一步观察到 bin-bin 碰撞，就一直保留到最终写快照。
             state["collision_detected"] = True
         elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
         if elapsed_steps < capture_step:
             # 还没到抓取时机，直接返回。
             return step_result
 
+        # 一旦达到抓取阈值，就立刻基于当前底层环境状态生成 JSON。
+        # 这里故意不等 episode 结束：
+        # after-drop 是一个时点快照，不是 episode summary。
         snapshot_payload = _collect_snapshot(
             base_env=base_env,
             env_id=env_id,
@@ -404,11 +450,13 @@ def install_snapshot_for_step(
             encoding="utf-8",
         )
         # 更新状态，供外层脚本记录或日志打印使用。
+        # 注意 `snapshot_json_path` 只有在真正写盘成功后才会填入。
         state["snapshot_written"] = True
         state["snapshot_json_path"] = path
         print(f"After-drop snapshot JSON: {path.resolve()}")
         return step_result
 
     # 直接替换实例上的 step 方法，实现运行时插桩。
+    # 这里是实例级修改，不影响同类 env 的其它实例。
     env.step = instrumented_step  # type: ignore[method-assign]
     return state
