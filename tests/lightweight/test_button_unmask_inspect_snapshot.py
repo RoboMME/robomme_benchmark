@@ -207,3 +207,11 @@ def test_install_snapshot_ignores_contact_query_errors(tmp_path, monkeypatch) ->
 
     payload = json.loads(state["snapshot_json_path"].read_text(encoding="utf-8"))
     assert payload["collision"] is False
+
+
+def test_step_has_bin_collision_ignores_offscreen_staging_bins() -> None:
+    base_env = _make_base_env(colliding_steps={0})
+    for actor in base_env.spawned_bins[:3]:
+        actor.pose.p = np.asarray([[10.0, 10.0, 10.0]], dtype=np.float32)
+
+    assert snapshot_utils._step_has_bin_collision(base_env) is False

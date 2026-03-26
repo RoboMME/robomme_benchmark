@@ -23,6 +23,7 @@ import torch
 
 DEFAULT_CAPTURE_STEP: int = 33
 DEFAULT_COLLISION_FORCE_EPS: float = 1e-6
+DEFAULT_WORKSPACE_ABS_LIMIT: float = 5.0
 
 # `env_id -> capture step` 的映射表。
 # 目前这几个环境都在同一个时间点抓 after-drop 快照，但保留成字典，
@@ -122,6 +123,25 @@ def _force_norm(force_tensor) -> float | None:
     return float(np.linalg.norm(force_array.reshape(-1, 3)[0]))
 
 
+def _is_actor_in_workspace(
+    actor,
+    *,
+    position_abs_limit: float = DEFAULT_WORKSPACE_ABS_LIMIT,
+) -> bool:
+    """判断 actor 是否仍处于工作区附近，而不是被临时挪到场外占位点。
+
+    一些 Robomme 状态变化辅助函数会把对象直接 teleport 到 `[10, 10, 10]`
+    一类的远离工作台位置，用作“暂时移出场景”的占位手段。此时这些对象之间
+    即使发生接触，也不应被当作 after-drop 场景里的有效 bin-bin collision。
+
+    这里用一个比较宽松的绝对坐标上界做过滤：
+    - 正常工作区内的 bin 通常都在原点附近；
+    - 被移出场景的占位坐标通常远大于这个阈值。
+    """
+    position_xyz = _actor_position_xyz(actor)
+    return all(abs(coord) <= float(position_abs_limit) for coord in position_xyz)
+
+
 def _step_has_bin_collision(
     base_env,
     *,
@@ -143,7 +163,11 @@ def _step_has_bin_collision(
     “在抓取快照之前的推进过程中，至少出现过一次 bin-bin 接触”。
     """
     scene = getattr(base_env, "scene", None)
-    spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
+    spawned_bins = [
+        actor
+        for actor in list(getattr(base_env, "spawned_bins", []) or [])
+        if _is_actor_in_workspace(actor)
+    ]
     if scene is None or len(spawned_bins) < 2:
         # 没有 scene 无法查询接触；bin 少于 2 个时也不存在 bin-bin 碰撞。
         return False
