@@ -146,7 +146,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=10,
+        default=50,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "

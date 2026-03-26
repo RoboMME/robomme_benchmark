@@ -311,9 +311,11 @@ class ButtonUnmaskSwap(BaseEnv):
         # Store color_names for RecordWrapper access
         self.color_names = color_names
 
-        # Randomly select 3 bins from all bins to spawn cube
+        # Randomly select up to 3 bins from the full spawned-bin set to spawn cubes.
         num_bins_to_select = min(3, len(self.spawned_bins))
-        selected_bin_indices = torch.randperm(3, generator=generator)[:num_bins_to_select].tolist()
+        selected_bin_indices = torch.randperm(
+            len(self.spawned_bins), generator=generator
+        )[:num_bins_to_select].tolist()
         selected_bins = [self.spawned_bins[idx] for idx in selected_bin_indices]
         self.selected_bin_indices = selected_bin_indices
         self.selected_bins = selected_bins  # Save selected bins, corresponding to color_names order

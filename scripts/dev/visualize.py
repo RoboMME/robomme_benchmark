@@ -1,6 +1,13 @@
-"""把 snapshot JSON 按 env 聚合成多张总览图。
+"""把 snapshot JSON 按 env 聚合成总览图。
 
-默认读取 `runs/replay_videos/snapshots/*.json`，每个 env_id 输出一张 PNG，
+默认读取 `runs/replay_videos/snapshots/*.json`，并把图片写到
+`runs/replay_videos/visualizations/`。
+
+输出包括：
+- 每个 env_id 一张单独的 snapshot overview PNG；
+- 一张按 env_id 分 subplot 的 all-episodes 总览图；
+- 一张按 env_id 分 subplot 的 solve_pickup_cubes 分布图。
+
 同一 env 的多个 JSON 会出现在同一张图里作为多个子图。
 每个子图使用俯视角展示，数据为 (x, y)，整体相对标准 x–y 图顺时针旋转 90°（横轴为 y，纵轴为 −x）：
 - `bin` 位置：方框。
@@ -8,7 +15,7 @@
 
 运行示例：
     uv run python scripts/dev/visualize.py
-    uv run python scripts/dev/visualize.py --output runs/replay_videos/snapshots/overview.png
+    uv run python scripts/dev/visualize.py --output runs/replay_videos/visualizations
 """
 
 from __future__ import annotations
@@ -27,11 +34,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import colors as mcolors
 from matplotlib.axes import Axes
-from matplotlib.cm import ScalarMappable
 from matplotlib.lines import Line2D
 
 DEFAULT_INPUT_DIR = Path("runs/replay_videos/snapshots")
-DEFAULT_OUTPUT_PATH = DEFAULT_INPUT_DIR / "overview.png"
+DEFAULT_OUTPUT_PATH = DEFAULT_INPUT_DIR.parent / "visualizations"
 # 俯视图 x/y 固定对称范围 [-OVERVIEW_XY_HALF_SPAN, OVERVIEW_XY_HALF_SPAN]
 OVERVIEW_XY_HALF_SPAN = 0.3
 
@@ -511,23 +517,12 @@ def _save_figure(scenes: list[SceneSnapshot], output_path: Path, dpi: int, env_i
     plt.close(fig)
 
 
-def _save_combined_figure(
-    scenes: list[SceneSnapshot], output_path: Path, dpi: int, env_id: str
+def _plot_all_episodes_overview(
+    ax: Axes,
+    scenes: list[SceneSnapshot],
+    env_id: str,
 ) -> None:
     x_limits, y_limits, x_pad, y_pad = _axis_limits()
-    fig, ax = plt.subplots(
-        figsize=(8.8, 7.2),
-        constrained_layout=True,
-    )
-
-    episode_values = [scene.episode for scene in scenes]
-    vmin = min(episode_values)
-    vmax = max(episode_values)
-    if vmin == vmax:
-        vmax = vmin + 1
-    cmap = plt.get_cmap("turbo")
-    norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
-
     has_buttons = False
     for scene in scenes:
         encountered_buttons = bool(scene.buttons)
@@ -583,11 +578,6 @@ def _save_combined_figure(
         )
     ax.legend(handles=handles, fontsize=8, loc="upper left", frameon=True)
 
-    scalar_mappable = ScalarMappable(norm=norm, cmap=cmap)
-    scalar_mappable.set_array([])
-    colorbar = fig.colorbar(scalar_mappable, ax=ax, pad=0.02)
-    colorbar.set_label("episode")
-
     ax.set_title(f"Snapshot Overview (All Episodes): {env_id}")
     ax.set_xlabel("y")
     ax.set_ylabel("−x")
@@ -596,20 +586,12 @@ def _save_combined_figure(
     ax.set_aspect("equal", adjustable="box")
     ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=dpi)
-    plt.close(fig)
-
-
-def _save_solve_pickup_distribution_figure(
-    scenes: list[SceneSnapshot], output_path: Path, dpi: int, env_id: str
+def _plot_solve_pickup_distribution(
+    ax: Axes,
+    scenes: list[SceneSnapshot],
+    env_id: str,
 ) -> None:
     x_limits, y_limits, x_pad, y_pad = _axis_limits()
-    fig, ax = plt.subplots(
-        figsize=(8.8, 7.2),
-        constrained_layout=True,
-    )
-
     pickup_markers = {
         1: "o",
         2: "^",
@@ -699,6 +681,29 @@ def _save_solve_pickup_distribution_figure(
     ax.set_aspect("equal", adjustable="box")
     ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
 
+
+def _save_all_envs_all_episodes_figure(
+    grouped_scenes: dict[str, list[SceneSnapshot]],
+    output_path: Path,
+    dpi: int,
+) -> None:
+    nrows, ncols = _subplot_shape(len(grouped_scenes))
+    fig, axes = plt.subplots(
+        nrows=nrows,
+        ncols=ncols,
+        figsize=(8.8 * ncols, 7.2 * nrows),
+        squeeze=False,
+        constrained_layout=True,
+    )
+    axes_flat = axes.ravel()
+
+    for axis, (env_id, env_scenes) in zip(axes_flat, grouped_scenes.items(), strict=False):
+        _plot_all_episodes_overview(axis, env_scenes, env_id)
+
+    for axis in axes_flat[len(grouped_scenes) :]:
+        axis.axis("off")
+
+    fig.suptitle("Snapshot Overview (All Episodes, Grouped by Env)", fontsize=16)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=dpi)
     plt.close(fig)
@@ -710,18 +715,48 @@ def _env_output_path(output_path: Path, env_id: str) -> Path:
     return output_path / f"{env_id}.png"
 
 
-def _env_combined_output_path(output_path: Path, env_id: str) -> Path:
+def _save_all_envs_solve_pickup_distribution_figure(
+    grouped_scenes: dict[str, list[SceneSnapshot]],
+    output_path: Path,
+    dpi: int,
+) -> None:
+    nrows, ncols = _subplot_shape(len(grouped_scenes))
+    fig, axes = plt.subplots(
+        nrows=nrows,
+        ncols=ncols,
+        figsize=(8.8 * ncols, 7.2 * nrows),
+        squeeze=False,
+        constrained_layout=True,
+    )
+    axes_flat = axes.ravel()
+
+    for axis, (env_id, env_scenes) in zip(axes_flat, grouped_scenes.items(), strict=False):
+        _plot_solve_pickup_distribution(axis, env_scenes, env_id)
+
+    for axis in axes_flat[len(grouped_scenes) :]:
+        axis.axis("off")
+
+    fig.suptitle(
+        "Solve Pickup Cube Color Distribution (All Episodes, Grouped by Env)",
+        fontsize=16,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=dpi)
+    plt.close(fig)
+
+
+def _all_envs_combined_output_path(output_path: Path) -> Path:
     if output_path.suffix.lower() == ".png":
-        return output_path.with_name(f"{output_path.stem}_{env_id}_all_episodes.png")
-    return output_path / f"{env_id}_all_episodes.png"
+        return output_path.with_name(f"{output_path.stem}_all_envs_all_episodes.png")
+    return output_path / "overview_all_envs_all_episodes.png"
 
 
-def _env_solve_pickup_output_path(output_path: Path, env_id: str) -> Path:
+def _all_envs_solve_pickup_output_path(output_path: Path) -> Path:
     if output_path.suffix.lower() == ".png":
         return output_path.with_name(
-            f"{output_path.stem}_{env_id}_solve_pickup_all_episodes.png"
+            f"{output_path.stem}_all_envs_solve_pickup_all_episodes.png"
         )
-    return output_path / f"{env_id}_solve_pickup_all_episodes.png"
+    return output_path / "overview_all_envs_solve_pickup_all_episodes.png"
 
 
 def main() -> None:
@@ -743,24 +778,20 @@ def main() -> None:
         env_output_path = _env_output_path(output_path, env_id)
         _save_figure(env_scenes, output_path=env_output_path, dpi=args.dpi, env_id=env_id)
         saved_paths.append(env_output_path)
-    for env_id, env_scenes in grouped_scenes.items():
-        combined_output_path = _env_combined_output_path(output_path, env_id)
-        _save_combined_figure(
-            env_scenes,
-            output_path=combined_output_path,
-            dpi=args.dpi,
-            env_id=env_id,
-        )
-        saved_paths.append(combined_output_path)
-    for env_id, env_scenes in grouped_scenes.items():
-        solve_pickup_output_path = _env_solve_pickup_output_path(output_path, env_id)
-        _save_solve_pickup_distribution_figure(
-            env_scenes,
-            output_path=solve_pickup_output_path,
-            dpi=args.dpi,
-            env_id=env_id,
-        )
-        saved_paths.append(solve_pickup_output_path)
+    combined_output_path = _all_envs_combined_output_path(output_path)
+    _save_all_envs_all_episodes_figure(
+        grouped_scenes,
+        output_path=combined_output_path,
+        dpi=args.dpi,
+    )
+    saved_paths.append(combined_output_path)
+    solve_pickup_output_path = _all_envs_solve_pickup_output_path(output_path)
+    _save_all_envs_solve_pickup_distribution_figure(
+        grouped_scenes,
+        output_path=solve_pickup_output_path,
+        dpi=args.dpi,
+    )
+    saved_paths.append(solve_pickup_output_path)
 
     print(f"Loaded {len(snapshot_paths)} snapshot JSON files from {input_dir}")
     print(f"Saved {len(saved_paths)} overview figures:")
