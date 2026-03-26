@@ -31,6 +31,8 @@ from matplotlib.lines import Line2D
 
 DEFAULT_INPUT_DIR = Path("runs/replay_videos/snapshots")
 DEFAULT_OUTPUT_PATH = DEFAULT_INPUT_DIR / "overview.png"
+# 俯视图 x/y 固定对称范围 [-OVERVIEW_XY_HALF_SPAN, OVERVIEW_XY_HALF_SPAN]
+OVERVIEW_XY_HALF_SPAN = 0.3
 
 BIN_EDGE_COLOR = "#111827"
 BIN_FILLED_FACE_COLOR = "#d1d5db"
@@ -220,23 +222,10 @@ def _subplot_shape(num_plots: int) -> tuple[int, int]:
     return nrows, ncols
 
 
-def _axis_limits(scenes: list[SceneSnapshot]) -> tuple[tuple[float, float], tuple[float, float], float, float]:
-    xs: list[float] = []
-    ys: list[float] = []
-    for scene in scenes:
-        xs.extend(bin_item.position_xyz[0] for bin_item in scene.bins)
-        ys.extend(bin_item.position_xyz[1] for bin_item in scene.bins)
-        xs.extend(cube_item.position_xyz[0] for cube_item in scene.cubes)
-        ys.extend(cube_item.position_xyz[1] for cube_item in scene.cubes)
-
-    if not xs or not ys:
-        return (-1.0, 1.0), (-1.0, 1.0), 0.05, 0.05
-
-    x_min, x_max = min(xs), max(xs)
-    y_min, y_max = min(ys), max(ys)
-    x_pad = max(0.02, (x_max - x_min) * 0.2)
-    y_pad = max(0.02, (y_max - y_min) * 0.2)
-    return (x_min - x_pad, x_max + x_pad), (y_min - y_pad, y_max + y_pad), x_pad, y_pad
+def _axis_limits() -> tuple[tuple[float, float], tuple[float, float], float, float]:
+    h = OVERVIEW_XY_HALF_SPAN
+    pad = 0.02
+    return (-h, h), (-h, h), pad, pad
 
 
 def _snapshot_text(scene: SceneSnapshot) -> str:
@@ -374,7 +363,7 @@ def _plot_snapshot(
 
 def _save_figure(scenes: list[SceneSnapshot], output_path: Path, dpi: int, env_id: str) -> None:
     nrows, ncols = _subplot_shape(len(scenes))
-    x_limits, y_limits, x_pad, y_pad = _axis_limits(scenes)
+    x_limits, y_limits, x_pad, y_pad = _axis_limits()
     fig, axes = plt.subplots(
         nrows=nrows,
         ncols=ncols,

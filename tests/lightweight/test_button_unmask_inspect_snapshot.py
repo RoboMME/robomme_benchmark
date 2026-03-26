@@ -158,6 +158,30 @@ def test_install_snapshot_tracks_collision_across_steps(tmp_path, monkeypatch) -
     assert payload["collision"] is True
 
 
+def test_install_snapshot_samples_collision_before_step_execution(
+    tmp_path, monkeypatch
+) -> None:
+    base_env = _make_base_env(colliding_steps={0})
+    env = _FakeEnv(base_env)
+    monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 1)
+
+    state = snapshot_utils.install_snapshot_for_step(
+        env=env,
+        env_id="ButtonUnmask",
+        episode=40,
+        seed=15,
+        difficulty="hard",
+        output_dir=tmp_path,
+    )
+
+    env.step(None)
+
+    payload = json.loads(state["snapshot_json_path"].read_text(encoding="utf-8"))
+    assert state["collision_detected"] is True
+    assert payload["capture_elapsed_steps"] == 1
+    assert payload["collision"] is True
+
+
 def test_install_snapshot_rewrites_collision_when_hit_after_capture(
     tmp_path, monkeypatch
 ) -> None:

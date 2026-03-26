@@ -425,6 +425,16 @@ def _rewrite_snapshot_collision(path: Path, collision: bool) -> bool:
     return True
 
 
+def _update_collision_sticky_flag(state: dict, base_env) -> bool:
+    """在当前环境状态上执行一次碰撞采样，并更新 sticky flag。"""
+    if state["collision_detected"]:
+        return False
+    if not _step_has_bin_collision(base_env):
+        return False
+    state["collision_detected"] = True
+    return True
+
+
 def install_snapshot_for_step(
     env: gym.Env,
     env_id: str,
@@ -437,11 +447,12 @@ def install_snapshot_for_step(
 
     这里采用最轻量的接入方式：保存原始 `env.step`，再在外面包一层。
     包装后的流程是：
-    1. 先正常执行一步环境；
-    2. 检测本步是否出现 workspace 内的 bin-bin collision，并累计成 episode 级 sticky flag；
-    3. 若达到抓取阈值且还没写过快照，就立刻写出 after-drop JSON；
-    4. 若快照已写出、但此后第一次观察到 collision，就回写同一路径 JSON 中的 `collision`；
-    5. 无论是否抓取/回写，都把原始 step 的返回值原样交还上层。
+    1. 在调用原始 `env.step` 前先采样一次当前状态；
+    2. 再正常执行一步环境；
+    3. 在 `env.step` 返回后再采样一次最终状态，并累计成 episode 级 sticky flag；
+    4. 若达到抓取阈值且还没写过快照，就立刻写出 after-drop JSON；
+    5. 若快照已写出、但此后第一次观察到 collision，就回写同一路径 JSON 中的 `collision`；
+    6. 无论是否抓取/回写，都把原始 step 的返回值原样交还上层。
 
     返回的 `state` 主要用于外层脚本查询“是否启用快照、文件写到哪里了”。
     注意：JSON 中的空间字段仍对应 after-drop 抓图时刻，但 `collision`
@@ -469,17 +480,19 @@ def install_snapshot_for_step(
     original_step = env.step
 
     def instrumented_step(action):
-        # 先让环境正常推进，确保抓取的是“执行完当前动作后的场景”。
+        # 在 step 前后各采样一次，降低“只在 step 中间短暂接触而末态已分离”时
+        # 因单次末态采样导致漏检的概率。
+        base_env = env.unwrapped
+        collision_just_detected = _update_collision_sticky_flag(state, base_env)
+
+        # 再让环境正常推进，抓取/回写逻辑继续以“执行完当前动作后的场景”为准。
         step_result = original_step(action)
 
         # 用 `unwrapped` 访问底层环境，避免被 wrapper 层屏蔽内部字段。
         base_env = env.unwrapped
-        collision_just_detected = False
-        if not state["collision_detected"] and _step_has_bin_collision(base_env):
-            # `collision_detected` 是一个“sticky flag”：
-            # 只要整局任一步观察到 bin-bin 碰撞，就一直保留到 episode 结束。
-            state["collision_detected"] = True
-            collision_just_detected = True
+        collision_just_detected = (
+            _update_collision_sticky_flag(state, base_env) or collision_just_detected
+        )
         elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
 
         if not state["snapshot_written"]:
