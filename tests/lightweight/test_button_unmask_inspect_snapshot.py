@@ -80,8 +80,79 @@ def _make_base_env(*, colliding_steps: set[int] | None = None):
     return base_env
 
 
+def _make_non_swap_base_env(*, colliding_steps: set[int] | None = None):
+    base_env = _make_base_env(colliding_steps=colliding_steps)
+
+    cube_red = _FakeActor("target_cube_red", [0.10, -0.10, 0.0167])
+    cube_green = _FakeActor("target_cube_green", [0.00, 0.15, 0.0167])
+    cube_blue = _FakeActor("target_cube_blue", [0.13, 0.16, 0.0167])
+    button_left = _FakeActor("button_left", [-0.20, 0.00, 0.052])
+    misleading_button = _FakeActor("button", [0.40, 0.40, 0.052])
+
+    base_env.color_names = ["red", "green", "blue"]
+    base_env.target_cube_0 = cube_red
+    base_env.target_cube_1 = cube_green
+    base_env.target_cube_2 = cube_blue
+    base_env.target_cube_red = cube_red
+    base_env.target_cube_green = cube_green
+    base_env.target_cube_blue = cube_blue
+    base_env.button_left = button_left
+    base_env.button = misleading_button
+    base_env.cube_bin_pairs = [
+        (cube_red, base_env.spawned_bins[2]),
+        (cube_green, base_env.spawned_bins[0]),
+        (cube_blue, base_env.spawned_bins[1]),
+    ]
+    base_env.bin_to_color = {2: "red", 0: "green", 1: "blue"}
+    return base_env
+
+
+def _make_swap_base_env(*, colliding_steps: set[int] | None = None):
+    base_env = _make_base_env(colliding_steps=colliding_steps)
+
+    cube_blue = _FakeActor("target_cube_blue", [0.10, -0.10, 0.0167])
+    cube_red = _FakeActor("target_cube_red", [0.13, 0.16, 0.0167])
+    cube_green = _FakeActor("target_cube_green", [0.00, 0.15, 0.0167])
+    button_left = _FakeActor("button_left", [-0.20, -0.10, 0.052])
+    button_right = _FakeActor("button_right", [-0.20, 0.10, 0.052])
+
+    base_env.cube_bin_pairs = [
+        (cube_blue, base_env.spawned_bins[2]),
+        (cube_red, base_env.spawned_bins[0]),
+        (cube_green, base_env.spawned_bins[1]),
+    ]
+    base_env.color_names = ["blue", "red", "green"]
+    base_env.bin_to_color = {2: "blue", 0: "red", 1: "green"}
+    base_env.target_cube_0 = _FakeActor("misleading_target_cube_0", [0.50, 0.50, 0.0167])
+    base_env.target_cube_1 = _FakeActor("misleading_target_cube_1", [0.55, 0.55, 0.0167])
+    base_env.target_cube_2 = _FakeActor("misleading_target_cube_2", [0.60, 0.60, 0.0167])
+    base_env.button_left = button_left
+    base_env.button_right = button_right
+    return base_env
+
+
+def test_collect_button_unmask_snapshot_uses_env_id_non_swap_routing_and_records_button() -> None:
+    base_env = _make_non_swap_base_env()
+
+    payload = snapshot_utils._collect_snapshot(
+        base_env=base_env,
+        env_id="ButtonUnmask",
+        episode=1,
+        seed=0,
+        difficulty="hard",
+        capture_elapsed_steps=33,
+        collision=False,
+    )
+
+    assert [cube_item["paired_bin_index"] for cube_item in payload["cubes"]] == [0, 1, 2]
+    assert "buttons" in payload
+    assert len(payload["buttons"]) == 1
+    assert payload["buttons"][0]["name"] == "button_left"
+    assert np.allclose(payload["buttons"][0]["position_xyz"], [-0.2, 0.0, 0.052])
+
+
 def test_collect_button_unmask_swap_snapshot_shape() -> None:
-    base_env = _make_base_env()
+    base_env = _make_swap_base_env()
 
     payload = snapshot_utils._collect_snapshot(
         base_env=base_env,
@@ -100,9 +171,15 @@ def test_collect_button_unmask_swap_snapshot_shape() -> None:
 
     cubes = payload["cubes"]
     bins = payload["bins"]
+    buttons = payload["buttons"]
 
     assert len(cubes) == len(base_env.cube_bin_pairs)
     assert len(bins) == len(base_env.spawned_bins)
+    assert [cube_item["paired_bin_index"] for cube_item in cubes] == [2, 0, 1]
+    assert [button_item["name"] for button_item in buttons] == [
+        "button_left",
+        "button_right",
+    ]
 
     for cube_item in cubes:
         assert "color" in cube_item
@@ -116,6 +193,40 @@ def test_collect_button_unmask_swap_snapshot_shape() -> None:
 
     empty_bin = next(item for item in bins if item["index"] == 3)
     assert empty_bin["has_cube_under_bin"] is False
+
+
+def test_collect_video_snapshots_do_not_emit_buttons() -> None:
+    non_swap_payload = snapshot_utils._collect_snapshot(
+        base_env=_make_non_swap_base_env(),
+        env_id="VideoUnmask",
+        episode=1,
+        seed=0,
+        difficulty="easy",
+        capture_elapsed_steps=33,
+        collision=False,
+    )
+    swap_payload = snapshot_utils._collect_snapshot(
+        base_env=_make_swap_base_env(),
+        env_id="VideoUnmaskSwap",
+        episode=1,
+        seed=0,
+        difficulty="easy",
+        capture_elapsed_steps=33,
+        collision=True,
+    )
+
+    assert "buttons" not in non_swap_payload
+    assert "buttons" not in swap_payload
+    assert [cube_item["paired_bin_index"] for cube_item in non_swap_payload["cubes"]] == [
+        0,
+        1,
+        2,
+    ]
+    assert [cube_item["paired_bin_index"] for cube_item in swap_payload["cubes"]] == [
+        2,
+        0,
+        1,
+    ]
 
 
 def test_snapshot_json_path_location() -> None:
@@ -134,7 +245,7 @@ def test_button_unmask_swap_inspect_this_timestep_value() -> None:
 
 
 def test_install_snapshot_tracks_collision_across_steps(tmp_path, monkeypatch) -> None:
-    base_env = _make_base_env(colliding_steps={2})
+    base_env = _make_non_swap_base_env(colliding_steps={2})
     env = _FakeEnv(base_env)
     monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 3)
 
@@ -161,7 +272,7 @@ def test_install_snapshot_tracks_collision_across_steps(tmp_path, monkeypatch) -
 def test_install_snapshot_samples_collision_before_step_execution(
     tmp_path, monkeypatch
 ) -> None:
-    base_env = _make_base_env(colliding_steps={0})
+    base_env = _make_non_swap_base_env(colliding_steps={0})
     env = _FakeEnv(base_env)
     monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 1)
 
@@ -185,7 +296,7 @@ def test_install_snapshot_samples_collision_before_step_execution(
 def test_install_snapshot_rewrites_collision_when_hit_after_capture(
     tmp_path, monkeypatch
 ) -> None:
-    base_env = _make_base_env(colliding_steps={4})
+    base_env = _make_non_swap_base_env(colliding_steps={4})
     env = _FakeEnv(base_env)
     monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 2)
 
@@ -216,7 +327,7 @@ def test_install_snapshot_rewrites_collision_when_hit_after_capture(
 
 
 def test_install_snapshot_writes_false_when_no_collision(tmp_path, monkeypatch) -> None:
-    base_env = _make_base_env()
+    base_env = _make_non_swap_base_env()
     env = _FakeEnv(base_env)
     monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 2)
 
@@ -243,7 +354,7 @@ def test_install_snapshot_writes_false_when_no_collision(tmp_path, monkeypatch) 
 def test_install_snapshot_does_not_rewrite_when_no_collision_after_capture(
     tmp_path, monkeypatch
 ) -> None:
-    base_env = _make_base_env()
+    base_env = _make_non_swap_base_env()
     env = _FakeEnv(base_env)
     monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 2)
 
@@ -275,7 +386,7 @@ def test_install_snapshot_does_not_rewrite_when_no_collision_after_capture(
 
 
 def test_install_snapshot_ignores_contact_query_errors(tmp_path, monkeypatch) -> None:
-    base_env = _make_base_env()
+    base_env = _make_non_swap_base_env()
     base_env.scene = _ErrorScene()
     env = _FakeEnv(base_env)
     monkeypatch.setitem(snapshot_utils.SNAPSHOT_ENVS, "ButtonUnmask", 2)
@@ -301,7 +412,7 @@ def test_install_snapshot_ignores_contact_query_errors(tmp_path, monkeypatch) ->
 
 
 def test_step_has_bin_collision_ignores_offscreen_staging_bins() -> None:
-    base_env = _make_base_env(colliding_steps={0})
+    base_env = _make_non_swap_base_env(colliding_steps={0})
     for actor in base_env.spawned_bins[:3]:
         actor.pose.p = np.asarray([[10.0, 10.0, 10.0]], dtype=np.float32)
 

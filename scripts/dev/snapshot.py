@@ -30,16 +30,15 @@ DEFAULT_WORKSPACE_ABS_LIMIT: float = 5.0
 # `env_id -> capture step` 的映射表。
 # 目前这几个环境都在同一个时间点抓 after-drop 快照，但保留成字典，
 # 是为了以后某个环境若需要不同的抓取时机，可以只改这里，不用改主流程。
-#
-# 这里不显式区分 swap / non-swap：
-# 后面会在运行时查看 `base_env` 上是否存在 `cube_bin_pairs`，
-# 再自动决定走哪条解析路径。
 SNAPSHOT_ENVS: dict[str, int] = {
     "ButtonUnmask": DEFAULT_CAPTURE_STEP,
     "ButtonUnmaskSwap": DEFAULT_CAPTURE_STEP,
     "VideoUnmask": DEFAULT_CAPTURE_STEP,
     "VideoUnmaskSwap": DEFAULT_CAPTURE_STEP,
 }
+NON_SWAP_SNAPSHOT_ENVS = {"ButtonUnmask", "VideoUnmask"}
+SWAP_SNAPSHOT_ENVS = {"ButtonUnmaskSwap", "VideoUnmaskSwap"}
+BUTTON_SNAPSHOT_ENVS = {"ButtonUnmask", "ButtonUnmaskSwap"}
 
 
 def _to_python_int(value) -> int:
@@ -231,6 +230,14 @@ def _build_cube_snapshot(
     }
 
 
+def _build_button_snapshot(button_actor, *, fallback_name: str | None = None) -> dict:
+    """把单个 button 组织成快照字典。"""
+    return {
+        "name": getattr(button_actor, "name", None) or fallback_name,
+        "position_xyz": _actor_position_xyz(button_actor),
+    }
+
+
 def _build_bins_snapshot(spawned_bins: list, bins_with_cubes: set[int]) -> list[dict]:
     """把所有 bin 组织成快照字典列表。
 
@@ -260,6 +267,7 @@ def _build_snapshot_payload(
     collision: bool,
     cubes: list[dict],
     bins: list[dict],
+    buttons: list[dict] | None = None,
 ) -> dict:
     """构造最终写入 JSON 的顶层 payload。
 
@@ -267,7 +275,7 @@ def _build_snapshot_payload(
     - 空间相关字段描述的是 after-drop 抓图时刻；
     - `collision` 描述的是整局 episode 级结果。
     """
-    return {
+    payload = {
         "env_id": env_id,
         "episode": int(episode),
         "seed": int(seed),
@@ -283,6 +291,103 @@ def _build_snapshot_payload(
         "cubes": cubes,
         "bins": bins,
     }
+    if buttons is not None:
+        payload["buttons"] = buttons
+    return payload
+
+
+def _collect_swap_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
+    """按 swap 环境的显式 `(cube, bin)` 配对收集 cube/bin 快照。"""
+    spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
+    color_names = list(getattr(base_env, "color_names", []) or [])
+    bin_to_color = dict(getattr(base_env, "bin_to_color", {}) or {})
+    bin_index_by_id = {id(bin_actor): idx for idx, bin_actor in enumerate(spawned_bins)}
+
+    bins_with_cubes: set[int] = set()
+    cubes: list[dict] = []
+
+    for pair_idx, pair in enumerate(list(getattr(base_env, "cube_bin_pairs", []) or [])):
+        if not isinstance(pair, (tuple, list)) or len(pair) != 2:
+            continue
+
+        cube_actor, bin_actor = pair
+        paired_bin_index = bin_index_by_id.get(id(bin_actor))
+        if paired_bin_index is not None:
+            bins_with_cubes.add(paired_bin_index)
+
+        cube_color = None
+        if paired_bin_index is not None:
+            cube_color = bin_to_color.get(paired_bin_index)
+        if cube_color is None and pair_idx < len(color_names):
+            cube_color = color_names[pair_idx]
+
+        cubes.append(
+            _build_cube_snapshot(
+                cube_actor=cube_actor,
+                cube_color=cube_color,
+                paired_bin_index=paired_bin_index,
+                paired_bin_actor=bin_actor,
+            )
+        )
+
+    return cubes, _build_bins_snapshot(spawned_bins, bins_with_cubes)
+
+
+def _collect_non_swap_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
+    """按 non-swap 环境的固定 index 约定收集 cube/bin 快照。"""
+    spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
+    color_names = list(getattr(base_env, "color_names", []) or [])
+
+    bins_with_cubes: set[int] = set()
+    cubes: list[dict] = []
+
+    pair_count = min(3, len(spawned_bins))
+    for pair_idx in range(pair_count):
+        cube_actor = getattr(base_env, f"target_cube_{pair_idx}", None)
+        if cube_actor is None and pair_idx < len(color_names):
+            cube_actor = getattr(base_env, f"target_cube_{color_names[pair_idx]}", None)
+        if cube_actor is None:
+            continue
+
+        bin_actor = spawned_bins[pair_idx]
+        bins_with_cubes.add(pair_idx)
+        cube_color = color_names[pair_idx] if pair_idx < len(color_names) else None
+        cubes.append(
+            _build_cube_snapshot(
+                cube_actor=cube_actor,
+                cube_color=cube_color,
+                paired_bin_index=pair_idx,
+                paired_bin_actor=bin_actor,
+            )
+        )
+
+    return cubes, _build_bins_snapshot(spawned_bins, bins_with_cubes)
+
+
+def _collect_buttons_snapshot(base_env, env_id: str) -> list[dict] | None:
+    """按 env_id 采集 button 位置；非 button env 返回 `None`。"""
+    if env_id not in BUTTON_SNAPSHOT_ENVS:
+        return None
+
+    buttons: list[dict] = []
+    if env_id == "ButtonUnmask":
+        button_actor = getattr(base_env, "button_left", None) or getattr(
+            base_env, "button", None
+        )
+        if button_actor is not None:
+            buttons.append(
+                _build_button_snapshot(button_actor, fallback_name="button_left")
+            )
+        return buttons
+
+    for attr_name in ("button_left", "button_right"):
+        button_actor = getattr(base_env, attr_name, None)
+        if button_actor is None:
+            continue
+        buttons.append(
+            _build_button_snapshot(button_actor, fallback_name=attr_name)
+        )
+    return buttons
 
 
 def _collect_snapshot(
@@ -296,100 +401,17 @@ def _collect_snapshot(
 ) -> dict:
     """收集 unmask 环境在固定 after-drop 时刻的场景信息。
 
-    通过 `base_env.cube_bin_pairs` 是否存在自动区分 swap / non-swap。
-
-    这里的核心难点不在“怎么读位置”，而在“怎么还原 cube 和 bin 的语义配对关系”：
-    - swap 环境通常显式保存 `(cube, bin)` 配对；
-    - non-swap 环境更多是按固定 index 隐式对应。
-
-    所以这里分成两条路径，最后再汇总成统一 JSON 结构。
+    分派规则只由 `env_id` 决定：
+    - `ButtonUnmask` / `VideoUnmask` 走 non-swap 路径；
+    - `ButtonUnmaskSwap` / `VideoUnmaskSwap` 走 swap 路径。
     """
-    # `spawned_bins` / `color_names` 即使缺失，也退化成空列表。
-    # 这样做的目的不是掩盖错误，而是保证“抓不到完整语义信息”时仍能产出
-    # 一个结构稳定的快照 JSON，便于后续人工检查到底缺了什么字段。
-    spawned_bins = list(getattr(base_env, "spawned_bins", []) or [])
-    color_names = list(getattr(base_env, "color_names", []) or [])
-
-    # 记录哪些 bin 在语义上“对应着一个目标 cube”。
-    # 后面会写入 bin 快照中，帮助下游判断哪些 bin 是需要重点看的。
-    bins_with_cubes: set[int] = set()
-    cubes: list[dict] = []
-
-    cube_bin_pairs = getattr(base_env, "cube_bin_pairs", None)
-    if cube_bin_pairs:
-        # ---- swap 路径：显式 (cube, bin) 配对 ----
-        # swap 环境的关键特征是：目标 bin 未必按固定顺序对应某种颜色/某个 cube，
-        # 所以必须优先依赖环境显式给出的配对关系，而不能简单假设
-        # “第 i 个 cube 对第 i 个 bin”。
-        #
-        # 某些 swap 环境会额外提供 `bin_to_color`，可以更准确地恢复“这个 bin 对应什么颜色”。
-        bin_to_color = dict(getattr(base_env, "bin_to_color", {}) or {})
-        # 由于 actor 本身未必可 hash，也不一定适合作为字典键，
-        # 这里用 `id(actor)` 建立“对象身份 -> bin 下标”的映射。
-        bin_index_by_id = {id(b): i for i, b in enumerate(spawned_bins)}
-
-        for pair_idx, pair in enumerate(cube_bin_pairs):
-            # 容错：如果环境返回的 pair 结构不合法，就跳过，而不是中断整个快照。
-            if not isinstance(pair, (tuple, list)) or len(pair) != 2:
-                continue
-
-            cube_actor, bin_actor = pair
-            paired_bin_index = bin_index_by_id.get(id(bin_actor))
-            if paired_bin_index is not None:
-                bins_with_cubes.add(paired_bin_index)
-
-            cube_color = None
-            if paired_bin_index is not None:
-                # 优先采用环境显式给出的 bin->color 映射。
-                cube_color = bin_to_color.get(paired_bin_index)
-            if cube_color is None and pair_idx < len(color_names):
-                # 如果缺少显式映射，则退回到配对顺序对应的颜色名。
-                # 这个回退不保证 100% 精确，只是尽量保留可读语义。
-                cube_color = color_names[pair_idx]
-
-            cubes.append(
-                _build_cube_snapshot(
-                    cube_actor=cube_actor,
-                    cube_color=cube_color,
-                    paired_bin_index=paired_bin_index,
-                    paired_bin_actor=bin_actor,
-                )
-            )
+    if env_id in NON_SWAP_SNAPSHOT_ENVS:
+        cubes, bins = _collect_non_swap_cubes_and_bins(base_env)
+    elif env_id in SWAP_SNAPSHOT_ENVS:
+        cubes, bins = _collect_swap_cubes_and_bins(base_env)
     else:
-        # ---- non-swap 路径：按 index 隐式配对 ----
-        # non-swap 环境通常没有显式 `cube_bin_pairs`，而是默认：
-        # 第 0 个目标 cube 对第 0 个 spawned bin，第 1 个对第 1 个，依此类推。
-        # 这种约定更脆弱，但在对应环境里通常是稳定成立的。
-        #
-        # 当前任务约定最多有 3 组目标 cube/bin，这里同时受 spawned_bins 长度约束。
-        pair_count = min(3, len(spawned_bins))
-        for pair_idx in range(pair_count):
-            # 优先尝试 `target_cube_0/1/2` 这种按下标命名的属性。
-            cube_actor = getattr(base_env, f"target_cube_{pair_idx}", None)
-            if cube_actor is None and pair_idx < len(color_names):
-                # 兼容另一种命名风格：`target_cube_red` / `target_cube_blue` 等。
-                cube_actor = getattr(
-                    base_env, f"target_cube_{color_names[pair_idx]}", None
-                )
-            if cube_actor is None:
-                # 如果连目标 cube 都找不到，说明这组配对无法恢复。
-                # 这里仍继续尝试后续 pair，避免前面某一组缺失时整份快照为空。
-                continue
+        raise ValueError(f"Unsupported snapshot env_id: {env_id}")
 
-            bin_actor = spawned_bins[pair_idx]
-            bins_with_cubes.add(pair_idx)
-            cube_color = color_names[pair_idx] if pair_idx < len(color_names) else None
-            cubes.append(
-                _build_cube_snapshot(
-                    cube_actor=cube_actor,
-                    cube_color=cube_color,
-                    paired_bin_index=pair_idx,
-                    paired_bin_actor=bin_actor,
-                )
-            )
-
-    # cube 和 bin 分别构建，再统一拼顶层 payload，方便后续字段演进。
-    bins = _build_bins_snapshot(spawned_bins, bins_with_cubes)
     return _build_snapshot_payload(
         env_id=env_id,
         episode=episode,
@@ -399,6 +421,7 @@ def _collect_snapshot(
         collision=collision,
         cubes=cubes,
         bins=bins,
+        buttons=_collect_buttons_snapshot(base_env, env_id),
     )
 
 

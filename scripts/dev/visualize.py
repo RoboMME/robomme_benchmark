@@ -62,6 +62,7 @@ NAMED_CUBE_COLORS = {
     "white": "#f9fafb",
     "black": "#111827",
 }
+BUTTON_MARKER_COLOR = "#dc2626"
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,12 @@ class CubeSnapshot:
 
 
 @dataclass(frozen=True)
+class ButtonSnapshot:
+    name: str | None
+    position_xyz: tuple[float, float, float]
+
+
+@dataclass(frozen=True)
 class SceneSnapshot:
     path: Path
     env_id: str
@@ -93,6 +100,7 @@ class SceneSnapshot:
     capture_phase: str | None
     bins: tuple[BinSnapshot, ...]
     cubes: tuple[CubeSnapshot, ...]
+    buttons: tuple[ButtonSnapshot, ...]
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -136,6 +144,7 @@ def _load_snapshot(path: Path) -> SceneSnapshot:
     env_id = str(payload["env_id"])
     bins_payload = payload.get("bins", [])
     cubes_payload = payload.get("cubes", [])
+    buttons_payload = payload.get("buttons", [])
 
     bins = tuple(
         BinSnapshot(
@@ -168,6 +177,17 @@ def _load_snapshot(path: Path) -> SceneSnapshot:
         )
         for cube_item in cubes_payload
     )
+    buttons = tuple(
+        ButtonSnapshot(
+            name=button_item.get("name"),
+            position_xyz=_position_xyz(
+                button_item["position_xyz"],
+                path=path,
+                field_name="buttons[].position_xyz",
+            ),
+        )
+        for button_item in buttons_payload
+    )
 
     return SceneSnapshot(
         path=path,
@@ -188,6 +208,7 @@ def _load_snapshot(path: Path) -> SceneSnapshot:
         capture_phase=payload.get("capture_phase"),
         bins=bins,
         cubes=cubes,
+        buttons=buttons,
     )
 
 
@@ -322,6 +343,41 @@ def _plot_snapshot(
             label="bin (empty)",
         ),
     ]
+    if scene.buttons:
+        for button_item in scene.buttons:
+            x_pos, y_pos, _ = button_item.position_xyz
+            button_label = button_item.name or "button"
+            ax.scatter(
+                x_pos,
+                y_pos,
+                s=180,
+                marker="X",
+                c=[BUTTON_MARKER_COLOR],
+                edgecolors=BIN_EDGE_COLOR,
+                linewidths=1.0,
+                alpha=0.95,
+                zorder=5,
+            )
+            ax.text(
+                x_pos + label_dx,
+                y_pos - label_dy,
+                button_label,
+                fontsize=7,
+                color=BUTTON_MARKER_COLOR,
+                zorder=6,
+            )
+        marker_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker="X",
+                color="none",
+                markeredgecolor=BIN_EDGE_COLOR,
+                markerfacecolor=BUTTON_MARKER_COLOR,
+                markersize=9,
+                label="button",
+            )
+        )
     color_handles = [
         Line2D(
             [0],
