@@ -1,6 +1,6 @@
 # RoboMME: A Robotic Benchmark for Memory-Augmented Manipulation
 
-### [Website](https://robomme.github.io/) | [Paper](https://arxiv.org/abs/2603.04639) | [MME-VLA Policy Learning](https://github.com/RoboMME/robomme_policy_learning) | [Dataset](https://huggingface.co/Yinpei/robomme_data_h5) |  [Models](https://huggingface.co/Yinpei/mme_vla_suite) | [Leaderboard](https://robomme.github.io/leaderboard.html) | [Demo](https://huggingface.co/spaces/HongzeFu/RoboMME)
+### [Website](https://robomme.github.io/) | [Paper](https://arxiv.org/abs/2603.04639) | [MME-VLA Policy Learning](https://github.com/RoboMME/robomme_policy_learning) | [Dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) |  [Models](https://huggingface.co/Yinpei/mme_vla_suite) | [Leaderboard](https://robomme.github.io/leaderboard.html) | [Demo](https://huggingface.co/spaces/HongzeFu/RoboMME)
 
 ### 🚀 Join Our Community: [Wechat Group](doc/Wechat.jpg) | [Discord](https://discord.gg/xbmSqMd4)
 ![Robomme bench](assets/robomme_bench.jpg)
@@ -69,7 +69,7 @@ All tasks are defined in `src/robomme/robomme_env`. A detailed description can b
 
 ### 📥 Training Data
 
-Training data can be downloaded [here](https://huggingface.co/Yinpei/robomme_data_h5). There are 1,600 demonstrations in total (100 per task). The HDF5 format is described in [doc/h5_data_format.md](doc/h5_data_format.md).
+Training data can be downloaded [here](https://huggingface.co/datasets/Yinpei/robomme_data_h5). There are 1,600 demonstrations in total (100 per task). The HDF5 format is described in [doc/h5_data_format.md](doc/h5_data_format.md).
 
 After downloading, replay the dataset for a sanity check:
 
@@ -130,7 +130,7 @@ The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) re
 
 
 ## 🏆 Submit Your Models
-Want to add your model? Download the [dataset](https://huggingface.co/Yinpei/robomme_data_h5) from Hugging Face, run evaluation using our [eval scripts](scripts/evaluation.py), then submit a PR with your results by adding `<your_model>.md` to the `doc/submission/` [directory](https://github.com/RoboMME/robomme_benchmark/tree/main/doc/submission). We will review it and update our leaderboard.
+Want to add your model? Download the [dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) from Hugging Face, run evaluation using our [eval scripts](scripts/evaluation.py), then submit a PR with your results by adding `<your_model>.md` to the `doc/submission/` [directory](https://github.com/RoboMME/robomme_benchmark/tree/main/doc/submission). We will review it and update our leaderboard.
 
 
 ## 🔧 Troubleshooting

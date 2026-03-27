@@ -55,7 +55,7 @@ docker build -t <image_name>:<tag> .
 ```
 Enter the docker 
 ```bash
-# download the robomme_data_h5 from https://huggingface.co/Yinpei/robomme_data_h5
+# download the robomme_data_h5 from https://huggingface.co/datasets/Yinpei/robomme_data_h5
 export robomme_data_path=<robomme_data_h5_path>
 
 docker run --rm -it --gpus all \
