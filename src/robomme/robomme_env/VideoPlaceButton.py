@@ -234,7 +234,7 @@ class VideoPlaceButton(BaseEnv):
                 {"color": (0, 1, 0, 1), "name": "green", "list": self.green_cubes, "name_list": self.green_cube_names},
             ]
             shuffle_indices = torch.randperm(
-                len(color_groups), generator=scene_generator
+                len(color_groups), generator=target_color_generator
             ).tolist()
             color_groups = [color_groups[i] for i in shuffle_indices]
 
