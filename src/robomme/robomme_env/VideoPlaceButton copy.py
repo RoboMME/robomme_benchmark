@@ -69,16 +69,19 @@ class VideoPlaceButton(BaseEnv):
 
     config_easy = {
         'color': 1, 
+        "additional_place":False,
         "swap":False,
         "targets":3
     }
     config_medium= {
         'color': 3, 
+        "additional_place":False,
         "swap":False,
         "targets":4
     }
     config_hard = {
         'color': 3, 
+        "additional_place":False,
         "swap":True,
         "targets":4
     }
@@ -90,9 +93,6 @@ class VideoPlaceButton(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
-
-    _TARGET_COLOR_SEED_OFFSET = 100_003
-    _BEFORE_AFTER_SEED_OFFSET = 200_003
 
 
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
@@ -143,6 +143,10 @@ class VideoPlaceButton(BaseEnv):
             else:  # seed_mod == 2
                 self.difficulty = "hard"
 
+        # Use seed to randomly determine number of repetitions (1-5)
+        generator = torch.Generator()
+        generator.manual_seed(seed)
+
         self.onto_goalsite=False
         self.start_step=99999
         self.end_step=99999
@@ -172,18 +176,8 @@ class VideoPlaceButton(BaseEnv):
 
 
     def _load_scene(self, options: dict):
-        scene_generator = torch.Generator()
-        scene_generator.manual_seed(self.seed)
-
-        target_color_generator = torch.Generator()
-        target_color_generator.manual_seed(
-            self.seed + self._TARGET_COLOR_SEED_OFFSET
-        )
-
-        before_after_generator = torch.Generator()
-        before_after_generator.manual_seed(
-            self.seed + self._BEFORE_AFTER_SEED_OFFSET
-        )
+        generator = torch.Generator()
+        generator.manual_seed(self.seed)
 
         try:
             self.table_scene = TableSceneBuilder(
@@ -202,7 +196,7 @@ class VideoPlaceButton(BaseEnv):
                     thickness=0.005,  # target thickness
                     min_gap=self.cube_half_size * 1,  # Gap requirement same as cube
                     name_prefix=f"goal_site",
-                    generator=scene_generator,
+                    generator=generator,
                 )
             except RuntimeError as exc:
                 raise SceneGenerationError("goal_site sampling failed") from exc
@@ -212,7 +206,7 @@ class VideoPlaceButton(BaseEnv):
                 self,
                 center_xy=(0.1, 0),
                 scale=1.5,
-                generator=scene_generator,
+                generator=generator,
                 randomize_range=(0.05, 0.3)
             )
             avoid.append(button_obb)
@@ -233,10 +227,11 @@ class VideoPlaceButton(BaseEnv):
                 {"color": (0, 0, 1, 1), "name": "blue", "list": self.blue_cubes, "name_list": self.blue_cube_names},
                 {"color": (0, 1, 0, 1), "name": "green", "list": self.green_cubes, "name_list": self.green_cube_names},
             ]
-            shuffle_indices = torch.randperm(
-                len(color_groups), generator=scene_generator
-            ).tolist()
+            shuffle_indices = torch.randperm(len(color_groups), generator=generator).tolist()
             color_groups = [color_groups[i] for i in shuffle_indices]
+
+            self.target_color_name = color_groups[0]["name"]
+            logger.debug(f"Target color selected: {self.target_color_name}")
 
             # Generate cubes for each color group
             for idx, group in enumerate(color_groups):
@@ -255,7 +250,7 @@ class VideoPlaceButton(BaseEnv):
                                 min_gap=self.cube_half_size,
                                 random_yaw=True,
                                 name_prefix=f"cube_{group['name']}_{cube_idx}",
-                                generator=scene_generator,
+                                generator=generator,
                             )
                         except RuntimeError as exc:
                             raise SceneGenerationError(
@@ -290,7 +285,7 @@ class VideoPlaceButton(BaseEnv):
                             thickness=0.005,  # target thickness
                             min_gap=self.cube_half_size * 1,  # Gap requirement same as cube
                             name_prefix=f"target_{i}",
-                            generator=scene_generator,
+                            generator=generator,
                         )
                     except RuntimeError as exc:
                         raise SceneGenerationError(f"Target {i + 1} sampling failed: {exc}") from exc
@@ -299,39 +294,19 @@ class VideoPlaceButton(BaseEnv):
                     setattr(self, f"target_{i}", target)
                     avoid.append(target)
 
-            selectable_color_groups = [
-                ("red", self.red_cubes),
-                ("blue", self.blue_cubes),
-                ("green", self.green_cubes),
-            ]
-            selectable_color_groups = [
-                (color_name, cubes)
-                for color_name, cubes in selectable_color_groups
-                if cubes
-            ]
+            if len(self.all_cubes) > 0:
+                target_cube_idx = torch.randint(0, len(self.all_cubes), (1,), generator=generator).item()
+                self.target_cube = self.all_cubes[target_cube_idx]
 
-            if selectable_color_groups:
-                target_color_idx = torch.randint(
-                    0,
-                    len(selectable_color_groups),
-                    (1,),
-                    generator=target_color_generator,
-                ).item()
-                self.target_color_name, target_color_cubes = selectable_color_groups[
-                    target_color_idx
-                ]
-                target_cube_idx = torch.randint(
-                    0,
-                    len(target_color_cubes),
-                    (1,),
-                    generator=target_color_generator,
-                ).item()
-                self.target_cube = target_color_cubes[target_cube_idx]
+                if self.target_cube in self.red_cubes:
+                    self.target_color_name = "red"
+                elif self.target_cube in self.blue_cubes:
+                    self.target_color_name = "blue"
+                elif self.target_cube in self.green_cubes:
+                    self.target_color_name = "green"
 
                 logger.debug(
-                    "Target color selected: %s (cube index %s within that color group)",
-                    self.target_color_name,
-                    target_cube_idx,
+                    f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)"
                 )
             else:
                 self.target_cube = None
@@ -347,7 +322,7 @@ class VideoPlaceButton(BaseEnv):
 
             if self.configs[self.difficulty]["swap"] == True:
                 if len(self.targets) >= 2:
-                    perm = torch.randperm(len(self.targets), generator=scene_generator)
+                    perm = torch.randperm(len(self.targets), generator=generator)
                     swap_idx_a = perm[0].item()
                     swap_idx_b = perm[1].item()
                     self.swap_target_a = self.targets[swap_idx_a]
@@ -361,9 +336,13 @@ class VideoPlaceButton(BaseEnv):
                         f"Swap targets selected: target_{swap_idx_a} <-> target_{swap_idx_b}"
                     )
 
-            self.task_flag = (
-                torch.rand(1, generator=before_after_generator).item() < 0.5
-            )
+            if self.configs[self.difficulty]["additional_place"] == True:
+                self.pre_flag = torch.rand(1, generator=generator).item() < 0.5
+                self.post_flag = torch.rand(1, generator=generator).item() < 0.5
+            else:
+                self.pre_flag = 0
+                self.post_flag = 0
+            self.task_flag = torch.rand(1, generator=generator).item() < 0.5
 
             if self.task_flag == 1:
                 self.target_target = self.target_0
@@ -377,6 +356,40 @@ class VideoPlaceButton(BaseEnv):
             ]
 
             tasks = []
+            if self.pre_flag == True:
+                tasks.append(
+                    {
+                        "func": (lambda: is_obj_pickup(self, obj=self.target_cube)),
+                        "name": f"pick up the cube",
+                        "subgoal_segment": f"pick up the cube at <>",
+                        "choice_label": "pick up the cube",
+                        "demonstration": True,
+                        "failure_func": None,
+                        "solve": lambda env, planner: solve_pickup(
+                            env, planner, obj=self.target_cube
+                        ),
+                        "segment": self.target_cube,
+                    }
+                )
+                tasks.append(
+                    {
+                        "func": (
+                            lambda: is_obj_dropped_onto(
+                                self, obj=self.target_cube, target=self.target_2
+                            )
+                        ),
+                        "name": "drop the cube onto target",
+                        "subgoal_segment": f"drop the cube onto target at <>",
+                        "choice_label": "drop onto",
+                        "demonstration": True,
+                        "failure_func": None,
+                        "solve": lambda env, planner: solve_putonto_whenhold(
+                            env, planner, target=self.target_2
+                        ),
+                        "segment": self.target_2,
+                    }
+                )
+
             tasks.append(
                 {
                     "func": (lambda: is_obj_pickup(self, obj=self.target_cube)),
@@ -422,6 +435,40 @@ class VideoPlaceButton(BaseEnv):
                     "segment": self.cap_link,
                 }
             )
+
+            if self.post_flag == True:
+                tasks.append(
+                    {
+                        "func": (lambda: is_obj_pickup(self, obj=self.target_cube)),
+                        "name": f"pick up the cube",
+                        "subgoal_segment": f"pick up the cube at <>",
+                        "choice_label": "pick up the cube",
+                        "demonstration": True,
+                        "failure_func": None,
+                        "solve": lambda env, planner: solve_pickup(
+                            env, planner, obj=self.target_cube
+                        ),
+                        "segment": self.target_cube,
+                    }
+                )
+                tasks.append(
+                    {
+                        "func": (
+                            lambda: is_obj_dropped_onto(
+                                self, obj=self.target_cube, target=self.target_3
+                            )
+                        ),
+                        "name": "drop the cube onto target",
+                        "subgoal_segment": f"drop the cube onto target at <>",
+                        "choice_label": "drop onto",
+                        "demonstration": True,
+                        "failure_func": None,
+                        "solve": lambda env, planner: solve_putonto_whenhold(
+                            env, planner, target=self.target_3
+                        ),
+                        "segment": self.target_3,
+                    }
+                )
 
             tasks.append(
                 {
@@ -574,7 +621,7 @@ class VideoPlaceButton(BaseEnv):
             if self.robomme_failure_recovery:
                 self.fail_grasp_task_index = inject_fail_grasp(
                     self.task_list,
-                    generator=scene_generator,
+                    generator=generator,
                     mode=self.robomme_failure_recovery_mode,
                 )
             else:
