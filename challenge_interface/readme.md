@@ -1,6 +1,6 @@
 # RoboMME Challenge @ CVPR 2026 FMEA Workshop
 
-### [FMEA Workshop](https://foundation-models-meet-embodied-agents.github.io/cvpr2026/) | [Submission Example](https://github.com/RoboMME/robomme_policy_learning?tab=readme-ov-file#robomme-challenge-example) | [Evaluate Your Policy](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor) 
+### [FMEA Workshop](https://foundation-models-meet-embodied-agents.github.io/cvpr2026/) | [Submission Example](https://github.com/RoboMME/robomme_policy_learning?tab=readme-ov-file#-robomme-challenge-example) | [Evaluate Your Policy](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor) 
 
 
 The RoboMME challenge is part of the **Foundation Models Meet Embodied Agents** workshop at CVPR 2026.   
