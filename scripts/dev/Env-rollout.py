@@ -380,7 +380,7 @@ def _run_episode(
     if snapshot_state.get("snapshot_enabled") and not snapshot_state["snapshot_written"]:
         # 快照缺失本身不一定说明 episode 失败，但通常意味着流程比预期更早结束了。
         print(
-            "Warning: after-drop snapshot JSON was not captured before the episode ended."
+            "Warning: snapshot JSON was not captured before the episode ended."
         )
     return episode_successful
 

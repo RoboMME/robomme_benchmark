@@ -1,15 +1,16 @@
-"""Unmask 环境 after-drop 场景快照与整局 bin-bin collision 监控逻辑。
+"""Robomme 部分环境的场景快照与整局 bin-bin collision 监控逻辑。
 
 这个模块做的事情比较单一：
-1. 针对少数指定的 unmask 环境，在固定 step 抓取一次场景快照；
+1. 针对少数指定的环境，在固定 step 或运行时条件满足时抓取一次场景快照；
 2. 从环境对象里提取 cube / bin 的位置和配对关系；
-3. 从 episode 开始持续监控到结束，记录是否出现过有效 bin-bin collision；
+3. 对支持 collision 监控的环境，从 episode 开始持续监控到结束，
+   记录是否出现过有效 bin-bin collision；
 4. 把这些信息序列化为 JSON，供后续回放、可视化或人工检查使用。
 
 设计上尽量保持“旁路接入”：
 - 不改环境内部实现；
 - 只在运行时包一层 `env.step`；
-- 达到目标 step 后先写出 after-drop 场景快照；若后续首次检测到 collision，
+- 达到目标抓图时机后立刻写出快照；若后续首次检测到 collision，
   再回写同一路径 JSON 中的 `collision` 字段。
 """
 
@@ -22,23 +23,40 @@ from pathlib import Path
 import gymnasium as gym
 import numpy as np
 import torch
+from robomme.robomme_env.utils.subgoal_evaluate_func import reset_check
 
 DEFAULT_CAPTURE_STEP: int = 33
 DEFAULT_COLLISION_FORCE_EPS: float = 1e-6
 DEFAULT_WORKSPACE_ABS_LIMIT: float = 5.0
+VIDEO_REPICK_ENV_ID = "VideoRepick"
+AFTER_DROP_CAPTURE_PHASE = "after_drop"
+AFTER_NO_RECORD_RESET_CAPTURE_PHASE = "after_no_record_reset"
 
-# `env_id -> capture step` 的映射表。
+# `env_id -> fixed capture step` 的映射表。
 # 目前这几个环境都在同一个时间点抓 after-drop 快照，但保留成字典，
 # 是为了以后某个环境若需要不同的抓取时机，可以只改这里，不用改主流程。
-SNAPSHOT_ENVS: dict[str, int] = {
+FIXED_STEP_SNAPSHOT_ENVS: dict[str, int] = {
     "ButtonUnmask": DEFAULT_CAPTURE_STEP,
     "ButtonUnmaskSwap": DEFAULT_CAPTURE_STEP,
     "VideoUnmask": DEFAULT_CAPTURE_STEP,
     "VideoUnmaskSwap": DEFAULT_CAPTURE_STEP,
 }
+SNAPSHOT_ENVS = set(FIXED_STEP_SNAPSHOT_ENVS) | {VIDEO_REPICK_ENV_ID}
 NON_SWAP_SNAPSHOT_ENVS = {"ButtonUnmask", "VideoUnmask"}
 SWAP_SNAPSHOT_ENVS = {"ButtonUnmaskSwap", "VideoUnmaskSwap"}
 BUTTON_SNAPSHOT_ENVS = {"ButtonUnmask", "ButtonUnmaskSwap"}
+
+
+def _capture_phase_for_env(env_id: str) -> str:
+    if env_id == VIDEO_REPICK_ENV_ID:
+        return AFTER_NO_RECORD_RESET_CAPTURE_PHASE
+    return AFTER_DROP_CAPTURE_PHASE
+
+
+def _snapshot_filename_suffix_for_phase(capture_phase: str) -> str:
+    if capture_phase == AFTER_NO_RECORD_RESET_CAPTURE_PHASE:
+        return "after_no_record_reset"
+    return "after_drop"
 
 
 def _to_python_int(value) -> int:
@@ -188,18 +206,26 @@ def _step_has_bin_collision(
     return False
 
 
-def _snapshot_json_path(output_root: Path, env_id: str, episode: int, seed: int) -> Path:
-    """拼出 after-drop 快照 JSON 的标准落盘路径。
+def _snapshot_json_path(
+    output_root: Path,
+    env_id: str,
+    episode: int,
+    seed: int,
+    *,
+    capture_phase: str,
+) -> Path:
+    """拼出快照 JSON 的标准落盘路径。
 
     文件名里包含 env / episode / seed，便于：
     - 不同实验结果并存；
     - 人工排查时直接从文件名定位样本；
     - 后续脚本按固定命名规则批量读取。
     """
+    suffix = _snapshot_filename_suffix_for_phase(capture_phase)
     return (
         output_root
         / "snapshots"
-        / f"{env_id}_ep{episode}_seed{seed}_after_drop.json"
+        / f"{env_id}_ep{episode}_seed{seed}_{suffix}.json"
     )
 
 
@@ -417,6 +443,19 @@ def _collect_solve_pickup_cubes(base_env, env_id: str) -> list[dict]:
             )
         return solve_pickup_cubes
 
+    if env_id == VIDEO_REPICK_ENV_ID:
+        target_cube = getattr(base_env, "target_cube_1", None)
+        if target_cube is None:
+            return solve_pickup_cubes
+        solve_pickup_cubes.append(
+            _build_solve_pickup_cube_snapshot(
+                pickup_order=1,
+                cube_actor=target_cube,
+                cube_color=None,
+            )
+        )
+        return solve_pickup_cubes
+
     raise ValueError(f"Unsupported snapshot env_id: {env_id}")
 
 
@@ -426,7 +465,9 @@ def _build_snapshot_payload(
     episode: int,
     seed: int,
     difficulty: str,
+    inspect_this_timestep: int | None,
     capture_elapsed_steps: int,
+    capture_phase: str,
     collision: bool,
     cubes: list[dict],
     bins: list[dict],
@@ -436,7 +477,7 @@ def _build_snapshot_payload(
     """构造最终写入 JSON 的顶层 payload。
 
     注意：
-    - 空间相关字段描述的是 after-drop 抓图时刻；
+    - 空间相关字段描述的是本次 capture_phase 对应的抓图时刻；
     - `collision` 描述的是整局 episode 级结果。
     """
     payload = {
@@ -444,13 +485,15 @@ def _build_snapshot_payload(
         "episode": int(episode),
         "seed": int(seed),
         "difficulty": difficulty,
-        # `inspect_this_timestep` 记录“理论上计划在哪个 step 抓图”，
-        # 方便和真实抓取 step（`capture_elapsed_steps`）对照。
-        "inspect_this_timestep": SNAPSHOT_ENVS[env_id],
+        # `inspect_this_timestep` 记录本次抓图的理论触发时机；
+        # 对固定 step env 是预先配置值，对动态 env 是运行时解析值。
+        "inspect_this_timestep": (
+            None if inspect_this_timestep is None else int(inspect_this_timestep)
+        ),
         # 真实抓取时环境内部已经走到的 elapsed_steps。
-        # 一般等于目标 step，但若外层逻辑跨过目标 step 才首次进入，也允许大于它。
+        # 一般等于目标触发 step，但若外层逻辑跨过目标点才首次进入，也允许大于它。
         "capture_elapsed_steps": int(capture_elapsed_steps),
-        "capture_phase": "after_drop",
+        "capture_phase": capture_phase,
         "collision": bool(collision),
         "cubes": cubes,
         "bins": bins,
@@ -544,6 +587,21 @@ def _collect_non_swap_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
     return cubes, _build_bins_snapshot(spawned_bins, bins_with_cubes)
 
 
+def _collect_videorepick_cubes_and_bins(base_env) -> tuple[list[dict], list[dict]]:
+    """收集 VideoRepick 当前场景中的全部 cubes。"""
+    cubes: list[dict] = []
+    for cube_actor in list(getattr(base_env, "spawned_cubes", []) or []):
+        cubes.append(
+            _build_cube_snapshot(
+                cube_actor=cube_actor,
+                cube_color=None,
+                paired_bin_index=None,
+                paired_bin_actor=None,
+            )
+        )
+    return cubes, []
+
+
 def _collect_buttons_snapshot(base_env, env_id: str) -> list[dict] | None:
     """按 env_id 采集 button 位置；非 button env 返回 `None`。
 
@@ -557,9 +615,20 @@ def _collect_buttons_snapshot(base_env, env_id: str) -> list[dict] | None:
     - 比起 `"buttons": []`，这种表达更容易和 button env 区分。
     """
     if env_id not in BUTTON_SNAPSHOT_ENVS:
-        return None
+        if env_id != VIDEO_REPICK_ENV_ID:
+            return None
 
     buttons: list[dict] = []
+    if env_id == VIDEO_REPICK_ENV_ID:
+        button_actor = getattr(base_env, "button_left", None) or getattr(
+            base_env, "button", None
+        )
+        if button_actor is not None:
+            buttons.append(
+                _build_button_snapshot(button_actor, fallback_name="button_left")
+            )
+        return buttons
+
     if env_id == "ButtonUnmask":
         button_actor = getattr(base_env, "button_left", None) or getattr(
             base_env, "button", None
@@ -580,16 +649,92 @@ def _collect_buttons_snapshot(base_env, env_id: str) -> list[dict] | None:
     return buttons
 
 
+def _normalize_task_entry(task_entry) -> dict | None:
+    if not isinstance(task_entry, dict):
+        return None
+    return task_entry
+
+
+def _current_task_entry(base_env) -> dict | None:
+    task_list = list(getattr(base_env, "task_list", []) or [])
+    task_index = _to_python_int(getattr(base_env, "timestep", 0))
+    if task_index < 0 or task_index >= len(task_list):
+        return None
+    return _normalize_task_entry(task_list[task_index])
+
+
+def _previous_task_entry(base_env) -> dict | None:
+    task_list = list(getattr(base_env, "task_list", []) or [])
+    task_index = _to_python_int(getattr(base_env, "timestep", 0)) - 1
+    if task_index < 0 or task_index >= len(task_list):
+        return None
+    return _normalize_task_entry(task_list[task_index])
+
+
+def _videorepick_final_swap_end_step(base_env) -> int | None:
+    if _to_python_int(getattr(base_env, "swap_times", 0)) < 1:
+        return None
+
+    swap_schedule = list(getattr(base_env, "swap_schedule", []) or [])
+    end_steps: list[int] = []
+    for schedule_item in swap_schedule:
+        if not isinstance(schedule_item, (tuple, list)) or len(schedule_item) < 4:
+            continue
+        end_steps.append(_to_python_int(schedule_item[3]))
+    if not end_steps:
+        return None
+    return max(end_steps)
+
+
+def _resolve_snapshot_trigger(
+    base_env,
+    env_id: str,
+) -> tuple[bool, int | None, str]:
+    """解析当前 env 是否已经达到抓图条件。"""
+    capture_phase = _capture_phase_for_env(env_id)
+    elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
+
+    if env_id in FIXED_STEP_SNAPSHOT_ENVS:
+        capture_step = FIXED_STEP_SNAPSHOT_ENVS[env_id]
+        if elapsed_steps < capture_step:
+            return False, capture_step, capture_phase
+        return True, capture_step, capture_phase
+
+    if env_id == VIDEO_REPICK_ENV_ID:
+        task_entry = _current_task_entry(base_env)
+        previous_task_entry = _previous_task_entry(base_env)
+        in_or_just_finished_no_record = (
+            (task_entry is not None and task_entry.get("name") == "NO RECORD")
+            or (
+                previous_task_entry is not None
+                and previous_task_entry.get("name") == "NO RECORD"
+            )
+        )
+        if not in_or_just_finished_no_record:
+            return False, None, capture_phase
+        if not reset_check(base_env):
+            return False, None, capture_phase
+
+        final_swap_end_step = _videorepick_final_swap_end_step(base_env)
+        if final_swap_end_step is not None and elapsed_steps <= final_swap_end_step:
+            return False, None, capture_phase
+        return True, elapsed_steps, capture_phase
+
+    return False, None, capture_phase
+
+
 def _collect_snapshot(
     base_env,
     env_id: str,
     episode: int,
     seed: int,
     difficulty: str,
+    inspect_this_timestep: int | None,
     capture_elapsed_steps: int,
+    capture_phase: str,
     collision: bool,
 ) -> dict:
-    """收集 unmask 环境在固定 after-drop 时刻的场景信息。
+    """收集支持快照环境在目标时刻的场景信息。
 
     分派规则只由 `env_id` 决定：
     - `ButtonUnmask` / `VideoUnmask` 走 non-swap 路径；
@@ -603,6 +748,8 @@ def _collect_snapshot(
         cubes, bins = _collect_non_swap_cubes_and_bins(base_env)
     elif env_id in SWAP_SNAPSHOT_ENVS:
         cubes, bins = _collect_swap_cubes_and_bins(base_env)
+    elif env_id == VIDEO_REPICK_ENV_ID:
+        cubes, bins = _collect_videorepick_cubes_and_bins(base_env)
     else:
         raise ValueError(f"Unsupported snapshot env_id: {env_id}")
 
@@ -611,7 +758,9 @@ def _collect_snapshot(
         episode=episode,
         seed=seed,
         difficulty=difficulty,
+        inspect_this_timestep=inspect_this_timestep,
         capture_elapsed_steps=capture_elapsed_steps,
+        capture_phase=capture_phase,
         collision=collision,
         cubes=cubes,
         bins=bins,
@@ -677,103 +826,98 @@ def install_snapshot_for_step(
     difficulty: str,
     output_dir: Path,
 ) -> dict:
-    """给支持的 unmask env 打补丁，在固定时机抓 after-drop 快照。
+    """给支持的 env 打补丁，在目标时机抓快照。
 
     这里采用最轻量的接入方式：保存原始 `env.step`，再在外面包一层。
     包装后的流程是：
     1. 在调用原始 `env.step` 前先采样一次当前状态；
     2. 再正常执行一步环境；
     3. 在 `env.step` 返回后再采样一次最终状态，并累计成 episode 级 sticky flag；
-    4. 若达到抓取阈值且还没写过快照，就立刻写出 after-drop JSON；
+    4. 若达到抓取阈值且还没写过快照，就立刻写出对应 phase 的 JSON；
     5. 若快照已写出、但此后第一次观察到 collision，就回写同一路径 JSON 中的 `collision`；
     6. 无论是否抓取/回写，都把原始 step 的返回值原样交还上层。
 
     返回的 `state` 主要用于外层脚本查询“是否启用快照、文件写到哪里了”。
-    注意：JSON 中的空间字段仍对应 after-drop 抓图时刻，但 `collision`
-    是整局 episode 级布尔值。
+    注意：JSON 中的空间字段仍对应抓图时刻，但 `collision` 是整局
+    episode 级布尔值；对不支持 collision 监控的环境固定为 `False`。
     """
-    # 只有列在 `SNAPSHOT_ENVS` 中的环境才启用这套逻辑，
-    # 这样不会影响其它任务环境。
     snapshot_enabled = env_id in SNAPSHOT_ENVS
+    capture_phase = _capture_phase_for_env(env_id)
+    collision_enabled = env_id in FIXED_STEP_SNAPSHOT_ENVS
     state: dict = {
-        # 是否对当前 env 启用 snapshot 插桩。
         "snapshot_enabled": snapshot_enabled,
-        # 本局是否已经把 after-drop 快照落盘。
         "snapshot_written": False,
-        # 实际写出的 JSON 路径；未写盘前保持为 None。
         "snapshot_json_path": None,
-        # 目前固定只支持 after-drop 这一类抓取阶段。
-        "capture_phase": "after_drop" if snapshot_enabled else None,
-        # episode 级碰撞粘性标志，只增不减。
+        "capture_phase": capture_phase if snapshot_enabled else None,
         "collision_detected": False,
-        # 快照文件里的 `collision` 字段是否已经和内存状态同步。
         "snapshot_collision_synced": False,
-        # 计划抓图的目标 step，仅用于外层调试或日志。
+        "collision_enabled": collision_enabled,
         "expected_capture_step": (
-            SNAPSHOT_ENVS[env_id] if snapshot_enabled else None
+            FIXED_STEP_SNAPSHOT_ENVS[env_id]
+            if env_id in FIXED_STEP_SNAPSHOT_ENVS
+            else None
         ),
     }
     if not snapshot_enabled:
         return state
 
-    capture_step = SNAPSHOT_ENVS[env_id]
-    # 保留原始 step，避免在包装函数里递归调用自己。
     original_step = env.step
 
     def instrumented_step(action):
-        # 在 step 前后各采样一次，降低“只在 step 中间短暂接触而末态已分离”时
-        # 因单次末态采样导致漏检的概率。
         base_env = env.unwrapped
-        collision_just_detected = _update_collision_sticky_flag(state, base_env)
+        collision_just_detected = False
+        if state["collision_enabled"]:
+            collision_just_detected = _update_collision_sticky_flag(state, base_env)
 
-        # 再让环境正常推进，抓取/回写逻辑继续以“执行完当前动作后的场景”为准。
         step_result = original_step(action)
 
-        # 用 `unwrapped` 访问底层环境，避免被 wrapper 层屏蔽内部字段。
         base_env = env.unwrapped
-        collision_just_detected = (
-            _update_collision_sticky_flag(state, base_env) or collision_just_detected
-        )
-        # 这里使用底层环境自己的 `elapsed_steps`，而不是外层脚本手工计数，
-        # 是为了让抓图时机与环境内部状态机保持一致。
+        if state["collision_enabled"]:
+            collision_just_detected = (
+                _update_collision_sticky_flag(state, base_env) or collision_just_detected
+            )
         elapsed_steps = _to_python_int(getattr(base_env, "elapsed_steps", 0))
 
         if not state["snapshot_written"]:
-            if elapsed_steps < capture_step:
-                # 还没到抓取时机，直接返回。
+            should_capture, inspect_this_timestep, resolved_capture_phase = (
+                _resolve_snapshot_trigger(base_env, env_id)
+            )
+            state["expected_capture_step"] = inspect_this_timestep
+            if not should_capture:
                 return step_result
 
-            # 一旦达到抓取阈值，就立刻基于当前底层环境状态生成 JSON。
-            # 这里故意不等 episode 结束：
-            # after-drop 是一个时点快照，不是 episode summary。
             snapshot_payload = _collect_snapshot(
                 base_env=base_env,
                 env_id=env_id,
                 episode=episode,
                 seed=seed,
                 difficulty=difficulty,
+                inspect_this_timestep=inspect_this_timestep,
                 capture_elapsed_steps=elapsed_steps,
+                capture_phase=resolved_capture_phase,
                 collision=state["collision_detected"],
             )
             path = _snapshot_json_path(
-                output_root=output_dir, env_id=env_id, episode=episode, seed=seed
+                output_root=output_dir,
+                env_id=env_id,
+                episode=episode,
+                seed=seed,
+                capture_phase=resolved_capture_phase,
             )
             _write_snapshot_payload(path, snapshot_payload)
-            # 更新状态，供外层脚本记录或日志打印使用。
-            # 注意 `snapshot_json_path` 只有在真正写盘成功后才会填入。
             state["snapshot_written"] = True
             state["snapshot_json_path"] = path
+            state["capture_phase"] = resolved_capture_phase
             state["snapshot_collision_synced"] = bool(state["collision_detected"])
-            print(f"After-drop snapshot JSON: {path.resolve()}")
+            print(f"{resolved_capture_phase} snapshot JSON: {path.resolve()}")
             return step_result
 
         if (
-            collision_just_detected
+            state["collision_enabled"]
+            and collision_just_detected
             and not state["snapshot_collision_synced"]
             and state["snapshot_json_path"] is not None
         ):
-            # 只有在“快照已存在，但文件中的 collision 还没被同步成 True”时，
-            # 才需要回写磁盘，避免每一步都重复读写 JSON。
             updated = _rewrite_snapshot_collision(
                 state["snapshot_json_path"],
                 collision=True,
@@ -781,12 +925,10 @@ def install_snapshot_for_step(
             if updated:
                 state["snapshot_collision_synced"] = True
                 print(
-                    "After-drop snapshot JSON collision flag updated: "
+                    f"{state['capture_phase']} snapshot JSON collision flag updated: "
                     f"{state['snapshot_json_path'].resolve()}"
                 )
         return step_result
 
-    # 直接替换实例上的 step 方法，实现运行时插桩。
-    # 这里是实例级修改，不影响同类 env 的其它实例。
     env.step = instrumented_step  # type: ignore[method-assign]
     return state

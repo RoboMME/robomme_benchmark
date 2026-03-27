@@ -134,7 +134,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["VideoUnmask","ButtonUnmask","VideoUnmaskSwap","ButtonUnmaskSwap"],
+        default=["VideoPlaceButton"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help=(
@@ -146,7 +146,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=50,
+        default=200,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -156,7 +156,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--difficulty",
         type=parse_difficulty_ratio,
-        default=[2, 1, 1],
+        default=[1, 0, 0],
         help=(
             "Episode difficulty ratio in easy:medium:hard order, such as "
             "'2:1:1' or '211'. Parsed into a list like [2, 1, 1]. "
@@ -458,7 +458,7 @@ def _run_episode(
     if snapshot_state.get("snapshot_enabled") and not snapshot_state["snapshot_written"]:
         # 快照缺失本身不一定说明 episode 失败，但通常意味着流程比预期更早结束了。
         print(
-            "Warning: after-drop snapshot JSON was not captured before the episode ended."
+            "Warning: snapshot JSON was not captured before the episode ended."
         )
     return episode_successful
 

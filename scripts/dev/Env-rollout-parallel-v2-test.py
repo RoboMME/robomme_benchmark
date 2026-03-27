@@ -9,6 +9,18 @@
 整体执行链路是：
 参数解析 -> 创建环境 -> 给 `env.step` 打补丁以便抓快照 -> 创建规划器并加重试逻辑
 -> 逐任务调用 solve -> 关闭环境 -> 打印最终视频路径。
+
+seed 规则采用 legacy 布局：
+base_seed = 1_500_000 + env_code * 100000 + episode * 100
+seed = base_seed + attempt
+
+Episode 级失败时各产物（由 `RobommeRecordWrapper.close()` 与 `snapshot.install_snapshot_for_step` 决定）：
+- MP4：`save_video=True` 时失败分支仍会尽量落盘失败回放视频（wrapper 内 `success=False`）。
+- HDF5：仅在 `RobommeRecordWrapper.episode_success` 为真时写入轨迹；失败时不写 buffer，并删除本 episode
+  对应 HDF5 group；`.h5` 文件可能仍存在但通常不含有效 episode 数据。若失败原因是 bin collision，
+  同样会在 close 前被强制压成失败，从而进入 `seed+1` 重试。
+- after-drop JSON：在达到 `scripts/dev/snapshot.py` 中配置的抓取步（默认第 33 步）时即写入，与后续任务是否
+  成功无关；若在该步之前 rollout 已结束，则可能不产生 JSON（`_run_episode` 会打印相应 warning）。
 """
 
 import argparse
@@ -50,10 +62,15 @@ DEFAULT_ENVS = [
     "PatternLock",
     "RouteStick",
 ]
+ENV_ID_TO_CODE = {name: idx + 1 for idx, name in enumerate(DEFAULT_ENVS)}
+SEED_OFFSET = 1_500_000
 VALID_ENVS: Set[str] = set(DEFAULT_ENVS)
-VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
+DIFFICULTY_ORDER = ("easy", "medium", "hard")
 DATASET_SCREW_MAX_ATTEMPTS = 3
 DATASET_RRT_MAX_ATTEMPTS = 3
+MAX_SEED_ATTEMPTS = 100
+MAX_EPISODES_PER_ENV = 1000
+ENV_SEED_BLOCK_SIZE = MAX_EPISODES_PER_ENV * MAX_SEED_ATTEMPTS
 
 
 def _latest_recorded_mp4(
@@ -85,47 +102,69 @@ def _tensor_to_bool(value) -> bool:
     return bool(value)
 
 
+def _base_seed_for_episode(env_id: str, episode: int) -> int:
+    """按 legacy 规则计算某个 env/episode 的基础 seed。"""
+    if env_id not in ENV_ID_TO_CODE:
+        raise ValueError(f"Environment {env_id} missing from ENV_ID_TO_CODE mapping")
+    env_code = ENV_ID_TO_CODE[env_id]
+    return SEED_OFFSET + env_code * ENV_SEED_BLOCK_SIZE + episode * MAX_SEED_ATTEMPTS
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """定义命令行参数。"""
+    def parse_difficulty_ratio(value: str) -> list[int]:
+        compact = value.strip().replace(":", "")
+        if len(compact) != 3 or not compact.isdigit():
+            raise argparse.ArgumentTypeError(
+                "difficulty must be a 3-part ratio such as '211' or '2:1:1'."
+            )
+
+        ratios = [int(part) for part in compact]
+        if sum(ratios) <= 0:
+            raise argparse.ArgumentTypeError(
+                "difficulty ratio must contain at least one non-zero part."
+            )
+        return ratios
+
     parser = argparse.ArgumentParser(
-        description="Run one or more Robomme episodes in parallel and record video."
+        description=(
+            "Run one or more Robomme episodes in parallel and record video. "
+            "Seeds use the legacy env/episode/attempt layout."
+        )
     )
     parser.add_argument(
         "--env",
         "-e",
         nargs="+",
-        default=["ButtonUnmaskSwap","ButtonUnmask","VideoUnmaskSwap","VideoUnmask"],
+        default=["VideoPlaceButton"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help=(
-            "One or more environment IDs to run in order (default: ButtonUnmaskSwap). "
-            "Each env runs the same episode range and seeds."
+            "One or more environment IDs to run in order (default: VideoUnmaskSwap). "
+            "Each env runs the same episode range; seeds are derived from "
+            "env_id/episode/attempt."
         ),
     )
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=5,
+        default=200,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
-            "episodes 0 .. N-1 (e.g. N=5 runs episodes 0,1,2,3,4). Default: 5."
-        ),
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=0,
-        help=(
-            "Initial environment seed; episode index k uses seed S0+k (default: 0)."
+            "episodes 0 .. N-1 (e.g. N=5 runs episodes 0,1,2,3,4). "
+            "Must be < 1000. Default: 200."
         ),
     )
     parser.add_argument(
         "--difficulty",
-        type=str,
-        default="hard",
-        choices=sorted(VALID_DIFFICULTIES),
-        help="Episode difficulty (default: easy).",
+        type=parse_difficulty_ratio,
+        default=[1, 0, 0],
+        help=(
+            "Episode difficulty ratio in easy:medium:hard order, such as "
+            "'2:1:1' or '211'. Parsed into a list like [2, 1, 1]. "
+            "Default: 2:1:1."
+        ),
     )
     parser.add_argument(
         "--gpu",
@@ -143,7 +182,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=10,
+        default=25,
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
             "the same env_id. Default: auto=min(os.cpu_count(), episode count)."
@@ -344,6 +383,24 @@ def _close_env(env: Optional[gym.Env], episode: int, seed: int) -> None:
         )
 
 
+def _mark_episode_failed(env: Optional[gym.Env], reason: str) -> None:
+    """在 close 前把 wrapper 和底层 env 的状态统一压成失败。"""
+    if env is None:
+        return
+
+    if hasattr(env, "episode_success"):
+        env.episode_success = False
+
+    base_env = getattr(env, "unwrapped", None)
+    if base_env is None:
+        return
+
+    base_env.failureflag = torch.tensor([True])
+    base_env.successflag = torch.tensor([False])
+    base_env.current_task_failure = True
+    print(f"[Replay] Episode failure forced before close: {reason}")
+
+
 def _run_episode(
     env_id: str,
     episode: int,
@@ -375,6 +432,19 @@ def _run_episode(
         planner = _create_planner(env, env_id)
         _wrap_planner_with_screw_then_rrt_retry(planner)
         episode_successful = _execute_task_list(env, planner, env_id)
+        if snapshot_state.get("collision_detected"):
+            print(
+                f"[Replay] env={env_id} episode={episode} seed={seed} "
+                "forcing episode failure because bin collision was detected."
+            )
+            _mark_episode_failed(
+                env,
+                reason=(
+                    f"env={env_id} episode={episode} seed={seed} "
+                    "reason=bin_collision"
+                ),
+            )
+            episode_successful = False
     except SceneGenerationError as exc:
         print(
             f"Scene generation failed for env {env_id}, episode {episode}, seed {seed}: {exc}"
@@ -394,6 +464,57 @@ def _run_episode(
             "Warning: snapshot JSON was not captured before the episode ended."
         )
     return episode_successful
+
+
+def _run_episode_with_retry(
+    env_id: str,
+    episode: int,
+    difficulty: str,
+    output_dir: Path,
+) -> tuple[bool, int]:
+    """按 legacy seed 规则执行单个 episode，并在失败时最多换 seed 重试 100 次。"""
+    base_seed = _base_seed_for_episode(env_id, episode)
+    print(
+        f"[Retry] env={env_id} episode={episode} "
+        f"base_seed={base_seed} difficulty={difficulty} "
+        f"max_attempts={MAX_SEED_ATTEMPTS}"
+    )
+
+    last_seed = base_seed
+    for attempt in range(MAX_SEED_ATTEMPTS):
+        seed = base_seed + attempt
+        last_seed = seed
+        print(
+            f"[Retry] env={env_id} episode={episode} "
+            f"attempt={attempt + 1}/{MAX_SEED_ATTEMPTS} seed={seed}"
+        )
+        try:
+            success = _run_episode(
+                env_id=env_id,
+                episode=episode,
+                seed=seed,
+                difficulty=difficulty,
+                output_dir=output_dir,
+            )
+        except Exception as exc:
+            print(
+                f"[Retry] env={env_id} episode={episode} seed={seed} "
+                f"raised {type(exc).__name__}: {exc}"
+            )
+            success = False
+
+        if success:
+            print(
+                f"[Retry] env={env_id} episode={episode} "
+                f"succeeded with seed={seed} on attempt {attempt + 1}/{MAX_SEED_ATTEMPTS}"
+            )
+            return True, seed
+
+    print(
+        f"[Retry] env={env_id} episode={episode} exhausted "
+        f"{MAX_SEED_ATTEMPTS} attempts; last_seed={last_seed}"
+    )
+    return False, last_seed
 
 
 def _resolve_max_workers(requested: Optional[int], n_episodes: int) -> int:
@@ -426,9 +547,7 @@ def _print_episode_artifacts(
 
 def _run_env_episodes(
     env_id: str,
-    episode_numbers: list[int],
-    initial_seed: int,
-    difficulty: str,
+    episode_specs: list[tuple[int, str]],
     output_dir: Path,
     max_workers: int,
 ) -> list[bool]:
@@ -436,47 +555,44 @@ def _run_env_episodes(
     env_successes: list[tuple[int, bool]] = []
 
     if max_workers == 1:
-        for ep in episode_numbers:
-            run_seed = initial_seed + ep
-            success = _run_episode(
+        for ep, difficulty in episode_specs:
+            success, used_seed = _run_episode_with_retry(
                 env_id=env_id,
                 episode=ep,
-                seed=run_seed,
                 difficulty=difficulty,
                 output_dir=output_dir,
             )
             env_successes.append((ep, success))
-            _print_episode_artifacts(output_dir, env_id, ep, run_seed)
+            _print_episode_artifacts(output_dir, env_id, ep, used_seed)
         return [success for _, success in sorted(env_successes)]
 
     ctx = mp.get_context("spawn")
     with ProcessPoolExecutor(max_workers=max_workers, mp_context=ctx) as executor:
         futures = {
             executor.submit(
-                _run_episode,
+                _run_episode_with_retry,
                 env_id,
                 ep,
-                initial_seed + ep,
                 difficulty,
                 output_dir,
-            ): (ep, initial_seed + ep)
-            for ep in episode_numbers
+            ): ep
+            for ep, difficulty in episode_specs
         }
 
         for future in as_completed(futures):
-            ep, run_seed = futures[future]
+            ep = futures[future]
             try:
-                success = future.result()
+                success, used_seed = future.result()
             except Exception as exc:
                 raise RuntimeError(
-                    f"Worker crashed for env={env_id} episode={ep} seed={run_seed}"
+                    f"Worker crashed for env={env_id} episode={ep}"
                 ) from exc
             env_successes.append((ep, success))
             print(
-                f"[Parent] Completed env={env_id} episode={ep} seed={run_seed} "
+                f"[Parent] Completed env={env_id} episode={ep} seed={used_seed} "
                 f"success={success}"
             )
-            _print_episode_artifacts(output_dir, env_id, ep, run_seed)
+            _print_episode_artifacts(output_dir, env_id, ep, used_seed)
 
     return [success for _, success in sorted(env_successes)]
 
@@ -492,21 +608,39 @@ def main() -> None:
     n_episodes = args.episode_number
     if n_episodes < 1:
         raise SystemExit("--episode-number must be at least 1 (run episodes 0..N-1).")
+    if n_episodes >= MAX_EPISODES_PER_ENV:
+        raise SystemExit(
+            f"--episode-number must be less than {MAX_EPISODES_PER_ENV}; "
+            "the legacy seed layout reserves 1000 episode slots per environment."
+        )
     episode_numbers = list(range(0, n_episodes))
     print(f"Environments (in order): {args.env}")
     print(
         f"Episode number N={n_episodes} → running episode indices {episode_numbers} "
         f"(0 .. {n_episodes - 1})"
     )
-    print(f"Initial seed S0={args.seed} (episode k uses seed {args.seed}+k)")
-    print(f"Difficulty: {args.difficulty}")
+    print(
+        "Seed policy: "
+        "base_seed = 1500000 + env_code * 100000 + episode * 100; "
+        f"each episode retries up to {MAX_SEED_ATTEMPTS} seeds."
+    )
+    difficulty_cycle = [
+        difficulty
+        for difficulty, count in zip(DIFFICULTY_ORDER, args.difficulty)
+        for _ in range(count)
+    ]
+    difficulty_preview = [
+        difficulty_cycle[ep % len(difficulty_cycle)] for ep in episode_numbers
+    ]
+    episode_specs = list(zip(episode_numbers, difficulty_preview))
+    print(f"Difficulty ratio [easy, medium, hard]: {args.difficulty}")
+    print(f"Difficulty per episode: {difficulty_preview}")
     print(f"GPU: {args.gpu}")
     worker_count = _resolve_max_workers(args.max_workers, len(episode_numbers))
     print(f"Max workers per env: {worker_count}")
     print(f"Video output root: {output_dir}")
 
     successes: list[bool] = []
-    initial_seed = args.seed
     for env_id in args.env:
         print(f"\n========== env={env_id} ==========")
         print(
@@ -516,9 +650,7 @@ def main() -> None:
         successes.extend(
             _run_env_episodes(
                 env_id=env_id,
-                episode_numbers=episode_numbers,
-                initial_seed=initial_seed,
-                difficulty=args.difficulty,
+                episode_specs=episode_specs,
                 output_dir=output_dir,
                 max_workers=worker_count,
             )
