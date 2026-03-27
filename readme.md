@@ -8,13 +8,13 @@
 ## 📢 Announcements
 
 [03/2026] 🚀 RoboMME Challenge is live at CVPR 2026! 🤖 Check our [website](https://robomme.github.io/challenge.html) and the [`challenge_interface`](challenge_interface) directory for all the details. Let’s build stronger memory-augmented robotic generalists together! 💪  
-[03/2026] We add docker support for installation.  
-[03/2026] We release [wechat](doc/Wechat.jpg) and [discord](https://discord.gg/xbmSqMd4) channel for people to discuss and study.   
+[03/2026] We added Docker support for installation.  
+[03/2026] We launched [Wechat](doc/Wechat.jpg) and [Discord](https://discord.gg/xbmSqMd4) channels for discussion and collaboration.   
 [03/2026] 🎉 We are thrilled to release RoboMME, the first large-scale robotic benchmark dedicated to memory-augmented manipulation! Spanning 4 cognitively motivated task suites with 16 carefully designed tasks, RoboMME pushes robots to remember 🧠, reason 💭, and act ⚡.
 
 ## 📦 Installation
 
-(1) Using UV  
+(1) Using `uv`  
 After cloning the repo, install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
 ```bash
@@ -22,14 +22,14 @@ uv sync
 uv pip install -e .
 ```
 
-(2) Using docker  
+(2) Using Docker  
 Build the image:
 
 ```bash
 docker build -t robomme:cuda12.8 .
 ```
 
-Run an interactive shell (videos/logs will be written to host `./runs`):
+Run an interactive shell (videos/logs will be written to the host path `./runs`):
 
 ```bash
 docker run --rm -it --gpus all \
@@ -50,7 +50,7 @@ uv run scripts/run_example.py
 
 This generates a rollout video in the `sample_run_videos` directory.
 
-We provide four action types: `joint_angle`, `ee_pose`, `waypoint`, and `multi_choice`, e.g., predict continuous absolute actions with `joint_angle` or `ee_pose`, discrete waypoint actions with `waypoint`, or use `multi_choice` for VideoQA-style problems.
+We provide four action types: `joint_angle`, `ee_pose`, `waypoint`, and `multi_choice`. For example, you can predict continuous absolute actions with `joint_angle` or `ee_pose`, discrete waypoint actions with `waypoint`, or use `multi_choice` for VideoQA-style problems.
 
 ## 📁 Benchmark
 
@@ -65,7 +65,7 @@ We have four task suites, each with 4 tasks:
 | Reference  | Object memory     | PickHighlight, VideoRepick, VideoPlaceButton, VideoPlaceOrder         |
 | Imitation  | Procedural memory | MoveCube, InsertPeg, PatternLock, RouteStick                          |
 
-All tasks are defined in `src/robomme/robomme_env`. A detailed description can be found in our paper appendix.
+All tasks are defined in `src/robomme/robomme_env`. A detailed description can be found in our paper's appendix.
 
 ### 📥 Training Data
 
@@ -115,7 +115,7 @@ uv run scripts/dev/xxxx
 
 ### 🌟 MME-VLA-Suite
 
-The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo provides MME-VLA model training and evaluation used in our paper. It contains a family of 14 memory-augmented VLA models built on [pi05](https://github.com/Physical-Intelligence/openpi) backbone.
+The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) repo provides the MME-VLA training and evaluation code used in our paper. It contains a family of 14 memory-augmented VLA models built on the [pi05](https://github.com/Physical-Intelligence/openpi) backbone.
 
 ### 📚 Prior Methods
 
@@ -146,9 +146,9 @@ A2: Please refer to the ManiSkill [solution](https://maniskill.readthedocs.io/en
 os.environ['SAPIEN_RENDER_DEVICE'] = 'cpu'
 os.environ['MUJOCO_GL'] = 'osmesa'
 ```
-Alternatively, you can also try to install RoboMME via Docker following the [instruction](doc/docker_installation.md).
+Alternatively, you can install RoboMME via Docker by following the [instructions](doc/docker_installation.md).
 
-**Q3: I want to participant RoboMME Challenge, how should I start?** 
+**Q3: I want to participate in the RoboMME Challenge. How should I get started?** 
 
 A3: We are finalizing the submission instructions and will announce details by the end of March. In the meantime, you can get started by exploring the benchmark repository and the [MME-VLA policy learning repo](https://github.com/RoboMME/robomme_policy_learning/tree/main); the challenge will use held-out test episodes similar to the standard [test episodes](https://github.com/RoboMME/robomme_benchmark/tree/main/src/robomme/env_metadata/test), but not publicly accessible during the competition.
 

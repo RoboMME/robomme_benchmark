@@ -3,14 +3,14 @@
 ### [Website]() | [Paper]() | [Code]()
 
 ## Introduction
-My cool model leverages a novel representation for history keyframes and maintains a memory cache to integrate with diffusion policy.
+My cool model leverages a novel representation of historical keyframes and maintains a memory cache integrated with a diffusion policy.
 
 ## Results 
 
 > We evaluate in a multi-task setting, using a single model checkpoint for all tasks, and require at least three runs with different random seeds to reduce performance variance. 
 > The benchmark seed is fixed internally.
 
-> For the action space, only `joint_angle`, `ee_pose` and `waypoint` are allowed. `multi_choice` is disallowed since it leverages ground-truth information and is mainly designed for Video-QA.
+> For the action space, only `joint_angle`, `ee_pose`, and `waypoint` are allowed. `multi_choice` is disallowed because it leverages ground-truth information and is mainly designed for Video-QA.
 
 ### Table
 
@@ -58,11 +58,11 @@ My cool model leverages a novel representation for history keyframes and maintai
 
 ### Training Details
 
-Any hyperparameters you would like to share
+Share any hyperparameters you would like to include.
 
 ### Released Checkpoints
 
-Any fine-tuned checkpoints you would like to release
+List any fine-tuned checkpoints you would like to release.
 
 > We highly encourage authors to fully release their training/eval code and checkpoints to help the community accelerate memory-augmented manipulation.
 

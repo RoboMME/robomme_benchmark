@@ -2,8 +2,8 @@
 
 This guide sets up Docker and NVIDIA GPU support so you can build and run the RoboMME image.
 
-## 1) Install Docker Engine 
-> Skip this if you already installed docker.
+## 1) Install Docker Engine
+> Skip this if you already installed Docker.
 
 Follow Docker’s official instructions for Ubuntu:
 - Docker Engine install guide: `https://docs.docker.com/engine/install/ubuntu/`
@@ -53,9 +53,9 @@ From the repository root:
 docker build -t <image_name>:<tag> .
 # e.g., run `docker build -t robomme:cuda12.8 .`
 ```
-Enter the docker 
+Run the container:
 ```bash
-# download the robomme_data_h5 from https://huggingface.co/datasets/Yinpei/robomme_data_h5
+# Download `robomme_data_h5` from https://huggingface.co/datasets/Yinpei/robomme_data_h5
 export robomme_data_path=<robomme_data_h5_path>
 
 docker run --rm -it --gpus all \
@@ -68,21 +68,21 @@ docker run --rm -it --gpus all \
 `-v` mounts a host path into the container (a volume mount). Here we mount the host directories `./runs` and `$robomme_data_path` to the container paths `/app/runs` and `/app/data/robomme_data_h5` (read-only via `:ro` when specified).  
 You can adapt these parameters to your needs. Inside the container, `/app` is the main directory of the repo.  
 
-Run sample scripts to check
-```
+Run a sample script to verify the setup:
+```bash
 uv run ./scripts/run_example.py
 ```
 
 ## 4) Other Hints
 
-To stop the docker
+To stop Docker:
 ```bash
 docker ps
 docker stop <container_id_or_name>
 ```
 Alternatively, inside the container shell you can stop the session with `exit` (or `Ctrl-D`).
 
-To rebuild the docker image
+To rebuild the Docker image:
 ```bash
 docker build --no-cache -t <image_name>:<tag> .
 ```

@@ -8,11 +8,11 @@ On RoboMME, a key difference from traditional Gym-like envs is that every observ
 We support four `ACTION_SPACE` types:
 
 - `joint_angle`: 7 joint angles + gripper open/close
-- `ee_pose`: 3 position (xyz) + 3 rotation (rpy) + gripper open/close
-- `waypoint`: Same format as ee_pose, but executed in discrete keyframe steps
-- `multi_choice`: Command dict, e.g. `{"choice": "A", "point": [y, x]}`; the total choices can be found in `info["available_multi_choices"]`, where the `point` is the pixel location on the front image. this action is designed for Video-QA research.
+- `ee_pose`: 3D position (xyz) + 3D rotation (rpy) + gripper open/close
+- `waypoint`: Same format as `ee_pose`, but executed in discrete keyframe steps
+- `multi_choice`: Command dict, e.g. `{"choice": "A", "point": [y, x]}`. The available choices can be found in `info["available_multi_choices"]`, where `point` is the pixel location on the front image. This action is designed for Video-QA research.
 
-Note: Gripper closed is -1, gripper open is 1. We use absoluate actions in our simulator.
+Note: A closed gripper is `-1`, and an open gripper is `1`. We use absolute actions in our simulator.
 
 
 ## Env Output Format
@@ -55,7 +55,7 @@ To use only the current (latest) observation, use `obs[key][-1]`.
 
 Default behavior:
 - All `include_*` flags default to `False`.
-- Without extra flags, env returns RGB + state related fields only.
+- Without extra flags, the env returns only RGB and state-related fields.
 
 Mapping:
 
@@ -111,7 +111,7 @@ obs, info = env.reset()
 | `task_goal` | Task goal list | `list[str]` |
 | `simple_subgoal_online` | Oracle online simple subgoal | Description of the current simple subgoal |
 | `grounded_subgoal_online` | Oracle online grounded subgoal | Description of the current grounded subgoal |
-| `available_multi_choices` | Current available options for multi-choice action | List of e.g. `{"label: "a/b/...", "action": str, "need_parameter": bool}`, need_parameter means this action needs grounding info like `[y, x]` |
+| `available_multi_choices` | Current available options for multi-choice actions | A list such as `{"label": "a/b/...", "action": str, "need_parameter": bool}`, where `need_parameter` means the action requires grounding info such as `[y, x]` |
 | `front_camera_intrinsic` | Front camera intrinsic | Camera intrinsic matrix |
 | `wrist_camera_intrinsic` | Wrist camera intrinsic | Camera intrinsic matrix |
 | `status` | Status flag | One of `success`, `fail`, `timeout`, `ongoing`, `error` |

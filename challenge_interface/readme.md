@@ -3,7 +3,7 @@
 ### [FMEA Workshop](https://foundation-models-meet-embodied-agents.github.io/cvpr2026/) | [Submission Example](https://github.com/RoboMME/robomme_policy_learning?tab=readme-ov-file#-robomme-challenge-example) | [Evaluate Your Policy](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor) 
 
 
-The RoboMME challenge is part of the **Foundation Models Meet Embodied Agents** workshop at CVPR 2026.   
+The RoboMME challenge is part of the **Foundation Models Meet Embodied Agents** workshop at CVPR 2026.
 Evaluate your policy by filling this [Google Form](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor).
 
 All challenge-related files are stored in the current directory.
@@ -22,7 +22,7 @@ challenge_interface/
 
 ## What participants will do
 1. Copy the `challenge_interface/` directory into your policy repository.
-2. Implement the `Policy` [class](https://github.com/RoboMME/robomme_benchmark/blob/edc8e8008718d9bf545cfcc2dd3dc2264c903239/src/remote_evaluation/policy.py#L23) by overriding **`infer`** and **`reset`**, and adapt `challenge_interface/scripts/deploy.py` to your needs.
+2. Implement the `Policy` [class](https://github.com/RoboMME/robomme_benchmark/blob/edc8e8008718d9bf545cfcc2dd3dc2264c903239/src/remote_evaluation/policy.py#L23) by overriding **`infer`** and **`reset`**, then adapt `challenge_interface/scripts/deploy.py` to your needs.
 3. Verify your policy locally:
 ```
 uv sync --group server
@@ -46,14 +46,14 @@ Submit the required information via this [link](https://docs.google.com/forms/d/
 > In this option, we run your model on our servers. We can provide at most 80 GB of GPU memory; if your total system requires more, please choose Option 2.
 
 **Option 2: via remote API**
-- Participants deploy their policy on their own machine as a server with a public IP.
+- Participants deploy their policy on their own machine as a server with a public IP address.
 - Organizers query the host machine and run evaluation remotely.
 - Submission example: [here](https://github.com/RoboMME/robomme_policy_learning/blob/main/challenge_interface/docs/submission_guidance_remote.md) (MME-VLA model).
 
 > This option may have unstable connections; we route to the closest node (US, mainland China, or Singapore) to reduce latency. Choose the `transport` type based on your setup; WebSocket with direct numeric IP access is highly recommended.
 
 **Option 3: via GitHub Repo**
-- Participants provide a link to their code repo.
+- Participants provide a link to their code repository.
 - Organizers `git clone` the repo and follow the instructions to launch your policy server locally.
 - Your server must follow the challenge interface (implement `Policy` with `infer()` and `reset()`).
 
@@ -78,11 +78,11 @@ Submit the required information via this [link](https://docs.google.com/forms/d/
 4. [Submit your policy](https://docs.google.com/forms/d/e/1FAIpQLSdMg_oEDU4kNsPM_dkuSsY6M7lTmtXQSyGzFO0MqwNmvvPGng/viewform?usp=publish-editor).
 
 
-## Acknowledgement
+## Acknowledgements
 
-We greatly appreciate the Foundation Models Meet Embodied Agents workshop at CVPR 2026 for hosting our challenge and Figure AI for sponsorship!
+We greatly appreciate the Foundation Models Meet Embodied Agents workshop at CVPR 2026 for hosting our challenge, and Figure AI for its sponsorship.
 
 
 ## Contact
 
-If you have anything to ask, please email robomme2026@gmail.com. We also provide wechat, discord channel, and google group link on our [website](https://robomme.github.io/challenge.html), you can join for latest news and discussion.
+If you have any questions, please email robomme2026@gmail.com. We also provide a Wechat group, a Discord channel, and a Google Group link on our [website](https://robomme.github.io/challenge.html), which you can join for the latest news and discussion.

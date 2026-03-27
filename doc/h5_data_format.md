@@ -40,8 +40,8 @@ Each episode contains:
 | `wrist_rgb` | `uint8 (256, 256, 3)` | Wrist camera RGB |
 | `front_depth` | `int16 (256, 256, 1)` | Front camera depth (mm) |
 | `wrist_depth` | `int16 (256, 256, 1)` | Wrist camera depth (mm) |
-| `joint_state` | `float32 (7,)` | Absoluate joint positions (7 joints) |
-| `eef_state` | `float32 (6,)` | Absoluate end-effector pose `[x, y, z, roll, pitch, yaw]` |
+| `joint_state` | `float32 (7,)` | Absolute joint positions (7 joints) |
+| `eef_state` | `float32 (6,)` | Absolute end-effector pose `[x, y, z, roll, pitch, yaw]` |
 | `gripper_state` | `float32 (2,)` | Gripper opening width in [0, 0.04] |
 | `is_gripper_close` | `bool` | Whether gripper is closed |
 | `front_camera_extrinsic` | `float32 (3, 4)` | Front camera extrinsic matrix |
