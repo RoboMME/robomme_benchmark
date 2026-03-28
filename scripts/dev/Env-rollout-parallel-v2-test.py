@@ -166,19 +166,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["VideoPlaceButton"],
+        default=["VideoPlaceButton","VideoPlaceOrder"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
-        help=(
-            "One or more environment IDs to run in order "
-            "(default: VideoPlaceButton). Each env runs the same episode range; "
-            "seeds are derived from env_id/episode/attempt."
-        ),
+        help="One or more environment IDs to run in order (default: VideoPlaceButton, VideoPlaceOrder). Each env runs the same episode range; seeds are derived from env_id/episode/attempt.",
     )
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=600,
+        default=300,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "

@@ -95,6 +95,10 @@ class VideoPlaceOrder(BaseEnv):
         'medium': config_medium
     }
 
+    _TARGET_COLOR_SEED_OFFSET = 100_003
+    _ORDER_SELECTION_SEED_OFFSET = 200_003
+    _FAIL_RECOVERY_SEED_OFFSET = 300_003
+
 
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
@@ -116,8 +120,9 @@ class VideoPlaceOrder(BaseEnv):
         self.human_cam_target_pos = cfg["human_cam_target_pos"]
 
         self.seed = seed
-        self.generator = torch.Generator()
-        self.generator.manual_seed(seed)
+        # Keep a default generator for compatibility, but use dedicated RNG
+        # streams for scene layout and discrete task selection.
+        self.generator = self._make_generator()
 
         self.robomme_failure_recovery = bool(
             kwargs.pop("robomme_failure_recovery", False)
@@ -150,6 +155,11 @@ class VideoPlaceOrder(BaseEnv):
         self.end_step=99999
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
+    def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
+        generator = torch.Generator()
+        generator.manual_seed(self.seed + seed_offset)
+        return generator
+
     @property
     def _default_sensor_configs(self):
         pose = sapien_utils.look_at(
@@ -174,6 +184,13 @@ class VideoPlaceOrder(BaseEnv):
 
 
     def _load_scene(self, options: dict):
+        scene_generator = self._make_generator()
+        target_color_generator = self._make_generator(
+            self._TARGET_COLOR_SEED_OFFSET
+        )
+        order_generator = self._make_generator(
+            self._ORDER_SELECTION_SEED_OFFSET
+        )
 
         try:
             self.table_scene = TableSceneBuilder(
@@ -199,7 +216,7 @@ class VideoPlaceOrder(BaseEnv):
                     thickness=0.005,  # target thickness
                     min_gap=self.cube_half_size * 1,  # Gap requirement same as cube
                     name_prefix=f"goal_site",
-                    generator=self.generator,
+                    generator=scene_generator,
                 )
             except RuntimeError as exc:
                 raise SceneGenerationError("goal_site sampling failed") from exc
@@ -209,7 +226,7 @@ class VideoPlaceOrder(BaseEnv):
                 self,
                 center_xy=(0.1, 0),
                 scale=1.5,
-                generator=self.generator,
+                generator=scene_generator,
                 randomize_range=(0.05, 0.3)
             )
             avoid.append(button_obb)
@@ -229,11 +246,10 @@ class VideoPlaceOrder(BaseEnv):
                 {"color": (0, 0, 1, 1), "name": "blue", "list": self.blue_cubes, "name_list": self.blue_cube_names},
                 {"color": (0, 1, 0, 1), "name": "green", "list": self.green_cubes, "name_list": self.green_cube_names},
             ]
-            shuffle_indices = torch.randperm(len(color_groups), generator=self.generator).tolist()
+            shuffle_indices = torch.randperm(
+                len(color_groups), generator=target_color_generator
+            ).tolist()
             color_groups = [color_groups[i] for i in shuffle_indices]
-
-            self.target_color_name = color_groups[0]["name"]
-            logger.debug(f"Target color selected: {self.target_color_name}")
 
             for idx, group in enumerate(color_groups):
                 if idx < self.configs[self.difficulty]['color']:
@@ -251,7 +267,7 @@ class VideoPlaceOrder(BaseEnv):
                                 min_gap=self.cube_half_size,
                                 random_yaw=True,
                                 name_prefix=f"cube_{group['name']}_{cube_idx}",
-                                generator=self.generator,
+                                generator=scene_generator,
                             )
                         except RuntimeError as exc:
                             raise SceneGenerationError(
@@ -284,7 +300,7 @@ class VideoPlaceOrder(BaseEnv):
                             thickness=0.005,  # target thickness
                             min_gap=self.cube_half_size*1,  # Gap requirement same as cube
                             name_prefix=f"target_{i}",
-                            generator=self.generator
+                            generator=scene_generator
                         )
                     except RuntimeError as exc:
                         raise SceneGenerationError(f"Target {i + 1} sampling failed: {exc}") from exc
@@ -293,18 +309,40 @@ class VideoPlaceOrder(BaseEnv):
                     setattr(self, f"target_{i}", target)
                     avoid.append(target)
 
-            if len(self.all_cubes) > 0:
-                target_cube_idx = torch.randint(0, len(self.all_cubes), (1,), generator=self.generator).item()
-                self.target_cube = self.all_cubes[target_cube_idx]
+            selectable_color_groups = [
+                ("red", self.red_cubes),
+                ("blue", self.blue_cubes),
+                ("green", self.green_cubes),
+            ]
+            selectable_color_groups = [
+                (color_name, cubes)
+                for color_name, cubes in selectable_color_groups
+                if cubes
+            ]
 
-                if self.target_cube in self.red_cubes:
-                    self.target_color_name = "red"
-                elif self.target_cube in self.blue_cubes:
-                    self.target_color_name = "blue"
-                elif self.target_cube in self.green_cubes:
-                    self.target_color_name = "green"
+            if selectable_color_groups:
+                target_color_idx = torch.randint(
+                    0,
+                    len(selectable_color_groups),
+                    (1,),
+                    generator=target_color_generator,
+                ).item()
+                self.target_color_name, target_color_cubes = selectable_color_groups[
+                    target_color_idx
+                ]
+                target_cube_idx = torch.randint(
+                    0,
+                    len(target_color_cubes),
+                    (1,),
+                    generator=target_color_generator,
+                ).item()
+                self.target_cube = target_color_cubes[target_cube_idx]
 
-                logger.debug(f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)")
+                logger.debug(
+                    "Target color selected: %s (cube index %s within that color group)",
+                    self.target_color_name,
+                    target_cube_idx,
+                )
             else:
                 self.target_cube = None
                 self.target_color_name = None
@@ -319,7 +357,7 @@ class VideoPlaceOrder(BaseEnv):
 
             if self.configs[self.difficulty]['swap']==True:
                 if len(self.targets) >= 2:
-                    perm = torch.randperm(len(self.targets), generator=self.generator)
+                    perm = torch.randperm(len(self.targets), generator=scene_generator)
                     swap_idx_a = perm[0].item()
                     swap_idx_b = perm[1].item()
                     self.swap_target_a = self.targets[swap_idx_a]
@@ -332,24 +370,35 @@ class VideoPlaceOrder(BaseEnv):
                     logger.debug(
                         f"Swap targets selected: target_{swap_idx_a} <-> target_{swap_idx_b}"
                     )
-            num_targets_to_pick = torch.randint(2, len(self.targets) + 1, (1,), generator=self.generator).item()
+            num_targets_to_pick = torch.randint(
+                2, len(self.targets) + 1, (1,), generator=order_generator
+            ).item()
 
-            indices = torch.randperm(len(self.targets), generator=self.generator)[:num_targets_to_pick]
+            indices = torch.randperm(
+                len(self.targets), generator=scene_generator
+            )[:num_targets_to_pick]
 
             self.which_targets_to_pick = [self.targets[i] for i in indices]
 
-            self.which_in_subset=torch.randint(1,len(self.which_targets_to_pick)+1,(1,),generator=self.generator).item()
+            if len(self.which_targets_to_pick) > 0:
+                k = torch.randint(
+                    0, len(self.which_targets_to_pick), (1,), generator=scene_generator
+                ).item()
+                self.button_task_index = k * 2 + 2  # each pair contributes pickup + drop
+            else:
+                self.button_task_index = 0
+
+            self.which_in_subset = torch.randint(
+                1,
+                len(self.which_targets_to_pick) + 1,
+                (1,),
+                generator=order_generator,
+            ).item()
 
             logger.debug("self.which_in_subset: %s", self.which_in_subset)
             self.target_target=self.which_targets_to_pick[self.which_in_subset-1]
 
             self.targets_not_true = [t for i, t in enumerate(self.targets) if self.targets[i]!=self.target_target]
-
-            if len(self.which_targets_to_pick) > 0:
-                k = torch.randint(0, len(self.which_targets_to_pick), (1,), generator=self.generator).item()
-                self.button_task_index = k * 2 + 2  # each pair contributes pickup + drop
-            else:
-                self.button_task_index = 0
 
         except SceneGenerationError:
             raise
@@ -500,9 +549,12 @@ class VideoPlaceOrder(BaseEnv):
             self.recovery_pickup_indices, self.recovery_pickup_tasks = task4recovery(self.task_list)
             if self.robomme_failure_recovery:
                 # Only inject an intentional failed grasp when recovery mode is enabled
+                fail_recovery_generator = self._make_generator(
+                    self._FAIL_RECOVERY_SEED_OFFSET
+                )
                 self.fail_grasp_task_index = inject_fail_grasp(
                     self.task_list,
-                    generator=self.generator,
+                    generator=fail_recovery_generator,
                     mode=self.robomme_failure_recovery_mode,
                 )
             else:
@@ -599,4 +651,3 @@ class VideoPlaceOrder(BaseEnv):
             )
         obs, reward, terminated, truncated, info = super().step(action)
         return obs, reward, terminated, truncated, info
-
