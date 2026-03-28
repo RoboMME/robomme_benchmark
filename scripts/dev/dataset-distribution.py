@@ -65,6 +65,8 @@ CSV_FIELDS = [
     "difficulty",
     "canonical_goal",
     "color_signature",
+    "put_in_color",
+    "put_in_numbers",
     "target_color",
     "first_target_color",
     "second_target_color",
@@ -239,6 +241,8 @@ def _parse_binfill_fields(goal: str) -> tuple[dict[str, int | str], str | None]:
         counts[f"{color}_count"] = count_value
 
     present_colors = [color for color in COLOR_ORDER if counts[f"{color}_count"] > 0]
+    put_in_color = len(present_colors)
+    put_in_numbers = sum(counts.values())
     if "put the cubes into the bin" in goal and not present_colors:
         color_signature = "none"
     elif present_colors:
@@ -246,7 +250,11 @@ def _parse_binfill_fields(goal: str) -> tuple[dict[str, int | str], str | None]:
     else:
         color_signature = "unknown"
 
-    parsed_fields: dict[str, int | str] = {"color_signature": color_signature}
+    parsed_fields: dict[str, int | str] = {
+        "color_signature": color_signature,
+        "put_in_color": put_in_color,
+        "put_in_numbers": put_in_numbers,
+    }
     parsed_fields.update(counts)
     if color_signature == "unknown":
         return (parsed_fields, "failed to parse BinFill color counts")
@@ -261,6 +269,8 @@ def _default_row(env_id: str, episode_name: str) -> dict[str, object]:
         "difficulty": "",
         "canonical_goal": "",
         "color_signature": "",
+        "put_in_color": "",
+        "put_in_numbers": "",
         "target_color": "",
         "first_target_color": "",
         "second_target_color": "",
@@ -657,28 +667,16 @@ def _figure_specs_for_env(env_id: str) -> list[dict[str, object]]:
     if env_id == "BinFill":
         return [
             {
-                "field": "color_signature",
-                "title": "Color Signature",
+                "field": "put_in_color",
+                "title": "Put-In Color Count",
                 "color": "#4C78A8",
-                "preferred_order": COLOR_SIGNATURE_ORDER,
+                "preferred_order": [str(value) for value in range(1, 4)] + ["unknown"],
             },
             {
-                "field": "red_count",
-                "title": "Red Cube Count",
-                "color": "#E45756",
-                "preferred_order": [str(value) for value in range(0, 7)],
-            },
-            {
-                "field": "blue_count",
-                "title": "Blue Cube Count",
-                "color": "#4C78A8",
-                "preferred_order": [str(value) for value in range(0, 7)],
-            },
-            {
-                "field": "green_count",
-                "title": "Green Cube Count",
+                "field": "put_in_numbers",
+                "title": "Put-In Cube Count",
                 "color": "#54A24B",
-                "preferred_order": [str(value) for value in range(0, 7)],
+                "preferred_order": [str(value) for value in range(1, 7)] + ["unknown"],
             },
         ]
     if env_id in {"PickXtimes", "SwingXtimes"}:
@@ -783,7 +781,7 @@ def _figure_specs_for_env(env_id: str) -> list[dict[str, object]]:
 
 def _render_env_figure(env_id: str, rows: list[dict[str, object]], output_path: Path, plt) -> None:
     plot_specs = _figure_specs_for_env(env_id)
-    if env_id in {"VideoPlaceButton", "VideoPlaceOrder"}:
+    if env_id in {"BinFill", "VideoPlaceButton", "VideoPlaceOrder"}:
         rows_by_difficulty = {
             difficulty: [
                 row
@@ -898,8 +896,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dataset-root",
         type=Path,
-        default=DEFAULT_DATASET_ROOT,
-        #default=Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos/hdf5_files"),
+        #default=DEFAULT_DATASET_ROOT,
+        default=Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos/hdf5_files"),
         help=(
             "Directory or HDF5 file containing either record_dataset_*.h5 "
             "files or per-episode *_ep*_seed*.h5 files."
