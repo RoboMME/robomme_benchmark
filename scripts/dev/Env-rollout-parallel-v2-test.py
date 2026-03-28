@@ -166,7 +166,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["BinFill"],
+        default=["PickXtimes"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help="One or more environment IDs to run in order (default: VideoPlaceButton, VideoPlaceOrder). Each env runs the same episode range; seeds are derived from env_id/episode/attempt.",
@@ -185,7 +185,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--difficulty",
         type=parse_difficulty_ratio,
-        default=[1, 1, 1],
+        default=[0, 1, 0],
         help=(
             "Episode difficulty ratio in easy:medium:hard order, such as "
             "'2:1:1' or '211'. Parsed into a list like [2, 1, 1]. "
@@ -195,7 +195,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--gpu",
         type=int,
-        default=0,
+        default=1,
         choices=[0, 1],
         help="GPU id to expose via CUDA_VISIBLE_DEVICES.",
     )

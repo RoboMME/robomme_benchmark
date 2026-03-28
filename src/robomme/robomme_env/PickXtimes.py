@@ -63,6 +63,9 @@ class PickXtimes(BaseEnv):
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
+    _COLOR_ORDER_SEED_OFFSET = 100_003
+    _TARGET_SELECTION_SEED_OFFSET = 200_003
+    _REPEAT_COUNT_SEED_OFFSET = 300_003
     
     config_hard = {
     'color': 3, 
@@ -88,6 +91,20 @@ class PickXtimes(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
+
+    def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
+        generator = torch.Generator()
+        generator.manual_seed(self.seed + seed_offset)
+        return generator
+
+    def _sample_num_repeats(self) -> int:
+        repeat_generator = self._make_generator(self._REPEAT_COUNT_SEED_OFFSET)
+        return torch.randint(
+            self.configs[self.difficulty]['number_min'],
+            self.configs[self.difficulty]['number_max'] + 1,
+            (1,),
+            generator=repeat_generator,
+        ).item()
 
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
@@ -134,10 +151,8 @@ class PickXtimes(BaseEnv):
             else:  # seed_mod == 2
                 self.difficulty = "hard"
 
-        # Use seed to randomly determine number of repetitions (1-5)
-        generator = torch.Generator()
-        generator.manual_seed(seed)
-        self.num_repeats = torch.randint(self.configs[self.difficulty]['number_min'], self.configs[self.difficulty]['number_max']+1, (1,), generator=generator).item()
+        # 重复次数单独走任务语义随机源，不受后续场景采样影响。
+        self.num_repeats = self._sample_num_repeats()
         logger.debug(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
 
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -169,7 +184,7 @@ class PickXtimes(BaseEnv):
         构建 PickXtimes 任务场景。
 
         这个函数主要完成以下几件事：
-        1. 根据固定 seed 创建随机数生成器，保证同一个 seed 下场景可复现。
+        1. 将“场景几何随机”和“任务语义随机”拆成独立 generator。
         2. 搭建桌面和按钮等基础场景物体。
         3. 按难度生成若干颜色的方块，并记录每种颜色对应的对象列表。
         4. 在不与现有物体重叠的前提下采样目标放置区域。
@@ -177,10 +192,13 @@ class PickXtimes(BaseEnv):
         6. 基于目标方块和重复次数，动态生成“抓取-放置-结束”任务序列。
         """
 
-        # 场景中的所有随机采样统一使用同一个生成器，
-        # 这样在 seed 相同的情况下，物体布局、颜色顺序和目标选择都可复现。
-        generator = torch.Generator()
-        generator.manual_seed(self.seed)
+        # scene_generator 只负责几何与位置相关的随机采样；
+        # 任务语义相关的随机性使用独立 generator，避免受位置采样消耗次数影响。
+        scene_generator = self._make_generator()
+        color_order_generator = self._make_generator(self._COLOR_ORDER_SEED_OFFSET)
+        target_selection_generator = self._make_generator(
+            self._TARGET_SELECTION_SEED_OFFSET
+        )
 
         # 先搭建桌面场景，机器人和后续物体都依赖这个基础环境。
         self.table_scene = TableSceneBuilder(
@@ -193,7 +211,7 @@ class PickXtimes(BaseEnv):
             self,
             center_xy=(-0.2, 0),
             scale=1.5,
-            generator=generator,
+            generator=scene_generator,
         )
         # avoid 记录当前已经占用的区域，后面采样方块和目标点时需要避开这些区域，
         # 以减少物体之间初始重叠或过近导致的无效场景。
@@ -222,8 +240,10 @@ class PickXtimes(BaseEnv):
 
         # 随机打乱颜色组顺序。
         # 这样即使难度只允许部分颜色出现，也不会总是优先生成固定颜色。
-        shuffle_indices = torch.randperm(len(color_groups), generator=generator).tolist()
-        color_groups = [color_groups[i] for i in shuffle_indices]
+        # shuffle_indices = torch.randperm(
+        #     len(color_groups), generator=color_order_generator
+        # ).tolist()
+        # color_groups = [color_groups[i] for i in shuffle_indices]
 
         # 根据难度控制本局实际启用多少种颜色。
         # easy / medium / hard 会通过 configs[self.difficulty]['color'] 决定参与生成的颜色数量。
@@ -245,7 +265,7 @@ class PickXtimes(BaseEnv):
                             min_gap=self.cube_half_size,
                             random_yaw=True,
                             name_prefix=f"cube_{group['name']}_{cube_idx}",
-                            generator=generator,
+                            generator=scene_generator,
                         )
                     except RuntimeError as e:
                         # 如果当前颜色的某个方块采样失败，就停止继续生成这一颜色组，
@@ -282,7 +302,7 @@ class PickXtimes(BaseEnv):
                 thickness=0.005,
                 min_gap=self.cube_half_size*2,
                 name_prefix=f"target",
-                generator=generator
+                generator=scene_generator
             )
         except RuntimeError as e:
             logger.debug(f"Target sampling failed: {e}")
@@ -296,7 +316,12 @@ class PickXtimes(BaseEnv):
 
         # 从所有已生成方块中随机抽一个，作为真正需要重复抓取和放置的目标方块。
         if len(self.all_cubes) > 0:
-            target_cube_idx = torch.randint(0, len(self.all_cubes), (1,), generator=generator).item()
+            target_cube_idx = torch.randint(
+                0,
+                len(self.all_cubes),
+                (1,),
+                generator=target_selection_generator,
+            ).item()
             self.target_cube = self.all_cubes[target_cube_idx]
 
             # 根据目标方块所属颜色列表，确定任务中使用的颜色名字，
@@ -376,7 +401,7 @@ class PickXtimes(BaseEnv):
             # 用于测试或训练恢复能力。
             self.fail_grasp_task_index = inject_fail_grasp(
                 self.task_list,
-                generator=generator,
+                generator=scene_generator,
                 mode=self.robomme_failure_recovery_mode,
             )
         else:
