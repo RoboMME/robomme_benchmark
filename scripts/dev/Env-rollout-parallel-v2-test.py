@@ -166,7 +166,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["VideoPlaceButton","VideoPlaceOrder"],
+        default=["VideoPlaceOrder"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help="One or more environment IDs to run in order (default: VideoPlaceButton, VideoPlaceOrder). Each env runs the same episode range; seeds are derived from env_id/episode/attempt.",

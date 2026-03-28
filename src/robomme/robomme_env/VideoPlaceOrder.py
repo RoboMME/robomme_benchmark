@@ -374,6 +374,7 @@ class VideoPlaceOrder(BaseEnv):
                 2, len(self.targets) + 1, (1,), generator=order_generator
             ).item()
 
+
             indices = torch.randperm(
                 len(self.targets), generator=scene_generator
             )[:num_targets_to_pick]
@@ -394,6 +395,8 @@ class VideoPlaceOrder(BaseEnv):
                 (1,),
                 generator=order_generator,
             ).item()
+
+            #self.which_in_subset=len(self.which_targets_to_pick)#test
 
             logger.debug("self.which_in_subset: %s", self.which_in_subset)
             self.target_target=self.which_targets_to_pick[self.which_in_subset-1]

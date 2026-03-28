@@ -898,8 +898,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dataset-root",
         type=Path,
-        #default=DEFAULT_DATASET_ROOT,
-        default=Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos/hdf5_files"),
+        default=DEFAULT_DATASET_ROOT,
+        #default=Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos/hdf5_files"),
         help=(
             "Directory or HDF5 file containing either record_dataset_*.h5 "
             "files or per-episode *_ep*_seed*.h5 files."
