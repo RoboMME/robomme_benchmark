@@ -145,6 +145,8 @@ class BinFill(BaseEnv):
         self.seed = seed
         self.generator = torch.Generator()
         self.generator.manual_seed(seed)
+        self.task_generator = torch.Generator()
+        self.task_generator.manual_seed(seed + 1003)
         self.dynamic=bool(torch.randint(0, 2, (1,), generator=self.generator).item())
 
         # Track the color order and counts used to describe the language goal.
@@ -186,7 +188,7 @@ class BinFill(BaseEnv):
         )
         self.table_scene.build()
 
-        # Create generator for all randomization
+        # 所有场景随机都统一使用同一个生成器，保证同 seed 可复现
         generator = self.generator
 
         button_obb = build_button(
@@ -195,93 +197,98 @@ class BinFill(BaseEnv):
             scale=1.5,
             generator=generator,
         )
+        # avoid 中维护当前已占用区域，后续采样方块时需要避开这些障碍
         avoid = [button_obb]
 
-        # Create square board with square hole
-        x_var = torch.rand(1, generator=generator).item() * 0.2 - 0.2  # [-0.25, 0.25]
-        y_var = torch.rand(1, generator=generator).item() * 0.4 - 0.2  # [-0.25, 0.25]
-        z_rot_deg = (torch.rand(1, generator=generator).item() * 40.0 - 20.0)  # [-20, 20] degrees
+        # 随机生成带孔挡板的位置和朝向
+        x_var = torch.rand(1, generator=generator).item() * 0.2 - 0.2  # [-0.2, 0.0)
+        y_var = torch.rand(1, generator=generator).item() * 0.4 - 0.2  # [-0.2, 0.2)
+        z_rot_deg = (torch.rand(1, generator=generator).item() * 40.0 - 20.0)  # [-20, 20) 度
         z_rot_rad = torch.deg2rad(torch.tensor(z_rot_deg))
-        # Create rotation quaternion for z-axis rotation
+        # 将 z 轴旋转角转换成四元数，供场景物体初始化使用
         rot_mat = euler_angles_to_matrix(torch.tensor([[0.0, 0.0, z_rot_rad]]), convention="XYZ")
-        rot_quat = matrix_to_quaternion(rot_mat)[0]  # [w, x, y, z]
+        rot_quat = matrix_to_quaternion(rot_mat)[0]
         self.board_with_hole = build_board_with_hole(
             self,
-            board_side=0.1,  # Side length of square board
-            hole_side=0.08,   # Side length of square hole, slightly larger than cube for passing
-            thickness=0.05,   # Board thickness
-            position=[0.15 + x_var, 0.0 + y_var, 0.0],  # Board position
-            rotation_quat=rot_quat.tolist(),  # z-axis rotation
+            board_side=0.1,  # 挡板边长
+            hole_side=0.08,   # 中间孔洞边长，略大于方块尺寸
+            thickness=0.05,   # 挡板厚度
+            position=[0.15 + x_var, 0.0 + y_var, 0.0],  # 挡板中心位置
+            rotation_quat=rot_quat.tolist(),  # 挡板绕 z 轴旋转
             name="board_with_hole"
         )
         avoid += [self.board_with_hole]
 
-        ###
-        ###
-        ###
-        ###
-        ###
-        # First generate target_number (put_in):
-        # If put_in_color == 1: Randomly select a color, assign target count in range [put_in_range[0], put_in_range[1]]
-        # If put_in_color == 3:
-            # First generate total target count total_target from put_in_range
-            # Start from [0, 0, 0], randomly distribute to three colors (no requirement for min 1 per color)
+        # 任务要求的颜色数和每种颜色目标数使用独立随机源，避免受场景采样顺序影响
+        task_generator = self.task_generator
 
-        # Then generate spawn_number:
-        # If num_colors == 1: Only the color with target will spawn cube, spawn count = max(total_spawn, target count)
-        # If num_colors == 3: Spawn count for each color at least equals target, remaining spawn count distributed randomly
-        # This ensures spawn >= target for each color.
-
-
-        # Get configuration for current difficulty
+        # 根据难度读取颜色数、生成数和放入目标数的采样范围
         config = self.configs[self.difficulty]
-        num_colors = config['color']  # 1 or 3
-        spawn_range = config['spawn_cubes']  # [min, max]
+        num_colors = config['color']  # 本局允许出现的颜色种类数
+        spawn_range = config['spawn_cubes']  # 总生成方块数范围
         put_in_color_range = config['put_in_color']
-        color_pool = torch.randperm(3, generator=generator).tolist()[:num_colors]
+        # 先随机选出本局可能出现的颜色集合
+        color_pool = torch.randperm(3, generator=task_generator).tolist()[:num_colors]
+        # 再随机本局任务要求多少种颜色放入 bin
         put_in_color = torch.randint(
-            put_in_color_range[0], put_in_color_range[1] + 1, (1,), generator=generator
+            put_in_color_range[0], put_in_color_range[1] + 1, (1,), generator=task_generator
         ).item()
         put_in_color = max(1, min(3, put_in_color))
         put_in_color = min(put_in_color, max(1, num_colors))
+        # active_color_indices 是真正参与放入目标分配的颜色
         active_color_indices = color_pool[:put_in_color]
-        put_in_range = config['put_in_numbers']  # [min, max]
+        put_in_range = config['put_in_numbers']  # 总目标放入数量范围
 
-        # First generate target_number (put_in)
+        # target_numbers 表示红蓝绿三种颜色分别需要放入 bin 的数量
         target_numbers = [0, 0, 0]
         if put_in_color == 1:
-            # Only one color needs to be put in bin
+            # 单颜色任务：只给该颜色分配目标数
             selected_idx = active_color_indices[0]
-            target_numbers[selected_idx] = torch.randint(put_in_range[0], put_in_range[1] + 1, (1,), generator=generator).item()
+            target_numbers[selected_idx] = torch.randint(
+                put_in_range[0],
+                put_in_range[1] + 1,
+                (1,),
+                generator=task_generator,
+            ).item()
         else:
-            # All 3 colors need to be put in bin, generate total number first then distribute
-            total_target = torch.randint(put_in_range[0], put_in_range[1] + 1, (1,), generator=generator).item()
-            # Randomly distribute target number to three colors
-            for _ in range(total_target):
-                idx = torch.randint(0, len(active_color_indices), (1,), generator=generator).item()
+            # 多颜色任务：先保证每个参与颜色至少分到 1 个，再分配剩余目标数
+            min_required_targets = len(active_color_indices)
+            if put_in_range[1] < min_required_targets:
+                raise ValueError(
+                    f"BinFill 配置无效：put_in_numbers={put_in_range} 无法覆盖 {min_required_targets} 个目标颜色"
+                )
+            total_target = torch.randint(
+                max(put_in_range[0], min_required_targets),
+                put_in_range[1] + 1,
+                (1,),
+                generator=task_generator,
+            ).item()
+            for color_idx in active_color_indices:
+                target_numbers[color_idx] += 1
+            for _ in range(total_target - min_required_targets):
+                idx = torch.randint(0, len(active_color_indices), (1,), generator=task_generator).item()
                 target_numbers[active_color_indices[idx]] += 1
 
         self.red_cubes_target_number = target_numbers[0]
         self.blue_cubes_target_number = target_numbers[1]
         self.green_cubes_target_number = target_numbers[2]
 
-        # Then generate spawn_number, ensure spawn >= target
+        # 再生成实际摆在桌面上的方块数量，并保证生成数不少于目标数
         total_spawn = torch.randint(spawn_range[0], spawn_range[1] + 1, (1,), generator=generator).item()
 
         if num_colors == 1:
-            # Only one color has cube, choose the one with target (if none, use first color in color_pool)
+            # 单颜色场景：只有一个颜色会生成方块
             spawn_numbers = [0, 0, 0]
             active_idx = next((i for i in color_pool if target_numbers[i] > 0), color_pool[0])
-            # Spawn number at least equals target number
             spawn_numbers[active_idx] = max(total_spawn, target_numbers[active_idx])
         else:
-            # num_colors controls 1/2/3 colors: ensure each selected color has at least 1 spawn, and spawn >= target
+            # 多颜色场景：每个参与生成的颜色至少放 1 个，并满足生成数 >= 目标数
             spawn_numbers = [0, 0, 0]
             for i in color_pool:
                 spawn_numbers[i] = max(target_numbers[i], 1)
             used_spawn = sum(spawn_numbers[i] for i in color_pool)
             remaining = total_spawn - used_spawn
-            # Randomly distribute remaining spawn count
+            # 剩余方块数继续随机分配到已参与的颜色中
             for _ in range(max(0, remaining)):
                 idx = torch.randint(0, len(color_pool), (1,), generator=generator).item()
                 spawn_numbers[color_pool[idx]] += 1
@@ -293,11 +300,6 @@ class BinFill(BaseEnv):
         logger.debug(f"Target numbers - Red: {self.red_cubes_target_number}, Blue: {self.blue_cubes_target_number}, Green: {self.green_cubes_target_number}")
         logger.debug(f"Spawn numbers - Red: {self.red_cubes_spawn_number}, Blue: {self.blue_cubes_spawn_number}, Green: {self.green_cubes_spawn_number}")
 
-        ###
-        ###
-        ###
-        ###
-        ###
         self.all_cubes = []
         self.red_cubes, self.blue_cubes, self.green_cubes = [], [], []
 
@@ -307,17 +309,16 @@ class BinFill(BaseEnv):
             {"color": (0, 1, 0, 1), "name": "green", "list": self.green_cubes, "spawn_num": self.green_cubes_spawn_number}
         ]
 
-        # Generate task list for all cubes and shuffle order
+        # 先整理出所有待生成方块，再打乱顺序，避免颜色生成顺序固定
         cube_tasks = []
         for info in color_info:
             for idx in range(info["spawn_num"]):
                 cube_tasks.append({"color": info["color"], "name": info["name"], "list": info["list"], "idx": idx})
 
-        # Shuffle generation order
         shuffle_order = torch.randperm(len(cube_tasks), generator=generator).tolist()
         cube_tasks = [cube_tasks[i] for i in shuffle_order]
 
-        # Spawn cubes in shuffled order
+        # 逐个生成方块；每成功生成一个，就加入 avoid，避免后续方块重叠
         for task in cube_tasks:
             try:
                 cube = spawn_random_cube(
