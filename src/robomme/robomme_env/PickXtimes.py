@@ -165,32 +165,45 @@ class PickXtimes(BaseEnv):
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
+        """
+        构建 PickXtimes 任务场景。
 
+        这个函数主要完成以下几件事：
+        1. 根据固定 seed 创建随机数生成器，保证同一个 seed 下场景可复现。
+        2. 搭建桌面和按钮等基础场景物体。
+        3. 按难度生成若干颜色的方块，并记录每种颜色对应的对象列表。
+        4. 在不与现有物体重叠的前提下采样目标放置区域。
+        5. 从所有已生成方块中随机选出一个真正的目标方块。
+        6. 基于目标方块和重复次数，动态生成“抓取-放置-结束”任务序列。
+        """
 
-
+        # 场景中的所有随机采样统一使用同一个生成器，
+        # 这样在 seed 相同的情况下，物体布局、颜色顺序和目标选择都可复现。
         generator = torch.Generator()
         generator.manual_seed(self.seed)
 
+        # 先搭建桌面场景，机器人和后续物体都依赖这个基础环境。
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
 
-
-
+        # 在桌面上放置一个按钮。按钮既是场景元素，也是最终“停止任务”的交互目标。
         button_obb = build_button(
             self,
             center_xy=(-0.2, 0),
             scale=1.5,
             generator=generator,
         )
+        # avoid 记录当前已经占用的区域，后面采样方块和目标点时需要避开这些区域，
+        # 以减少物体之间初始重叠或过近导致的无效场景。
         avoid = [button_obb]
 
-       
+        # all_cubes 保存本场景生成的全部方块对象，便于后续统一随机抽取目标方块。
+        self.all_cubes = []
 
-        self.all_cubes = []  # Save all cube objects
-
-        # Initialize storage for each color group
+        # 分颜色维护方块对象和名字列表。
+        # 这样后面既可以按颜色生成语言描述，也可以方便地做失败检查和目标归类。
         self.red_cubes = []
         self.red_cube_names = []
         self.blue_cubes = []
@@ -198,24 +211,27 @@ class PickXtimes(BaseEnv):
         self.green_cubes = []
         self.green_cube_names = []
 
+        # 当前实现里每种激活颜色只生成一个方块。
+        # 保留这个变量可以让后续扩展到“每种颜色多个方块”时不用重写主逻辑。
         cubes_per_color = 1
         color_groups = [
             {"color": (1, 0, 0, 1), "name": "red", "list": self.red_cubes, "name_list": self.red_cube_names},
             {"color": (0, 0, 1, 1), "name": "blue", "list": self.blue_cubes, "name_list": self.blue_cube_names},
             {"color": (0, 1, 0, 1), "name": "green", "list": self.green_cubes, "name_list": self.green_cube_names}
         ]
+
+        # 随机打乱颜色组顺序。
+        # 这样即使难度只允许部分颜色出现，也不会总是优先生成固定颜色。
         shuffle_indices = torch.randperm(len(color_groups), generator=generator).tolist()
         color_groups = [color_groups[i] for i in shuffle_indices]
 
-        # Randomly select target color using generator
-        target_color_idx = torch.randint(0, len(color_groups), (1,), generator=generator).item()
-        self.target_color_name = color_groups[target_color_idx]["name"]
-        logger.debug(f"Target color selected: {self.target_color_name}")
-
-        # Generate 5 cubes for each color group
-        for idx, group in enumerate(color_groups):
-            if idx < self.configs[self.difficulty]['color']:
-                for idx in range(cubes_per_color):
+        # 根据难度控制本局实际启用多少种颜色。
+        # easy / medium / hard 会通过 configs[self.difficulty]['color'] 决定参与生成的颜色数量。
+        for group_idx, group in enumerate(color_groups):
+            if group_idx < self.configs[self.difficulty]['color']:
+                # 在当前颜色组内生成若干个方块。
+                # 每次采样都会避开按钮和此前已生成的物体。
+                for cube_idx in range(cubes_per_color):
                     try:
                         cube = spawn_random_cube(
                             self,
@@ -228,18 +244,24 @@ class PickXtimes(BaseEnv):
                             half_size=self.cube_half_size,
                             min_gap=self.cube_half_size,
                             random_yaw=True,
-                            name_prefix=f"cube_{group['name']}_{idx}",
+                            name_prefix=f"cube_{group['name']}_{cube_idx}",
                             generator=generator,
                         )
                     except RuntimeError as e:
-                        logger.debug(f"Failed to generate {group['name']} cube {idx}: {e}")
+                        # 如果当前颜色的某个方块采样失败，就停止继续生成这一颜色组，
+                        # 但保留前面已经成功生成的物体，避免整局场景直接构建失败。
+                        logger.debug(f"Failed to generate {group['name']} cube {cube_idx}: {e}")
                         break
 
+                    # 同时把方块登记到总列表和颜色专属列表中，
+                    # 便于后续统一抽取目标，或按颜色做逻辑判断。
                     self.all_cubes.append(cube)
                     group["list"].append(cube)
-                    cube_name = f"cube_{group['name']}_{idx}"
+                    cube_name = f"cube_{group['name']}_{cube_idx}"
                     group["name_list"].append(cube_name)
+                    # 额外挂到实例属性上，便于外部通过固定名字访问该方块。
                     setattr(self, cube_name, cube)
+                    # 新生成的方块也要加入避障列表，防止后续采样与其重叠。
                     avoid.append(cube)
 
             logger.debug(f"Generated {len(group['list'])} {group['name']} cubes")
@@ -247,35 +269,38 @@ class PickXtimes(BaseEnv):
         logger.debug(f"Generated {len(self.all_cubes)} cubes total (red: {len(self.red_cubes)}, blue: {len(self.blue_cubes)}, green: {len(self.green_cubes)})")
 
         try:
+            # 在桌面区域内采样一个放置目标点（target）。
+            # 这里同样显式传入 avoid，保证目标位置不会与按钮或已生成方块冲突。
             target = spawn_random_target(
                 self,
-                avoid=avoid,  # Use current avoidance list, containing all spawned cubes
-                include_existing=False,  # Manually maintain list
-                include_goal=False,  # Manually maintain list
+                avoid=avoid,
+                include_existing=False,
+                include_goal=False,
                 region_center=[-0.1, 0],
                 region_half_size=0.2,
-                radius=self.cube_half_size*2,  # Use radius instead of half_size
-                thickness=0.005,  # target thickness
-                min_gap=self.cube_half_size*2,  # Gap requirement same as cube
+                radius=self.cube_half_size*2,
+                thickness=0.005,
+                min_gap=self.cube_half_size*2,
                 name_prefix=f"target",
                 generator=generator
             )
         except RuntimeError as e:
             logger.debug(f"Target sampling failed: {e}")
 
-
-        # Assign target to self.target_0, self.target_1 etc. attributes
+        # 这个任务只有一个目标点，因此直接挂到 self.target 上。
         setattr(self, f"target", target)
-        # Add newly generated target to avoidance list
+        # 目标点也加入避障列表，虽然当前后面不再继续采样场景物体，
+        # 但这样能保持 avoid 的语义完整。
         avoid.append(target)
 
 
- # Randomly select one cube from all available cubes as the target
+        # 从所有已生成方块中随机抽一个，作为真正需要重复抓取和放置的目标方块。
         if len(self.all_cubes) > 0:
             target_cube_idx = torch.randint(0, len(self.all_cubes), (1,), generator=generator).item()
             self.target_cube = self.all_cubes[target_cube_idx]
 
-            # Determine the color of the selected target cube
+            # 根据目标方块所属颜色列表，确定任务中使用的颜色名字，
+            # 使语言描述和任务逻辑与实际目标方块保持一致。
             if self.target_cube in self.red_cubes:
                 self.target_color_name = "red"
             elif self.target_cube in self.blue_cubes:
@@ -286,28 +311,37 @@ class PickXtimes(BaseEnv):
 
             logger.debug(f"Target cube selected: {self.target_color_name} cube (index {target_cube_idx} in all_cubes)")
         else:
+            # 理论上如果一个方块都没生成出来，就没有可执行的抓取目标。
+            # 这里保留空值，方便后续逻辑识别异常场景。
             self.target_cube = None
             self.target_color_name = None
             logger.debug("No cubes generated, no target cube selected")
 
-        # Create list of non-target cubes for failure checking
+        # 维护“非目标方块”列表。
+        # 在任务执行时，如果抓起了错误的方块，failure_func 会用它来判定失败。
         self.non_target_cubes = [cube for cube in self.all_cubes if cube != self.target_cube]
         logger.debug(f"Non-target cubes: {len(self.non_target_cubes)}")
 
-                # Dynamically generate task list for N pickup-drop cycles
+        # 按照 num_repeats 动态构造子任务序列：
+        # 每一轮都包含“抓起目标方块”与“放到目标点上”两个阶段；
+        # 最后追加“按按钮结束任务”作为收尾动作。
         tasks = []
         for i in range(self.num_repeats):
-
+            # 第 1 类子任务：抓起目标颜色的方块。
             tasks.append({
                 "func": (lambda i=i: is_obj_pickup(self, obj=self.target_cube)),
                 "name": subgoal_language.get_subgoal_with_index(i, "pick up the {color} cube for the {idx} time", color=self.target_color_name),
                  "subgoal_segment": subgoal_language.get_subgoal_with_index(i, "pick up the {color} cube at <> for the {idx} time", color=self.target_color_name),
                 "choice_label": "pick up the cube",
                 "demonstration": False,
+                # 失败条件包括：
+                # 1. 抓起了任意非目标方块；
+                # 2. 在不该结束时提前按下按钮。
                 "failure_func": lambda: [is_any_obj_pickup(self, self.non_target_cubes),is_button_pressed(self, obj=self.button)],
                 "solve": lambda env, planner: solve_pickup(env,planner,self.target_cube),
                 "segment":self.target_cube
             })
+            # 第 2 类子任务：将当前抓着的目标方块放到 target 上。
             tasks.append({
                 "func": (lambda: is_obj_dropped_onto(self,obj=self.target_cube,target=self.target)),
                 "name": f"place the {self.target_color_name} cube onto the target",
@@ -319,6 +353,7 @@ class PickXtimes(BaseEnv):
                 "segment":self.target
             })
 
+        # 所有重复轮次结束后，要求机器人按按钮来显式结束任务。
         tasks.append( {
                 "func": lambda:is_button_pressed(self, obj=self.button),
                 "name": "press the button to stop",
@@ -331,13 +366,14 @@ class PickXtimes(BaseEnv):
             })
 
 
-        # Store task list for RecordWrapper use
+        # 保存完整任务列表，供评测逻辑和 RecordWrapper 等上层模块使用。
         self.task_list = tasks
 
-                # Record pickup related task indices and items for recovery
+        # 记录和“抓取”有关的任务索引，供失败恢复逻辑使用。
         self.recovery_pickup_indices, self.recovery_pickup_tasks = task4recovery(self.task_list)
         if self.robomme_failure_recovery:
-            # Only inject an intentional failed grasp when recovery mode is enabled
+            # 只有在开启失败恢复模式时，才注入一次可控的失败抓取任务，
+            # 用于测试或训练恢复能力。
             self.fail_grasp_task_index = inject_fail_grasp(
                 self.task_list,
                 generator=generator,
