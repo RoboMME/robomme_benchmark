@@ -17,6 +17,7 @@ import numpy as np
 
 DEFAULT_DATASET_ROOT = Path("/data/hongzefu/data-0306")
 DEFAULT_OUTPUT_DIR = Path("./tmp/dataset-distribution")
+DEFAULT_MAX_PER_DIFFICULTY = 1000
 MISSING_TASK_GOAL = "<missing task_goal>"
 FIXED_TASK_GOAL_LABEL = "fixed_task_goal"
 
@@ -363,6 +364,28 @@ def _iter_h5_paths(dataset_root: Path) -> list[Path]:
     return sorted(h5_paths)
 
 
+def _normalize_difficulty(value: object) -> str:
+    return str(value).strip().lower()
+
+
+def _peek_episode_difficulty(episode_group: h5py.Group) -> str:
+    setup_group = episode_group.get("setup")
+    if setup_group is None or "difficulty" not in setup_group:
+        return ""
+    return _normalize_difficulty(_decode_dataset_string(setup_group["difficulty"][()]))
+
+
+def _difficulty_limit_reached(
+    difficulty_counts: Counter[str], max_per_difficulty: int | None
+) -> bool:
+    if max_per_difficulty is None or max_per_difficulty <= 0:
+        return False
+    return all(
+        difficulty_counts[difficulty] >= max_per_difficulty
+        for difficulty in DIFFICULTY_ORDER
+    )
+
+
 def _parse_split_h5_identity(h5_path: Path) -> tuple[str, str] | None:
     match = SPLIT_H5_PATTERN.match(h5_path.stem)
     if match is None:
@@ -431,9 +454,12 @@ def _append_episode_row(
     rows.append(row)
 
 
-def _read_episode_rows(dataset_root: Path) -> tuple[list[dict[str, object]], list[str]]:
+def _read_episode_rows(
+    dataset_root: Path, max_per_difficulty: int | None = None
+) -> tuple[list[dict[str, object]], list[str]]:
     rows: list[dict[str, object]] = []
     warnings: list[str] = []
+    difficulty_counts: Counter[str] = Counter()
 
     for h5_path in _iter_h5_paths(dataset_root):
         try:
@@ -447,6 +473,14 @@ def _read_episode_rows(dataset_root: Path) -> tuple[list[dict[str, object]], lis
                                 f"{env_id}/{episode_name}: expected HDF5 group"
                             )
                             continue
+                        difficulty = _peek_episode_difficulty(episode_group)
+                        if (
+                            max_per_difficulty is not None
+                            and max_per_difficulty > 0
+                            and difficulty in DIFFICULTY_ORDER
+                            and difficulty_counts[difficulty] >= max_per_difficulty
+                        ):
+                            continue
                         _append_episode_row(
                             rows,
                             warnings,
@@ -454,6 +488,12 @@ def _read_episode_rows(dataset_root: Path) -> tuple[list[dict[str, object]], lis
                             episode_name=episode_name,
                             episode_group=episode_group,
                         )
+                        if difficulty in DIFFICULTY_ORDER:
+                            difficulty_counts[difficulty] += 1
+                            if _difficulty_limit_reached(
+                                difficulty_counts, max_per_difficulty
+                            ):
+                                return rows, warnings
                     continue
 
                 split_identity = _parse_split_h5_identity(h5_path)
@@ -474,6 +514,14 @@ def _read_episode_rows(dataset_root: Path) -> tuple[list[dict[str, object]], lis
                     continue
 
                 episode_name, episode_group = resolved_episode
+                difficulty = _peek_episode_difficulty(episode_group)
+                if (
+                    max_per_difficulty is not None
+                    and max_per_difficulty > 0
+                    and difficulty in DIFFICULTY_ORDER
+                    and difficulty_counts[difficulty] >= max_per_difficulty
+                ):
+                    continue
                 _append_episode_row(
                     rows,
                     warnings,
@@ -481,6 +529,12 @@ def _read_episode_rows(dataset_root: Path) -> tuple[list[dict[str, object]], lis
                     episode_name=episode_name,
                     episode_group=episode_group,
                 )
+                if difficulty in DIFFICULTY_ORDER:
+                    difficulty_counts[difficulty] += 1
+                    if _difficulty_limit_reached(
+                        difficulty_counts, max_per_difficulty
+                    ):
+                        return rows, warnings
         except Exception as exc:
             warnings.append(f"{h5_path.name}: failed to open ({exc})")
 
@@ -862,6 +916,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Display figures interactively after saving them.",
     )
+    parser.add_argument(
+        "--max-per-difficulty",
+        type=int,
+        default=DEFAULT_MAX_PER_DIFFICULTY,
+        help=(
+            "Maximum number of episodes to read for each difficulty. "
+            "Set to 0 or a negative value to disable the limit."
+        ),
+    )
     return parser
 
 
@@ -910,7 +973,9 @@ def main() -> None:
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    rows, warnings = _read_episode_rows(dataset_root)
+    rows, warnings = _read_episode_rows(
+        dataset_root, max_per_difficulty=args.max_per_difficulty
+    )
     csv_path = output_dir / "episode_task_metadata.csv"
     _write_csv(rows, csv_path)
 
