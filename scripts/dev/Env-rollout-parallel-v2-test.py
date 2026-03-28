@@ -185,7 +185,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--difficulty",
         type=parse_difficulty_ratio,
-        default=[0, 1, 0],
+        default=[1, 1, 1],
         help=(
             "Episode difficulty ratio in easy:medium:hard order, such as "
             "'2:1:1' or '211'. Parsed into a list like [2, 1, 1]. "
@@ -208,7 +208,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=25,
+        default=10,
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
             "the same env_id. Default: auto=min(os.cpu_count(), episode count)."

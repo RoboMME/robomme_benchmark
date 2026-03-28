@@ -35,7 +35,6 @@ def _make_env(seed: int, difficulty: str = "medium") -> PickXtimes:
     env.robomme_failure_recovery_mode = None
     env.use_demonstrationwrapper = False
     env.demonstration_record_traj = False
-    env.num_repeats = env._sample_num_repeats()
     return env
 
 
@@ -96,13 +95,34 @@ def test_pickxtimes_target_selection_isolated_from_scene_draws(monkeypatch) -> N
 def test_pickxtimes_num_repeats_isolated_from_scene_draws() -> None:
     env = _make_env(seed=504101, difficulty="medium")
 
-    baseline = env._sample_num_repeats()
+    baseline = torch.randint(
+        env.configs[env.difficulty]["number_min"],
+        env.configs[env.difficulty]["number_max"] + 1,
+        (1,),
+        generator=env._make_generator(env._REPEAT_COUNT_SEED_OFFSET),
+    ).item()
     scene_generator = env._make_generator()
     for _ in range(32):
         torch.rand(1, generator=scene_generator)
-    shifted = env._sample_num_repeats()
+    shifted = torch.randint(
+        env.configs[env.difficulty]["number_min"],
+        env.configs[env.difficulty]["number_max"] + 1,
+        (1,),
+        generator=env._make_generator(env._REPEAT_COUNT_SEED_OFFSET),
+    ).item()
 
     assert baseline == shifted
+
+
+def test_pickxtimes_num_repeats_isolated_inside_load_scene(monkeypatch) -> None:
+    base_env = _load_stubbed_scene(
+        monkeypatch, seed=504101, difficulty="medium", extra_scene_draws=0
+    )
+    shifted_env = _load_stubbed_scene(
+        monkeypatch, seed=504101, difficulty="medium", extra_scene_draws=7
+    )
+
+    assert base_env.num_repeats == shifted_env.num_repeats
 
 
 def test_pickxtimes_task_randomness_can_vary_across_seeds(monkeypatch) -> None:

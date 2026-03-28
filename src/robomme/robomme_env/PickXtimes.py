@@ -92,19 +92,17 @@ class PickXtimes(BaseEnv):
         'medium': config_medium
     }
 
+    @staticmethod
+    def _splitmix64(x: int) -> int:
+        """Splitmix64 bit mixing to break linear seed correlation."""
+        x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
+        x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
+        return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF
+
     def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
         generator = torch.Generator()
-        generator.manual_seed(self.seed + seed_offset)
+        generator.manual_seed(self._splitmix64(self.seed + seed_offset))
         return generator
-
-    def _sample_num_repeats(self) -> int:
-        repeat_generator = self._make_generator(self._REPEAT_COUNT_SEED_OFFSET)
-        return torch.randint(
-            self.configs[self.difficulty]['number_min'],
-            self.configs[self.difficulty]['number_max'] + 1,
-            (1,),
-            generator=repeat_generator,
-        ).item()
 
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
@@ -151,10 +149,6 @@ class PickXtimes(BaseEnv):
             else:  # seed_mod == 2
                 self.difficulty = "hard"
 
-        # 重复次数单独走任务语义随机源，不受后续场景采样影响。
-        self.num_repeats = self._sample_num_repeats()
-        logger.debug(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
-
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
 
     @property
@@ -199,6 +193,18 @@ class PickXtimes(BaseEnv):
         target_selection_generator = self._make_generator(
             self._TARGET_SELECTION_SEED_OFFSET
         )
+        repeat_generator = self._make_generator(self._REPEAT_COUNT_SEED_OFFSET)
+
+        # 重复次数单独走任务语义随机源，不受后续场景采样影响。
+        self.num_repeats = torch.randint(
+            self.configs[self.difficulty]['number_min'],
+            self.configs[self.difficulty]['number_max'] + 1,
+            (1,),
+            generator=repeat_generator,
+        ).item()
+        logger.debug(
+            f"Task will repeat {self.num_repeats} times (pickup-drop cycles)"
+        )
 
         # 先搭建桌面场景，机器人和后续物体都依赖这个基础环境。
         self.table_scene = TableSceneBuilder(
@@ -240,10 +246,10 @@ class PickXtimes(BaseEnv):
 
         # 随机打乱颜色组顺序。
         # 这样即使难度只允许部分颜色出现，也不会总是优先生成固定颜色。
-        # shuffle_indices = torch.randperm(
-        #     len(color_groups), generator=color_order_generator
-        # ).tolist()
-        # color_groups = [color_groups[i] for i in shuffle_indices]
+        shuffle_indices = torch.randperm(
+            len(color_groups), generator=color_order_generator
+        ).tolist()
+        color_groups = [color_groups[i] for i in shuffle_indices]
 
         # 根据难度控制本局实际启用多少种颜色。
         # easy / medium / hard 会通过 configs[self.difficulty]['color'] 决定参与生成的颜色数量。
@@ -323,6 +329,8 @@ class PickXtimes(BaseEnv):
                 generator=target_selection_generator,
             ).item()
             self.target_cube = self.all_cubes[target_cube_idx]
+
+
 
             # 根据目标方块所属颜色列表，确定任务中使用的颜色名字，
             # 使语言描述和任务逻辑与实际目标方块保持一致。
