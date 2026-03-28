@@ -40,6 +40,13 @@ COLOR_SEQUENCE_ORDER = (
 )
 BEFORE_AFTER_ORDER = ["before", "after", "unknown"]
 DIFFICULTY_ORDER = ["easy", "medium", "hard"]
+DIFFICULTY_SPLIT_ENVS = {
+    "BinFill",
+    "PickXtimes",
+    "SwingXtimes",
+    "VideoPlaceButton",
+    "VideoPlaceOrder",
+}
 
 NUMBER_WORDS = {
     "zero": 0,
@@ -385,17 +392,6 @@ def _peek_episode_difficulty(episode_group: h5py.Group) -> str:
     return _normalize_difficulty(_decode_dataset_string(setup_group["difficulty"][()]))
 
 
-def _difficulty_limit_reached(
-    difficulty_counts: Counter[str], max_per_difficulty: int | None
-) -> bool:
-    if max_per_difficulty is None or max_per_difficulty <= 0:
-        return False
-    return all(
-        difficulty_counts[difficulty] >= max_per_difficulty
-        for difficulty in DIFFICULTY_ORDER
-    )
-
-
 def _parse_split_h5_identity(h5_path: Path) -> tuple[str, str] | None:
     match = SPLIT_H5_PATTERN.match(h5_path.stem)
     if match is None:
@@ -469,13 +465,16 @@ def _read_episode_rows(
 ) -> tuple[list[dict[str, object]], list[str]]:
     rows: list[dict[str, object]] = []
     warnings: list[str] = []
-    difficulty_counts: Counter[str] = Counter()
+    difficulty_counts_by_env: dict[str, Counter[str]] = {}
 
     for h5_path in _iter_h5_paths(dataset_root):
         try:
             with h5py.File(h5_path, "r") as handle:
                 if h5_path.stem.startswith(AGGREGATED_H5_PREFIX):
                     env_id = h5_path.stem.removeprefix(AGGREGATED_H5_PREFIX)
+                    difficulty_counts = difficulty_counts_by_env.setdefault(
+                        env_id, Counter()
+                    )
                     for episode_name in sorted(handle.keys(), key=_episode_sort_key):
                         episode_group = handle[episode_name]
                         if not isinstance(episode_group, h5py.Group):
@@ -500,10 +499,6 @@ def _read_episode_rows(
                         )
                         if difficulty in DIFFICULTY_ORDER:
                             difficulty_counts[difficulty] += 1
-                            if _difficulty_limit_reached(
-                                difficulty_counts, max_per_difficulty
-                            ):
-                                return rows, warnings
                     continue
 
                 split_identity = _parse_split_h5_identity(h5_path)
@@ -514,6 +509,9 @@ def _read_episode_rows(
                     continue
 
                 env_id, expected_episode_name = split_identity
+                difficulty_counts = difficulty_counts_by_env.setdefault(
+                    env_id, Counter()
+                )
                 resolved_episode = _resolve_split_episode_group(
                     handle, expected_episode_name
                 )
@@ -541,10 +539,6 @@ def _read_episode_rows(
                 )
                 if difficulty in DIFFICULTY_ORDER:
                     difficulty_counts[difficulty] += 1
-                    if _difficulty_limit_reached(
-                        difficulty_counts, max_per_difficulty
-                    ):
-                        return rows, warnings
         except Exception as exc:
             warnings.append(f"{h5_path.name}: failed to open ({exc})")
 
@@ -781,7 +775,7 @@ def _figure_specs_for_env(env_id: str) -> list[dict[str, object]]:
 
 def _render_env_figure(env_id: str, rows: list[dict[str, object]], output_path: Path, plt) -> None:
     plot_specs = _figure_specs_for_env(env_id)
-    if env_id in {"BinFill", "VideoPlaceButton", "VideoPlaceOrder"}:
+    if env_id in DIFFICULTY_SPLIT_ENVS:
         rows_by_difficulty = {
             difficulty: [
                 row
@@ -896,8 +890,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dataset-root",
         type=Path,
-        #default=DEFAULT_DATASET_ROOT,
-        default=Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos/hdf5_files"),
+        default=DEFAULT_DATASET_ROOT,
+        #default=Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos/hdf5_files"),
         help=(
             "Directory or HDF5 file containing either record_dataset_*.h5 "
             "files or per-episode *_ep*_seed*.h5 files."
