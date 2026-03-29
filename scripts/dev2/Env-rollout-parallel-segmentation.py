@@ -308,21 +308,12 @@ def _save_visible_objects_json(
     return json_path
 
 
-def _set_equal_3d_axes(ax, points_xyz: np.ndarray) -> None:
-    """为 3D scatter 设定一致尺度，避免坐标轴拉伸。"""
-    if points_xyz.size == 0:
-        ax.set_xlim(-0.1, 0.1)
-        ax.set_ylim(-0.1, 0.1)
-        ax.set_zlim(0.0, 0.2)
-        return
-
-    mins = points_xyz.min(axis=0)
-    maxs = points_xyz.max(axis=0)
-    centers = (mins + maxs) / 2.0
-    radius = max(float((maxs - mins).max()) / 2.0, 0.05)
-    ax.set_xlim(centers[0] - radius, centers[0] + radius)
-    ax.set_ylim(centers[1] - radius, centers[1] + radius)
-    ax.set_zlim(centers[2] - radius, centers[2] + radius)
+def _set_equal_xy_axes(ax, points_xyz: np.ndarray) -> None:
+    """为俯视 XY scatter 设定固定坐标范围。"""
+    del points_xyz
+    ax.set_xlim(-0.3, 0.3)
+    ax.set_ylim(-0.3, 0.3)
+    ax.set_aspect("equal", adjustable="box")
 
 
 def _save_visible_objects_3d_plot(
@@ -332,14 +323,14 @@ def _save_visible_objects_3d_plot(
     seed: int,
     visible_payload: dict[str, object],
 ) -> Path:
-    """写出 reset 可见对象的独立 3D world xyz 可视化图。"""
+    """写出 reset 可见对象的独立 world xyz 俯视图。"""
     import matplotlib.pyplot as plt
 
     plot_path = _visible_object_plot_path(reset_output_dir)
     objects = list(visible_payload["objects"])
 
     figure = plt.figure(figsize=(8, 6))
-    axis = figure.add_subplot(111, projection="3d")
+    axis = figure.add_subplot(111)
     points_xyz: list[list[float]] = []
 
     for item in objects:
@@ -359,7 +350,6 @@ def _save_visible_objects_3d_plot(
         axis.scatter(
             point_xyz[0],
             point_xyz[1],
-            point_xyz[2],
             s=80,
             color=color_rgb,
             edgecolors="black",
@@ -368,7 +358,6 @@ def _save_visible_objects_3d_plot(
         axis.text(
             point_xyz[0],
             point_xyz[1],
-            point_xyz[2],
             f"{item['name']} ({tag or '-'})",
             fontsize=8,
         )
@@ -379,18 +368,16 @@ def _save_visible_objects_3d_plot(
         if points_xyz
         else np.zeros((0, 3), dtype=np.float64)
     )
-    _set_equal_3d_axes(axis, points_array)
+    _set_equal_xy_axes(axis, points_array)
     axis.set_xlabel("World X")
     axis.set_ylabel("World Y")
-    axis.set_zlabel("World Z")
-    axis.view_init(elev=28, azim=42)
     axis.set_title(
-        f"Visible Object Positions 3D\n{env_id} ep={episode} seed={seed}"
+        f"Visible Object Positions Top-Down (XY)\n{env_id} ep={episode} seed={seed}"
     )
     axis.grid(True)
 
     if not objects:
-        axis.text(0.0, 0.0, 0.0, "No visible objects", fontsize=10)
+        axis.text(0.0, 0.0, "No visible objects", fontsize=10)
 
     figure.tight_layout()
     figure.savefig(plot_path, dpi=200)
