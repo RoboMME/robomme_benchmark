@@ -316,6 +316,11 @@ def _set_equal_xy_axes(ax, points_xyz: np.ndarray) -> None:
     ax.set_aspect("equal", adjustable="box")
 
 
+def _xy_rot_cw_90(x_pos: float, y_pos: float) -> tuple[float, float]:
+    """俯视图顺时针旋转 90°：显示 (y, -x)。"""
+    return y_pos, -x_pos
+
+
 def _save_visible_objects_3d_plot(
     reset_output_dir: Path,
     env_id: str,
@@ -346,18 +351,19 @@ def _save_visible_objects_3d_plot(
             tag += "B"
         if visible_in.get("hand_camera"):
             tag += "H"
+        plot_x, plot_y = _xy_rot_cw_90(point_xyz[0], point_xyz[1])
 
         axis.scatter(
-            point_xyz[0],
-            point_xyz[1],
+            plot_x,
+            plot_y,
             s=80,
             color=color_rgb,
             edgecolors="black",
             linewidths=0.6,
         )
         axis.text(
-            point_xyz[0],
-            point_xyz[1],
+            plot_x,
+            plot_y,
             f"{item['name']} ({tag or '-'})",
             fontsize=8,
         )
@@ -369,10 +375,10 @@ def _save_visible_objects_3d_plot(
         else np.zeros((0, 3), dtype=np.float64)
     )
     _set_equal_xy_axes(axis, points_array)
-    axis.set_xlabel("World X")
-    axis.set_ylabel("World Y")
+    axis.set_xlabel("World Y")
+    axis.set_ylabel("-World X")
     axis.set_title(
-        f"Visible Object Positions Top-Down (XY)\n{env_id} ep={episode} seed={seed}"
+        f"Visible Object Positions Top-Down (Y, -X)\n{env_id} ep={episode} seed={seed}"
     )
     axis.grid(True)
 
@@ -636,10 +642,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "-e",
         nargs="+",
         default=[
-    "PickXtimes",
-    # "StopCube",
-    # "SwingXtimes",
-    # "BinFill",
+    #"PickXtimes",
+     "StopCube",
+    "SwingXtimes",
+    "BinFill",
     # "VideoUnmaskSwap",
     # "VideoUnmask",
     # "ButtonUnmaskSwap",
@@ -660,7 +666,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=30,
+        default=50,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -681,7 +687,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--gpu",
         type=int,
-        default=1,
+        default=0,
         choices=[0, 1],
         help="GPU id to expose via CUDA_VISIBLE_DEVICES.",
     )

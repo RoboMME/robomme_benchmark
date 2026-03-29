@@ -15,12 +15,12 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
-from PIL import Image
 
 VISIBLE_OBJECT_JSON_FILENAME = "visible_objects.json"
 DEFAULT_INPUT_DIR = Path("runs/replay_videos/reset_segmentation_pngs")
 DEFAULT_OUTPUT_DIR = Path("runs/replay_videos/aggregate_visible_object_xy")
 XY_LIMIT = 0.3
+AGGREGATE_DPI = 300
 
 ALL_OBJECTS_PNG = "all_objects_xy.png"
 CUBE_PNG = "cube_xy.png"
@@ -202,45 +202,37 @@ def _load_points(
     return points_by_env, skipped, episode_counts
 
 
-def _prepare_axis(ax, env_id: str, title: str, episode_count: int, point_count: int) -> None:
+def _xy_rot_cw_90(x_pos: float, y_pos: float) -> tuple[float, float]:
+    """俯视图顺时针旋转 90°：显示 (y, -x)。"""
+    return y_pos, -x_pos
+
+
+def _prepare_axis(ax, title: str, point_count: int) -> None:
     ax.set_xlim(-XY_LIMIT, XY_LIMIT)
     ax.set_ylim(-XY_LIMIT, XY_LIMIT)
     ax.set_aspect("equal", adjustable="box")
-    ax.set_xlabel("World X")
-    ax.set_ylabel("World Y")
+    ax.set_xlabel("World Y")
+    ax.set_ylabel("-World X")
     ax.grid(True, alpha=0.45)
-    ax.set_title(f"{title}\n{env_id} | episodes={episode_count} | points={point_count}")
+    ax.set_title(f"{title}\npoints={point_count}")
 
 
-def _save_figure(fig, output_path: Path) -> None:
+def _save_combined_figure(fig, output_path: Path) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=200)
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.savefig(output_path, dpi=AGGREGATE_DPI)
     plt.close(fig)
+    return output_path
 
 
-def _stitch_images_horizontally(image_paths: list[Path], output_path: Path) -> Path:
-    images = [Image.open(path).convert("RGBA") for path in image_paths]
-    try:
-        total_width = sum(image.width for image in images)
-        max_height = max(image.height for image in images)
-        canvas = Image.new("RGBA", (total_width, max_height), (255, 255, 255, 255))
-
-        x_offset = 0
-        for image in images:
-            canvas.paste(image, (x_offset, 0))
-            x_offset += image.width
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        canvas.save(output_path)
-        return output_path
-    finally:
-        for image in images:
-            image.close()
+def _cleanup_legacy_panel_files(env_output_dir: Path) -> None:
+    for filename in (ALL_OBJECTS_PNG, CUBE_PNG, BUTTON_PNG, TARGET_PNG):
+        stale_path = env_output_dir / filename
+        if stale_path.exists():
+            stale_path.unlink()
 
 
-def _plot_all_objects(points: list[VisibleObjectPoint], output_path: Path, env_id: str, episode_count: int) -> None:
-    fig, ax = plt.subplots(figsize=(7, 7))
+def _plot_all_objects(ax, points: list[VisibleObjectPoint]) -> None:
     grouped: dict[str, list[VisibleObjectPoint]] = defaultdict(list)
     for point in points:
         grouped[point.semantic].append(point)
@@ -250,8 +242,12 @@ def _plot_all_objects(points: list[VisibleObjectPoint], output_path: Path, env_i
         semantic_points = grouped.get(semantic, [])
         if not semantic_points:
             continue
-        xs = [point.world_x for point in semantic_points]
-        ys = [point.world_y for point in semantic_points]
+        rotated_points = [
+            _xy_rot_cw_90(point.world_x, point.world_y)
+            for point in semantic_points
+        ]
+        xs = [point[0] for point in rotated_points]
+        ys = [point[1] for point in rotated_points]
         ax.scatter(
             xs,
             ys,
@@ -274,26 +270,25 @@ def _plot_all_objects(points: list[VisibleObjectPoint], output_path: Path, env_i
             )
         )
 
-    _prepare_axis(ax, env_id, "All Visible Objects XY", episode_count, len(points))
+    _prepare_axis(ax, "All Visible Objects (Rotated XY)", len(points))
     if legend_handles:
         ax.legend(handles=legend_handles, loc="upper right")
     else:
         ax.text(0.0, 0.0, "No data", ha="center", va="center")
-    _save_figure(fig, output_path)
 
 
-def _plot_cube_objects(points: list[VisibleObjectPoint], output_path: Path, env_id: str, episode_count: int) -> None:
+def _plot_cube_objects(ax, points: list[VisibleObjectPoint]) -> None:
     cube_points = [point for point in points if point.semantic == "cube"]
-    fig, ax = plt.subplots(figsize=(7, 7))
 
     legend_handles: list[Line2D] = []
     for color_name in ("red", "green", "blue", "unknown"):
         bucket = [point for point in cube_points if point.cube_color == color_name]
         if not bucket:
             continue
+        rotated_points = [_xy_rot_cw_90(point.world_x, point.world_y) for point in bucket]
         ax.scatter(
-            [point.world_x for point in bucket],
-            [point.world_y for point in bucket],
+            [point[0] for point in rotated_points],
+            [point[1] for point in rotated_points],
             s=48,
             alpha=0.78,
             c=CUBE_COLOR_MAP[color_name],
@@ -313,17 +308,15 @@ def _plot_cube_objects(points: list[VisibleObjectPoint], output_path: Path, env_
             )
         )
 
-    _prepare_axis(ax, env_id, "Cube XY", episode_count, len(cube_points))
+    _prepare_axis(ax, "Cube (Rotated XY)", len(cube_points))
     if legend_handles:
         ax.legend(handles=legend_handles, loc="upper right")
     else:
         ax.text(0.0, 0.0, "No cube data", ha="center", va="center")
-    _save_figure(fig, output_path)
 
 
-def _plot_button_objects(points: list[VisibleObjectPoint], output_path: Path, env_id: str, episode_count: int) -> None:
+def _plot_button_objects(ax, points: list[VisibleObjectPoint]) -> None:
     button_points = [point for point in points if point.semantic == "button"]
-    fig, ax = plt.subplots(figsize=(7, 7))
 
     legend_handles: list[Line2D] = []
     for kind in ("button_base", "button_cap", "button_other"):
@@ -331,9 +324,10 @@ def _plot_button_objects(points: list[VisibleObjectPoint], output_path: Path, en
         if not bucket:
             continue
         style = BUTTON_STYLE_MAP[kind]
+        rotated_points = [_xy_rot_cw_90(point.world_x, point.world_y) for point in bucket]
         ax.scatter(
-            [point.world_x for point in bucket],
-            [point.world_y for point in bucket],
+            [point[0] for point in rotated_points],
+            [point[1] for point in rotated_points],
             s=62,
             alpha=0.8,
             c=style["color"],
@@ -354,22 +348,21 @@ def _plot_button_objects(points: list[VisibleObjectPoint], output_path: Path, en
             )
         )
 
-    _prepare_axis(ax, env_id, "Button XY", episode_count, len(button_points))
+    _prepare_axis(ax, "Button (Rotated XY)", len(button_points))
     if legend_handles:
         ax.legend(handles=legend_handles, loc="upper right")
     else:
         ax.text(0.0, 0.0, "No button data", ha="center", va="center")
-    _save_figure(fig, output_path)
 
 
-def _plot_target_objects(points: list[VisibleObjectPoint], output_path: Path, env_id: str, episode_count: int) -> None:
+def _plot_target_objects(ax, points: list[VisibleObjectPoint]) -> None:
     target_points = [point for point in points if point.semantic == "target"]
-    fig, ax = plt.subplots(figsize=(7, 7))
 
     if target_points:
+        rotated_points = [_xy_rot_cw_90(point.world_x, point.world_y) for point in target_points]
         ax.scatter(
-            [point.world_x for point in target_points],
-            [point.world_y for point in target_points],
+            [point[0] for point in rotated_points],
+            [point[1] for point in rotated_points],
             s=70,
             alpha=0.8,
             c=TARGET_STYLE["color"],
@@ -382,8 +375,7 @@ def _plot_target_objects(points: list[VisibleObjectPoint], output_path: Path, en
     else:
         ax.text(0.0, 0.0, "No target data", ha="center", va="center")
 
-    _prepare_axis(ax, env_id, "Target XY", episode_count, len(target_points))
-    _save_figure(fig, output_path)
+    _prepare_axis(ax, "Target (Rotated XY)", len(target_points))
 
 
 def _category_counts(points: Iterable[VisibleObjectPoint]) -> Counter:
@@ -396,22 +388,24 @@ def _category_counts(points: Iterable[VisibleObjectPoint]) -> Counter:
 def _render_env(output_root: Path, env_id: str, points: list[VisibleObjectPoint], episode_count: int) -> Counter:
     env_output_dir = output_root / env_id
     env_output_dir.mkdir(parents=True, exist_ok=True)
+    _cleanup_legacy_panel_files(env_output_dir)
 
-    plot_paths = [
-        env_output_dir / ALL_OBJECTS_PNG,
-        env_output_dir / CUBE_PNG,
-        env_output_dir / BUTTON_PNG,
-        env_output_dir / TARGET_PNG,
-    ]
-    _plot_all_objects(points, plot_paths[0], env_id, episode_count)
-    _plot_cube_objects(points, plot_paths[1], env_id, episode_count)
-    _plot_button_objects(points, plot_paths[2], env_id, episode_count)
-    _plot_target_objects(points, plot_paths[3], env_id, episode_count)
-    stitched_path = _stitch_images_horizontally(
-        plot_paths,
+    fig, axes = plt.subplots(1, 4, figsize=(28, 7), sharex=True, sharey=True)
+    fig.suptitle(
+        f"{env_id} | episodes={episode_count} | points={len(points)}",
+        fontsize=18,
+    )
+
+    _plot_all_objects(axes[0], points)
+    _plot_cube_objects(axes[1], points)
+    _plot_button_objects(axes[2], points)
+    _plot_target_objects(axes[3], points)
+
+    output_path = _save_combined_figure(
+        fig,
         env_output_dir / HORIZONTAL_COLLAGE_PNG,
     )
-    print(f"[Env] {env_id}: stitched panels -> {stitched_path}")
+    print(f"[Env] {env_id}: output -> {output_path}")
 
     return _category_counts(points)
 
