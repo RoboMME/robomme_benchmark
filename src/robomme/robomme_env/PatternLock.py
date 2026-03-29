@@ -63,6 +63,8 @@ class PatternLock(BaseEnv):
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
+    _PATH_NODE_SELECTION_SEED_OFFSET = 100_003
+    _PATH_SEARCH_SEED_OFFSET = 200_003
 
     config_hard = {
         "grid":5,
@@ -85,6 +87,18 @@ class PatternLock(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
+
+    @staticmethod
+    def _splitmix64(x: int) -> int:
+        """Splitmix64 bit mixing to break linear seed correlation."""
+        x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
+        x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
+        return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF
+
+    def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
+        generator = torch.Generator()
+        generator.manual_seed(self._splitmix64(self.seed + seed_offset))
+        return generator
 
 
     def __init__(self, *args, robot_uids="panda_stick", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
@@ -168,8 +182,12 @@ class PatternLock(BaseEnv):
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
-        generator = torch.Generator()
-        generator.manual_seed(self.seed)
+        scene_generator = self._make_generator()
+        node_selection_generator = self._make_generator(
+            self._PATH_NODE_SELECTION_SEED_OFFSET
+        )
+        path_search_generator = self._make_generator(self._PATH_SEARCH_SEED_OFFSET)
+        self._scene_generator = scene_generator
 
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -265,7 +283,9 @@ class PatternLock(BaseEnv):
         max_attempts = 1000  # Safety limit
 
         for attempt in range(max_attempts):
-            node_choices = torch.randperm(num_targets, generator=generator)[:2]
+            node_choices = torch.randperm(
+                num_targets, generator=node_selection_generator
+            )[:2]
             start_node, end_node = node_choices.tolist()
             
             path_nodes, _, _, _ = find_path_0_to_8(
@@ -274,7 +294,7 @@ class PatternLock(BaseEnv):
                 R=num_rows,
                 C=num_cols,
                 diagonals=True,
-                generator=generator,
+                generator=path_search_generator,
             )
 
             length_range = self.configs[self.difficulty]["length"]

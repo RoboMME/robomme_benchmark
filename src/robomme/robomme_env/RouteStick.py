@@ -68,6 +68,9 @@ class RouteStick(BaseEnv):
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
+    _STEP_COUNT_SEED_OFFSET = 100_003
+    _ROUTE_SELECTION_SEED_OFFSET = 200_003
+    _SWING_DIRECTION_SEED_OFFSET = 300_003
 
 
 
@@ -90,6 +93,18 @@ class RouteStick(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
+
+    @staticmethod
+    def _splitmix64(x: int) -> int:
+        """Splitmix64 bit mixing to break linear seed correlation."""
+        x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
+        x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
+        return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF
+
+    def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
+        generator = torch.Generator()
+        generator.manual_seed(self._splitmix64(self.seed + seed_offset))
+        return generator
 
     def __init__(self, *args, robot_uids="panda_stick", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
@@ -183,8 +198,15 @@ class RouteStick(BaseEnv):
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
-        generator = torch.Generator()
-        generator.manual_seed(self.seed)
+        scene_generator = self._make_generator()
+        step_count_generator = self._make_generator(self._STEP_COUNT_SEED_OFFSET)
+        route_selection_generator = self._make_generator(
+            self._ROUTE_SELECTION_SEED_OFFSET
+        )
+        swing_direction_generator = self._make_generator(
+            self._SWING_DIRECTION_SEED_OFFSET
+        )
+        self._scene_generator = scene_generator
 
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
@@ -207,7 +229,7 @@ class RouteStick(BaseEnv):
 
 
         theta = math.radians(
-        (torch.rand(1, generator=generator).item() * 60) - 30
+        (torch.rand(1, generator=scene_generator).item() * 60) - 30
             )
         #theta=0
         for row in range(num_rows):
@@ -282,7 +304,7 @@ class RouteStick(BaseEnv):
             builder = self.scene.create_actor_builder()
 
             cylinder_material = sapien.render.RenderMaterial()
-            random_rgb = torch.rand(3, generator=generator).tolist()
+            random_rgb = torch.rand(3, generator=scene_generator).tolist()
             cylinder_material.set_base_color((*random_rgb, 1))
 
             # Rotate upright then around its own z-axis to align with the target line.
@@ -335,10 +357,17 @@ class RouteStick(BaseEnv):
 
         cfg = self.configs.get(getattr(self, "difficulty", "easy"), self.config_easy)
         length_min, length_max = cfg.get("length")
-        steps = int(torch.randint(length_min, length_max + 1, (1,), generator=generator).item())
+        steps = int(
+            torch.randint(
+                length_min,
+                length_max + 1,
+                (1,),
+                generator=step_count_generator,
+            ).item()
+        )
         allow_backtracking = bool(cfg.get("backtrack", True))
 
-        traj=generate_dynamic_walk(button_indices,steps=steps,allow_backtracking=allow_backtracking,generator=generator)# Generate trajectory
+        traj=generate_dynamic_walk(button_indices,steps=steps,allow_backtracking=allow_backtracking,generator=route_selection_generator)# Generate trajectory
         self.selected_buttons = [self.buttons_grid[i] for i in traj]
 
         def _stick_side(actor, ref_actor=None):
@@ -362,7 +391,11 @@ class RouteStick(BaseEnv):
         # Randomly decide and record clockwise/counterclockwise direction for each solve_swingonto_withDirection
         self.swing_directions = []
         for _ in self.selected_buttons[1:]:
-            dir_flag = "clockwise" if torch.rand(1, generator=generator).item() < 0.5 else "counterclockwise"
+            dir_flag = (
+                "clockwise"
+                if torch.rand(1, generator=swing_direction_generator).item() < 0.5
+                else "counterclockwise"
+            )
             self.swing_directions.append(dir_flag)
         logger.debug(f"[RouteStick] swing direction list: {self.swing_directions}")
 
