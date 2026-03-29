@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,10 +35,18 @@ BINFILL_BOARD_WITH_HOLE_NAME = "board_with_hole"
 VIDEOREPICK_ENV_ID = "VideoRepick"
 VIDEOREPICK_DIFFICULTY_CYCLE = ("easy", "easy", "medium", "hard")
 ENV_METADATA_ROOT = Path("src/robomme/env_metadata")
+BIN_PANEL_ENVS = {
+    "VideoUnmask",
+    "VideoUnmaskSwap",
+    "ButtonUnmask",
+    "ButtonUnmaskSwap",
+}
+BIN_NAME_PATTERN = re.compile(r"^bin_(\d+)$")
 
 ALL_CATEGORY_COLORS = {
     "cube": "#2ca02c",
     "button": "#9467bd",
+    "bin": "#f28e2b",
     "target": "#e15759",
     "other": "#7f7f7f",
 }
@@ -58,6 +67,18 @@ BINFILL_BOARD_STYLE = {
     "marker": TARGET_STYLE["marker"],
     "label": BINFILL_BOARD_WITH_HOLE_NAME,
 }
+BIN_COLOR_CYCLE = (
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+)
 
 
 @dataclass(frozen=True)
@@ -72,14 +93,15 @@ class VisibleObjectPoint:
     semantic: str
     cube_color: str
     button_kind: str
-    difficulty: Optional[str]
+    difficulty: Optional[str] = None
+    bin_index: Optional[int] = None
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Aggregate visible_objects.json files and export per-env XY scatter plots "
-            "for all objects, cubes, buttons, and targets."
+            "for all objects, cubes, buttons, and targets or bins for selected envs."
         )
     )
     parser.add_argument(
@@ -117,9 +139,18 @@ def _is_binfill_board_with_hole(env_id: str, name: str) -> bool:
     return env_id == BINFILL_ENV_ID and name == BINFILL_BOARD_WITH_HOLE_NAME
 
 
+def _bin_index(name: str) -> Optional[int]:
+    match = BIN_NAME_PATTERN.fullmatch(name)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
 def _semantic_category(env_id: str, name: str) -> str:
     if _is_binfill_board_with_hole(env_id, name):
         return "target"
+    if env_id in BIN_PANEL_ENVS and _bin_index(name) is not None:
+        return "bin"
     lower = name.lower()
     if "cube" in lower:
         return "cube"
@@ -274,6 +305,7 @@ def _load_points(
                     cube_color=_cube_color(name),
                     button_kind=_button_kind(name),
                     difficulty=difficulty,
+                    bin_index=_bin_index(name),
                 )
             )
 
@@ -332,7 +364,7 @@ def _plot_all_objects(ax, points: list[VisibleObjectPoint]) -> None:
         grouped[point.semantic].append(point)
 
     legend_handles: list[Line2D] = []
-    for semantic in ("cube", "button", "target", "other"):
+    for semantic in ("cube", "button", "bin", "target", "other"):
         semantic_points = grouped.get(semantic, [])
         if not semantic_points:
             continue
@@ -449,6 +481,55 @@ def _plot_button_objects(ax, points: list[VisibleObjectPoint]) -> None:
         ax.text(0.0, 0.0, "No button data", ha="center", va="center")
 
 
+def _plot_bin_objects(ax, points: list[VisibleObjectPoint]) -> None:
+    bin_points = [point for point in points if point.semantic == "bin"]
+
+    grouped: dict[Optional[int], list[VisibleObjectPoint]] = defaultdict(list)
+    for point in bin_points:
+        grouped[point.bin_index].append(point)
+
+    legend_handles: list[Line2D] = []
+    ordered_keys = sorted(
+        grouped,
+        key=lambda value: (value is None, -1 if value is None else value),
+    )
+    for key in ordered_keys:
+        bucket = grouped[key]
+        if not bucket:
+            continue
+        color = BIN_COLOR_CYCLE[(key or 0) % len(BIN_COLOR_CYCLE)]
+        label = f"bin_{key}" if key is not None else "bin_unknown"
+        rotated_points = [_xy_rot_cw_90(point.world_x, point.world_y) for point in bucket]
+        ax.scatter(
+            [point[0] for point in rotated_points],
+            [point[1] for point in rotated_points],
+            s=62,
+            alpha=0.8,
+            c=color,
+            marker="s",
+            edgecolors="black",
+            linewidths=0.45,
+        )
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker="s",
+                color="none",
+                markerfacecolor=color,
+                markeredgecolor="black",
+                markersize=8,
+                label=label,
+            )
+        )
+
+    _prepare_axis(ax, "Bin (Rotated XY)", len(bin_points))
+    if legend_handles:
+        ax.legend(handles=legend_handles, loc="upper right")
+    else:
+        ax.text(0.0, 0.0, "No bin data", ha="center", va="center")
+
+
 def _target_panel_points(
     env_id: str,
     points: Iterable[VisibleObjectPoint],
@@ -539,7 +620,10 @@ def _render_collage(
     _plot_all_objects(axes[0], points)
     _plot_cube_objects(axes[1], points)
     _plot_button_objects(axes[2], points)
-    _plot_target_objects(axes[3], env_id, points)
+    if env_id in BIN_PANEL_ENVS:
+        _plot_bin_objects(axes[3], points)
+    else:
+        _plot_target_objects(axes[3], env_id, points)
 
     return _save_combined_figure(fig, env_output_dir / output_filename)
 
@@ -616,13 +700,15 @@ def main() -> None:
         print(
             f"[Env] {env_id}: episodes={episode_counts.get(env_id, 0)} "
             f"points={len(points)} cube={counts.get('cube', 0)} "
-            f"button={counts.get('button', 0)} target={counts.get('target', 0)} "
+            f"button={counts.get('button', 0)} bin={counts.get('bin', 0)} "
+            f"target={counts.get('target', 0)} "
             f"other={counts.get('other', 0)}"
         )
 
     print(
         f"[Summary] envs={len(points_by_env)} total_points={total_points} "
         f"cube={overall_counts.get('cube', 0)} button={overall_counts.get('button', 0)} "
+        f"bin={overall_counts.get('bin', 0)} "
         f"target={overall_counts.get('target', 0)} other={overall_counts.get('other', 0)} "
         f"skipped_files={skipped.get('files', 0)} skipped_objects={skipped.get('objects', 0)}"
     )
