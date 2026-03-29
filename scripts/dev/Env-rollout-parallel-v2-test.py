@@ -17,6 +17,7 @@ seed = base_seed + attempt
 """
 
 import argparse
+import json
 import multiprocessing as mp
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -30,6 +31,11 @@ import numpy as np
 from robomme.env_record_wrapper import RobommeRecordWrapper
 from robomme.robomme_env import *  # noqa: F401,F403
 from robomme.robomme_env.utils.SceneGenerationError import SceneGenerationError
+from videorepick_setup_metadata import (
+    VIDEOREPICK_ENV_ID,
+    VIDEOREPICK_METADATA_DATASET,
+    write_videorepick_setup_metadata,
+)
 
 DEFAULT_ENVS = [
     "PickXtimes",
@@ -85,7 +91,50 @@ def _latest_recorded_mp4(
     return max(candidates, key=lambda path: path.stat().st_mtime)
 
 
-def _verify_setup_h5(h5_path: Path, episode: int) -> tuple[bool, str]:
+def _decode_h5_text(value: object) -> str:
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    if isinstance(value, np.bytes_):
+        return bytes(value).decode("utf-8")
+    if isinstance(value, np.ndarray):
+        flattened = value.reshape(-1).tolist()
+        if not flattened:
+            return ""
+        return _decode_h5_text(flattened[0])
+    return str(value)
+
+
+def _verify_videorepick_setup_metadata(setup_group: h5py.Group) -> tuple[bool, str]:
+    if VIDEOREPICK_METADATA_DATASET not in setup_group:
+        return False, f"missing setup dataset: {VIDEOREPICK_METADATA_DATASET}"
+
+    try:
+        payload_raw = _decode_h5_text(setup_group[VIDEOREPICK_METADATA_DATASET][()])
+        payload = json.loads(payload_raw)
+    except Exception as exc:
+        return (
+            False,
+            f"invalid {VIDEOREPICK_METADATA_DATASET} JSON "
+            f"({type(exc).__name__}: {exc})",
+        )
+
+    if not isinstance(payload, dict):
+        return False, f"{VIDEOREPICK_METADATA_DATASET} is not a JSON object"
+
+    target_color = payload.get("target_cube_1_color")
+    if target_color not in {"red", "blue", "green"}:
+        return False, "invalid target_cube_1_color in videorepick_metadata"
+
+    num_repeats = payload.get("num_repeats")
+    if isinstance(num_repeats, bool) or not isinstance(num_repeats, int):
+        return False, "invalid num_repeats type in videorepick_metadata"
+    if num_repeats < 1:
+        return False, "num_repeats must be >= 1 in videorepick_metadata"
+
+    return True, "videorepick metadata verified"
+
+
+def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, str]:
     """验证 setup-only HDF5 是否满足 downstream 读取要求。"""
     if not h5_path.is_file():
         return False, f"missing HDF5 file: {h5_path}"
@@ -125,6 +174,9 @@ def _verify_setup_h5(h5_path: Path, episode: int) -> tuple[bool, str]:
                     "unexpected timestep data present: "
                     f"{', '.join(timestep_groups[:3])}"
                 )
+
+            if env_id == VIDEOREPICK_ENV_ID:
+                return _verify_videorepick_setup_metadata(setup_group)
     except Exception as exc:
         return False, f"failed to inspect HDF5 ({type(exc).__name__}: {exc})"
 
@@ -166,7 +218,24 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["PickXtimes"],
+        default=[
+    # "PickXtimes",
+    # "StopCube",
+    # "SwingXtimes",
+    # "BinFill",
+    # "VideoUnmaskSwap",
+    # "VideoUnmask",
+    # "ButtonUnmaskSwap",
+    # "ButtonUnmask",
+     "VideoRepick",
+    # "VideoPlaceButton",
+    # "VideoPlaceOrder",
+    # "PickHighlight",
+    # "InsertPeg",
+    # "MoveCube",
+    # "PatternLock",
+    # "RouteStick",
+],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help="One or more environment IDs to run in order (default: VideoPlaceButton, VideoPlaceOrder). Each env runs the same episode range; seeds are derived from env_id/episode/attempt.",
@@ -208,7 +277,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=10,
+        default=30,
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
             "the same env_id. Default: auto=min(os.cpu_count(), episode count)."
@@ -368,7 +437,16 @@ def _run_episode(
     finally:
         _close_env(env, episode, seed)
 
-    setup_ok, setup_message = _verify_setup_h5(h5_path, episode)
+    try:
+        write_videorepick_setup_metadata(env, h5_path, episode)
+    except Exception as exc:
+        print(
+            f"[Setup] Failed to append VideoRepick metadata for env={env_id} "
+            f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
+        )
+        return False, False
+
+    setup_ok, setup_message = _verify_setup_h5(h5_path, env_id, episode)
     mp4_path = _latest_recorded_mp4(output_dir, env_id, episode, seed)
     status_text = "SUCCESS" if setup_ok else "FAILED"
     print(

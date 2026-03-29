@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 import re
 import signal
@@ -44,6 +45,7 @@ DIFFICULTY_SPLIT_ENVS = {
     "BinFill",
     "PickXtimes",
     "SwingXtimes",
+    "VideoRepick",
     "VideoPlaceButton",
     "VideoPlaceOrder",
 }
@@ -103,6 +105,7 @@ CONSTANT_GOAL_ENVS = {
     "PickHighlight",
 }
 AGGREGATED_H5_PREFIX = "record_dataset_"
+VIDEOREPICK_METADATA_FIELD = "videorepick_metadata"
 SPLIT_H5_PATTERN = re.compile(
     r"^(?P<env_id>.+?)_ep(?P<episode>\d+)(?:_seed\d+)?$"
 )
@@ -268,6 +271,64 @@ def _parse_binfill_fields(goal: str) -> tuple[dict[str, int | str], str | None]:
     return (parsed_fields, None)
 
 
+def _merge_error_messages(existing_error: object, errors: list[str]) -> str:
+    merged: list[str] = []
+
+    existing_text = str(existing_error).strip()
+    if existing_text:
+        merged.extend(
+            part.strip() for part in existing_text.split(";") if part.strip()
+        )
+
+    merged.extend(error.strip() for error in errors if error and error.strip())
+
+    unique_errors: list[str] = []
+    for error in merged:
+        if error not in unique_errors:
+            unique_errors.append(error)
+    return "; ".join(unique_errors)
+
+
+def _parse_videorepick_setup_fields(
+    setup_group: h5py.Group | None,
+) -> tuple[dict[str, int | str], str | None]:
+    if setup_group is None or VIDEOREPICK_METADATA_FIELD not in setup_group:
+        return ({}, f"missing {VIDEOREPICK_METADATA_FIELD}")
+
+    payload_raw = _decode_dataset_string(
+        setup_group[VIDEOREPICK_METADATA_FIELD][()],
+        default="",
+    ).strip()
+    if not payload_raw:
+        return ({}, f"missing {VIDEOREPICK_METADATA_FIELD}")
+
+    try:
+        payload = json.loads(payload_raw)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        return ({}, f"invalid {VIDEOREPICK_METADATA_FIELD} json ({exc})")
+
+    if not isinstance(payload, dict):
+        return ({}, f"invalid {VIDEOREPICK_METADATA_FIELD} payload type")
+
+    target_color = payload.get("target_cube_1_color")
+    if target_color not in COLOR_ORDER:
+        return ({}, "invalid videorepick target_cube_1_color")
+
+    repeat_count = payload.get("num_repeats")
+    if isinstance(repeat_count, bool) or not isinstance(repeat_count, int):
+        return ({}, "invalid videorepick num_repeats type")
+    if repeat_count < 1:
+        return ({}, "invalid videorepick num_repeats value")
+
+    return (
+        {
+            "target_color": target_color,
+            "repeat_count": repeat_count,
+        },
+        None,
+    )
+
+
 def _default_row(env_id: str, episode_name: str) -> dict[str, object]:
     episode_number = episode_name.removeprefix("episode_")
     return {
@@ -294,13 +355,30 @@ def _default_row(env_id: str, episode_name: str) -> dict[str, object]:
     }
 
 
-def _parse_semantic_fields(row: dict[str, object]) -> None:
+def _parse_semantic_fields(
+    row: dict[str, object],
+    setup_group: h5py.Group | None = None,
+) -> None:
     env_id = str(row["env_id"])
     goal = str(row["canonical_goal"]).lower()
     errors: list[str] = []
+    existing_error = row.get("parse_error", "")
+
+    if env_id == "VideoRepick":
+        if goal == MISSING_TASK_GOAL.lower():
+            errors.append("missing task_goal")
+
+        parsed_fields, error = _parse_videorepick_setup_fields(setup_group)
+        if parsed_fields:
+            row.update(parsed_fields)
+        if error:
+            errors.append(error)
+
+        row["parse_error"] = _merge_error_messages(existing_error, errors)
+        return
 
     if goal == MISSING_TASK_GOAL.lower():
-        row["parse_error"] = "missing task_goal"
+        row["parse_error"] = _merge_error_messages(existing_error, ["missing task_goal"])
         return
 
     if env_id == "BinFill":
@@ -332,11 +410,6 @@ def _parse_semantic_fields(row: dict[str, object]) -> None:
             errors.append("failed to parse target_color")
         if row["target_order"] == "unknown":
             errors.append("failed to parse target_order")
-    elif env_id == "VideoRepick":
-        repeat_count = _parse_repeat_count(goal)
-        row["repeat_count"] = repeat_count if repeat_count is not None else "unknown"
-        if row["repeat_count"] == "unknown":
-            errors.append("failed to parse repeat_count")
     elif env_id == "StopCube":
         stop_visit = _parse_stop_visit(goal)
         row["stop_visit"] = stop_visit if stop_visit is not None else "unknown"
@@ -362,8 +435,7 @@ def _parse_semantic_fields(row: dict[str, object]) -> None:
     elif env_id in CONSTANT_GOAL_ENVS:
         return
 
-    if errors:
-        row["parse_error"] = "; ".join(errors)
+    row["parse_error"] = _merge_error_messages(existing_error, errors)
 
 
 def _iter_h5_paths(dataset_root: Path) -> list[Path]:
@@ -454,7 +526,7 @@ def _append_episode_row(
         row["parse_error"] = "missing task_goal"
         warnings.append(f"{env_id}/{episode_name}: missing task_goal")
 
-    _parse_semantic_fields(row)
+    _parse_semantic_fields(row, setup_group)
     if row["parse_error"]:
         warnings.append(f"{env_id}/{episode_name}: {row['parse_error']}")
     rows.append(row)
@@ -720,6 +792,12 @@ def _figure_specs_for_env(env_id: str) -> list[dict[str, object]]:
         ]
     if env_id == "VideoRepick":
         return [
+            {
+                "field": "target_color",
+                "title": "Target Color",
+                "color": "#72B7B2",
+                "preferred_order": COLOR_ORDER + ["unknown"],
+            },
             {
                 "field": "repeat_count",
                 "title": "Repeat Count",
