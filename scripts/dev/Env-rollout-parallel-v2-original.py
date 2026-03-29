@@ -134,7 +134,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["PickHighlight"],
+        default=["PatternLock","RouteStick"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help=(

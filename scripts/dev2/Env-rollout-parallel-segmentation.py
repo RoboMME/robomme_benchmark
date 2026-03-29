@@ -13,20 +13,33 @@ seed = base_seed + attempt
 产物语义：
 - HDF5：必需产物。脚本会验证 `episode_x/setup`、`difficulty`、`task_goal`、
   `available_multi_choices` 存在，且不允许出现 `timestep_*` 数据。
+- PNG：必需产物。reset 成功后会导出所有带 `segmentation` 的相机彩色分割图。
+- JSON：必需产物。reset 成功后会导出非黑色可见对象的 world xyz 信息。
+- 3D PNG：必需产物。reset 成功后会导出可见对象的独立 3D 坐标图。
 - MP4：尽力产物。仅尝试 1 次 no-op step 以给 wrapper 留帧；若没有 MP4，不视为失败。
 """
 
 import argparse
+import colorsys
 import json
 import multiprocessing as mp
 import os
+import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional, Set
 
 import gymnasium as gym
 import h5py
+import imageio
 import numpy as np
+
+os.environ.setdefault("MPLBACKEND", "Agg")
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEV_SCRIPT_DIR = SCRIPT_DIR.parent / "dev"
+if str(DEV_SCRIPT_DIR) not in sys.path:
+    sys.path.append(str(DEV_SCRIPT_DIR))
 
 from pickhighlight_setup_metadata import (
     PICKHIGHLIGHT_ENV_ID,
@@ -36,6 +49,8 @@ from pickhighlight_setup_metadata import (
 from robomme.env_record_wrapper import RobommeRecordWrapper
 from robomme.robomme_env import *  # noqa: F401,F403
 from robomme.robomme_env.utils.SceneGenerationError import SceneGenerationError
+from robomme.robomme_env.utils.choice_action_mapping import extract_actor_position_xyz
+from robomme.robomme_env.utils.segmentation_utils import create_segmentation_visuals
 from videorepick_setup_metadata import (
     VIDEOREPICK_ENV_ID,
     VIDEOREPICK_METADATA_DATASET,
@@ -67,6 +82,10 @@ DIFFICULTY_ORDER = ("easy", "medium", "hard")
 MAX_SEED_ATTEMPTS = 100
 MAX_EPISODES_PER_ENV = 1000
 ENV_SEED_BLOCK_SIZE = MAX_EPISODES_PER_ENV * MAX_SEED_ATTEMPTS
+RESET_SEGMENTATION_DIRNAME = "reset_segmentation_pngs"
+VISIBLE_OBJECT_CAMERAS = ("base_camera", "hand_camera")
+VISIBLE_OBJECT_JSON_FILENAME = "visible_objects.json"
+VISIBLE_OBJECT_3D_PNG_FILENAME = "visible_object_positions_3d.png"
 
 
 def _dataset_hdf5_dir(dataset_root: Path) -> Path:
@@ -94,6 +113,381 @@ def _latest_recorded_mp4(
     if not candidates:
         return None
     return max(candidates, key=lambda path: path.stat().st_mtime)
+
+
+def _reset_segmentation_dir(
+    output_root: Path, env_id: str, episode: int, seed: int
+) -> Path:
+    """返回当前 episode 对应的 reset segmentation PNG 目录。"""
+    return (
+        output_root
+        / RESET_SEGMENTATION_DIRNAME
+        / f"{env_id}_ep{episode}_seed{seed}"
+    )
+
+
+def _to_numpy(value: object) -> np.ndarray:
+    """将 tensor / array-like 转为 CPU numpy。"""
+    if hasattr(value, "detach"):
+        value = value.detach()
+    if hasattr(value, "cpu"):
+        value = value.cpu()
+    return np.asarray(value)
+
+
+def _generate_color_map(
+    n: int = 10_000,
+    s_min: float = 0.70,
+    s_max: float = 0.95,
+    v_min: float = 0.78,
+    v_max: float = 0.95,
+) -> dict[int, list[int]]:
+    """复刻 RecordWrapper 的固定 segmentation 色表。"""
+    phi = 0.6180339887498948
+    color_map: dict[int, list[int]] = {}
+    for index in range(1, n + 1):
+        hue = (index * phi) % 1.0
+        saturation = s_min + (s_max - s_min) * ((index % 7) / 6)
+        value = v_min + (v_max - v_min) * (((index * 3) % 5) / 4)
+        red, green, blue = colorsys.hsv_to_rgb(hue, saturation, value)
+        color_map[index] = [
+            int(round(red * 255)),
+            int(round(green * 255)),
+            int(round(blue * 255)),
+        ]
+    return color_map
+
+
+SEGMENTATION_COLOR_MAP = _generate_color_map()
+
+
+def _get_reset_blacklisted_object_names(env: gym.Env) -> set[str]:
+    """返回 reset segmentation 中需要显示为黑色的对象名称集合。"""
+    blacklisted_names = {"table-workspace", "ground"}
+    robot = getattr(getattr(env.unwrapped, "agent", None), "robot", None)
+    for link in list(getattr(robot, "links", []) or []):
+        link_name = getattr(link, "name", None)
+        if link_name:
+            blacklisted_names.add(str(link_name))
+    return blacklisted_names
+
+
+def _build_reset_segmentation_color_map(
+    env: gym.Env,
+    segmentation_id_map: object,
+) -> dict[int, list[int]]:
+    """根据 reset 时的 segmentation_id_map 应用对象级颜色覆盖。"""
+    color_map = {
+        seg_id: color.copy() for seg_id, color in SEGMENTATION_COLOR_MAP.items()
+    }
+    blacklisted_names = _get_reset_blacklisted_object_names(env)
+    if isinstance(segmentation_id_map, dict):
+        for obj_id, obj in segmentation_id_map.items():
+            obj_name = getattr(obj, "name", None)
+            if obj_name in blacklisted_names:
+                color_map[int(obj_id)] = [0, 0, 0]
+    return color_map
+
+
+def _visible_object_json_path(reset_output_dir: Path) -> Path:
+    return reset_output_dir / VISIBLE_OBJECT_JSON_FILENAME
+
+
+def _visible_object_plot_path(reset_output_dir: Path) -> Path:
+    return reset_output_dir / VISIBLE_OBJECT_3D_PNG_FILENAME
+
+
+def _collect_reset_visible_objects(
+    obs: object,
+    env: gym.Env,
+) -> dict[str, object]:
+    """收集 base/hand camera 中非黑色可见对象的 world xyz 信息。"""
+    if not isinstance(obs, dict):
+        raise ValueError("reset observation is not a dict")
+
+    sensor_data = obs.get("sensor_data")
+    if not isinstance(sensor_data, dict):
+        raise ValueError("reset observation missing sensor_data dict")
+
+    segmentation_id_map = getattr(env.unwrapped, "segmentation_id_map", None)
+    if not isinstance(segmentation_id_map, dict):
+        raise ValueError("env missing segmentation_id_map dict after reset")
+
+    blacklisted_names = _get_reset_blacklisted_object_names(env)
+    visible_ids_by_camera: dict[str, set[int]] = {}
+    visible_objects: dict[int, dict[str, object]] = {}
+
+    for camera_name in VISIBLE_OBJECT_CAMERAS:
+        camera_obs = sensor_data.get(camera_name)
+        if not isinstance(camera_obs, dict):
+            raise ValueError(f"reset observation missing camera '{camera_name}'")
+        if "segmentation" not in camera_obs:
+            raise ValueError(
+                f"reset observation camera '{camera_name}' missing segmentation"
+            )
+
+        segmentation = _to_numpy(camera_obs["segmentation"])
+        if segmentation.ndim >= 4:
+            segmentation = segmentation[0]
+        segmentation_2d = segmentation.squeeze()
+        if segmentation_2d.ndim != 2:
+            raise ValueError(
+                f"camera '{camera_name}' segmentation has invalid ndim "
+                f"{segmentation_2d.ndim}; expected 2"
+            )
+
+        camera_visible_ids: set[int] = set()
+        for seg_id in sorted(int(seg_value) for seg_value in np.unique(segmentation_2d)):
+            if seg_id <= 0:
+                continue
+
+            obj = segmentation_id_map.get(seg_id)
+            if obj is None:
+                raise ValueError(
+                    f"visible segmentation id {seg_id} missing from segmentation_id_map"
+                )
+
+            obj_name = getattr(obj, "name", None)
+            if obj_name in blacklisted_names:
+                continue
+
+            position_xyz = extract_actor_position_xyz(obj)
+            if position_xyz is None:
+                raise ValueError(
+                    f"failed to extract world xyz for seg_id={seg_id}, "
+                    f"name={obj_name!r}"
+                )
+
+            camera_visible_ids.add(seg_id)
+            visible_objects.setdefault(
+                seg_id,
+                {
+                    "segmentation_id": seg_id,
+                    "name": str(obj_name or f"seg_{seg_id}"),
+                    "object_type": type(obj).__name__,
+                    "world_xyz": np.asarray(position_xyz, dtype=np.float64).tolist(),
+                },
+            )
+
+        visible_ids_by_camera[camera_name] = camera_visible_ids
+
+    objects_payload: list[dict[str, object]] = []
+    for seg_id in sorted(visible_objects):
+        item = dict(visible_objects[seg_id])
+        item["visible_in"] = {
+            camera_name: seg_id in visible_ids_by_camera.get(camera_name, set())
+            for camera_name in VISIBLE_OBJECT_CAMERAS
+        }
+        objects_payload.append(item)
+
+    return {
+        "cameras": list(VISIBLE_OBJECT_CAMERAS),
+        "objects": objects_payload,
+    }
+
+
+def _save_visible_objects_json(
+    reset_output_dir: Path,
+    env_id: str,
+    episode: int,
+    seed: int,
+    visible_payload: dict[str, object],
+) -> Path:
+    """写出 reset 可见对象 JSON。"""
+    json_path = _visible_object_json_path(reset_output_dir)
+    payload = {
+        "env_id": env_id,
+        "episode": episode,
+        "seed": seed,
+        "cameras": visible_payload["cameras"],
+        "objects": visible_payload["objects"],
+    }
+    with json_path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=True)
+        handle.write("\n")
+    return json_path
+
+
+def _set_equal_3d_axes(ax, points_xyz: np.ndarray) -> None:
+    """为 3D scatter 设定一致尺度，避免坐标轴拉伸。"""
+    if points_xyz.size == 0:
+        ax.set_xlim(-0.1, 0.1)
+        ax.set_ylim(-0.1, 0.1)
+        ax.set_zlim(0.0, 0.2)
+        return
+
+    mins = points_xyz.min(axis=0)
+    maxs = points_xyz.max(axis=0)
+    centers = (mins + maxs) / 2.0
+    radius = max(float((maxs - mins).max()) / 2.0, 0.05)
+    ax.set_xlim(centers[0] - radius, centers[0] + radius)
+    ax.set_ylim(centers[1] - radius, centers[1] + radius)
+    ax.set_zlim(centers[2] - radius, centers[2] + radius)
+
+
+def _save_visible_objects_3d_plot(
+    reset_output_dir: Path,
+    env_id: str,
+    episode: int,
+    seed: int,
+    visible_payload: dict[str, object],
+) -> Path:
+    """写出 reset 可见对象的独立 3D world xyz 可视化图。"""
+    import matplotlib.pyplot as plt
+
+    plot_path = _visible_object_plot_path(reset_output_dir)
+    objects = list(visible_payload["objects"])
+
+    figure = plt.figure(figsize=(8, 6))
+    axis = figure.add_subplot(111, projection="3d")
+    points_xyz: list[list[float]] = []
+
+    for item in objects:
+        seg_id = int(item["segmentation_id"])
+        point_xyz = np.asarray(item["world_xyz"], dtype=np.float64)
+        color_rgb = np.asarray(
+            SEGMENTATION_COLOR_MAP.get(seg_id, [255, 255, 255]),
+            dtype=np.float64,
+        ) / 255.0
+        visible_in = item["visible_in"]
+        tag = ""
+        if visible_in.get("base_camera"):
+            tag += "B"
+        if visible_in.get("hand_camera"):
+            tag += "H"
+
+        axis.scatter(
+            point_xyz[0],
+            point_xyz[1],
+            point_xyz[2],
+            s=80,
+            color=color_rgb,
+            edgecolors="black",
+            linewidths=0.6,
+        )
+        axis.text(
+            point_xyz[0],
+            point_xyz[1],
+            point_xyz[2],
+            f"{item['name']} ({tag or '-'})",
+            fontsize=8,
+        )
+        points_xyz.append(point_xyz.tolist())
+
+    points_array = (
+        np.asarray(points_xyz, dtype=np.float64)
+        if points_xyz
+        else np.zeros((0, 3), dtype=np.float64)
+    )
+    _set_equal_3d_axes(axis, points_array)
+    axis.set_xlabel("World X")
+    axis.set_ylabel("World Y")
+    axis.set_zlabel("World Z")
+    axis.view_init(elev=28, azim=42)
+    axis.set_title(
+        f"Visible Object Positions 3D\n{env_id} ep={episode} seed={seed}"
+    )
+    axis.grid(True)
+
+    if not objects:
+        axis.text(0.0, 0.0, 0.0, "No visible objects", fontsize=10)
+
+    figure.tight_layout()
+    figure.savefig(plot_path, dpi=200)
+    plt.close(figure)
+    return plot_path
+
+
+def _save_reset_visible_object_artifacts(
+    obs: object,
+    env: gym.Env,
+    reset_output_dir: Path,
+    env_id: str,
+    episode: int,
+    seed: int,
+) -> tuple[Path, Path]:
+    """导出 reset 可见对象 JSON 与独立 3D 位置图。"""
+    visible_payload = _collect_reset_visible_objects(obs=obs, env=env)
+    json_path = _save_visible_objects_json(
+        reset_output_dir=reset_output_dir,
+        env_id=env_id,
+        episode=episode,
+        seed=seed,
+        visible_payload=visible_payload,
+    )
+    plot_path = _save_visible_objects_3d_plot(
+        reset_output_dir=reset_output_dir,
+        env_id=env_id,
+        episode=episode,
+        seed=seed,
+        visible_payload=visible_payload,
+    )
+    print(f"[Setup] Visible object JSON saved: {json_path.resolve()}")
+    print(f"[Setup] Visible object 3D plot saved: {plot_path.resolve()}")
+    return json_path, plot_path
+
+
+def _save_reset_segmentation_pngs(
+    obs: object,
+    env: gym.Env,
+    output_root: Path,
+    env_id: str,
+    episode: int,
+    seed: int,
+) -> Path:
+    """导出 reset 帧中所有相机的 segmentation 彩色 PNG。"""
+    if not isinstance(obs, dict):
+        raise ValueError("reset observation is not a dict")
+
+    sensor_data = obs.get("sensor_data")
+    if not isinstance(sensor_data, dict):
+        raise ValueError("reset observation missing sensor_data dict")
+
+    output_dir = _reset_segmentation_dir(output_root, env_id, episode, seed)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    color_map = _build_reset_segmentation_color_map(
+        env,
+        getattr(env.unwrapped, "segmentation_id_map", None)
+    )
+
+    saved_paths: list[Path] = []
+    for camera_name, camera_obs in sensor_data.items():
+        if not isinstance(camera_obs, dict) or "segmentation" not in camera_obs:
+            continue
+        if "rgb" not in camera_obs:
+            raise ValueError(
+                f"camera '{camera_name}' has segmentation but missing rgb frame"
+            )
+
+        segmentation = _to_numpy(camera_obs["segmentation"])
+        rgb = _to_numpy(camera_obs["rgb"])
+        if segmentation.ndim >= 4:
+            segmentation = segmentation[0]
+        if rgb.ndim >= 4:
+            rgb = rgb[0]
+
+        segmentation_vis, _, _ = create_segmentation_visuals(
+            segmentation=segmentation,
+            segmentation_result=segmentation,
+            base_frame=rgb,
+            color_map=color_map,
+            segmentation_points=[],
+        )
+        png_path = output_dir / f"{camera_name}_segmentation.png"
+        try:
+            imageio.imwrite(png_path, segmentation_vis)
+        except Exception as exc:
+            raise RuntimeError(
+                f"failed to write segmentation png for camera '{camera_name}' "
+                f"to {png_path}: {exc}"
+            ) from exc
+        saved_paths.append(png_path)
+
+    if not saved_paths:
+        raise ValueError("reset observation contained no camera segmentation data")
+
+    print(f"[Setup] Reset segmentation PNGs saved: {output_dir.resolve()}")
+    return output_dir
 
 
 def _decode_h5_text(value: object) -> str:
@@ -256,21 +650,21 @@ def _build_parser() -> argparse.ArgumentParser:
         nargs="+",
         default=[
     "PickXtimes",
-    "StopCube",
-    "SwingXtimes",
-    "BinFill",
-    "VideoUnmaskSwap",
-    "VideoUnmask",
-    "ButtonUnmaskSwap",
-    "ButtonUnmask",
-    "VideoRepick",
-    "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "PickHighlight",
-    "InsertPeg",
-    "MoveCube",
-    "PatternLock",
-    "RouteStick",
+    # "StopCube",
+    # "SwingXtimes",
+    # "BinFill",
+    # "VideoUnmaskSwap",
+    # "VideoUnmask",
+    # "ButtonUnmaskSwap",
+    # "ButtonUnmask",
+    # "VideoRepick",
+    # "VideoPlaceButton",
+    # "VideoPlaceOrder",
+    # "PickHighlight",
+    # "InsertPeg",
+    # "MoveCube",
+    # "PatternLock",
+    # "RouteStick",
 ],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
@@ -279,7 +673,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=300,
+        default=30,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -446,12 +840,13 @@ def _run_episode(
     )
 
     env: Optional[gym.Env] = None
+    obs: Optional[dict] = None
     h5_path = _episode_h5_path(output_dir, env_id, episode, seed)
 
     try:
         env_kwargs = _build_env_kwargs(episode, seed, difficulty)
         env = _create_env(env_id, env_kwargs, output_dir, episode, seed)
-        env.reset()
+        obs, _ = env.reset()
     except SceneGenerationError as exc:
         print(
             f"[Setup] Scene generation failed for env={env_id} "
@@ -466,6 +861,31 @@ def _run_episode(
         )
         _close_env(env, episode, seed)
         return False, True
+
+    try:
+        reset_output_dir = _save_reset_segmentation_pngs(
+            obs=obs,
+            env=env,
+            output_root=output_dir,
+            env_id=env_id,
+            episode=episode,
+            seed=seed,
+        )
+        _save_reset_visible_object_artifacts(
+            obs=obs,
+            env=env,
+            reset_output_dir=reset_output_dir,
+            env_id=env_id,
+            episode=episode,
+            seed=seed,
+        )
+    except Exception as exc:
+        print(
+            f"[Setup] Failed to save reset artifacts for env={env_id} "
+            f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
+        )
+        _close_env(env, episode, seed)
+        return False, False
 
     try:
         _attempt_noop_step(env, env_id, episode, seed)
@@ -599,6 +1019,42 @@ def _print_episode_artifacts(
         print(
             f"No MP4 matched under {output_dir / 'videos'} "
             f"(expected filename fragment '{env_id}_ep{episode}_seed{run_seed}')."
+        )
+
+    png_dir = _reset_segmentation_dir(output_dir, env_id, episode, run_seed)
+    if png_dir.is_dir():
+        print(
+            f"Reset segmentation PNGs ({env_id} episode {episode}, seed={run_seed}): "
+            f"{png_dir.resolve()}"
+        )
+    else:
+        print(
+            f"Missing reset segmentation PNGs ({env_id} episode {episode}, "
+            f"seed={run_seed}): {png_dir}"
+        )
+
+    visible_json_path = _visible_object_json_path(png_dir)
+    if visible_json_path.is_file():
+        print(
+            f"Visible object JSON ({env_id} episode {episode}, seed={run_seed}): "
+            f"{visible_json_path.resolve()}"
+        )
+    else:
+        print(
+            f"Missing visible object JSON ({env_id} episode {episode}, "
+            f"seed={run_seed}): {visible_json_path}"
+        )
+
+    visible_plot_path = _visible_object_plot_path(png_dir)
+    if visible_plot_path.is_file():
+        print(
+            f"Visible object 3D PNG ({env_id} episode {episode}, seed={run_seed}): "
+            f"{visible_plot_path.resolve()}"
+        )
+    else:
+        print(
+            f"Missing visible object 3D PNG ({env_id} episode {episode}, "
+            f"seed={run_seed}): {visible_plot_path}"
         )
 
 
