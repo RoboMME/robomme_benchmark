@@ -27,8 +27,13 @@ CUBE_PNG = "cube_xy.png"
 BUTTON_PNG = "button_xy.png"
 TARGET_PNG = "target_xy.png"
 HORIZONTAL_COLLAGE_PNG = "all_panels_horizontal.png"
+VIDEOREPICK_EASY_MEDIUM_PNG = "all_panels_horizontal_easy_medium.png"
+VIDEOREPICK_HARD_PNG = "all_panels_horizontal_hard.png"
 BINFILL_ENV_ID = "BinFill"
 BINFILL_BOARD_WITH_HOLE_NAME = "board_with_hole"
+VIDEOREPICK_ENV_ID = "VideoRepick"
+VIDEOREPICK_DIFFICULTY_CYCLE = ("easy", "easy", "medium", "hard")
+ENV_METADATA_ROOT = Path("src/robomme/env_metadata")
 
 ALL_CATEGORY_COLORS = {
     "cube": "#2ca02c",
@@ -67,6 +72,7 @@ class VisibleObjectPoint:
     semantic: str
     cube_color: str
     button_kind: str
+    difficulty: Optional[str]
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -145,9 +151,69 @@ def _discover_json_files(input_dir: Path) -> list[Path]:
     return sorted(input_dir.rglob(VISIBLE_OBJECT_JSON_FILENAME))
 
 
+def _load_episode_difficulty_map() -> dict[str, dict[int, str]]:
+    difficulty_by_env_episode: dict[str, dict[int, str]] = defaultdict(dict)
+    if not ENV_METADATA_ROOT.is_dir():
+        return {}
+
+    for metadata_path in sorted(ENV_METADATA_ROOT.glob("*/record_dataset_*_metadata.json")):
+        try:
+            with metadata_path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except Exception as exc:
+            print(
+                f"[Warn] Skip invalid env metadata {metadata_path}: "
+                f"{type(exc).__name__}: {exc}"
+            )
+            continue
+
+        env_id = payload.get("env_id")
+        records = payload.get("records")
+        if not isinstance(env_id, str) or not isinstance(records, list):
+            print(f"[Warn] Skip malformed env metadata {metadata_path}")
+            continue
+
+        env_map = difficulty_by_env_episode[env_id]
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            episode = record.get("episode")
+            difficulty = record.get("difficulty")
+            if not isinstance(episode, int) or not isinstance(difficulty, str):
+                continue
+            existing = env_map.get(episode)
+            if existing is not None and existing != difficulty:
+                print(
+                    f"[Warn] Conflicting difficulty metadata for env={env_id} "
+                    f"episode={episode}: keep {existing}, ignore {difficulty}"
+                )
+                continue
+            env_map[episode] = difficulty
+
+    return {env_id: dict(env_map) for env_id, env_map in difficulty_by_env_episode.items()}
+
+
+def _fallback_difficulty(env_id: str, episode: int) -> Optional[str]:
+    if env_id == VIDEOREPICK_ENV_ID:
+        return VIDEOREPICK_DIFFICULTY_CYCLE[episode % len(VIDEOREPICK_DIFFICULTY_CYCLE)]
+    return None
+
+
+def _resolve_difficulty(
+    difficulty_by_env_episode: dict[str, dict[int, str]],
+    env_id: str,
+    episode: int,
+) -> Optional[str]:
+    env_map = difficulty_by_env_episode.get(env_id, {})
+    if episode in env_map:
+        return env_map[episode]
+    return _fallback_difficulty(env_id, episode)
+
+
 def _load_points(
     input_dir: Path,
     env_filter: Optional[str],
+    difficulty_by_env_episode: dict[str, dict[int, str]],
 ) -> tuple[dict[str, list[VisibleObjectPoint]], Counter, Counter]:
     points_by_env: dict[str, list[VisibleObjectPoint]] = defaultdict(list)
     skipped = Counter(files=0, objects=0)
@@ -179,6 +245,7 @@ def _load_points(
             continue
 
         episodes_by_env[env_id].add((episode, seed))
+        difficulty = _resolve_difficulty(difficulty_by_env_episode, env_id, episode)
 
         for obj in objects:
             if not isinstance(obj, dict):
@@ -206,6 +273,7 @@ def _load_points(
                     semantic=semantic,
                     cube_color=_cube_color(name),
                     button_kind=_button_kind(name),
+                    difficulty=difficulty,
                 )
             )
 
@@ -240,6 +308,19 @@ def _save_combined_figure(fig, output_path: Path) -> Path:
 
 def _cleanup_legacy_panel_files(env_output_dir: Path) -> None:
     for filename in (ALL_OBJECTS_PNG, CUBE_PNG, BUTTON_PNG, TARGET_PNG):
+        stale_path = env_output_dir / filename
+        if stale_path.exists():
+            stale_path.unlink()
+
+
+def _cleanup_collage_files(env_id: str, env_output_dir: Path) -> None:
+    stale_filenames = [HORIZONTAL_COLLAGE_PNG]
+    if env_id == VIDEOREPICK_ENV_ID:
+        stale_filenames.extend(
+            [VIDEOREPICK_EASY_MEDIUM_PNG, VIDEOREPICK_HARD_PNG]
+        )
+
+    for filename in stale_filenames:
         stale_path = env_output_dir / filename
         if stale_path.exists():
             stale_path.unlink()
@@ -434,14 +515,24 @@ def _category_counts(points: Iterable[VisibleObjectPoint]) -> Counter:
     return counts
 
 
-def _render_env(output_root: Path, env_id: str, points: list[VisibleObjectPoint], episode_count: int) -> Counter:
-    env_output_dir = output_root / env_id
-    env_output_dir.mkdir(parents=True, exist_ok=True)
-    _cleanup_legacy_panel_files(env_output_dir)
+def _count_unique_episodes(points: Iterable[VisibleObjectPoint]) -> int:
+    return len({(point.episode, point.seed) for point in points})
 
+
+def _render_collage(
+    env_output_dir: Path,
+    env_id: str,
+    points: list[VisibleObjectPoint],
+    episode_count: int,
+    title_suffix: Optional[str],
+    output_filename: str,
+) -> Path:
     fig, axes = plt.subplots(1, 4, figsize=(28, 7), sharex=True, sharey=True)
+    title = f"{env_id} | episodes={episode_count} | points={len(points)}"
+    if title_suffix:
+        title = f"{title} | {title_suffix}"
     fig.suptitle(
-        f"{env_id} | episodes={episode_count} | points={len(points)}",
+        title,
         fontsize=18,
     )
 
@@ -450,11 +541,44 @@ def _render_env(output_root: Path, env_id: str, points: list[VisibleObjectPoint]
     _plot_button_objects(axes[2], points)
     _plot_target_objects(axes[3], env_id, points)
 
-    output_path = _save_combined_figure(
-        fig,
-        env_output_dir / HORIZONTAL_COLLAGE_PNG,
-    )
-    print(f"[Env] {env_id}: output -> {output_path}")
+    return _save_combined_figure(fig, env_output_dir / output_filename)
+
+
+def _render_env(output_root: Path, env_id: str, points: list[VisibleObjectPoint], episode_count: int) -> Counter:
+    env_output_dir = output_root / env_id
+    env_output_dir.mkdir(parents=True, exist_ok=True)
+    _cleanup_legacy_panel_files(env_output_dir)
+    _cleanup_collage_files(env_id, env_output_dir)
+
+    if env_id == VIDEOREPICK_ENV_ID:
+        split_specs = (
+            ("easy+medium", {"easy", "medium"}, VIDEOREPICK_EASY_MEDIUM_PNG),
+            ("hard", {"hard"}, VIDEOREPICK_HARD_PNG),
+        )
+        for split_name, difficulties, output_filename in split_specs:
+            split_points = [point for point in points if point.difficulty in difficulties]
+            if not split_points:
+                print(f"[Env] {env_id}: skip empty split={split_name}")
+                continue
+            output_path = _render_collage(
+                env_output_dir,
+                env_id,
+                split_points,
+                _count_unique_episodes(split_points),
+                f"difficulty={split_name}",
+                output_filename,
+            )
+            print(f"[Env] {env_id}: split={split_name} output -> {output_path}")
+    else:
+        output_path = _render_collage(
+            env_output_dir,
+            env_id,
+            points,
+            episode_count,
+            None,
+            HORIZONTAL_COLLAGE_PNG,
+        )
+        print(f"[Env] {env_id}: output -> {output_path}")
 
     return _category_counts(points)
 
@@ -467,7 +591,12 @@ def main() -> None:
     if not input_dir.is_dir():
         raise SystemExit(f"--input-dir does not exist or is not a directory: {input_dir}")
 
-    points_by_env, skipped, episode_counts = _load_points(input_dir, args.env)
+    difficulty_by_env_episode = _load_episode_difficulty_map()
+    points_by_env, skipped, episode_counts = _load_points(
+        input_dir,
+        args.env,
+        difficulty_by_env_episode,
+    )
     if not points_by_env:
         env_part = f" for env={args.env}" if args.env else ""
         raise SystemExit(f"No visible_objects.json data found under {input_dir}{env_part}.")

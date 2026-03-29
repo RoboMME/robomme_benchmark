@@ -198,7 +198,7 @@ class VideoPlaceButton(BaseEnv):
                     include_goal=False,  # Manually maintain list
                     region_center=[-0.1, 0],
                     region_half_size=0.1,
-                    radius=self.cube_half_size * 3,  # Use radius instead of half_size
+                    radius=self.cube_half_size * 2,  # Use radius instead of half_size
                     thickness=0.005,  # target thickness
                     min_gap=self.cube_half_size * 1,  # Gap requirement same as cube
                     name_prefix=f"goal_site",
