@@ -28,6 +28,11 @@ import gymnasium as gym
 import h5py
 import numpy as np
 
+from pickhighlight_setup_metadata import (
+    PICKHIGHLIGHT_ENV_ID,
+    PICKHIGHLIGHT_METADATA_DATASET,
+    write_pickhighlight_setup_metadata,
+)
 from robomme.env_record_wrapper import RobommeRecordWrapper
 from robomme.robomme_env import *  # noqa: F401,F403
 from robomme.robomme_env.utils.SceneGenerationError import SceneGenerationError
@@ -134,6 +139,34 @@ def _verify_videorepick_setup_metadata(setup_group: h5py.Group) -> tuple[bool, s
     return True, "videorepick metadata verified"
 
 
+def _verify_pickhighlight_setup_metadata(setup_group: h5py.Group) -> tuple[bool, str]:
+    if PICKHIGHLIGHT_METADATA_DATASET not in setup_group:
+        return False, f"missing setup dataset: {PICKHIGHLIGHT_METADATA_DATASET}"
+
+    try:
+        payload_raw = _decode_h5_text(setup_group[PICKHIGHLIGHT_METADATA_DATASET][()])
+        payload = json.loads(payload_raw)
+    except Exception as exc:
+        return (
+            False,
+            f"invalid {PICKHIGHLIGHT_METADATA_DATASET} JSON "
+            f"({type(exc).__name__}: {exc})",
+        )
+
+    if not isinstance(payload, dict):
+        return False, f"{PICKHIGHLIGHT_METADATA_DATASET} is not a JSON object"
+
+    target_cube_colors = payload.get("target_cube_colors")
+    if not isinstance(target_cube_colors, list) or not target_cube_colors:
+        return False, "invalid target_cube_colors in pickhighlight_metadata"
+
+    for color_name in target_cube_colors:
+        if color_name not in {"red", "blue", "green"}:
+            return False, "invalid target cube color in pickhighlight_metadata"
+
+    return True, "pickhighlight metadata verified"
+
+
 def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, str]:
     """验证 setup-only HDF5 是否满足 downstream 读取要求。"""
     if not h5_path.is_file():
@@ -174,6 +207,9 @@ def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, st
                     "unexpected timestep data present: "
                     f"{', '.join(timestep_groups[:3])}"
                 )
+
+            if env_id == PICKHIGHLIGHT_ENV_ID:
+                return _verify_pickhighlight_setup_metadata(setup_group)
 
             if env_id == VIDEOREPICK_ENV_ID:
                 return _verify_videorepick_setup_metadata(setup_group)
@@ -227,10 +263,10 @@ def _build_parser() -> argparse.ArgumentParser:
     # "VideoUnmask",
     # "ButtonUnmaskSwap",
     # "ButtonUnmask",
-     "VideoRepick",
+    # "VideoRepick",
     # "VideoPlaceButton",
     # "VideoPlaceOrder",
-    # "PickHighlight",
+     "PickHighlight",
     # "InsertPeg",
     # "MoveCube",
     # "PatternLock",
@@ -438,10 +474,11 @@ def _run_episode(
         _close_env(env, episode, seed)
 
     try:
+        write_pickhighlight_setup_metadata(env, h5_path, episode)
         write_videorepick_setup_metadata(env, h5_path, episode)
     except Exception as exc:
         print(
-            f"[Setup] Failed to append VideoRepick metadata for env={env_id} "
+            f"[Setup] Failed to append task-specific metadata for env={env_id} "
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
         return False, False

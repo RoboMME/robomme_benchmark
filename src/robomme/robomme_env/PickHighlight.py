@@ -24,6 +24,7 @@ from mani_skill.utils.geometry.rotation_conversions import (
     matrix_to_quaternion,
 )
 
+from .utils.SceneGenerationError import SceneGenerationError as SceneGenerationErrorClass
 from .utils import *
 from .utils.subgoal_evaluate_func import static_check
 from .utils import subgoal_language
@@ -63,6 +64,7 @@ class PickHighlight(BaseEnv):
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
+    _TARGET_SELECTION_SEED_OFFSET = 100_003
 
     config_hard = {
         'spawn': 6,
@@ -85,6 +87,18 @@ class PickHighlight(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
+
+    @staticmethod
+    def _splitmix64(x: int) -> int:
+        """Splitmix64 bit mixing to break linear seed correlation."""
+        x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
+        x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
+        return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF
+
+    def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
+        generator = torch.Generator()
+        generator.manual_seed(self._splitmix64(self.seed + seed_offset))
+        return generator
 
 
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
@@ -161,6 +175,9 @@ class PickHighlight(BaseEnv):
 
     def _load_scene(self, options: dict):
         self.generator.manual_seed(self.seed)
+        target_selection_generator = self._make_generator(
+            self._TARGET_SELECTION_SEED_OFFSET
+        )
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -226,10 +243,38 @@ class PickHighlight(BaseEnv):
 
         logger.debug(f"Generated {len(self.all_cubes)} cubes total")
 
+        color_to_candidate_indices = {
+            color["name"]: [] for color in available_colors
+        }
+        for cube_idx, color_name in enumerate(self.all_cube_colors):
+            color_to_candidate_indices.setdefault(color_name, []).append(cube_idx)
 
+        target_colors = []
+        for _ in range(self.configs[self.difficulty]["pickup"]):
+            color_choice_idx = torch.randint(
+                0,
+                len(available_colors),
+                (1,),
+                generator=target_selection_generator,
+            ).item()
+            target_colors.append(available_colors[color_choice_idx])
 
-         # Randomly select one cube from all available cubes as the target
-        target_cube_indices = torch.randperm(len(self.all_cubes), generator=self.generator)[:self.configs[self.difficulty]['pickup']]
+        target_cube_indices = []
+        for target_color in target_colors:
+            candidate_indices = color_to_candidate_indices.get(target_color["name"], [])
+            if not candidate_indices:
+                raise SceneGenerationErrorClass(
+                    f"Failed to select a {target_color['name']} target cube"
+                )
+
+            candidate_choice_idx = torch.randint(
+                0,
+                len(candidate_indices),
+                (1,),
+                generator=target_selection_generator,
+            ).item()
+            selected_idx = candidate_indices.pop(candidate_choice_idx)
+            target_cube_indices.append(selected_idx)
 
         self.target_cubes = [self.all_cubes[idx] for idx in target_cube_indices]
         self.target_cube_names = [self.all_cube_names[idx] for idx in target_cube_indices]

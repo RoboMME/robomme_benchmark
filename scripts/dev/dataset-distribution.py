@@ -79,6 +79,7 @@ CSV_FIELDS = [
     "target_color",
     "first_target_color",
     "second_target_color",
+    "third_target_color",
     "target_color_sequence",
     "pickup_count",
     "repeat_count",
@@ -102,9 +103,9 @@ CONSTANT_GOAL_ENVS = {
     "MoveCube",
     "PatternLock",
     "RouteStick",
-    "PickHighlight",
 }
 AGGREGATED_H5_PREFIX = "record_dataset_"
+PICKHIGHLIGHT_METADATA_FIELD = "pickhighlight_metadata"
 VIDEOREPICK_METADATA_FIELD = "videorepick_metadata"
 SPLIT_H5_PATTERN = re.compile(
     r"^(?P<env_id>.+?)_ep(?P<episode>\d+)(?:_seed\d+)?$"
@@ -329,6 +330,53 @@ def _parse_videorepick_setup_fields(
     )
 
 
+def _parse_pickhighlight_setup_fields(
+    setup_group: h5py.Group | None,
+) -> tuple[dict[str, int | str], str | None]:
+    if setup_group is None or PICKHIGHLIGHT_METADATA_FIELD not in setup_group:
+        return ({}, f"missing {PICKHIGHLIGHT_METADATA_FIELD}")
+
+    payload_raw = _decode_dataset_string(
+        setup_group[PICKHIGHLIGHT_METADATA_FIELD][()],
+        default="",
+    ).strip()
+    if not payload_raw:
+        return ({}, f"missing {PICKHIGHLIGHT_METADATA_FIELD}")
+
+    try:
+        payload = json.loads(payload_raw)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        return ({}, f"invalid {PICKHIGHLIGHT_METADATA_FIELD} json ({exc})")
+
+    if not isinstance(payload, dict):
+        return ({}, f"invalid {PICKHIGHLIGHT_METADATA_FIELD} payload type")
+
+    target_cube_colors = payload.get("target_cube_colors")
+    if not isinstance(target_cube_colors, list) or not target_cube_colors:
+        return ({}, "invalid pickhighlight target_cube_colors")
+
+    normalized_colors: list[str] = []
+    for color_name in target_cube_colors:
+        normalized_color = str(color_name).strip().lower()
+        if normalized_color not in COLOR_ORDER:
+            return ({}, f"invalid pickhighlight target color {color_name!r}")
+        normalized_colors.append(normalized_color)
+
+    max_target_slots = 3
+    if len(normalized_colors) > max_target_slots:
+        return ({}, f"unexpected pickhighlight target count {len(normalized_colors)}")
+
+    padded_colors = normalized_colors + ["none"] * (max_target_slots - len(normalized_colors))
+    return (
+        {
+            "first_target_color": padded_colors[0],
+            "second_target_color": padded_colors[1],
+            "third_target_color": padded_colors[2],
+        },
+        None,
+    )
+
+
 def _default_row(env_id: str, episode_name: str) -> dict[str, object]:
     episode_number = episode_name.removeprefix("episode_")
     return {
@@ -342,6 +390,7 @@ def _default_row(env_id: str, episode_name: str) -> dict[str, object]:
         "target_color": "",
         "first_target_color": "",
         "second_target_color": "",
+        "third_target_color": "",
         "target_color_sequence": "",
         "pickup_count": "",
         "repeat_count": "",
@@ -369,6 +418,19 @@ def _parse_semantic_fields(
             errors.append("missing task_goal")
 
         parsed_fields, error = _parse_videorepick_setup_fields(setup_group)
+        if parsed_fields:
+            row.update(parsed_fields)
+        if error:
+            errors.append(error)
+
+        row["parse_error"] = _merge_error_messages(existing_error, errors)
+        return
+
+    if env_id == "PickHighlight":
+        if goal == MISSING_TASK_GOAL.lower():
+            errors.append("missing task_goal")
+
+        parsed_fields, error = _parse_pickhighlight_setup_fields(setup_group)
         if parsed_fields:
             row.update(parsed_fields)
         if error:
@@ -804,6 +866,27 @@ def _figure_specs_for_env(env_id: str) -> list[dict[str, object]]:
                 "color": "#F58518",
                 "preferred_order": [str(value) for value in range(1, 7)] + ["unknown"],
             }
+        ]
+    if env_id == "PickHighlight":
+        return [
+            {
+                "field": "first_target_color",
+                "title": "1st Target Color",
+                "color": "#72B7B2",
+                "preferred_order": COLOR_ORDER + ["none", "unknown"],
+            },
+            {
+                "field": "second_target_color",
+                "title": "2nd Target Color",
+                "color": "#F58518",
+                "preferred_order": COLOR_ORDER + ["none", "unknown"],
+            },
+            {
+                "field": "third_target_color",
+                "title": "3rd Target Color",
+                "color": "#B279A2",
+                "preferred_order": COLOR_ORDER + ["none", "unknown"],
+            },
         ]
     if env_id == "StopCube":
         return [
