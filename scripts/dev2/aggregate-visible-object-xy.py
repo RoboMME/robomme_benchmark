@@ -8,6 +8,7 @@ import os
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from itertools import permutations
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -33,6 +34,10 @@ VIDEOREPICK_HARD_PNG = "all_panels_horizontal_hard.png"
 BINFILL_ENV_ID = "BinFill"
 BINFILL_BOARD_WITH_HOLE_NAME = "board_with_hole"
 VIDEOREPICK_ENV_ID = "VideoRepick"
+INSERTPEG_ENV_ID = "InsertPeg"
+MOVECUBE_ENV_ID = "MoveCube"
+INSERTPEG_BOX_WITH_HOLE_NAME = "box_with_hole"
+MOVECUBE_GOAL_SITE_NAME = "goal_site"
 VIDEOREPICK_DIFFICULTY_CYCLE = ("easy", "easy", "medium", "hard")
 ENV_METADATA_ROOT = Path("src/robomme/env_metadata")
 BIN_PANEL_ENVS = {
@@ -46,10 +51,23 @@ BIN_NAME_PATTERN = re.compile(r"^bin_(\d+)$")
 ALL_CATEGORY_COLORS = {
     "cube": "#2ca02c",
     "button": "#9467bd",
+    "peg": "#4e79a7",
     "bin": "#f28e2b",
+    "goal_site": "#59a14f",
+    "box_with_hole": "#e15759",
     "target": "#e15759",
     "other": "#7f7f7f",
 }
+ALL_OBJECT_PANEL_ORDER = (
+    "cube",
+    "button",
+    "peg",
+    "bin",
+    "goal_site",
+    "box_with_hole",
+    "target",
+    "other",
+)
 CUBE_COLOR_MAP = {
     "red": "#d62728",
     "green": "#2ca02c",
@@ -61,7 +79,17 @@ BUTTON_STYLE_MAP = {
     "button_cap": {"color": "#5b2a86", "marker": "X", "label": "button_cap"},
     "button_other": {"color": "#c084fc", "marker": "o", "label": "button_other"},
 }
+PEG_PART_STYLE_MAP = {
+    "peg_head": {"color": "#4e79a7", "marker": "o", "label": "peg_head"},
+    "peg_tail": {"color": "#f28e2b", "marker": "X", "label": "peg_tail"},
+}
 TARGET_STYLE = {"color": "#e15759", "marker": "^", "label": "target"}
+GOAL_SITE_STYLE = {"color": "#59a14f", "marker": "^", "label": MOVECUBE_GOAL_SITE_NAME}
+BOX_WITH_HOLE_STYLE = {
+    "color": "#e15759",
+    "marker": "D",
+    "label": INSERTPEG_BOX_WITH_HOLE_NAME,
+}
 BINFILL_BOARD_STYLE = {
     "color": TARGET_STYLE["color"],
     "marker": TARGET_STYLE["marker"],
@@ -95,13 +123,14 @@ class VisibleObjectPoint:
     button_kind: str
     difficulty: Optional[str] = None
     bin_index: Optional[int] = None
+    peg_part: Optional[str] = None
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Aggregate visible_objects.json files and export per-env XY scatter plots "
-            "for all objects, cubes, buttons, and targets or bins for selected envs."
+            "for all objects, cubes, buttons, and environment-specific targets/bins/groups."
         )
     )
     parser.add_argument(
@@ -146,9 +175,29 @@ def _bin_index(name: str) -> Optional[int]:
     return int(match.group(1))
 
 
+def _peg_part(name: str) -> Optional[str]:
+    if name in PEG_PART_STYLE_MAP:
+        return name
+    return None
+
+
+def _is_insertpeg_box_with_hole(env_id: str, name: str) -> bool:
+    return env_id == INSERTPEG_ENV_ID and name == INSERTPEG_BOX_WITH_HOLE_NAME
+
+
+def _is_movecube_goal_site(env_id: str, name: str) -> bool:
+    return env_id == MOVECUBE_ENV_ID and name == MOVECUBE_GOAL_SITE_NAME
+
+
 def _semantic_category(env_id: str, name: str) -> str:
     if _is_binfill_board_with_hole(env_id, name):
         return "target"
+    if env_id in {INSERTPEG_ENV_ID, MOVECUBE_ENV_ID} and _peg_part(name) is not None:
+        return "peg"
+    if _is_insertpeg_box_with_hole(env_id, name):
+        return "box_with_hole"
+    if _is_movecube_goal_site(env_id, name):
+        return "goal_site"
     if env_id in BIN_PANEL_ENVS and _bin_index(name) is not None:
         return "bin"
     lower = name.lower()
@@ -306,6 +355,7 @@ def _load_points(
                     button_kind=_button_kind(name),
                     difficulty=difficulty,
                     bin_index=_bin_index(name),
+                    peg_part=_peg_part(name),
                 )
             )
 
@@ -364,7 +414,7 @@ def _plot_all_objects(ax, points: list[VisibleObjectPoint]) -> None:
         grouped[point.semantic].append(point)
 
     legend_handles: list[Line2D] = []
-    for semantic in ("cube", "button", "bin", "target", "other"):
+    for semantic in ALL_OBJECT_PANEL_ORDER:
         semantic_points = grouped.get(semantic, [])
         if not semantic_points:
             continue
@@ -481,6 +531,139 @@ def _plot_button_objects(ax, points: list[VisibleObjectPoint]) -> None:
         ax.text(0.0, 0.0, "No button data", ha="center", va="center")
 
 
+def _plot_peg_objects(ax, points: list[VisibleObjectPoint]) -> None:
+    peg_points = [point for point in points if point.semantic == "peg"]
+    for head_point, tail_point in _nearest_episode_peg_pairs(peg_points):
+        head_xy = _xy_rot_cw_90(head_point.world_x, head_point.world_y)
+        tail_xy = _xy_rot_cw_90(tail_point.world_x, tail_point.world_y)
+        ax.plot(
+            [head_xy[0], tail_xy[0]],
+            [head_xy[1], tail_xy[1]],
+            color="#6b7280",
+            alpha=0.35,
+            linewidth=1.2,
+            zorder=1,
+        )
+
+    legend_handles: list[Line2D] = []
+    for peg_name in ("peg_head", "peg_tail"):
+        bucket = [point for point in peg_points if point.peg_part == peg_name]
+        if not bucket:
+            continue
+        style = PEG_PART_STYLE_MAP[peg_name]
+        rotated_points = [_xy_rot_cw_90(point.world_x, point.world_y) for point in bucket]
+        ax.scatter(
+            [point[0] for point in rotated_points],
+            [point[1] for point in rotated_points],
+            s=62,
+            alpha=0.8,
+            c=style["color"],
+            marker=style["marker"],
+            edgecolors="black",
+            linewidths=0.45,
+            zorder=2,
+        )
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker=style["marker"],
+                color="none",
+                markerfacecolor=style["color"],
+                markeredgecolor="black",
+                markersize=8,
+                label=style["label"],
+            )
+        )
+
+    _prepare_axis(ax, "Peg Head/Tail (Rotated XY)", len(peg_points))
+    if legend_handles:
+        ax.legend(handles=legend_handles, loc="upper right")
+    else:
+        ax.text(0.0, 0.0, "No peg data", ha="center", va="center")
+
+
+def _peg_pair_distance_sq(head_point: VisibleObjectPoint, tail_point: VisibleObjectPoint) -> float:
+    dx = head_point.world_x - tail_point.world_x
+    dy = head_point.world_y - tail_point.world_y
+    return (dx * dx) + (dy * dy)
+
+
+def _nearest_peg_pairs_for_episode(
+    head_points: list[VisibleObjectPoint],
+    tail_points: list[VisibleObjectPoint],
+) -> list[tuple[VisibleObjectPoint, VisibleObjectPoint]]:
+    pair_count = min(len(head_points), len(tail_points))
+    if pair_count == 0:
+        return []
+
+    if pair_count <= 7:
+        best_pairs: list[tuple[VisibleObjectPoint, VisibleObjectPoint]] = []
+        best_distance_sq = float("inf")
+        if len(head_points) <= len(tail_points):
+            for tail_perm in permutations(tail_points, pair_count):
+                candidate_pairs = list(zip(head_points, tail_perm))
+                candidate_distance_sq = sum(
+                    _peg_pair_distance_sq(head_point, tail_point)
+                    for head_point, tail_point in candidate_pairs
+                )
+                if candidate_distance_sq < best_distance_sq:
+                    best_distance_sq = candidate_distance_sq
+                    best_pairs = candidate_pairs
+        else:
+            for head_perm in permutations(head_points, pair_count):
+                candidate_pairs = list(zip(head_perm, tail_points))
+                candidate_distance_sq = sum(
+                    _peg_pair_distance_sq(head_point, tail_point)
+                    for head_point, tail_point in candidate_pairs
+                )
+                if candidate_distance_sq < best_distance_sq:
+                    best_distance_sq = candidate_distance_sq
+                    best_pairs = candidate_pairs
+        return best_pairs
+
+    remaining_heads = list(head_points)
+    remaining_tails = list(tail_points)
+    greedy_pairs: list[tuple[VisibleObjectPoint, VisibleObjectPoint]] = []
+    while remaining_heads and remaining_tails:
+        best_pair: tuple[int, int] | None = None
+        best_distance_sq = float("inf")
+        for head_index, head_point in enumerate(remaining_heads):
+            for tail_index, tail_point in enumerate(remaining_tails):
+                candidate_distance_sq = _peg_pair_distance_sq(head_point, tail_point)
+                if candidate_distance_sq < best_distance_sq:
+                    best_distance_sq = candidate_distance_sq
+                    best_pair = (head_index, tail_index)
+        if best_pair is None:
+            break
+        head_index, tail_index = best_pair
+        greedy_pairs.append((remaining_heads.pop(head_index), remaining_tails.pop(tail_index)))
+    return greedy_pairs
+
+
+def _nearest_episode_peg_pairs(
+    peg_points: Iterable[VisibleObjectPoint],
+) -> list[tuple[VisibleObjectPoint, VisibleObjectPoint]]:
+    peg_points_by_episode: dict[tuple[int, int], dict[str, list[VisibleObjectPoint]]] = defaultdict(
+        lambda: {"peg_head": [], "peg_tail": []}
+    )
+    for point in peg_points:
+        if point.peg_part not in {"peg_head", "peg_tail"}:
+            continue
+        peg_points_by_episode[(point.episode, point.seed)][point.peg_part].append(point)
+
+    pairs: list[tuple[VisibleObjectPoint, VisibleObjectPoint]] = []
+    for episode_key in sorted(peg_points_by_episode):
+        grouped_points = peg_points_by_episode[episode_key]
+        pairs.extend(
+            _nearest_peg_pairs_for_episode(
+                grouped_points["peg_head"],
+                grouped_points["peg_tail"],
+            )
+        )
+    return pairs
+
+
 def _plot_bin_objects(ax, points: list[VisibleObjectPoint]) -> None:
     bin_points = [point for point in points if point.semantic == "bin"]
 
@@ -528,6 +711,52 @@ def _plot_bin_objects(ax, points: list[VisibleObjectPoint]) -> None:
         ax.legend(handles=legend_handles, loc="upper right")
     else:
         ax.text(0.0, 0.0, "No bin data", ha="center", va="center")
+
+
+def _plot_goal_site_objects(ax, points: list[VisibleObjectPoint]) -> None:
+    goal_points = [point for point in points if point.semantic == "goal_site"]
+
+    if goal_points:
+        rotated_points = [_xy_rot_cw_90(point.world_x, point.world_y) for point in goal_points]
+        ax.scatter(
+            [point[0] for point in rotated_points],
+            [point[1] for point in rotated_points],
+            s=70,
+            alpha=0.8,
+            c=GOAL_SITE_STYLE["color"],
+            marker=GOAL_SITE_STYLE["marker"],
+            edgecolors="black",
+            linewidths=0.45,
+            label=GOAL_SITE_STYLE["label"],
+        )
+        ax.legend(loc="upper right")
+    else:
+        ax.text(0.0, 0.0, "No goal_site data", ha="center", va="center")
+
+    _prepare_axis(ax, "goal_site (Rotated XY)", len(goal_points))
+
+
+def _plot_box_with_hole_objects(ax, points: list[VisibleObjectPoint]) -> None:
+    box_points = [point for point in points if point.semantic == "box_with_hole"]
+
+    if box_points:
+        rotated_points = [_xy_rot_cw_90(point.world_x, point.world_y) for point in box_points]
+        ax.scatter(
+            [point[0] for point in rotated_points],
+            [point[1] for point in rotated_points],
+            s=70,
+            alpha=0.8,
+            c=BOX_WITH_HOLE_STYLE["color"],
+            marker=BOX_WITH_HOLE_STYLE["marker"],
+            edgecolors="black",
+            linewidths=0.45,
+            label=BOX_WITH_HOLE_STYLE["label"],
+        )
+        ax.legend(loc="upper right")
+    else:
+        ax.text(0.0, 0.0, "No box_with_hole data", ha="center", va="center")
+
+    _prepare_axis(ax, "box_with_hole (Rotated XY)", len(box_points))
 
 
 def _target_panel_points(
@@ -600,6 +829,44 @@ def _count_unique_episodes(points: Iterable[VisibleObjectPoint]) -> int:
     return len({(point.episode, point.seed) for point in points})
 
 
+def _panel_specs_for_env(env_id: str) -> tuple[str, ...]:
+    if env_id == INSERTPEG_ENV_ID:
+        return ("all", "peg", "box_with_hole")
+    if env_id == MOVECUBE_ENV_ID:
+        return ("all", "peg", "goal_site", "cube")
+    if env_id in BIN_PANEL_ENVS:
+        return ("all", "cube", "button", "bin")
+    return ("all", "cube", "button", "target")
+
+
+def _plot_panel(ax, panel_key: str, env_id: str, points: list[VisibleObjectPoint]) -> None:
+    if panel_key == "all":
+        _plot_all_objects(ax, points)
+        return
+    if panel_key == "cube":
+        _plot_cube_objects(ax, points)
+        return
+    if panel_key == "button":
+        _plot_button_objects(ax, points)
+        return
+    if panel_key == "peg":
+        _plot_peg_objects(ax, points)
+        return
+    if panel_key == "bin":
+        _plot_bin_objects(ax, points)
+        return
+    if panel_key == "goal_site":
+        _plot_goal_site_objects(ax, points)
+        return
+    if panel_key == "box_with_hole":
+        _plot_box_with_hole_objects(ax, points)
+        return
+    if panel_key == "target":
+        _plot_target_objects(ax, env_id, points)
+        return
+    raise ValueError(f"Unsupported panel key: {panel_key}")
+
+
 def _render_collage(
     env_output_dir: Path,
     env_id: str,
@@ -608,7 +875,15 @@ def _render_collage(
     title_suffix: Optional[str],
     output_filename: str,
 ) -> Path:
-    fig, axes = plt.subplots(1, 4, figsize=(28, 7), sharex=True, sharey=True)
+    panel_specs = _panel_specs_for_env(env_id)
+    fig, axes = plt.subplots(
+        1,
+        len(panel_specs),
+        figsize=(7 * len(panel_specs), 7),
+        sharex=True,
+        sharey=True,
+    )
+    axes = np.atleast_1d(axes)
     title = f"{env_id} | episodes={episode_count} | points={len(points)}"
     if title_suffix:
         title = f"{title} | {title_suffix}"
@@ -617,13 +892,8 @@ def _render_collage(
         fontsize=18,
     )
 
-    _plot_all_objects(axes[0], points)
-    _plot_cube_objects(axes[1], points)
-    _plot_button_objects(axes[2], points)
-    if env_id in BIN_PANEL_ENVS:
-        _plot_bin_objects(axes[3], points)
-    else:
-        _plot_target_objects(axes[3], env_id, points)
+    for ax, panel_key in zip(axes, panel_specs):
+        _plot_panel(ax, panel_key, env_id, points)
 
     return _save_combined_figure(fig, env_output_dir / output_filename)
 
@@ -700,7 +970,9 @@ def main() -> None:
         print(
             f"[Env] {env_id}: episodes={episode_counts.get(env_id, 0)} "
             f"points={len(points)} cube={counts.get('cube', 0)} "
-            f"button={counts.get('button', 0)} bin={counts.get('bin', 0)} "
+            f"button={counts.get('button', 0)} peg={counts.get('peg', 0)} "
+            f"bin={counts.get('bin', 0)} goal_site={counts.get('goal_site', 0)} "
+            f"box_with_hole={counts.get('box_with_hole', 0)} "
             f"target={counts.get('target', 0)} "
             f"other={counts.get('other', 0)}"
         )
@@ -708,7 +980,9 @@ def main() -> None:
     print(
         f"[Summary] envs={len(points_by_env)} total_points={total_points} "
         f"cube={overall_counts.get('cube', 0)} button={overall_counts.get('button', 0)} "
-        f"bin={overall_counts.get('bin', 0)} "
+        f"peg={overall_counts.get('peg', 0)} bin={overall_counts.get('bin', 0)} "
+        f"goal_site={overall_counts.get('goal_site', 0)} "
+        f"box_with_hole={overall_counts.get('box_with_hole', 0)} "
         f"target={overall_counts.get('target', 0)} other={overall_counts.get('other', 0)} "
         f"skipped_files={skipped.get('files', 0)} skipped_objects={skipped.get('objects', 0)}"
     )
