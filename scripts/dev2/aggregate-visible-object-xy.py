@@ -27,6 +27,8 @@ CUBE_PNG = "cube_xy.png"
 BUTTON_PNG = "button_xy.png"
 TARGET_PNG = "target_xy.png"
 HORIZONTAL_COLLAGE_PNG = "all_panels_horizontal.png"
+BINFILL_ENV_ID = "BinFill"
+BINFILL_BOARD_WITH_HOLE_NAME = "board_with_hole"
 
 ALL_CATEGORY_COLORS = {
     "cube": "#2ca02c",
@@ -46,6 +48,11 @@ BUTTON_STYLE_MAP = {
     "button_other": {"color": "#c084fc", "marker": "o", "label": "button_other"},
 }
 TARGET_STYLE = {"color": "#e15759", "marker": "^", "label": "target"}
+BINFILL_BOARD_STYLE = {
+    "color": TARGET_STYLE["color"],
+    "marker": TARGET_STYLE["marker"],
+    "label": BINFILL_BOARD_WITH_HOLE_NAME,
+}
 
 
 @dataclass(frozen=True)
@@ -100,7 +107,13 @@ def _safe_float_triplet(value: object) -> Optional[tuple[float, float, float]]:
     return float(arr[0]), float(arr[1]), float(arr[2])
 
 
-def _semantic_category(name: str) -> str:
+def _is_binfill_board_with_hole(env_id: str, name: str) -> bool:
+    return env_id == BINFILL_ENV_ID and name == BINFILL_BOARD_WITH_HOLE_NAME
+
+
+def _semantic_category(env_id: str, name: str) -> str:
+    if _is_binfill_board_with_hole(env_id, name):
+        return "target"
     lower = name.lower()
     if "cube" in lower:
         return "cube"
@@ -180,7 +193,7 @@ def _load_points(
                 print(f"[Warn] Skip malformed object in {json_path}: {obj!r}")
                 continue
 
-            semantic = _semantic_category(name)
+            semantic = _semantic_category(env_id, name)
             points_by_env[env_id].append(
                 VisibleObjectPoint(
                     env_id=env_id,
@@ -355,8 +368,44 @@ def _plot_button_objects(ax, points: list[VisibleObjectPoint]) -> None:
         ax.text(0.0, 0.0, "No button data", ha="center", va="center")
 
 
-def _plot_target_objects(ax, points: list[VisibleObjectPoint]) -> None:
-    target_points = [point for point in points if point.semantic == "target"]
+def _target_panel_points(
+    env_id: str,
+    points: Iterable[VisibleObjectPoint],
+) -> list[VisibleObjectPoint]:
+    if env_id == BINFILL_ENV_ID:
+        return [
+            point
+            for point in points
+            if point.name == BINFILL_BOARD_WITH_HOLE_NAME
+        ]
+    return [point for point in points if point.semantic == "target"]
+
+
+def _target_panel_title(env_id: str) -> str:
+    if env_id == BINFILL_ENV_ID:
+        return f"{BINFILL_BOARD_WITH_HOLE_NAME} (Rotated XY)"
+    return "Target (Rotated XY)"
+
+
+def _target_panel_empty_text(env_id: str) -> str:
+    if env_id == BINFILL_ENV_ID:
+        return f"No {BINFILL_BOARD_WITH_HOLE_NAME} data"
+    return "No target data"
+
+
+def _target_panel_style(env_id: str) -> dict[str, str]:
+    if env_id == BINFILL_ENV_ID:
+        return BINFILL_BOARD_STYLE
+    return TARGET_STYLE
+
+
+def _plot_target_objects(
+    ax,
+    env_id: str,
+    points: list[VisibleObjectPoint],
+) -> None:
+    target_points = _target_panel_points(env_id, points)
+    style = _target_panel_style(env_id)
 
     if target_points:
         rotated_points = [_xy_rot_cw_90(point.world_x, point.world_y) for point in target_points]
@@ -365,17 +414,17 @@ def _plot_target_objects(ax, points: list[VisibleObjectPoint]) -> None:
             [point[1] for point in rotated_points],
             s=70,
             alpha=0.8,
-            c=TARGET_STYLE["color"],
-            marker=TARGET_STYLE["marker"],
+            c=style["color"],
+            marker=style["marker"],
             edgecolors="black",
             linewidths=0.45,
-            label=TARGET_STYLE["label"],
+            label=style["label"],
         )
         ax.legend(loc="upper right")
     else:
-        ax.text(0.0, 0.0, "No target data", ha="center", va="center")
+        ax.text(0.0, 0.0, _target_panel_empty_text(env_id), ha="center", va="center")
 
-    _prepare_axis(ax, "Target (Rotated XY)", len(target_points))
+    _prepare_axis(ax, _target_panel_title(env_id), len(target_points))
 
 
 def _category_counts(points: Iterable[VisibleObjectPoint]) -> Counter:
@@ -399,7 +448,7 @@ def _render_env(output_root: Path, env_id: str, points: list[VisibleObjectPoint]
     _plot_all_objects(axes[0], points)
     _plot_cube_objects(axes[1], points)
     _plot_button_objects(axes[2], points)
-    _plot_target_objects(axes[3], points)
+    _plot_target_objects(axes[3], env_id, points)
 
     output_path = _save_combined_figure(
         fig,
