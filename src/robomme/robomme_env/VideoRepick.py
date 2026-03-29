@@ -64,6 +64,9 @@ class VideoRepick(BaseEnv):
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
+    _REPEAT_COUNT_SEED_OFFSET = 100_003
+    _SWAP_COUNT_SEED_OFFSET = 200_003
+    _MONOCHROME_COLOR_SEED_OFFSET = 300_003
     config_easy = {
         "cube":3,
         "swap_min":1,
@@ -88,6 +91,18 @@ class VideoRepick(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
+
+    @staticmethod
+    def _splitmix64(x: int) -> int:
+        """Splitmix64 bit mixing to break linear seed correlation."""
+        x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
+        x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
+        return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF
+
+    def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
+        generator = torch.Generator()
+        generator.manual_seed(self._splitmix64(self.seed + seed_offset))
+        return generator
 
 
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
@@ -139,10 +154,17 @@ class VideoRepick(BaseEnv):
         # Use seed to randomly determine number of repetitions (1-5)
         self.generator = torch.Generator()
         self.generator.manual_seed(seed)
-        self.num_repeats = torch.randint(1, 4, (1,), generator=self.generator).item()
+        repeat_generator = self._make_generator(self._REPEAT_COUNT_SEED_OFFSET)
+        self.num_repeats = torch.randint(1, 4, (1,), generator=repeat_generator).item()
         logger.debug(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
 
-        self.swap_times = torch.randint(self.configs[self.difficulty]['swap_min'], self.configs[self.difficulty]['swap_max']+1, (1,), generator=self.generator).item()
+        swap_generator = self._make_generator(self._SWAP_COUNT_SEED_OFFSET)
+        self.swap_times = torch.randint(
+            self.configs[self.difficulty]['swap_min'],
+            self.configs[self.difficulty]['swap_max'] + 1,
+            (1,),
+            generator=swap_generator,
+        ).item()
         logger.debug(f"Task will swap {self.swap_times} times")
 
 
@@ -174,6 +196,9 @@ class VideoRepick(BaseEnv):
 
     def _load_scene(self, options: dict):
         try:
+            monochrome_color_generator = self._make_generator(
+                self._MONOCHROME_COLOR_SEED_OFFSET
+            )
             self.table_scene = TableSceneBuilder(
                 self, robot_init_qpos_noise=self.robot_init_qpos_noise
             )
@@ -201,6 +226,7 @@ class VideoRepick(BaseEnv):
             ]
             if self.difficulty == "hard":
                 self.spawned_cubes = []
+                hard_cubes_by_color = {group["name"]: [] for group in options}
 
                 for idx in range(5):
                     shuffle_indices = torch.randperm(len(options), generator=self.generator).tolist()
@@ -227,17 +253,45 @@ class VideoRepick(BaseEnv):
                             ) from e
 
                         self.spawned_cubes.append(cube)
+                        hard_cubes_by_color[group["name"]].append(cube)
                         avoid.append(cube)
 
                 if not self.spawned_cubes:
                     raise SceneGenerationError("Failed to generate any cube")
 
-                target_idx = torch.randint(0, len(self.spawned_cubes), (1,), generator=self.generator).item()
-                logger.debug("target index: %s", target_idx)
-                self.target_cube_1 = self.spawned_cubes[target_idx]
+                color_idx = torch.randint(
+                    0,
+                    len(options),
+                    (1,),
+                    generator=monochrome_color_generator,
+                ).item()
+                target_color = options[color_idx]
+                target_candidates = hard_cubes_by_color.get(target_color["name"], [])
+                if not target_candidates:
+                    raise SceneGenerationError(
+                        f"Failed to select a {target_color['name']} target cube"
+                    )
+
+                target_idx = torch.randint(
+                    0,
+                    len(target_candidates),
+                    (1,),
+                    generator=monochrome_color_generator,
+                ).item()
+                logger.debug(
+                    "target color: %s, target index in color group: %s",
+                    target_color["name"],
+                    target_idx,
+                )
+                self.target_cube_1 = target_candidates[target_idx]
 
             else:
-                idx = torch.randint(0, len(options), (1,), generator=self.generator).item()
+                idx = torch.randint(
+                    0,
+                    len(options),
+                    (1,),
+                    generator=monochrome_color_generator,
+                ).item()
                 chosen_color = options[idx]["color"]
 
                 cube_colors = [chosen_color] * 4
