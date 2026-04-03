@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Export front_rgb videos with waypoint-derived keyframes highlighted."""
+"""Predict joint/gripper keyframes and compare them against waypoint keyframes."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from dataclasses import dataclass
@@ -12,12 +13,24 @@ from pathlib import Path
 import cv2
 import h5py
 import imageio.v2 as imageio
+import matplotlib
 import numpy as np
 
+matplotlib.use("Agg")
+from matplotlib import pyplot as plt
+
 DEFAULT_INPUT_DIR = Path("/data/hongzefu/data-0306")
-DEFAULT_OUTPUT_DIR = Path("runs/keyframes_waypoint")
+DEFAULT_OUTPUT_DIR = Path("runs/keyframes_jointangle_compare")
 DEFAULT_EPISODES_PER_TASK = 3
 DEFAULT_FPS = 30.0
+DEFAULT_MOTION_LOW = 0.002
+DEFAULT_MOTION_HIGH = 0.005
+DEFAULT_MATCH_TOLERANCE = 2
+
+PREDICTED_COLOR_BGR = (0, 165, 255)
+NATIVE_COLOR_BGR = (0, 200, 0)
+PREDICTED_COLOR_RGB = "#ff8c00"
+NATIVE_COLOR_RGB = "#1a9f3f"
 
 _H5_RE = re.compile(r"^record_dataset_(.+)\.h5$")
 _EPISODE_RE = re.compile(r"^episode_(\d+)$")
@@ -25,13 +38,37 @@ _TIMESTEP_RE = re.compile(r"^timestep_(\d+)(?:_dup(\d+))?$")
 
 
 @dataclass(frozen=True)
-class KeyframeDecision:
+class FrameRecord:
     frame_index: int
     timestep_key: str
     is_video_demo: bool
     waypoint_action: np.ndarray | None
-    is_keyframe: bool
-    keyframe_index: int | None
+    joint_action: np.ndarray | None
+    is_gripper_close: bool | None
+
+
+@dataclass(frozen=True)
+class EpisodeScan:
+    frames: list[FrameRecord]
+    valid_waypoint_count: int
+    valid_joint_count: int
+    predicted_keyframes: list[int]
+    native_keyframes: list[int]
+
+
+@dataclass(frozen=True)
+class MatchPair:
+    predicted_frame_index: int
+    native_frame_index: int
+    distance: int
+
+
+@dataclass(frozen=True)
+class ComparisonResult:
+    matched_pairs: list[MatchPair]
+    tp: int
+    fp: int
+    fn: int
 
 
 @dataclass(frozen=True)
@@ -39,9 +76,11 @@ class EpisodeSummary:
     task_name: str
     episode: int
     frame_count: int
-    valid_waypoint_count: int
-    keyframe_count: int
-    output_path: Path
+    predicted_keyframe_count: int
+    native_keyframe_count: int
+    timeline_png_path: Path
+    timeline_json_path: Path
+    compare_video_path: Path
 
 
 def task_name_from_h5_path(h5_path: Path) -> str:
@@ -110,46 +149,157 @@ def read_waypoint_action(timestep_group: h5py.Group) -> np.ndarray | None:
     return waypoint_action.astype(np.float64, copy=False)
 
 
-def scan_episode_keyframes(episode_group: h5py.Group) -> tuple[list[KeyframeDecision], int]:
-    decisions: list[KeyframeDecision] = []
+def read_joint_action(timestep_group: h5py.Group) -> np.ndarray | None:
+    action_group = timestep_group.get("action")
+    if action_group is None or not isinstance(action_group, h5py.Group):
+        return None
+    if "joint_action" not in action_group:
+        return None
+    try:
+        joint_action = np.asarray(action_group["joint_action"][()]).astype(np.float64).flatten()
+    except (TypeError, ValueError):
+        return None
+    if joint_action.shape != (8,):
+        return None
+    if not np.all(np.isfinite(joint_action)):
+        return None
+    return joint_action
+
+
+def read_is_gripper_close(timestep_group: h5py.Group) -> bool | None:
+    obs_group = timestep_group.get("obs")
+    if obs_group is None or not isinstance(obs_group, h5py.Group):
+        return None
+    if "is_gripper_close" not in obs_group:
+        return None
+    value = np.asarray(obs_group["is_gripper_close"][()])
+    flat = value.reshape(-1)
+    if flat.size != 1:
+        return None
+    return bool(flat[0])
+
+
+def build_frame_records(episode_group: h5py.Group) -> tuple[list[FrameRecord], int, int]:
+    frames: list[FrameRecord] = []
     valid_waypoint_count = 0
-    keyframe_count = 0
-    prev_waypoint_action: np.ndarray | None = None
+    valid_joint_count = 0
 
     for frame_index, timestep_key in enumerate(iter_sorted_timestep_keys(episode_group)):
         timestep_group = episode_group[timestep_key]
         if not isinstance(timestep_group, h5py.Group):
             continue
 
-        is_video_demo = False
         info_group = timestep_group.get("info")
-        if isinstance(info_group, h5py.Group):
-            is_video_demo = _read_bool(info_group, "is_video_demo", default=False)
-
+        is_video_demo = (
+            _read_bool(info_group, "is_video_demo", default=False)
+            if isinstance(info_group, h5py.Group)
+            else False
+        )
         waypoint_action = read_waypoint_action(timestep_group)
-        is_keyframe = False
-        keyframe_index: int | None = None
+        joint_action = read_joint_action(timestep_group)
+        is_gripper_close = read_is_gripper_close(timestep_group)
 
         if waypoint_action is not None:
             valid_waypoint_count += 1
-            if prev_waypoint_action is None or not np.array_equal(waypoint_action, prev_waypoint_action):
-                keyframe_count += 1
-                keyframe_index = keyframe_count
-                is_keyframe = True
-                prev_waypoint_action = waypoint_action.copy()
+        if joint_action is not None:
+            valid_joint_count += 1
 
-        decisions.append(
-            KeyframeDecision(
+        frames.append(
+            FrameRecord(
                 frame_index=frame_index,
                 timestep_key=timestep_key,
                 is_video_demo=is_video_demo,
                 waypoint_action=waypoint_action,
-                is_keyframe=is_keyframe,
-                keyframe_index=keyframe_index,
+                joint_action=joint_action,
+                is_gripper_close=is_gripper_close,
             )
         )
 
-    return decisions, valid_waypoint_count
+    return frames, valid_waypoint_count, valid_joint_count
+
+
+def scan_native_keyframes(frames: list[FrameRecord]) -> list[int]:
+    native_keyframes: list[int] = []
+    prev_waypoint_action: np.ndarray | None = None
+    for record in frames:
+        if record.waypoint_action is None:
+            continue
+        if prev_waypoint_action is None or not np.array_equal(record.waypoint_action, prev_waypoint_action):
+            native_keyframes.append(record.frame_index)
+            prev_waypoint_action = record.waypoint_action.copy()
+    return native_keyframes
+
+
+def _compute_motion_deltas(frames: list[FrameRecord]) -> list[float | None]:
+    deltas: list[float | None] = [None] * len(frames)
+    for index in range(1, len(frames)):
+        prev_joint = frames[index - 1].joint_action
+        curr_joint = frames[index].joint_action
+        if prev_joint is None or curr_joint is None:
+            continue
+        deltas[index] = float(np.max(np.abs(curr_joint[:7] - prev_joint[:7])))
+    return deltas
+
+
+def scan_predicted_keyframes(
+    frames: list[FrameRecord],
+    *,
+    motion_low: float,
+    motion_high: float,
+) -> list[int]:
+    if not frames:
+        return []
+
+    deltas = _compute_motion_deltas(frames)
+    boundary_candidates: set[int] = set()
+    gripper_candidates: set[int] = set()
+
+    for index in range(1, len(frames) - 1):
+        curr_delta = deltas[index]
+        next_delta = deltas[index + 1]
+        if curr_delta is None or next_delta is None:
+            continue
+        if curr_delta <= motion_low and next_delta > motion_high:
+            boundary_candidates.add(index)
+        if curr_delta > motion_high and next_delta <= motion_low:
+            boundary_candidates.add(index + 1)
+
+    for index in range(1, len(frames)):
+        prev_gripper = frames[index - 1].is_gripper_close
+        curr_gripper = frames[index].is_gripper_close
+        if prev_gripper is None or curr_gripper is None:
+            continue
+        if prev_gripper != curr_gripper:
+            gripper_candidates.add(index)
+
+    filtered_boundaries = {
+        index
+        for index in boundary_candidates
+        if all(abs(index - gripper_index) > 1 for gripper_index in gripper_candidates)
+    }
+    return sorted(filtered_boundaries | gripper_candidates)
+
+
+def scan_episode_keyframes(
+    episode_group: h5py.Group,
+    *,
+    motion_low: float = DEFAULT_MOTION_LOW,
+    motion_high: float = DEFAULT_MOTION_HIGH,
+) -> EpisodeScan:
+    frames, valid_waypoint_count, valid_joint_count = build_frame_records(episode_group)
+    predicted_keyframes = scan_predicted_keyframes(
+        frames,
+        motion_low=motion_low,
+        motion_high=motion_high,
+    )
+    native_keyframes = scan_native_keyframes(frames)
+    return EpisodeScan(
+        frames=frames,
+        valid_waypoint_count=valid_waypoint_count,
+        valid_joint_count=valid_joint_count,
+        predicted_keyframes=predicted_keyframes,
+        native_keyframes=native_keyframes,
+    )
 
 
 def _to_uint8_hwc(frame: np.ndarray) -> np.ndarray:
@@ -202,41 +352,91 @@ def _put_text_block(frame: np.ndarray, lines: list[str], start_xy: tuple[int, in
         y += int(28 * scale + 10)
 
 
-def _format_waypoint_lines(waypoint_action: np.ndarray) -> list[str]:
-    xyz = ", ".join(f"{value:.3f}" for value in waypoint_action[:3])
-    rpyg = ", ".join(f"{value:.3f}" for value in waypoint_action[3:])
-    return [f"wp xyz=[{xyz}]", f"wp rpyg=[{rpyg}]"]
+def _keyframe_number_map(indices: list[int]) -> dict[int, int]:
+    return {frame_index: order for order, frame_index in enumerate(indices, start=1)}
 
 
-def render_frame(
+def render_lane_frame(
     front_rgb: np.ndarray,
     *,
     task_name: str,
     episode: int,
-    decision: KeyframeDecision,
+    record: FrameRecord,
+    lane_title: str,
+    is_keyframe: bool,
+    keyframe_index: int | None,
+    border_color: tuple[int, int, int],
+    show_gripper_state: bool,
 ) -> np.ndarray:
     frame = _front_rgb_to_bgr(front_rgb)
     base_lines = [
+        lane_title,
         f"task={task_name}",
-        f"episode={episode}  frame={decision.frame_index}",
-        f"timestep={decision.timestep_key}",
-        f"is_video_demo={decision.is_video_demo}",
+        f"episode={episode}  frame={record.frame_index}",
+        f"timestep={record.timestep_key}",
     ]
+    if show_gripper_state:
+        gripper_text = (
+            str(record.is_gripper_close)
+            if record.is_gripper_close is not None
+            else "unknown"
+        )
+        base_lines.append(f"is_gripper_close={gripper_text}")
     _put_text_block(frame, base_lines, start_xy=(10, 26), scale=0.55)
 
-    if decision.is_keyframe:
+    if is_keyframe and keyframe_index is not None:
         height, width = frame.shape[:2]
-        cv2.rectangle(frame, (0, 0), (width - 1, height - 1), (0, 0, 255), 8)
-        keyframe_lines = [f"KEYFRAME #{decision.keyframe_index}"]
-        if decision.waypoint_action is not None:
-            keyframe_lines.extend(_format_waypoint_lines(decision.waypoint_action))
-        _put_text_block(frame, keyframe_lines, start_xy=(10, height - 90), scale=0.7)
+        cv2.rectangle(frame, (0, 0), (width - 1, height - 1), border_color, 8)
+        label = "PRED KF" if show_gripper_state else "WAYPOINT KF"
+        _put_text_block(frame, [f"{label} #{keyframe_index}"], start_xy=(10, height - 48), scale=0.7)
 
     return frame
 
 
-def output_video_path(output_dir: Path, task_name: str, episode: int) -> Path:
-    return output_dir / f"{task_name}_ep{episode}_front_rgb_keyframes.mp4"
+def render_comparison_frame(
+    front_rgb: np.ndarray,
+    *,
+    task_name: str,
+    episode: int,
+    record: FrameRecord,
+    predicted_keyframes: dict[int, int],
+    native_keyframes: dict[int, int],
+) -> np.ndarray:
+    predicted_frame = render_lane_frame(
+        front_rgb,
+        task_name=task_name,
+        episode=episode,
+        record=record,
+        lane_title="Predicted (joint + gripper)",
+        is_keyframe=record.frame_index in predicted_keyframes,
+        keyframe_index=predicted_keyframes.get(record.frame_index),
+        border_color=PREDICTED_COLOR_BGR,
+        show_gripper_state=True,
+    )
+    native_frame = render_lane_frame(
+        front_rgb,
+        task_name=task_name,
+        episode=episode,
+        record=record,
+        lane_title="Native (waypoint)",
+        is_keyframe=record.frame_index in native_keyframes,
+        keyframe_index=native_keyframes.get(record.frame_index),
+        border_color=NATIVE_COLOR_BGR,
+        show_gripper_state=False,
+    )
+    return np.vstack([predicted_frame, native_frame])
+
+
+def output_timeline_png_path(output_dir: Path, task_name: str, episode: int) -> Path:
+    return output_dir / f"{task_name}_ep{episode}_keyframe_timeline.png"
+
+
+def output_timeline_json_path(output_dir: Path, task_name: str, episode: int) -> Path:
+    return output_dir / f"{task_name}_ep{episode}_keyframe_timeline.json"
+
+
+def output_compare_video_path(output_dir: Path, task_name: str, episode: int) -> Path:
+    return output_dir / f"{task_name}_ep{episode}_front_rgb_keyframe_compare.mp4"
 
 
 class EpisodeVideoWriter:
@@ -305,13 +505,157 @@ class EpisodeVideoWriter:
             self._cv2_writer = None
 
 
-def export_episode_video(
+def match_keyframes(
+    predicted_keyframes: list[int],
+    native_keyframes: list[int],
+    *,
+    tolerance: int,
+) -> ComparisonResult:
+    remaining_native = set(native_keyframes)
+    matched_pairs: list[MatchPair] = []
+
+    for predicted_index in predicted_keyframes:
+        candidates = [
+            native_index
+            for native_index in remaining_native
+            if abs(predicted_index - native_index) <= tolerance
+        ]
+        if not candidates:
+            continue
+        native_index = min(candidates, key=lambda index: (abs(predicted_index - index), index))
+        remaining_native.remove(native_index)
+        matched_pairs.append(
+            MatchPair(
+                predicted_frame_index=predicted_index,
+                native_frame_index=native_index,
+                distance=abs(predicted_index - native_index),
+            )
+        )
+
+    tp = len(matched_pairs)
+    return ComparisonResult(
+        matched_pairs=matched_pairs,
+        tp=tp,
+        fp=len(predicted_keyframes) - tp,
+        fn=len(native_keyframes) - tp,
+    )
+
+
+def save_timeline_plot(
+    out_path: Path,
+    *,
+    task_name: str,
+    episode: int,
+    frame_count: int,
+    predicted_keyframes: list[int],
+    native_keyframes: list[int],
+) -> None:
+    fig_width = min(max(frame_count / 35.0, 8.0), 20.0)
+    fig, ax = plt.subplots(figsize=(fig_width, 3.2), dpi=150)
+
+    xmax = max(frame_count - 1, 1)
+    ax.hlines(1, 0, xmax, colors="#c7c7c7", linewidth=2)
+    ax.hlines(0, 0, xmax, colors="#c7c7c7", linewidth=2)
+    if predicted_keyframes:
+        ax.scatter(
+            predicted_keyframes,
+            np.full(len(predicted_keyframes), 1.0),
+            color=PREDICTED_COLOR_RGB,
+            s=28,
+            label="Predicted (joint + gripper)",
+            zorder=3,
+        )
+    if native_keyframes:
+        ax.scatter(
+            native_keyframes,
+            np.full(len(native_keyframes), 0.0),
+            color=NATIVE_COLOR_RGB,
+            s=28,
+            label="Native (waypoint)",
+            zorder=3,
+        )
+
+    ax.set_xlim(-1, xmax + 1)
+    ax.set_ylim(-0.6, 1.6)
+    ax.set_yticks([1, 0], labels=["Predicted", "Native"])
+    ax.set_xlabel("Frame Index")
+    ax.grid(axis="x", alpha=0.25, linewidth=0.6)
+    ax.set_title(
+        f"{task_name} / episode {episode} / frames={frame_count} / "
+        f"predicted={len(predicted_keyframes)} / native={len(native_keyframes)}"
+    )
+    if predicted_keyframes or native_keyframes:
+        ax.legend(loc="upper right", frameon=False)
+
+    fig.tight_layout()
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+
+
+def build_timeline_json_payload(
+    *,
+    task_name: str,
+    episode: int,
+    scan: EpisodeScan,
+    motion_low: float,
+    motion_high: float,
+    match_tolerance: int,
+    comparison: ComparisonResult,
+) -> dict[str, object]:
+    predicted_timestep_keys = [
+        scan.frames[frame_index].timestep_key for frame_index in scan.predicted_keyframes
+    ]
+    native_timestep_keys = [
+        scan.frames[frame_index].timestep_key for frame_index in scan.native_keyframes
+    ]
+    matched_pairs = [
+        {
+            "predicted_frame_index": pair.predicted_frame_index,
+            "predicted_timestep_key": scan.frames[pair.predicted_frame_index].timestep_key,
+            "native_frame_index": pair.native_frame_index,
+            "native_timestep_key": scan.frames[pair.native_frame_index].timestep_key,
+            "distance": pair.distance,
+        }
+        for pair in comparison.matched_pairs
+    ]
+    return {
+        "task_name": task_name,
+        "episode": episode,
+        "frame_count": len(scan.frames),
+        "params": {
+            "motion_low": motion_low,
+            "motion_high": motion_high,
+            "match_tolerance": match_tolerance,
+        },
+        "predicted": {
+            "count": len(scan.predicted_keyframes),
+            "frame_indices": scan.predicted_keyframes,
+            "timestep_keys": predicted_timestep_keys,
+        },
+        "native": {
+            "count": len(scan.native_keyframes),
+            "frame_indices": scan.native_keyframes,
+            "timestep_keys": native_timestep_keys,
+        },
+        "comparison": {
+            "matched_pairs": matched_pairs,
+            "tp": comparison.tp,
+            "fp": comparison.fp,
+            "fn": comparison.fn,
+        },
+    }
+
+
+def export_episode_outputs(
     h5_path: Path,
     *,
     task_name: str,
     episode: int,
     output_dir: Path,
     fps: float,
+    motion_low: float,
+    motion_high: float,
+    match_tolerance: int,
 ) -> EpisodeSummary:
     with h5py.File(h5_path, "r") as h5:
         episode_key = f"episode_{episode}"
@@ -321,42 +665,87 @@ def export_episode_video(
         if not isinstance(episode_group, h5py.Group):
             raise TypeError(f"{episode_key} is not a group in {h5_path}")
 
-        decisions, valid_waypoint_count = scan_episode_keyframes(episode_group)
-        if not decisions:
+        scan = scan_episode_keyframes(
+            episode_group,
+            motion_low=motion_low,
+            motion_high=motion_high,
+        )
+        if not scan.frames:
             raise ValueError(f"{episode_key} has no timestep groups in {h5_path}")
 
+        comparison = match_keyframes(
+            scan.predicted_keyframes,
+            scan.native_keyframes,
+            tolerance=match_tolerance,
+        )
         output_dir.mkdir(parents=True, exist_ok=True)
-        out_path = output_video_path(output_dir, task_name, episode)
+
+        timeline_png_path = output_timeline_png_path(output_dir, task_name, episode)
+        timeline_json_path = output_timeline_json_path(output_dir, task_name, episode)
+        compare_video_path = output_compare_video_path(output_dir, task_name, episode)
+
+        save_timeline_plot(
+            timeline_png_path,
+            task_name=task_name,
+            episode=episode,
+            frame_count=len(scan.frames),
+            predicted_keyframes=scan.predicted_keyframes,
+            native_keyframes=scan.native_keyframes,
+        )
+
+        timeline_json_payload = build_timeline_json_payload(
+            task_name=task_name,
+            episode=episode,
+            scan=scan,
+            motion_low=motion_low,
+            motion_high=motion_high,
+            match_tolerance=match_tolerance,
+            comparison=comparison,
+        )
+        timeline_json_path.write_text(
+            json.dumps(timeline_json_payload, indent=2, ensure_ascii=True) + "\n",
+            encoding="utf-8",
+        )
+
+        predicted_keyframes = _keyframe_number_map(scan.predicted_keyframes)
+        native_keyframes = _keyframe_number_map(scan.native_keyframes)
         writer: EpisodeVideoWriter | None = None
 
         try:
-            for decision in decisions:
-                timestep_group = episode_group[decision.timestep_key]
+            for record in scan.frames:
+                timestep_group = episode_group[record.timestep_key]
                 obs_group = timestep_group.get("obs")
                 if obs_group is None or not isinstance(obs_group, h5py.Group):
-                    raise KeyError(f"{episode_key}/{decision.timestep_key} missing obs group")
+                    raise KeyError(f"{episode_key}/{record.timestep_key} missing obs group")
                 if "front_rgb" not in obs_group:
-                    raise KeyError(f"{episode_key}/{decision.timestep_key} missing obs/front_rgb")
+                    raise KeyError(f"{episode_key}/{record.timestep_key} missing obs/front_rgb")
 
                 front_rgb = np.asarray(obs_group["front_rgb"][()])
-                frame = render_frame(front_rgb, task_name=task_name, episode=episode, decision=decision)
-
+                frame = render_comparison_frame(
+                    front_rgb,
+                    task_name=task_name,
+                    episode=episode,
+                    record=record,
+                    predicted_keyframes=predicted_keyframes,
+                    native_keyframes=native_keyframes,
+                )
                 if writer is None:
                     height, width = frame.shape[:2]
-                    writer = EpisodeVideoWriter(out_path, fps, (width, height))
+                    writer = EpisodeVideoWriter(compare_video_path, fps, (width, height))
                 writer.write(frame)
         finally:
             if writer is not None:
                 writer.close()
 
-    keyframe_count = sum(1 for decision in decisions if decision.is_keyframe)
     return EpisodeSummary(
         task_name=task_name,
         episode=episode,
-        frame_count=len(decisions),
-        valid_waypoint_count=valid_waypoint_count,
-        keyframe_count=keyframe_count,
-        output_path=out_path,
+        frame_count=len(scan.frames),
+        predicted_keyframe_count=len(scan.predicted_keyframes),
+        native_keyframe_count=len(scan.native_keyframes),
+        timeline_png_path=timeline_png_path,
+        timeline_json_path=timeline_json_path,
+        compare_video_path=compare_video_path,
     )
 
 
@@ -366,6 +755,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--episodes-per-task", type=int, default=DEFAULT_EPISODES_PER_TASK)
     parser.add_argument("--fps", type=float, default=DEFAULT_FPS)
+    parser.add_argument("--motion-low", type=float, default=DEFAULT_MOTION_LOW)
+    parser.add_argument("--motion-high", type=float, default=DEFAULT_MOTION_HIGH)
+    parser.add_argument("--match-tolerance", type=int, default=DEFAULT_MATCH_TOLERANCE)
     parser.add_argument(
         "--tasks",
         nargs="+",
@@ -377,6 +769,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--episodes-per-task must be positive")
     if args.fps <= 0:
         parser.error("--fps must be positive")
+    if args.motion_low < 0:
+        parser.error("--motion-low must be non-negative")
+    if args.motion_high <= args.motion_low:
+        parser.error("--motion-high must be greater than --motion-low")
+    if args.match_tolerance < 0:
+        parser.error("--match-tolerance must be non-negative")
     return args
 
 
@@ -421,12 +819,15 @@ def main(argv: list[str] | None = None) -> int:
 
         for episode in selected_episodes:
             try:
-                summary = export_episode_video(
+                summary = export_episode_outputs(
                     h5_path,
                     task_name=task_name,
                     episode=episode,
                     output_dir=args.output_dir,
                     fps=args.fps,
+                    motion_low=args.motion_low,
+                    motion_high=args.motion_high,
+                    match_tolerance=args.match_tolerance,
                 )
             except Exception as exc:
                 failures.append(
@@ -437,12 +838,16 @@ def main(argv: list[str] | None = None) -> int:
             total_success += 1
             print(
                 f"[OK] task={summary.task_name} episode={summary.episode} "
-                f"frames={summary.frame_count} valid_waypoints={summary.valid_waypoint_count} "
-                f"keyframes={summary.keyframe_count} output={summary.output_path}"
+                f"frames={summary.frame_count} "
+                f"predicted_keyframes={summary.predicted_keyframe_count} "
+                f"native_keyframes={summary.native_keyframe_count} "
+                f"timeline_png={summary.timeline_png_path} "
+                f"timeline_json={summary.timeline_json_path} "
+                f"compare_video={summary.compare_video_path}"
             )
 
     print(
-        f"[SUMMARY] videos_written={total_success} "
+        f"[SUMMARY] episodes_written={total_success} "
         f"failures={len(failures)} output_dir={args.output_dir}"
     )
     for failure in failures:
