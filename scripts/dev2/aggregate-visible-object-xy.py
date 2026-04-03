@@ -36,6 +36,7 @@ BINFILL_BOARD_WITH_HOLE_NAME = "board_with_hole"
 VIDEOREPICK_ENV_ID = "VideoRepick"
 INSERTPEG_ENV_ID = "InsertPeg"
 MOVECUBE_ENV_ID = "MoveCube"
+ROUTESTICK_ENV_ID = "RouteStick"
 INSERTPEG_BOX_WITH_HOLE_NAME = "box_with_hole"
 MOVECUBE_GOAL_SITE_NAME = "goal_site"
 VIDEOREPICK_DIFFICULTY_CYCLE = ("easy", "easy", "medium", "hard")
@@ -453,7 +454,13 @@ def _plot_all_objects(ax, points: list[VisibleObjectPoint]) -> None:
         ax.text(0.0, 0.0, "No data", ha="center", va="center")
 
 
-def _plot_cube_objects(ax, points: list[VisibleObjectPoint]) -> None:
+def _cube_label(env_id: str, color_name: str) -> str:
+    if env_id == ROUTESTICK_ENV_ID and color_name == "unknown":
+        return "obstacle"
+    return f"cube_{color_name}"
+
+
+def _plot_cube_objects(ax, env_id: str, points: list[VisibleObjectPoint]) -> None:
     cube_points = [point for point in points if point.semantic == "cube"]
 
     legend_handles: list[Line2D] = []
@@ -480,7 +487,7 @@ def _plot_cube_objects(ax, points: list[VisibleObjectPoint]) -> None:
                 markerfacecolor=CUBE_COLOR_MAP[color_name],
                 markeredgecolor="black",
                 markersize=8,
-                label=f"cube_{color_name}",
+                label=_cube_label(env_id, color_name),
             )
         )
 
@@ -844,7 +851,7 @@ def _plot_panel(ax, panel_key: str, env_id: str, points: list[VisibleObjectPoint
         _plot_all_objects(ax, points)
         return
     if panel_key == "cube":
-        _plot_cube_objects(ax, points)
+        _plot_cube_objects(ax, env_id, points)
         return
     if panel_key == "button":
         _plot_button_objects(ax, points)

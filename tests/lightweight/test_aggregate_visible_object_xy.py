@@ -91,6 +91,12 @@ def test_peg_part_extracts_named_peg_parts() -> None:
     assert aggregate_mod._peg_part("goal_site") is None
 
 
+def test_cube_label_uses_obstacle_for_routestick_unknown_only() -> None:
+    assert aggregate_mod._cube_label("RouteStick", "unknown") == "obstacle"
+    assert aggregate_mod._cube_label("MoveCube", "unknown") == "cube_unknown"
+    assert aggregate_mod._cube_label("RouteStick", "red") == "cube_red"
+
+
 def test_panel_specs_match_insertpeg_and_movecube_layouts() -> None:
     assert aggregate_mod._panel_specs_for_env("InsertPeg") == (
         "all",
@@ -159,6 +165,21 @@ def test_plot_bin_objects_uses_bin_title_and_index_legend() -> None:
         legend = ax.get_legend()
         assert legend is not None
         assert [text.get_text() for text in legend.get_texts()] == ["bin_0", "bin_1"]
+    finally:
+        plt.close(fig)
+
+
+def test_plot_cube_objects_uses_obstacle_label_for_routestick_unknown() -> None:
+    fig, ax = plt.subplots()
+    try:
+        aggregate_mod._plot_cube_objects(
+            ax,
+            "RouteStick",
+            [_point(env_id="RouteStick", name="target_cube_1", semantic="cube")],
+        )
+        legend = ax.get_legend()
+        assert legend is not None
+        assert [text.get_text() for text in legend.get_texts()] == ["obstacle"]
     finally:
         plt.close(fig)
 
