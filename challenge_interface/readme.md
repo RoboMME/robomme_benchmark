@@ -66,7 +66,7 @@ Submit the required information via this [link](https://docs.google.com/forms/d/
 - **Before May 22 (Phase 1 Validation)**: We verify stability & correctness for your Docker image / remote server / code repo.
   - If we find issues, we will contact you, and you can update your models/deployment during this window (up to **3 times**).
 - **May 23**: Deadline to finalize your models and deployment.
-- **May 23–June 2 (Phase 2 Full Evaluation)**: We evaluate on held-out episodes for teams that passed Phase 1.
+- **May 23–May 28 (Phase 2 Full Evaluation)**: We evaluate on held-out episodes for teams that passed Phase 1.
 - **June 3**: Winner announcement at the FMEA workshop.
 
 
