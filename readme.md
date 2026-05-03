@@ -128,6 +128,8 @@ The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) re
  
 **Diffusion Policy**: The [RoboMME_DP](https://github.com/RoboMME/DP) repo provides our implementation adapted from the [diffusion_policy](https://github.com/real-stanford/diffusion_policy) repo.
 
+**OpenVLA-OFT**: The [RoboMME_OpenVLA-OFT](https://github.com/RoboMME/OpenVLA-OFT) repo provides our implementation adapted from the [OpenVLA-OFT](https://github.com/moojink/openvla-oft) repo.
+
 
 
 ## 🏆 Submit Your Models
