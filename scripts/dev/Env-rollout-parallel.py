@@ -33,22 +33,22 @@ from robomme.robomme_env.utils.planner_fail_safe import (
 )
 
 DEFAULT_ENVS = [
-    "PickXtimes",
-    "StopCube",
-    "SwingXtimes",
-    "BinFill",
-    "VideoUnmaskSwap",
-    "VideoUnmask",
+    # "PickXtimes",
+    # "StopCube",
+    # "SwingXtimes",
+    # "BinFill",
+    # "VideoUnmaskSwap",
+    # "VideoUnmask",
     "ButtonUnmaskSwap",
-    "ButtonUnmask",
-    "VideoRepick",
-    "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "PickHighlight",
-    "InsertPeg",
-    "MoveCube",
-    "PatternLock",
-    "RouteStick",
+    # "ButtonUnmask",
+    # "VideoRepick",
+    # "VideoPlaceButton",
+    # "VideoPlaceOrder",
+    # "PickHighlight",
+    # "InsertPeg",
+    # "MoveCube",
+    # "PatternLock",
+    # "RouteStick",
 ]
 VALID_ENVS: Set[str] = set(DEFAULT_ENVS)
 VALID_DIFFICULTIES: Set[str] = {"easy", "medium", "hard"}
@@ -105,7 +105,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=5,
+        default=40,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -123,7 +123,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--difficulty",
         type=str,
-        default="hard",
+        default="",
         choices=sorted(VALID_DIFFICULTIES),
         help="Episode difficulty (default: easy).",
     )
@@ -143,7 +143,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=10,
+        default=20,
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
             "the same env_id. Default: auto=min(os.cpu_count(), episode count)."

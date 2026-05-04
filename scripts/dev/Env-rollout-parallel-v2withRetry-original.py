@@ -134,7 +134,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--env",
         "-e",
         nargs="+",
-        default=["PatternLock","RouteStick"],
+        default=["PickX"],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
         help=(
@@ -146,7 +146,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=20,
+        default=50,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -166,7 +166,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--gpu",
         type=int,
-        default=0,
+        default=1,
         choices=[0, 1],
         help="GPU id to expose via CUDA_VISIBLE_DEVICES.",
     )

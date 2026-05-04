@@ -20,21 +20,118 @@ seed = base_seed + attempt
 """
 
 import argparse
+import atexit
 import colorsys
 import json
 import multiprocessing as mp
 import os
+import signal
 import sys
+import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional, Set
+
+os.environ.setdefault("MPLBACKEND", "Agg")
+
+_GPU_PIN_ENV_MARKER = "_ROBOMME_GPU_PINNED"
+DEFAULT_GPU_ID = 1
+ALLOWED_GPU_IDS = (0, 1)
+
+
+def _early_pin_gpu() -> int:
+    """Pin CUDA_VISIBLE_DEVICES BEFORE any GPU-touching imports run.
+
+    Must execute at module import time so that:
+    1. Parent process: parses --gpu from sys.argv, exports CUDA_VISIBLE_DEVICES,
+       and sets _ROBOMME_GPU_PINNED so spawn-children can recover the choice.
+    2. Spawn worker (re-imports this module with multiprocessing's own argv):
+       sees _ROBOMME_GPU_PINNED inherited from parent and re-applies the same
+       CUDA_VISIBLE_DEVICES — never falling back to the argparse default.
+    """
+    inherited = os.environ.get(_GPU_PIN_ENV_MARKER)
+    if inherited is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = inherited
+        return int(inherited)
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--gpu", type=int, default=DEFAULT_GPU_ID)
+    args, _ = parser.parse_known_args()
+    gpu_id = int(args.gpu)
+    if gpu_id not in ALLOWED_GPU_IDS:
+        raise SystemExit(
+            f"--gpu must be one of {ALLOWED_GPU_IDS}; got {gpu_id}."
+        )
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    os.environ[_GPU_PIN_ENV_MARKER] = str(gpu_id)
+    return gpu_id
+
+
+_PINNED_GPU_ID = _early_pin_gpu()
 
 import gymnasium as gym
 import h5py
 import imageio
 import numpy as np
 
-os.environ.setdefault("MPLBACKEND", "Agg")
+
+_ACTIVE_EXECUTOR: "Optional[ProcessPoolExecutor]" = None
+_SHUTDOWN_INITIATED = False
+
+
+def _terminate_active_workers(grace_seconds: float = 3.0) -> None:
+    """Force-terminate all live worker processes of the currently active executor."""
+    executor = _ACTIVE_EXECUTOR
+    if executor is None:
+        return
+    try:
+        worker_processes = list(executor._processes.values())
+    except (AttributeError, RuntimeError):
+        worker_processes = []
+
+    for proc in worker_processes:
+        try:
+            if proc.is_alive():
+                proc.terminate()
+        except Exception:
+            pass
+
+    deadline = time.time() + max(0.0, grace_seconds)
+    while time.time() < deadline and any(p.is_alive() for p in worker_processes):
+        time.sleep(0.05)
+
+    for proc in worker_processes:
+        try:
+            if proc.is_alive():
+                proc.kill()
+        except Exception:
+            pass
+
+
+def _handle_termination_signal(signum, _frame) -> None:
+    """SIGINT/SIGTERM handler: kill all worker processes, then exit the parent."""
+    global _SHUTDOWN_INITIATED
+    if _SHUTDOWN_INITIATED:
+        os._exit(128 + signum)
+    _SHUTDOWN_INITIATED = True
+    print(
+        f"\n[Parent] Received signal {signum}; terminating worker processes ...",
+        flush=True,
+    )
+    _terminate_active_workers()
+    print("[Parent] Worker processes terminated; exiting.", flush=True)
+    sys.exit(128 + signum)
+
+
+def _install_parent_signal_handlers() -> None:
+    signal.signal(signal.SIGINT, _handle_termination_signal)
+    signal.signal(signal.SIGTERM, _handle_termination_signal)
+    atexit.register(_terminate_active_workers)
+
+
+def _worker_initializer() -> None:
+    """Ignore SIGINT in worker processes so the parent owns shutdown."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEV_SCRIPT_DIR = SCRIPT_DIR.parent / "dev"
@@ -643,21 +740,21 @@ def _build_parser() -> argparse.ArgumentParser:
         nargs="+",
         default=[
     "PickXtimes",
-     "StopCube",
-    "SwingXtimes",
-    "BinFill",
-    "VideoUnmaskSwap",
-    "VideoUnmask",
-    "ButtonUnmaskSwap",
-    "ButtonUnmask",
-    "VideoRepick",
-     "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "PickHighlight",
-    "InsertPeg",
-    "MoveCube",
-    "PatternLock",
-    "RouteStick",
+    #  "StopCube",
+    # "SwingXtimes",
+    # "BinFill",
+    # "VideoUnmaskSwap",
+    # "VideoUnmask",
+     #"ButtonUnmaskSwap",
+    # "ButtonUnmask",
+    # "VideoRepick",
+    #  "VideoPlaceButton",
+    # "VideoPlaceOrder",
+    # "PickHighlight",
+    # "InsertPeg",
+    # "MoveCube",
+    # "PatternLock",
+    # "RouteStick",
 ],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
@@ -666,7 +763,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=300,
+        default=100,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -687,9 +784,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--gpu",
         type=int,
-        default=0,
-        choices=[0, 1],
-        help="GPU id to expose via CUDA_VISIBLE_DEVICES.",
+        default=1,
+        choices=list(ALLOWED_GPU_IDS),
+        help=(
+            "GPU id to expose via CUDA_VISIBLE_DEVICES. "
+            f"Default: {DEFAULT_GPU_ID}. Must be parsed BEFORE any heavy imports, "
+            "so the same value is also picked up by the early module-level parser."
+        ),
     )
     parser.add_argument(
         "--output-dir",
@@ -1072,33 +1173,42 @@ def _run_env_episodes(
             _print_episode_artifacts(output_dir, env_id, ep, used_seed)
         return [success for _, success in sorted(env_successes)]
 
+    global _ACTIVE_EXECUTOR
     ctx = mp.get_context("spawn")
-    with ProcessPoolExecutor(max_workers=max_workers, mp_context=ctx) as executor:
-        futures = {
-            executor.submit(
-                _run_episode_with_retry,
-                env_id,
-                ep,
-                difficulty,
-                output_dir,
-            ): ep
-            for ep, difficulty in episode_specs
-        }
+    with ProcessPoolExecutor(
+        max_workers=max_workers,
+        mp_context=ctx,
+        initializer=_worker_initializer,
+    ) as executor:
+        _ACTIVE_EXECUTOR = executor
+        try:
+            futures = {
+                executor.submit(
+                    _run_episode_with_retry,
+                    env_id,
+                    ep,
+                    difficulty,
+                    output_dir,
+                ): ep
+                for ep, difficulty in episode_specs
+            }
 
-        for future in as_completed(futures):
-            ep = futures[future]
-            try:
-                success, used_seed = future.result()
-            except Exception as exc:
-                raise RuntimeError(
-                    f"Worker crashed for env={env_id} episode={ep}"
-                ) from exc
-            env_successes.append((ep, success))
-            print(
-                f"[Parent] Completed env={env_id} episode={ep} seed={used_seed} "
-                f"success={success}"
-            )
-            _print_episode_artifacts(output_dir, env_id, ep, used_seed)
+            for future in as_completed(futures):
+                ep = futures[future]
+                try:
+                    success, used_seed = future.result()
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Worker crashed for env={env_id} episode={ep}"
+                    ) from exc
+                env_successes.append((ep, success))
+                print(
+                    f"[Parent] Completed env={env_id} episode={ep} seed={used_seed} "
+                    f"success={success}"
+                )
+                _print_episode_artifacts(output_dir, env_id, ep, used_seed)
+        finally:
+            _ACTIVE_EXECUTOR = None
 
     return [success for _, success in sorted(env_successes)]
 
@@ -1106,7 +1216,20 @@ def _run_env_episodes(
 def main() -> None:
     """脚本入口：解析参数、生成 setup-only HDF5、打印结果路径。"""
     args = _build_parser().parse_args()
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+
+    if int(args.gpu) != _PINNED_GPU_ID:
+        raise SystemExit(
+            f"GPU mismatch: full parser saw --gpu={args.gpu} but module-level "
+            f"early parser already pinned CUDA_VISIBLE_DEVICES to {_PINNED_GPU_ID}. "
+            "Pass --gpu before any other arguments so it is parsed before heavy "
+            "GPU-touching imports run."
+        )
+    print(
+        f"[GPU] CUDA_VISIBLE_DEVICES pinned to '{os.environ.get('CUDA_VISIBLE_DEVICES')}' "
+        f"(GPU id {_PINNED_GPU_ID}); GPU0 must remain untouched."
+    )
+
+    _install_parent_signal_handlers()
 
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)

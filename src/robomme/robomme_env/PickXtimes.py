@@ -272,6 +272,10 @@ class PickXtimes(BaseEnv):
                             random_yaw=True,
                             name_prefix=f"cube_{group['name']}_{cube_idx}",
                             generator=scene_generator,
+                            # Halton 索引：seed → 一一映射的 (x, y)；
+                            # group_idx 区分同一 episode 内的多个 cube。
+                            halton_index=int(self.seed) * 3 + int(group_idx),
+                            halton_bases=(2, 3),
                         )
                     except RuntimeError as e:
                         # 如果当前颜色的某个方块采样失败，就停止继续生成这一颜色组，
@@ -308,7 +312,10 @@ class PickXtimes(BaseEnv):
                 thickness=0.005,
                 min_gap=self.cube_half_size*2,
                 name_prefix=f"target",
-                generator=scene_generator
+                generator=scene_generator,
+                # Halton 索引：seed → target XY 一一映射；与 cube 走互不重叠的基底流。
+                halton_index=int(self.seed),
+                halton_bases=(5, 7),
             )
         except RuntimeError as e:
             logger.debug(f"Target sampling failed: {e}")

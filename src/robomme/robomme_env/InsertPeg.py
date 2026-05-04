@@ -254,7 +254,7 @@ class InsertPeg(BaseEnv):
                 if candidate_xy is None:
                     raise RuntimeError("Failed to sample peg positions satisfying placement constraints.")
 
-                yaw_value = (torch.rand(1, generator=self._hb_generator).item() * 2 - 1) * np.radians(45)
+                yaw_value = np.pi / 2 + (torch.rand(1, generator=self._hb_generator).item() * 2 - 1) * np.radians(20)
 
                 yaw_angles = torch.tensor([[0.0, 0.0, yaw_value]], dtype=torch.float32)
                 yaw_matrix = euler_angles_to_matrix(yaw_angles, convention="XYZ")

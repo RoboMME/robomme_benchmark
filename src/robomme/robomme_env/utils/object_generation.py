@@ -25,6 +25,22 @@ from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.structs.types import Array
 from typing import Optional, Union
 
+def _halton(index: int, base: int) -> float:
+    """Van der Corput / Halton low-discrepancy 1D sequence value at integer index.
+
+    index 从 0 开始（内部 +1 跳过退化点）。base 通常用互质小素数。"""
+    f = 1.0
+    result = 0.0
+    i = int(index) + 1
+    if base < 2:
+        raise ValueError("_halton: base must be >= 2")
+    while i > 0:
+        f /= base
+        result += f * (i % base)
+        i //= base
+    return result
+
+
 def _color_to_rgba(color: Union[str, Sequence[float]]) -> Tuple[float, float, float, float]:
     """Convert a hex string or RGB/RGBA tuple to an RGBA tuple accepted by SAPIEN."""
     if isinstance(color, str):
@@ -232,7 +248,10 @@ def spawn_random_cube(
         random_yaw=True,
         include_existing=True,
         include_goal=True,
-        generator=None
+        generator=None,
+        halton_index: Optional[int] = None,
+        halton_bases: Tuple[int, int] = (2, 3),
+        halton_stride: int = 1009,
     ):
     """
     Drop a cube (onto table) in rectangular region using rejection sampling, and return the cube actor.
@@ -375,11 +394,16 @@ def spawn_random_cube(
     device = self.device
 
     for trial in range(int(max_trials)):
-        # Use simple uniform sampling to ensure good spatial coverage
-        # Complex sampling strategies often reduce coverage
-
-        u1 = torch.rand(1, generator=generator).item()
-        u2 = torch.rand(1, generator=generator).item()
+        # 位置采样：默认走 IID 均匀（torch.rand）；
+        # 若调用方提供 halton_index，则改用 Halton 低差异序列以获得更均匀的 2D 覆盖。
+        # 碰撞拒采时按 halton_stride 推进索引，整条路径仍是 seed 的纯函数。
+        if halton_index is not None:
+            idx = int(halton_index) + trial * int(halton_stride)
+            u1 = _halton(idx, halton_bases[0])
+            u2 = _halton(idx, halton_bases[1])
+        else:
+            u1 = torch.rand(1, generator=generator).item()
+            u2 = torch.rand(1, generator=generator).item()
 
         # Map directly to sampling region - Uniform distribution provides best spatial coverage
         x = float(x_low + u1 * (x_high - x_low))
@@ -462,6 +486,9 @@ def spawn_random_target(
         generator=None,
         randomize=True,      # Control whether to randomize position
         target_style="purple",  # Choose which color scheme target to create
+        halton_index: Optional[int] = None,
+        halton_bases: Tuple[int, int] = (5, 7),
+        halton_stride: int = 1009,
     ):
     """
     Drop a target (onto table) in rectangular region using rejection sampling, and return the target actor.
@@ -625,9 +652,16 @@ def spawn_random_target(
     else:
         raise ValueError("spawn_random_target: target_style must be a string or callable builder function")
 
-    for _ in range(int(max_trials)):
-        x = float(torch.rand(1, generator=generator).item() * (x_high - x_low) + x_low)
-        y = float(torch.rand(1, generator=generator).item() * (y_high - y_low) + y_low)
+    for trial in range(int(max_trials)):
+        if halton_index is not None:
+            idx = int(halton_index) + trial * int(halton_stride)
+            u1 = _halton(idx, halton_bases[0])
+            u2 = _halton(idx, halton_bases[1])
+        else:
+            u1 = torch.rand(1, generator=generator).item()
+            u2 = torch.rand(1, generator=generator).item()
+        x = float(u1 * (x_high - x_low) + x_low)
+        y = float(u2 * (y_high - y_low) + y_low)
 
         if random_yaw:
             yaw = float(torch.rand(1, generator=generator).item() * 2 * np.pi - np.pi)

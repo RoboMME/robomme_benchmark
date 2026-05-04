@@ -230,31 +230,27 @@ class ButtonUnmaskSwap(BaseEnv):
 
          # Generate 3 bins
         self.spawned_bins = []
-        # Generate y offsets for region4 using torch generator
-        y_offset_1 = (torch.rand(1, generator=generator).item()) * 0.1  # for first two points
-        y_offset_2 = (torch.rand(1, generator=generator).item()) * 0.1  # for last two points
 
-        region4=[[0, -0.1 + y_offset_1],
-                 [0, 0.1 + y_offset_1],
-                 [0.1, 0.1 + y_offset_2],
-                 [0.1, -0.1 + y_offset_2]]
+        def _jitter():
+            return (torch.rand(1, generator=generator).item() - 0.5) * 0.10  # U(-0.05, +0.05)
 
+        # Symmetric four-quadrant layout, independent jitter per bin.
+        cx, cy = 0.05, 0.0   # workspace anchor on positive-X side, away from buttons at x=-0.2
+        dx, dy = 0.10, 0.10  # half-spacing between quadrant centers
 
-        # Generate independent random x offsets for each point using torch generator
-        x_offset_tri_1 = (torch.rand(1, generator=generator).item()) * 0.1
-        x_offset_tri_2 = (torch.rand(1, generator=generator).item()) * 0.1
-        x_offset_tri_3 = (torch.rand(1, generator=generator).item()) * 0.1
+        region4 = [
+            [cx - dx + _jitter(), cy - dy + _jitter()],   # bin_0  (-x, -y)
+            [cx - dx + _jitter(), cy + dy + _jitter()],   # bin_1  (-x, +y)
+            [cx + dx + _jitter(), cy + dy + _jitter()],   # bin_2  (+x, +y)
+            [cx + dx + _jitter(), cy - dy + _jitter()],   # bin_3  (+x, -y)
+        ]
 
-        x_offset_line_1 = (torch.rand(1, generator=generator).item()) * 0.1
-        x_offset_line_2 = (torch.rand(1, generator=generator).item()) * 0.1
-        x_offset_line_3 = (torch.rand(1, generator=generator).item()) * 0.1
-
-        region3_tri=[[-0.05 + x_offset_tri_1, -0.15],
-                     [-0.05 + x_offset_tri_2, 0.15],
-                     [0.05 + x_offset_tri_3, 0]]
-        region3_line=[[-0.05 + x_offset_line_1, -0.15],
-                      [-0.05 + x_offset_line_2, 0.15],
-                      [-0.05 + x_offset_line_3, 0]]
+        region3_tri = [[-0.05 + _jitter(), -0.15],
+                       [-0.05 + _jitter(),  0.15],
+                       [ 0.05 + _jitter(),  0.0 ]]
+        region3_line = [[-0.05 + _jitter(), -0.15],
+                        [-0.05 + _jitter(),  0.15],
+                        [-0.05 + _jitter(),  0.0 ]]
 
         # Use generator to randomly select region3_tri or region3_line
         region3_choice = torch.randint(0, 2, (1,), generator=generator).item()
