@@ -41,6 +41,17 @@ def _halton(index: int, base: int) -> float:
     return result
 
 
+def _splitmix64(x: int) -> int:
+    """SplitMix64 位混合：把任意整数打散成均匀分布的 64-bit 值。
+
+    用于在调用 _halton 之前打掉 seed 的结构性周期（例如 seed = base + k * 100
+    与 base-5 对齐时会让 halton 塌缩到很窄区间）。"""
+    x = int(x) & 0xFFFFFFFFFFFFFFFF
+    x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
+    x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
+    return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF
+
+
 def _color_to_rgba(color: Union[str, Sequence[float]]) -> Tuple[float, float, float, float]:
     """Convert a hex string or RGB/RGBA tuple to an RGBA tuple accepted by SAPIEN."""
     if isinstance(color, str):
@@ -393,12 +404,20 @@ def spawn_random_cube(
 
     device = self.device
 
+    # 提前把 halton_index 打散一次：原始 seed 可能与 Halton 基底有结构对齐
+    # （例如 seed = const + k*100 时 base-5 的低位永远为 0），直接喂进去会把
+    # 采样塌缩到一个很窄的子区间。SplitMix64 后再取 16-bit 索引可解耦。
+    if halton_index is not None:
+        _halton_base_idx = _splitmix64(halton_index) & 0xFFFF
+    else:
+        _halton_base_idx = None
+
     for trial in range(int(max_trials)):
         # 位置采样：默认走 IID 均匀（torch.rand）；
         # 若调用方提供 halton_index，则改用 Halton 低差异序列以获得更均匀的 2D 覆盖。
         # 碰撞拒采时按 halton_stride 推进索引，整条路径仍是 seed 的纯函数。
-        if halton_index is not None:
-            idx = int(halton_index) + trial * int(halton_stride)
+        if _halton_base_idx is not None:
+            idx = _halton_base_idx + trial * int(halton_stride)
             u1 = _halton(idx, halton_bases[0])
             u2 = _halton(idx, halton_bases[1])
         else:
@@ -652,9 +671,16 @@ def spawn_random_target(
     else:
         raise ValueError("spawn_random_target: target_style must be a string or callable builder function")
 
+    # 见 spawn_random_cube 的同名注释：先用 SplitMix64 打散再喂 Halton，
+    # 避免 seed 与基底有结构对齐时采样塌缩。
+    if halton_index is not None:
+        _halton_base_idx = _splitmix64(halton_index) & 0xFFFF
+    else:
+        _halton_base_idx = None
+
     for trial in range(int(max_trials)):
-        if halton_index is not None:
-            idx = int(halton_index) + trial * int(halton_stride)
+        if _halton_base_idx is not None:
+            idx = _halton_base_idx + trial * int(halton_stride)
             u1 = _halton(idx, halton_bases[0])
             u2 = _halton(idx, halton_bases[1])
         else:
