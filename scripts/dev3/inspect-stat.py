@@ -149,8 +149,6 @@ MOVECUBE_ENV_ID = "MoveCube"
 ROUTESTICK_ENV_ID = "RouteStick"
 INSERTPEG_BOX_WITH_HOLE_NAME = "box_with_hole"
 MOVECUBE_GOAL_SITE_NAME = "goal_site"
-VIDEOREPICK_DIFFICULTY_CYCLE = ("easy", "easy", "medium", "hard")
-ENV_METADATA_ROOT = Path("src/robomme/env_metadata")
 BIN_PANEL_ENVS = {
     "VideoUnmask",
     "VideoUnmaskSwap",
@@ -770,10 +768,11 @@ def _read_episode_rows(
     *,
     env_filter: Optional[str],
     max_per_difficulty: int | None,
-) -> tuple[list[dict[str, object]], list[str]]:
+) -> tuple[list[dict[str, object]], list[str], dict[tuple[str, int], str]]:
     rows: list[dict[str, object]] = []
     warnings: list[str] = []
     difficulty_counts_by_env: dict[str, Counter[str]] = {}
+    difficulty_map: dict[tuple[str, int], str] = {}
 
     def _difficulty_cap_reached(env_id: str, difficulty: str) -> bool:
         if max_per_difficulty is None or max_per_difficulty <= 0:
@@ -787,6 +786,14 @@ def _read_episode_rows(
         if difficulty in DIFFICULTY_ORDER:
             counts = difficulty_counts_by_env.setdefault(env_id, Counter())
             counts[difficulty] += 1
+
+    def _record_difficulty(env_id: str, episode_name: str, difficulty: str) -> None:
+        if not difficulty:
+            return
+        episode_suffix = episode_name.removeprefix("episode_")
+        if not episode_suffix.isdigit():
+            return
+        difficulty_map[(env_id, int(episode_suffix))] = difficulty
 
     for h5_path in aggregated_paths:
         env_id = h5_path.stem.removeprefix(AGGREGATED_H5_PREFIX)
@@ -802,6 +809,7 @@ def _read_episode_rows(
                         )
                         continue
                     difficulty = _peek_episode_difficulty(episode_group)
+                    _record_difficulty(env_id, episode_name, difficulty)
                     if _difficulty_cap_reached(env_id, difficulty):
                         continue
                     _append_episode_row(
@@ -829,6 +837,7 @@ def _read_episode_rows(
                     continue
                 episode_name, episode_group = resolved
                 difficulty = _peek_episode_difficulty(episode_group)
+                _record_difficulty(entry.env_id, episode_name, difficulty)
                 if _difficulty_cap_reached(entry.env_id, difficulty):
                     continue
                 _append_episode_row(
@@ -842,7 +851,7 @@ def _read_episode_rows(
         except Exception as exc:
             warnings.append(f"{entry.path.name}: failed to open ({exc})")
 
-    return rows, warnings
+    return rows, warnings, difficulty_map
 
 
 def _write_csv(rows: list[dict[str, object]], output_path: Path) -> None:
@@ -1371,78 +1380,22 @@ def _dedup_visible_object_files(
     return kept, skipped
 
 
-def _load_episode_difficulty_map() -> dict[str, dict[int, str]]:
-    difficulty_by_env_episode: dict[str, dict[int, str]] = defaultdict(dict)
-    if not ENV_METADATA_ROOT.is_dir():
-        return {}
-
-    for metadata_path in sorted(ENV_METADATA_ROOT.glob("*/record_dataset_*_metadata.json")):
-        try:
-            with metadata_path.open("r", encoding="utf-8") as handle:
-                payload = json.load(handle)
-        except Exception as exc:
-            print(
-                f"[Warn] Skip invalid env metadata {metadata_path}: "
-                f"{type(exc).__name__}: {exc}"
-            )
-            continue
-
-        env_id = payload.get("env_id")
-        records = payload.get("records")
-        if not isinstance(env_id, str) or not isinstance(records, list):
-            print(f"[Warn] Skip malformed env metadata {metadata_path}")
-            continue
-
-        env_map = difficulty_by_env_episode[env_id]
-        for record in records:
-            if not isinstance(record, dict):
-                continue
-            episode = record.get("episode")
-            difficulty = record.get("difficulty")
-            if not isinstance(episode, int) or not isinstance(difficulty, str):
-                continue
-            existing = env_map.get(episode)
-            if existing is not None and existing != difficulty:
-                print(
-                    f"[Warn] Conflicting difficulty metadata for env={env_id} "
-                    f"episode={episode}: keep {existing}, ignore {difficulty}"
-                )
-                continue
-            env_map[episode] = difficulty
-
-    return {env_id: dict(env_map) for env_id, env_map in difficulty_by_env_episode.items()}
-
-
-def _fallback_difficulty(env_id: str, episode: int) -> Optional[str]:
-    if env_id == VIDEOREPICK_ENV_ID:
-        return VIDEOREPICK_DIFFICULTY_CYCLE[episode % len(VIDEOREPICK_DIFFICULTY_CYCLE)]
-    return None
-
-
-def _resolve_difficulty(
-    difficulty_by_env_episode: dict[str, dict[int, str]],
-    env_id: str,
-    episode: int,
-) -> Optional[str]:
-    env_map = difficulty_by_env_episode.get(env_id, {})
-    if episode in env_map:
-        return env_map[episode]
-    return _fallback_difficulty(env_id, episode)
-
-
 def _build_points_from_files(
     files: list[_VisibleObjectsFile],
-    difficulty_by_env_episode: dict[str, dict[int, str]],
-) -> tuple[dict[str, list[VisibleObjectPoint]], Counter, Counter]:
+    difficulty_by_env_episode: dict[tuple[str, int], str],
+) -> tuple[dict[str, list[VisibleObjectPoint]], Counter, Counter, list[tuple[str, int]]]:
     points_by_env: dict[str, list[VisibleObjectPoint]] = defaultdict(list)
     skipped = Counter(objects=0)
     episodes_by_env: dict[str, set[tuple[int, int]]] = defaultdict(set)
+    missing_difficulty: list[tuple[str, int]] = []
 
     for file_entry in files:
         episodes_by_env[file_entry.env_id].add((file_entry.episode, file_entry.seed))
-        difficulty = _resolve_difficulty(
-            difficulty_by_env_episode, file_entry.env_id, file_entry.episode
+        difficulty = difficulty_by_env_episode.get(
+            (file_entry.env_id, file_entry.episode)
         )
+        if difficulty is None:
+            missing_difficulty.append((file_entry.env_id, file_entry.episode))
 
         for obj in file_entry.objects:
             if not isinstance(obj, dict):
@@ -1479,7 +1432,7 @@ def _build_points_from_files(
     episode_counts = Counter(
         {env_id: len(episode_keys) for env_id, episode_keys in episodes_by_env.items()}
     )
-    return points_by_env, skipped, episode_counts
+    return points_by_env, skipped, episode_counts, missing_difficulty
 
 
 # ---------------------------------------------------------------------------
@@ -2165,7 +2118,12 @@ def _run_distribution_pipeline(
     env_filter: Optional[str],
     max_per_difficulty: int,
     show: bool,
-) -> tuple[list[_SplitH5Entry], list[_SplitH5Entry], list[Path]]:
+) -> tuple[
+    list[_SplitH5Entry],
+    list[_SplitH5Entry],
+    list[Path],
+    dict[tuple[str, int], str],
+]:
     h5_paths = _iter_h5_paths(hdf5_dir)
     aggregated, split_entries, classify_warnings = _classify_h5_paths(h5_paths)
     kept_split, skipped_split = _dedup_split_h5_entries(split_entries)
@@ -2180,7 +2138,7 @@ def _run_distribution_pipeline(
     else:
         kept_for_processing = kept_split
 
-    rows, read_warnings = _read_episode_rows(
+    rows, read_warnings, difficulty_map = _read_episode_rows(
         aggregated,
         kept_for_processing,
         env_filter=env_filter,
@@ -2226,13 +2184,14 @@ def _run_distribution_pipeline(
             print(f"    - {warning}")
     print()
 
-    return kept_split, skipped_split, figure_paths
+    return kept_split, skipped_split, figure_paths, difficulty_map
 
 
 def _run_xy_pipeline(
     segmentation_dir: Path,
     output_dir: Path,
     env_filter: Optional[str],
+    difficulty_by_env_episode: dict[tuple[str, int], str],
 ) -> tuple[list[_VisibleObjectsFile], list[_VisibleObjectsFile]]:
     if not segmentation_dir.is_dir():
         print("=" * 72)
@@ -2251,9 +2210,8 @@ def _run_xy_pipeline(
 
     kept_files, skipped_files = _dedup_visible_object_files(files)
 
-    difficulty_by_env_episode = _load_episode_difficulty_map()
-    points_by_env, skipped_objects, episode_counts = _build_points_from_files(
-        kept_files, difficulty_by_env_episode
+    points_by_env, skipped_objects, episode_counts, missing_difficulty = (
+        _build_points_from_files(kept_files, difficulty_by_env_episode)
     )
 
     print("=" * 72)
@@ -2262,6 +2220,15 @@ def _run_xy_pipeline(
     print(f"  Segmentation dir: {segmentation_dir}")
     if env_filter:
         print(f"  Env filter:       {env_filter}")
+
+    if missing_difficulty:
+        unique_missing = sorted(set(missing_difficulty))
+        print(
+            f"  [Warn] {len(unique_missing)} episodes have visible_objects.json but "
+            f"no matching HDF5 difficulty — VideoRepick split routing will skip them:"
+        )
+        for env_id, episode in unique_missing:
+            print(f"    - env={env_id} ep={episode}")
 
     if not points_by_env:
         env_part = f" for env={env_filter}" if env_filter else ""
@@ -2326,7 +2293,7 @@ def main() -> None:
     print()
 
     # Pipeline 1: pre-discover + dedup HDF5, then run distribution
-    kept_h5, skipped_h5, _ = _run_distribution_pipeline(
+    kept_h5, skipped_h5, _, difficulty_map = _run_distribution_pipeline(
         hdf5_dir,
         output_dir,
         args.env,
@@ -2339,6 +2306,7 @@ def main() -> None:
         segmentation_dir,
         output_dir,
         args.env,
+        difficulty_map,
     )
 
     # Report seed-dedup results (consolidated for both pipelines)
