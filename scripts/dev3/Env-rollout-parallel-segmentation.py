@@ -73,6 +73,14 @@ import gymnasium as gym
 import h5py
 import imageio
 import numpy as np
+import torch
+
+from robomme.env_record_wrapper import FailsafeTimeout
+from robomme.robomme_env.utils.planner_fail_safe import (
+    FailAwarePandaArmMotionPlanningSolver,
+    FailAwarePandaStickMotionPlanningSolver,
+    ScrewPlanFailure,
+)
 
 
 _ACTIVE_EXECUTOR: "Optional[ProcessPoolExecutor]" = None
@@ -138,6 +146,8 @@ DEV_SCRIPT_DIR = SCRIPT_DIR.parent / "dev"
 if str(DEV_SCRIPT_DIR) not in sys.path:
     sys.path.append(str(DEV_SCRIPT_DIR))
 
+import snapshot as snapshot_utils  # scripts/dev/snapshot.py — needs DEV_SCRIPT_DIR in sys.path
+
 from pickhighlight_setup_metadata import (
     PICKHIGHLIGHT_ENV_ID,
     PICKHIGHLIGHT_METADATA_DATASET,
@@ -178,6 +188,8 @@ VALID_ENVS: Set[str] = set(DEFAULT_ENVS)
 DIFFICULTY_ORDER = ("easy", "medium", "hard")
 MAX_SEED_ATTEMPTS = 100
 MAX_EPISODES_PER_ENV = 1000
+DATASET_SCREW_MAX_ATTEMPTS = 3
+DATASET_RRT_MAX_ATTEMPTS = 3
 ENV_SEED_BLOCK_SIZE = MAX_EPISODES_PER_ENV * MAX_SEED_ATTEMPTS
 RESET_SEGMENTATION_DIRNAME = "reset_segmentation_pngs"
 VISIBLE_OBJECT_CAMERAS = ("base_camera", "hand_camera")
@@ -703,6 +715,161 @@ def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, st
     return True, "setup verified"
 
 
+def _tensor_to_bool(value) -> bool:
+    """把 Tensor / ndarray / Python 标量统一转换成布尔值。"""
+    if value is None:
+        return False
+    if isinstance(value, torch.Tensor):
+        return bool(value.detach().cpu().bool().item())
+    if isinstance(value, np.ndarray):
+        return bool(np.any(value))
+    return bool(value)
+
+
+def _create_planner(env: gym.Env, env_id: str):
+    """按任务类型选择 stick 规划器或机械臂规划器。"""
+    if env_id in {"PatternLock", "RouteStick"}:
+        return FailAwarePandaStickMotionPlanningSolver(
+            env,
+            debug=False,
+            vis=False,
+            base_pose=env.unwrapped.agent.robot.pose,
+            visualize_target_grasp_pose=False,
+            print_env_info=False,
+            joint_vel_limits=0.3,
+        )
+    return FailAwarePandaArmMotionPlanningSolver(
+        env,
+        debug=False,
+        vis=False,
+        base_pose=env.unwrapped.agent.robot.pose,
+        visualize_target_grasp_pose=False,
+        print_env_info=False,
+    )
+
+
+def _wrap_planner_with_screw_then_rrt_retry(planner) -> None:
+    """给 screw 规划加"多次重试 + RRT* 兜底"逻辑。"""
+    original_screw = planner.move_to_pose_with_screw
+    original_rrt = planner.move_to_pose_with_RRTStar
+
+    def _retry(*args, **kwargs):
+        for attempt in range(1, DATASET_SCREW_MAX_ATTEMPTS + 1):
+            try:
+                result = original_screw(*args, **kwargs)
+            except ScrewPlanFailure as exc:
+                print(
+                    f"[Replay] screw planning failed "
+                    f"(attempt {attempt}/{DATASET_SCREW_MAX_ATTEMPTS}): {exc}"
+                )
+                continue
+            if isinstance(result, int) and result == -1:
+                print(
+                    f"[Replay] screw planning returned -1 "
+                    f"(attempt {attempt}/{DATASET_SCREW_MAX_ATTEMPTS})"
+                )
+                continue
+            return result
+
+        print(
+            "[Replay] screw planning exhausted; "
+            f"fallback to RRT* (max {DATASET_RRT_MAX_ATTEMPTS} attempts)"
+        )
+        for attempt in range(1, DATASET_RRT_MAX_ATTEMPTS + 1):
+            try:
+                result = original_rrt(*args, **kwargs)
+            except Exception as exc:
+                print(
+                    f"[Replay] RRT* planning failed "
+                    f"(attempt {attempt}/{DATASET_RRT_MAX_ATTEMPTS}): {exc}"
+                )
+                continue
+            if isinstance(result, int) and result == -1:
+                print(
+                    f"[Replay] RRT* planning returned -1 "
+                    f"(attempt {attempt}/{DATASET_RRT_MAX_ATTEMPTS})"
+                )
+                continue
+            return result
+
+        print("[Replay] screw->RRT* planning exhausted; return -1")
+        return -1
+
+    planner.move_to_pose_with_screw = _retry
+
+
+def _execute_task_list(env: gym.Env, planner, env_id: str) -> bool:
+    """按任务列表执行 evaluate -> solve -> evaluate 主循环。"""
+    env.unwrapped.evaluate()
+    tasks = list(getattr(env.unwrapped, "task_list", []) or [])
+    print(f"{env_id}: Task list has {len(tasks)} tasks")
+
+    episode_successful = False
+
+    for idx, task_entry in enumerate(tasks):
+        task_name = task_entry.get("name", f"Task {idx}")
+        print(f"Executing task {idx + 1}/{len(tasks)}: {task_name}")
+
+        solve_callable = task_entry.get("solve")
+        if not callable(solve_callable):
+            raise ValueError(f"Task '{task_name}' must supply a callable 'solve'.")
+
+        env.unwrapped.evaluate(solve_complete_eval=True)
+        screw_failed = False
+        try:
+            solve_result = solve_callable(env, planner)
+            if isinstance(solve_result, int) and solve_result == -1:
+                screw_failed = True
+                print(f"Screw->RRT* planning exhausted during '{task_name}'")
+                env.unwrapped.failureflag = torch.tensor([True])
+                env.unwrapped.successflag = torch.tensor([False])
+                env.unwrapped.current_task_failure = True
+        except ScrewPlanFailure as exc:
+            screw_failed = True
+            print(f"Screw plan failure during '{task_name}': {exc}")
+            env.unwrapped.failureflag = torch.tensor([True])
+            env.unwrapped.successflag = torch.tensor([False])
+            env.unwrapped.current_task_failure = True
+        except FailsafeTimeout as exc:
+            print(f"Failsafe: {exc}")
+            break
+
+        evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
+        fail_flag = evaluation.get("fail", False)
+        success_flag = evaluation.get("success", False)
+
+        if _tensor_to_bool(success_flag):
+            print("All tasks completed successfully.")
+            episode_successful = True
+            break
+
+        if screw_failed or _tensor_to_bool(fail_flag):
+            print("Encountered failure condition; stopping task sequence.")
+            break
+    else:
+        evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
+        episode_successful = _tensor_to_bool(evaluation.get("success", False))
+
+    return episode_successful or _tensor_to_bool(
+        getattr(env, "episode_success", False)
+    )
+
+
+def _mark_episode_failed(env: Optional[gym.Env], reason: str) -> None:
+    """在 close 前把 wrapper 和底层 env 的状态统一压成失败。"""
+    if env is None:
+        return
+    if hasattr(env, "episode_success"):
+        env.episode_success = False
+    base_env = getattr(env, "unwrapped", None)
+    if base_env is None:
+        return
+    base_env.failureflag = torch.tensor([True])
+    base_env.successflag = torch.tensor([False])
+    base_env.current_task_failure = True
+    print(f"[Replay] Episode failure forced before close: {reason}")
+
+
 def _base_seed_for_episode(env_id: str, episode: int) -> int:
     """按 legacy 规则计算某个 env/episode 的基础 seed。"""
     if env_id not in ENV_ID_TO_CODE:
@@ -763,7 +930,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=10,
+        default=100,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -805,6 +972,17 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
             "the same env_id. Default: auto=min(os.cpu_count(), episode count)."
+        ),
+    )
+    parser.add_argument(
+        "--skip-execute",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "When True (default): setup-only mode — reset, export segmentation/JSON/3D PNG, "
+            "1 no-op step for video, clear buffer, force write setup HDF5 only. "
+            "When False (--no-skip-execute): full rollout mode — additionally run planner "
+            "and execute task list after exporting segmentation artifacts."
         ),
     )
     return parser
@@ -921,15 +1099,21 @@ def _run_episode(
     seed: int,
     difficulty: str,
     output_dir: Path,
+    skip_execute: bool = True,
 ) -> tuple[bool, bool]:
     """执行单个 episode。
 
     返回 `(success, retryable_failure)`：
-    - success=True: setup HDF5 已写出并通过校验。
+    - success=True: HDF5 已写出并通过校验（skip_execute 模式）或 planner 成功（rollout 模式）。
     - retryable_failure=True: 失败发生在 env 创建 / reset 阶段，允许换 seed 重试。
+
+    skip_execute=True（默认）：setup-only 模式，不运行 planner，只写 setup HDF5。
+    skip_execute=False：完整 rollout 模式，运行 planner 并执行 task list。
+    两种模式均在 reset 后导出 segmentation PNG / visible objects JSON / 3D PNG。
     """
+    mode_tag = "setup-only" if skip_execute else "rollout"
     print(
-        f"--- Generating setup env={env_id} episode={episode} "
+        f"--- [{mode_tag}] env={env_id} episode={episode} "
         f"seed={seed} difficulty={difficulty} ---"
     )
 
@@ -937,25 +1121,27 @@ def _run_episode(
     obs: Optional[dict] = None
     h5_path = _episode_h5_path(output_dir, env_id, episode, seed)
 
+    # ── 共同流程：创建环境 + reset ─────────────────────────────────────────
     try:
         env_kwargs = _build_env_kwargs(episode, seed, difficulty)
         env = _create_env(env_id, env_kwargs, output_dir, episode, seed)
         obs, _ = env.reset()
     except SceneGenerationError as exc:
         print(
-            f"[Setup] Scene generation failed for env={env_id} "
+            f"[{mode_tag}] Scene generation failed for env={env_id} "
             f"episode={episode} seed={seed}: {exc}"
         )
         _close_env(env, episode, seed)
         return False, True
     except Exception as exc:
         print(
-            f"[Setup] Failed during env creation/reset for env={env_id} "
+            f"[{mode_tag}] Failed during env creation/reset for env={env_id} "
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
         _close_env(env, episode, seed)
         return False, True
 
+    # ── 共同流程：导出 reset 帧的 segmentation / visible objects ──────────
     try:
         reset_output_dir = _save_reset_segmentation_pngs(
             obs=obs,
@@ -975,15 +1161,66 @@ def _run_episode(
         )
     except Exception as exc:
         print(
-            f"[Setup] Failed to save reset artifacts for env={env_id} "
+            f"[{mode_tag}] Failed to save reset artifacts for env={env_id} "
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
         _close_env(env, episode, seed)
         return False, False
 
+    # ── 分支：setup-only ───────────────────────────────────────────────────
+    if skip_execute:
+        try:
+            _attempt_noop_step(env, env_id, episode, seed)
+            _prepare_setup_only_close(env, env_id, episode, seed)
+        finally:
+            _close_env(env, episode, seed)
+
+        try:
+            write_pickhighlight_setup_metadata(env, h5_path, episode)
+            write_videorepick_setup_metadata(env, h5_path, episode)
+        except Exception as exc:
+            print(
+                f"[setup-only] Failed to append task-specific metadata for env={env_id} "
+                f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
+            )
+            return False, False
+
+        setup_ok, setup_message = _verify_setup_h5(h5_path, env_id, episode)
+        mp4_path = _latest_recorded_mp4(output_dir, env_id, episode, seed)
+        status_text = "SUCCESS" if setup_ok else "FAILED"
+        print(
+            f"--- [setup-only] Finished env={env_id} episode={episode} seed={seed} "
+            f"difficulty={difficulty} [{status_text}] ---"
+        )
+        print(f"[setup-only] HDF5 check: {setup_message}")
+        if mp4_path is not None:
+            print(f"[setup-only] MP4 recorded: {mp4_path.resolve()}")
+        else:
+            print(
+                f"[setup-only] Warning: no MP4 matched under {output_dir / 'videos'} "
+                f"(expected filename fragment '{env_id}_ep{episode}_seed{seed}')."
+            )
+        return setup_ok, False
+
+    # ── 分支：完整 rollout ─────────────────────────────────────────────────
+    episode_successful = False
     try:
-        _attempt_noop_step(env, env_id, episode, seed)
-        _prepare_setup_only_close(env, env_id, episode, seed)
+        snapshot_state = snapshot_utils.install_snapshot_for_step(
+            env, env_id, episode, seed, difficulty, output_dir
+        )
+        planner = _create_planner(env, env_id)
+        _wrap_planner_with_screw_then_rrt_retry(planner)
+        episode_successful = _execute_task_list(env, planner, env_id)
+        if snapshot_state.get("collision_detected"):
+            _mark_episode_failed(env, "bin_collision")
+            episode_successful = False
+    except Exception as exc:
+        print(
+            f"[rollout] Planner/task execution failed for env={env_id} "
+            f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
+        )
+        _mark_episode_failed(env, f"exception: {type(exc).__name__}")
+        episode_successful = False
     finally:
         _close_env(env, episode, seed)
 
@@ -992,28 +1229,25 @@ def _run_episode(
         write_videorepick_setup_metadata(env, h5_path, episode)
     except Exception as exc:
         print(
-            f"[Setup] Failed to append task-specific metadata for env={env_id} "
+            f"[rollout] Failed to append task-specific metadata for env={env_id} "
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
         return False, False
 
-    setup_ok, setup_message = _verify_setup_h5(h5_path, env_id, episode)
     mp4_path = _latest_recorded_mp4(output_dir, env_id, episode, seed)
-    status_text = "SUCCESS" if setup_ok else "FAILED"
+    status_text = "SUCCESS" if episode_successful else "FAILED"
     print(
-        f"--- Finished setup env={env_id} episode={episode} seed={seed} "
+        f"--- [rollout] Finished env={env_id} episode={episode} seed={seed} "
         f"difficulty={difficulty} [{status_text}] ---"
     )
-    print(f"[Setup] HDF5 check: {setup_message}")
     if mp4_path is not None:
-        print(f"[Setup] MP4 recorded: {mp4_path.resolve()}")
+        print(f"[rollout] MP4 recorded: {mp4_path.resolve()}")
     else:
         print(
-            f"[Setup] Warning: no MP4 matched under {output_dir / 'videos'} "
+            f"[rollout] Warning: no MP4 matched under {output_dir / 'videos'} "
             f"(expected filename fragment '{env_id}_ep{episode}_seed{seed}')."
         )
-
-    return setup_ok, False
+    return episode_successful, False
 
 
 def _run_episode_with_retry(
@@ -1021,6 +1255,7 @@ def _run_episode_with_retry(
     episode: int,
     difficulty: str,
     output_dir: Path,
+    skip_execute: bool = True,
 ) -> tuple[bool, int]:
     """按 legacy seed 规则执行单个 episode。"""
     base_seed = _base_seed_for_episode(env_id, episode)
@@ -1045,6 +1280,7 @@ def _run_episode_with_retry(
                 seed=seed,
                 difficulty=difficulty,
                 output_dir=output_dir,
+                skip_execute=skip_execute,
             )
         except Exception as exc:
             print(
@@ -1157,6 +1393,7 @@ def _run_env_episodes(
     episode_specs: list[tuple[int, str]],
     output_dir: Path,
     max_workers: int,
+    skip_execute: bool = True,
 ) -> list[bool]:
     """在同一个 env_id 内并行执行多个 episode。"""
     env_successes: list[tuple[int, bool]] = []
@@ -1168,6 +1405,7 @@ def _run_env_episodes(
                 episode=ep,
                 difficulty=difficulty,
                 output_dir=output_dir,
+                skip_execute=skip_execute,
             )
             env_successes.append((ep, success))
             _print_episode_artifacts(output_dir, env_id, ep, used_seed)
@@ -1189,6 +1427,7 @@ def _run_env_episodes(
                     ep,
                     difficulty,
                     output_dir,
+                    skip_execute,
                 ): ep
                 for ep, difficulty in episode_specs
             }
@@ -1214,7 +1453,7 @@ def _run_env_episodes(
 
 
 def main() -> None:
-    """脚本入口：解析参数、生成 setup-only HDF5、打印结果路径。"""
+    """脚本入口：解析参数、执行 episode 生成、打印结果路径。"""
     args = _build_parser().parse_args()
 
     if int(args.gpu) != _PINNED_GPU_ID:
@@ -1243,7 +1482,11 @@ def main() -> None:
             "the legacy seed layout reserves 1000 episode slots per environment."
         )
 
+    skip_execute: bool = args.skip_execute
+    mode_label = "setup-only" if skip_execute else "full rollout"
+
     episode_numbers = list(range(0, n_episodes))
+    print(f"Mode: {mode_label} (--skip-execute={skip_execute})")
     print(f"Environments (in order): {args.env}")
     print(
         f"Episode number N={n_episodes} -> running episode indices {episode_numbers} "
@@ -1275,9 +1518,9 @@ def main() -> None:
 
     successes: list[bool] = []
     for env_id in args.env:
-        print(f"\n========== env={env_id} ==========")
+        print(f"\n========== env={env_id} [{mode_label}] ==========")
         print(
-            f"Dispatching {len(episode_numbers)} setup-only episodes for env={env_id} "
+            f"Dispatching {len(episode_numbers)} episodes ({mode_label}) for env={env_id} "
             f"with up to {worker_count} worker process(es)."
         )
         successes.extend(
@@ -1286,15 +1529,16 @@ def main() -> None:
                 episode_specs=episode_specs,
                 output_dir=output_dir,
                 max_workers=worker_count,
+                skip_execute=skip_execute,
             )
         )
 
     if all(successes):
-        print("Setup-only generation finished successfully (all episodes).")
+        print(f"Generation finished successfully ({mode_label}, all episodes).")
     else:
         print(
-            "Setup-only generation finished with failure status "
-            "(one or more episodes missing verified setup HDF5)."
+            f"Generation finished with failure status ({mode_label}; "
+            "one or more episodes missing verified output)."
         )
 
 

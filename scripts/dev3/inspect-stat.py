@@ -31,9 +31,12 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import h5py
 import numpy as np
 
-DEFAULT_HDF5_DIR = Path("runs/replay_videos/hdf5_files")
-DEFAULT_SEGMENTATION_DIR = Path("runs/replay_videos/reset_segmentation_pngs")
-DEFAULT_OUTPUT_DIR = Path("./tmp/inspect-stat")
+DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
+DEFAULT_HDF5_DIR = DEFAULT_BASE_DIR / "hdf5_files"
+DEFAULT_SEGMENTATION_DIR = DEFAULT_BASE_DIR / "reset_segmentation_pngs"
+DEFAULT_OUTPUT_DIR = DEFAULT_BASE_DIR / "inspect-stat"
+DEFAULT_TASK_GOAL_DIR = DEFAULT_OUTPUT_DIR / "task-goal"
+DEFAULT_XY_DIR = DEFAULT_OUTPUT_DIR / "xy"
 DEFAULT_MAX_PER_DIFFICULTY = 1000
 
 # ---------------------------------------------------------------------------
@@ -2027,42 +2030,34 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         )
     )
     parser.add_argument(
+        "--base-dir",
+        type=Path,
+        default="/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos",
+        help="Base directory under runs/replay_videos; hdf5-dir, segmentation-dir, and output-dir are derived from it.",
+    )
+    parser.add_argument(
         "--hdf5-dir",
         type=Path,
-        default=DEFAULT_HDF5_DIR,
-        help="Directory containing per-episode <env>_ep<n>_seed<s>.h5 (or record_dataset_*.h5) files.",
+        default=None,
+        help="Directory containing per-episode <env>_ep<n>_seed<s>.h5 (or record_dataset_*.h5) files. Defaults to <base-dir>/hdf5_files.",
     )
     parser.add_argument(
         "--segmentation-dir",
         type=Path,
-        default=DEFAULT_SEGMENTATION_DIR,
-        help="Directory containing reset segmentation episode folders with visible_objects.json.",
+        default=None,
+        help="Directory containing reset segmentation episode folders with visible_objects.json. Defaults to <base-dir>/reset_segmentation_pngs.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Single shared output directory for CSV + all PNGs.",
+        default=None,
+        help="Single shared output directory for CSV + all PNGs. Defaults to <base-dir>/inspect-stat.",
     )
     parser.add_argument(
         "--env",
         type=str,
         default=None,
         help="Optional env_id filter applied to both pipelines.",
-    )
-    parser.add_argument(
-        "--max-per-difficulty",
-        type=int,
-        default=DEFAULT_MAX_PER_DIFFICULTY,
-        help=(
-            "Distribution pipeline only: max episodes per difficulty per env. "
-            "Set to 0 or negative to disable."
-        ),
-    )
-    parser.add_argument(
-        "--show",
-        action="store_true",
-        help="Distribution pipeline only: display figures interactively after saving.",
     )
     return parser
 
@@ -2116,8 +2111,6 @@ def _run_distribution_pipeline(
     hdf5_dir: Path,
     output_dir: Path,
     env_filter: Optional[str],
-    max_per_difficulty: int,
-    show: bool,
 ) -> tuple[
     list[_SplitH5Entry],
     list[_SplitH5Entry],
@@ -2142,13 +2135,13 @@ def _run_distribution_pipeline(
         aggregated,
         kept_for_processing,
         env_filter=env_filter,
-        max_per_difficulty=max_per_difficulty,
+        max_per_difficulty=DEFAULT_MAX_PER_DIFFICULTY,
     )
 
     csv_path = output_dir / "episode_task_metadata.csv"
     _write_csv(rows, csv_path)
 
-    plt = _get_pyplot(show)
+    plt = _get_pyplot(show=False)
     rows_by_env: dict[str, list[dict[str, object]]] = {}
     for row in rows:
         rows_by_env.setdefault(str(row["env_id"]), []).append(row)
@@ -2159,8 +2152,6 @@ def _run_distribution_pipeline(
         _render_env_figure(env_id, rows_by_env[env_id], figure_path, plt)
         figure_paths.append(figure_path)
 
-    if show:
-        plt.show()
     plt.close("all")
 
     print("=" * 72)
@@ -2280,12 +2271,17 @@ def _run_xy_pipeline(
 
 def main() -> None:
     args = _build_arg_parser().parse_args()
-    hdf5_dir = args.hdf5_dir.resolve()
-    segmentation_dir = args.segmentation_dir.resolve()
-    output_dir = args.output_dir.resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
+    base_dir = args.base_dir.resolve()
+    hdf5_dir = (args.hdf5_dir or base_dir / "hdf5_files").resolve()
+    segmentation_dir = (args.segmentation_dir or base_dir / "reset_segmentation_pngs").resolve()
+    inspect_dir = (args.output_dir or base_dir / "inspect-stat").resolve()
+    task_goal_dir = inspect_dir / "task-goal"
+    xy_dir = inspect_dir / "xy"
+    task_goal_dir.mkdir(parents=True, exist_ok=True)
+    xy_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Output dir:     {output_dir}")
+    print(f"Task-goal dir:  {task_goal_dir}")
+    print(f"XY dir:         {xy_dir}")
     print(f"HDF5 dir:       {hdf5_dir}")
     print(f"Segmentation:   {segmentation_dir}")
     if args.env:
@@ -2295,16 +2291,14 @@ def main() -> None:
     # Pipeline 1: pre-discover + dedup HDF5, then run distribution
     kept_h5, skipped_h5, _, difficulty_map = _run_distribution_pipeline(
         hdf5_dir,
-        output_dir,
+        task_goal_dir,
         args.env,
-        args.max_per_difficulty,
-        args.show,
     )
 
     # Pipeline 2: pre-discover + dedup JSON, then run XY aggregation
     kept_json, skipped_json = _run_xy_pipeline(
         segmentation_dir,
-        output_dir,
+        xy_dir,
         args.env,
         difficulty_map,
     )
