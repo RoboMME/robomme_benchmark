@@ -65,7 +65,7 @@ class VideoUnmask(BaseEnv):
     cube_spawn_center = (0, 0)
 
     config_hard = {
-    'bin':15,
+    'bin':5,
     "pick":2,
     }
 
@@ -166,32 +166,19 @@ class VideoUnmask(BaseEnv):
         )
         self.table_scene.build()
 
-        avoid=[]
-
-
-         # Generate 3 bins
-        self.spawned_bins = []
-        for i in range(self.configs[self.difficulty]['bin']):
-            try:
-                bin_actor = spawn_random_bin(
-                    self,
-                    avoid=avoid,  # Use current avoidance list, containing all spawned objects
-                    region_center=[0, 0],
-                    region_half_size=0.2,
-                    min_gap=self.cube_half_size*2,  # bins need larger gap, increased to 6x to avoid collision
-                    name_prefix=f"bin_{i}",
-                    max_trials=256,
-                    generator=generator
-                )
-                logger.debug(f"Spawned bin_{i} at position {bin_actor.pose.p}")
-            except RuntimeError as e:
-                break
-
-            self.spawned_bins.append(bin_actor)
-            # Assign bin to self.bin_0, self.bin_1 etc. attributes
+        # Generate bins jointly via Poisson disk for uniform spatial distribution
+        self.spawned_bins = spawn_N_random_bins(
+            self,
+            n=self.configs[self.difficulty]['bin'],
+            avoid=[],
+            region_center=[0, 0],
+            region_half_size=0.2,
+            min_gap=self.cube_half_size * 2,
+            name_prefix="bin",
+            generator=generator,
+        )
+        for i, bin_actor in enumerate(self.spawned_bins):
             setattr(self, f"bin_{i}", bin_actor)
-            # Add newly generated bin to avoidance list
-            avoid.append(bin_actor)
 
 
         # Generate 3 dynamic cubes under each bin (use fixed position, colors red, green, blue)
@@ -232,8 +219,6 @@ class VideoUnmask(BaseEnv):
             setattr(self, f"target_cube_{color_names[i]}", cube_actor)
             # Also store using numeric index for easy access
             setattr(self, f"target_cube_{i}", cube_actor)
-            # Add newly generated cube to avoidance list
-            avoid.append(cube_actor)
 
         tasks = [
              {

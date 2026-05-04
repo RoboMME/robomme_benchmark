@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import sapien
+from .SceneGenerationError import SceneGenerationError
 from typing import Optional, Tuple, Sequence, Union
 from mani_skill.utils.structs.pose import Pose
 from mani_skill.utils.geometry.rotation_conversions import (
@@ -1066,6 +1067,123 @@ def spawn_random_bin(
         return bin_actor
 
     raise RuntimeError("_spawn_random_bin: Region crowded or constraints too tight, no feasible position found. Try: increase region/decrease bin/decrease min_gap.")
+
+
+def _poisson_disk_bin_positions(n, center, area_half, bin_half_size, min_gap,
+                                 obb2d_obstacles, generator, max_attempts=30):
+    """Bridson Poisson disk sampling for bin centers.
+
+    Returns a list of (x, y) tuples of length <= n.  The sampling range is
+    identical to spawn_random_bin: centers are inset by bin_half_size so every
+    bin footprint stays inside the region.
+    """
+    r_sep = (bin_half_size + min_gap) * 2  # minimum center-to-center distance
+    x_lo = center[0] - area_half + bin_half_size
+    x_hi = center[0] + area_half - bin_half_size
+    y_lo = center[1] - area_half + bin_half_size
+    y_hi = center[1] + area_half - bin_half_size
+
+    def _in_region(x, y):
+        return x_lo <= x <= x_hi and y_lo <= y <= y_hi
+
+    def _collides(x, y, placed):
+        p = np.array([x, y])
+        for (cx, cy) in placed:
+            if np.linalg.norm(p - np.array([cx, cy])) < r_sep:
+                return True
+        for (c_obs, A_obs, h_obs) in obb2d_obstacles:
+            lp = A_obs.T @ (p - c_obs)
+            closest = c_obs + A_obs @ np.clip(lp, -h_obs, h_obs)
+            if np.linalg.norm(p - closest) < bin_half_size + min_gap:
+                return True
+        return False
+
+    placed = []
+    active = []
+
+    # Find a valid seed point
+    for _ in range(256):
+        sx = float(torch.rand(1, generator=generator).item()) * (x_hi - x_lo) + x_lo
+        sy = float(torch.rand(1, generator=generator).item()) * (y_hi - y_lo) + y_lo
+        if not _collides(sx, sy, []):
+            placed.append((sx, sy))
+            active.append(0)
+            break
+
+    while active and len(placed) < n:
+        ai = int(torch.rand(1, generator=generator).item() * len(active))
+        px, py = placed[active[ai]]
+        found = False
+        for _ in range(max_attempts):
+            angle = float(torch.rand(1, generator=generator).item()) * 2 * np.pi
+            dist = r_sep * (1.0 + float(torch.rand(1, generator=generator).item()))
+            nx = px + dist * np.cos(angle)
+            ny = py + dist * np.sin(angle)
+            if _in_region(nx, ny) and not _collides(nx, ny, placed):
+                placed.append((nx, ny))
+                active.append(len(placed) - 1)
+                found = True
+                break
+        if not found:
+            active.pop(ai)
+
+    return placed  # len <= n
+
+
+def spawn_N_random_bins(self, n, avoid=None, region_center=None, region_half_size=0.2,
+                         min_gap=0.05, name_prefix="bin", generator=None):
+    """Place n bins jointly using Poisson disk sampling for uniform spatial distribution.
+
+    Raises SceneGenerationError if the region cannot accommodate all n bins —
+    the caller should skip to the next seed.
+    """
+    if region_center is None:
+        region_center = [0, 0]
+    if avoid is None:
+        avoid = []
+
+    center = np.array(region_center, dtype=np.float64)
+    area_half = float(region_half_size)
+    inner_side = self.cube_half_size * 2.5
+    wall_thickness = 0.005
+    bin_half_size = (inner_side + wall_thickness) * 0.5
+
+    obb2d_list = []
+
+    def _push(actor, pad=0.0):
+        try:
+            obb = get_actor_obb(actor, to_world_frame=True, vis=False)
+            obb2d_list.append(_trimesh_box_to_obb2d(obb, extra_pad=float(pad)))
+        except Exception:
+            pass
+
+    for item in avoid:
+        if isinstance(item, tuple) and len(item) == 3 and isinstance(item[0], np.ndarray):
+            obb2d_list.append(item)
+        elif isinstance(item, tuple):
+            actor, pad = item
+            _push(actor, pad)
+        else:
+            _push(item, min_gap)
+
+    positions = _poisson_disk_bin_positions(
+        n, center, area_half, bin_half_size, min_gap, obb2d_list, generator
+    )
+
+    if len(positions) < n:
+        raise SceneGenerationError(
+            f"spawn_N_random_bins: Poisson disk placed {len(positions)}/{n} bins "
+            f"(region too crowded or obstacles too large)."
+        )
+
+    bins = []
+    for i, (x, y) in enumerate(positions):
+        z_rot = float(torch.rand(1, generator=generator).item() * 90.0)
+        actor = build_bin(self, callsign=f"{name_prefix}_{i}", position=[x, y, 0.002],
+                          z_rotation_deg=z_rot)
+        bins.append(actor)
+    return bins
+
 
 def spawn_fixed_cube(
         self,
