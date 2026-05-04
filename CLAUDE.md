@@ -1,4 +1,12 @@
-# CLAUDE.md — RoboMME Benchmark Agent Guide
+# CLAUDE.md — RoboMME Benchmark
+
+## Project Overview
+
+RoboMME is a robotic benchmark for memory-augmented manipulation (CVPR 2026 challenge). It wraps [ManiSkill](https://github.com/haosulab/ManiSkill) environments into 16 tasks across 4 task suites. Participants implement a `Policy` class, serve it via `challenge_interface/`, and the organizer evaluates it end-to-end.
+
+Source code lives in `src/robomme/`. Tests live in `tests/`. Challenge integration code lives in `challenge_interface/`.
+
+---
 
 ## Environment & Package Management (uv)
 
@@ -7,16 +15,17 @@ This repo uses **uv** exclusively. Never use bare `pip`, `python`, or `conda` un
 ```bash
 # First-time setup
 uv sync
+uv pip install -e .
 
 # With optional server dependencies (challenge interface)
 uv sync --group server
 
-# Add a dependency
+# Add / remove a dependency
 uv add <package>
 uv remove <package>
 
 # Always run commands through uv
-uv run python scripts/run_example.py
+uv run scripts/run_example.py
 uv run python -m pytest tests/
 ```
 
@@ -24,40 +33,25 @@ Python version is pinned at **3.11** (`.python-version`). `pyproject.toml` is th
 
 `mani-skill` is sourced from a specific Git commit — do not change `[tool.uv.sources]` without a reason.
 
+### Dependency Groups
+
+| Group | Purpose | Install command |
+|-------|---------|-----------------|
+| (default) | core sim + training | `uv sync` |
+| `dev` | pytest + opencv dev tools | `uv sync --group dev` |
+| `server` | Flask + msgpack + websockets (challenge interface) | `uv sync --group server` |
+
 ---
 
-## Error Handling Philosophy
+## Error Handling Rules
 
-**No silent fallbacks.** Every error path must raise explicitly. No `except Exception: pass`, no quiet defaults when something is missing, no returning `None` where a value is expected. If something can go wrong at a system boundary, raise a typed exception with a clear message. `info["status"] = "error"` in env wrappers is the one sanctioned soft-error pattern (see `FailAwareWrapper`).
+**No silent fallbacks.** Every error path must raise explicitly. No `except Exception: pass`, no quiet defaults when something is missing, no returning `None` where a value is expected.
 
----
+The **one sanctioned soft-error pattern** is `DemonstrationWrapper.step()`, which catches physics/IK exceptions and surfaces them as `info["status"] = "error"` + `info["error_message"]`. This is an explicit, structured error return — callers must check it.
 
-## Repository Layout
-
-```
-src/robomme/
-  robomme_env/          # 16 task environments (one file per task)
-  robomme_env/utils/    # shared helpers: planners, object generation, scoring
-  env_record_wrapper/   # RecordWrapper, DemonstrationWrapper, BenchmarkEnvBuilder
-  env_metadata/         # per-task episode metadata (train/val/test JSON)
-  logging_utils.py
-
-scripts/
-  run_example.py        # quick single-env smoke test
-  evaluation.py         # full eval harness
-  dataset_replay.py     # replay downloaded HDF5 data for sanity check
-
-challenge_interface/    # CVPR 2026 challenge server/client stubs
-  policy.py             # participants implement Policy.infer() / Policy.reset()
-  server_http.py / server.py
-  scripts/deploy.py / phase1_eval.py
-
-tests/
-  lightweight/          # fast unit tests, no physics engine
-  dataset/              # heavy e2e tests, real Mujoco sim + HDF5 recording
-  _shared/              # shared fixtures and dataset generation cache
-  conftest.py           # session-level repo_root / src_root fixtures
-```
+- Script-level step loops must check `info.get("status") == "error"` and handle it explicitly (see `scripts/run_example.py`).
+- Do **not** wrap `env.step()` in a bare `try/except Exception`.
+- Do **not** add silent fallback branches or default-return paths unless the user explicitly requests graceful degradation.
 
 ---
 
@@ -89,7 +83,7 @@ uv run python -m pytest tests/lightweight/test_TaskGoal.py::test_binfill_two_col
 uv run python -m pytest tests/ -s
 ```
 
-### Test categories
+### Test Categories
 
 | Directory | Marks | Cost | What it covers |
 |-----------|-------|------|----------------|
@@ -98,23 +92,69 @@ uv run python -m pytest tests/ -s
 
 `tests/dataset/` uses a **session-scoped hash cache** (`_shared/dataset_generation.py`) so identical env/seed/difficulty combinations only generate data once per pytest session.
 
-### Preferred testing approach
+---
 
-Prefer **end-to-end tests** in `tests/dataset/` for anything that touches env wrappers, HDF5 recording, or observation shapes. Lightweight tests are for pure functions that have no sim dependency. Do not mock the physics engine or the wrapper stack — divergence from real behavior has caused silent bugs before.
+## Testing Philosophy
+
+**Prefer end-to-end, heavy tests.** Tests that spin up real ManiSkill environments, record HDF5 datasets, and replay them are strongly preferred over pure unit tests.
+
+- Do **not** mock the physics engine or the wrapper stack — divergence from real behavior has caused silent bugs before.
+- Use mocks only for import-level stubs when ManiSkill/SAPIEN is genuinely unavailable in the current environment.
+- When adding new behaviour, write an end-to-end test that: (1) builds a real `BenchmarkEnvBuilder`, (2) records a trajectory, (3) replays it and asserts the full output contract.
+- Fall back to lightweight/AST tests only when physics rendering is genuinely unavailable.
+- Do not skip or `xfail` without a comment explaining why — prefer fixing the root cause.
+
+### Adding New Tests
+
+- **Pure logic** → `tests/lightweight/test_<topic>.py`, mark `@pytest.mark.lightweight`
+- **Sim-dependent** → `tests/dataset/test_<topic>.py`, mark `@pytest.mark.dataset`
+- Register any new dataset fixture in `tests/dataset/conftest.py` following the existing `dataset_factory` pattern.
 
 ---
 
-## Key APIs
+## Repository Layout
 
-### Instantiating an environment
+```
+src/robomme/
+  robomme_env/          # 16 task environments (one file per task)
+  robomme_env/utils/    # shared helpers: planners, object generation, scoring
+  env_record_wrapper/   # RecordWrapper, DemonstrationWrapper, BenchmarkEnvBuilder
+  env_metadata/         # per-task episode metadata (train/val/test JSON)
+  logging_utils.py
+
+scripts/
+  run_example.py        # quick single-env smoke test
+  evaluation.py         # full eval harness
+  dataset_replay.py     # replay downloaded HDF5 data for sanity check
+
+challenge_interface/    # CVPR 2026 challenge server/client stubs
+  policy.py             # participants implement Policy.infer() / Policy.reset()
+  server_http.py / server.py
+  scripts/deploy.py / phase1_eval.py
+
+tests/
+  lightweight/          # fast unit tests, no physics engine
+  dataset/              # heavy e2e tests, real Mujoco sim + HDF5 recording
+  _shared/              # shared fixtures and dataset generation cache
+  conftest.py           # session-level repo_root / src_root fixtures
+
+doc/                    # supplementary documentation
+  env_format.md         # observation/action format spec
+  h5_data_format.md     # HDF5 dataset format
+  docker_installation.md
+```
+
+---
+
+## Instantiating an Environment
 
 ```python
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
 
 builder = BenchmarkEnvBuilder(
-    env_id="PickXtimes",   # task name
-    dataset="test",         # "train" | "val" | "test"
-    action_space="joint_angle",  # "joint_angle" | "ee_pose" | "waypoint" | "multi_choice"
+    env_id="PickXtimes",          # task name
+    dataset="test",                # "train" | "val" | "test"
+    action_space="joint_angle",    # "joint_angle" | "ee_pose" | "waypoint" | "multi_choice"
     gui_render=False,
 )
 env = builder.make_env_for_episode(episode_idx=0)
@@ -125,7 +165,22 @@ obs, reward, terminated, truncated, info = env.step(action)
 # info["status"] == "error" means the step raised internally — do not ignore it
 ```
 
-### Challenge interface (CVPR 2026)
+---
+
+## Task Suites
+
+| Suite      | Focus             | Tasks                                                        |
+|------------|-------------------|------------------------------------------------------------|
+| Counting   | Temporal memory   | BinFill, PickXtimes, SwingXtimes, StopCube                 |
+| Permanence | Spatial memory    | VideoUnmask, VideoUnmaskSwap, ButtonUnmask, ButtonUnmaskSwap|
+| Reference  | Object memory     | PickHighlight, VideoRepick, VideoPlaceButton, VideoPlaceOrder|
+| Imitation  | Procedural memory | MoveCube, InsertPeg, PatternLock, RouteStick                |
+
+Dataset splits: `train` (100 ep/task), `val` (50 ep/task, fixed seeds), `test` (50 ep/task, held-out).
+
+---
+
+## Challenge Interface (CVPR 2026)
 
 ```bash
 uv sync --group server
@@ -141,22 +196,11 @@ Participants implement `Policy.infer()` and `Policy.reset()` in `challenge_inter
 
 ---
 
-## Dependency Groups
-
-| Group | Purpose | Install command |
-|-------|---------|-----------------|
-| (default) | core sim + training | `uv sync` |
-| `dev` | pytest + opencv dev tools | `uv sync --group dev` |
-| `server` | Flask + msgpack + websockets (challenge interface) | `uv sync --group server` |
-
----
-
 ## Headless / GPU Notes
 
 Tasks require a display for Vulkan rendering. For headless machines:
 
 ```bash
-# CPU rendering fallback (slower, no Vulkan required)
 export SAPIEN_RENDER_DEVICE=cpu
 export MUJOCO_GL=osmesa
 ```
@@ -171,13 +215,4 @@ docker run --rm -it --gpus all \
   robomme:cuda12.8
 ```
 
-Tests marked `gpu` will fail without a working display or the env vars above.
-
----
-
-## Adding New Tests
-
-- **Pure logic** → `tests/lightweight/test_<topic>.py`, mark `@pytest.mark.lightweight`
-- **Sim-dependent** → `tests/dataset/test_<topic>.py`, mark `@pytest.mark.dataset`
-- Register any new dataset fixture in `tests/dataset/conftest.py` following the existing `dataset_factory` pattern
-- Do not skip or `xfail` without a comment explaining why — prefer fixing the root cause
+Tests marked `gpu` will fail without a working display or the env vars above. See `doc/docker_installation.md` for more options.
