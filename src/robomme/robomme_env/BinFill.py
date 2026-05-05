@@ -65,7 +65,7 @@ class BinFill(BaseEnv):
 
     config_hard = {
     'color': 3, 
-    'spawn_cubes':[6,8],
+    'spawn_cubes':[8,10],
     "put_in_color":[2,3],
     "put_in_numbers":[3,5]
     }

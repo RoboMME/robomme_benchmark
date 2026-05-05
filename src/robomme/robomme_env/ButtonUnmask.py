@@ -63,7 +63,7 @@ class ButtonUnmask(BaseEnv):
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
     config_hard = {
-    'bin':5,
+    'bin':6,
     "pick":2,
     }
 
@@ -73,7 +73,7 @@ class ButtonUnmask(BaseEnv):
     }
 
     config_medium = {
-    'bin':5,
+    'bin':6,
     "pick":1,
     }
 
