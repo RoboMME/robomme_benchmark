@@ -228,7 +228,7 @@ class VideoRepick(BaseEnv):
                 self.spawned_cubes = []
                 hard_cubes_by_color = {group["name"]: [] for group in options}
 
-                for idx in range(3):
+                for idx in range(4):
                     shuffle_indices = torch.randperm(len(options), generator=self.generator).tolist()
                     new_options = [options[i] for i in shuffle_indices]
                     for group in new_options:
