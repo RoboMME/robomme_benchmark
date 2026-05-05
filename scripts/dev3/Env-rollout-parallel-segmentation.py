@@ -289,6 +289,35 @@ def _videos_success_dir(output_root: Path) -> Path:
     return output_root / "videos-success"
 
 
+def _pick_videos_success_candidate(
+    output_root: Path, env_id: str, episode: int, seed: int
+) -> Optional[Path]:
+    """从 videos/ 挑出适合复制到 videos-success/ 的 mp4。
+
+    排除两类不应进入"成功样本目录"的视频：
+    - 以 ``FAILED_`` 开头：失败视频（含 ``FAILED_NO_OBJECT_``）。
+    - 以 ``success_NO_OBJECT_`` 开头：target 全程不在视野的"成功"，
+      不算合格的成功样本（详见 RecordWrapper._video_flush_episode_files）。
+
+    与 _latest_recorded_mp4 的区别：后者是按 mtime 取最新（用于打印 best-effort
+    mp4），可能错选 success_NO_OBJECT_ 视频；本函数只在合格候选中按 mtime 选。
+    """
+    videos_dir = output_root / "videos"
+    if not videos_dir.is_dir():
+        return None
+    tag = f"{env_id}_ep{episode}_seed{seed}"
+    candidates = [
+        path
+        for path in videos_dir.glob("*.mp4")
+        if tag in path.name
+        and not path.name.startswith("FAILED_")
+        and not path.name.startswith("success_NO_OBJECT_")
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: path.stat().st_mtime)
+
+
 def _copy_to_success_dir(
     output_root: Path, mp4_path: Path
 ) -> Optional[Path]:
@@ -1168,22 +1197,22 @@ def _build_parser() -> argparse.ArgumentParser:
         "-e",
         nargs="+",
         default=[
-    # "PickXtimes",
-    # "StopCube",
-    # "SwingXtimes",
-    "BinFill",
-    # "VideoUnmaskSwap",
-    # "VideoUnmask",
-    #  "ButtonUnmaskSwap",
-    #  "ButtonUnmask",
-    "VideoRepick",
-    #  "VideoPlaceButton",
-    # "VideoPlaceOrder",
-    # "PickHighlight",
-    # "InsertPeg",
-    # "MoveCube",
-    # "PatternLock",
-    # "RouteStick",
+        "PickXtimes",
+        "StopCube",
+        "SwingXtimes",
+        "BinFill",
+        "VideoUnmaskSwap",
+        "VideoUnmask",
+        "ButtonUnmaskSwap",
+        "ButtonUnmask",
+        "VideoRepick",
+        "VideoPlaceButton",
+        "VideoPlaceOrder",
+        "PickHighlight",
+        "InsertPeg",
+        "MoveCube",
+        "PatternLock",
+        "RouteStick",
 ],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
@@ -1769,22 +1798,26 @@ def _print_episode_artifacts(
             f"Best-effort MP4 ({env_id} episode {episode}, seed={run_seed}): "
             f"{mp4_path.resolve()}"
         )
-        # 仅当本 attempt 真正成功（mp4 文件名不带 FAILED_ 前缀）时，
-        # 再把 mp4 额外复制一份到 videos-success/ 方便单独查阅成功样本。
-        # _latest_recorded_mp4 用精确 (env_id, ep, used_seed) tag 匹配，
-        # 中间失败 seed 的 mp4 不会命中；FAILED_ 前缀检查是双重保险。
-        if not mp4_path.name.startswith("FAILED_"):
-            success_copy = _copy_to_success_dir(output_dir, mp4_path)
-            if success_copy is not None:
-                print(
-                    f"Success MP4 copy ({env_id} episode {episode}, "
-                    f"seed={run_seed}): {success_copy.resolve()}"
-                )
     else:
         print(
             f"No MP4 matched under {output_dir / 'videos'} "
             f"(expected filename fragment '{env_id}_ep{episode}_seed{run_seed}')."
         )
+
+    # 把"合格的成功样本"额外复制一份到 videos-success/。合格性由
+    # _pick_videos_success_candidate 单独判定（排除 FAILED_ 与
+    # success_NO_OBJECT_ 两类前缀），独立于上面 best-effort mp4 的 mtime
+    # 选择，避免在边角情况下错选 NO_OBJECT 视频。
+    success_candidate = _pick_videos_success_candidate(
+        output_dir, env_id, episode, run_seed
+    )
+    if success_candidate is not None:
+        success_copy = _copy_to_success_dir(output_dir, success_candidate)
+        if success_copy is not None:
+            print(
+                f"Success MP4 copy ({env_id} episode {episode}, "
+                f"seed={run_seed}): {success_copy.resolve()}"
+            )
 
     png_dir = _reset_segmentation_dir(output_dir, env_id, episode, run_seed)
     if png_dir.is_dir():
