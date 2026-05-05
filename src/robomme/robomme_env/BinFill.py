@@ -48,24 +48,6 @@ class BinFill(BaseEnv):
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
 
-    # config_hard = {
-    # 'color': 3, 
-    # 'spawn_cubes':4,
-    #     "put_in_color":3,
-    # }
-
-    # config_easy = {
-    #     'color': 1, 
-    # 'spawn_cubes':8,
-    #     "put_in_color":1,
-    # }
-
-    # config_medium = {
-    #     'color': 3, 
-    # 'spawn_cubes':4,
-    #     "put_in_color":1,
-    # }
-
     config_easy = {
     'color': 1, 
     'spawn_cubes':[4,6],
@@ -75,7 +57,7 @@ class BinFill(BaseEnv):
 
     config_medium = {
     'color': 2, 
-    'spawn_cubes':[8,10],
+    'spawn_cubes':[6,8],
     "put_in_color":[1,2],
     "put_in_numbers":[2,4]
     }
@@ -83,7 +65,7 @@ class BinFill(BaseEnv):
 
     config_hard = {
     'color': 3, 
-    'spawn_cubes':[10,12],
+    'spawn_cubes':[6,8],
     "put_in_color":[2,3],
     "put_in_numbers":[3,5]
     }

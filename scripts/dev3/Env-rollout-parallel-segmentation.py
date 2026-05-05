@@ -26,6 +26,7 @@ import fcntl
 import json
 import multiprocessing as mp
 import os
+import shutil
 import signal
 import sys
 import time
@@ -281,6 +282,40 @@ def _latest_recorded_mp4(
     if not candidates:
         return None
     return max(candidates, key=lambda path: path.stat().st_mtime)
+
+
+def _videos_success_dir(output_root: Path) -> Path:
+    """返回 videos-success/ 目录路径（不创建）。"""
+    return output_root / "videos-success"
+
+
+def _copy_to_success_dir(
+    output_root: Path, mp4_path: Path
+) -> Optional[Path]:
+    """把成功 mp4 复制一份到 videos-success/，文件名保持不变。
+
+    返回目标路径（成功）或 None（失败）。失败时不抛异常，只在 stderr 警告——
+    与 _append_episode_log 的"日志写失败降级"同类（参见上方 _append_episode_log
+    docstring）：videos-success/ 是冗余便利副本，主产物 mp4 已在 videos/，
+    权威 success 状态已写入 episode_results.jsonl，复制失败不应让整个并行
+    rollout 崩溃，但必须显式告知用户（不是静默降级）。catch 范围严格收敛到
+    OSError，避免吞掉编程错误。
+    """
+    dest_dir = _videos_success_dir(output_root)
+    try:
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = dest_dir / mp4_path.name
+        # shutil.copy2 默认覆盖目标；不需要先 unlink。
+        # 重复运行同一 (env_id, ep, seed) 时新覆盖旧就是"最后一次"语义。
+        shutil.copy2(mp4_path, dest_path)
+        return dest_path
+    except OSError as exc:
+        print(
+            f"[warn] Failed to copy success mp4 to {dest_dir}: "
+            f"{_format_exception(exc)} (source={mp4_path})",
+            file=sys.stderr,
+        )
+        return None
 
 
 def _reset_segmentation_dir(
@@ -1134,18 +1169,18 @@ def _build_parser() -> argparse.ArgumentParser:
         nargs="+",
         default=[
     # "PickXtimes",
-    #  "StopCube",
+    # "StopCube",
     # "SwingXtimes",
-    # "BinFill",
-     "VideoUnmaskSwap",
+    "BinFill",
+    # "VideoUnmaskSwap",
     # "VideoUnmask",
-      "ButtonUnmaskSwap",
+    #  "ButtonUnmaskSwap",
     #  "ButtonUnmask",
-    # "VideoRepick",
+    "VideoRepick",
     #  "VideoPlaceButton",
     # "VideoPlaceOrder",
     # "PickHighlight",
-     "InsertPeg",
+    # "InsertPeg",
     # "MoveCube",
     # "PatternLock",
     # "RouteStick",
@@ -1157,7 +1192,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=50,
+        default=30,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -1734,6 +1769,17 @@ def _print_episode_artifacts(
             f"Best-effort MP4 ({env_id} episode {episode}, seed={run_seed}): "
             f"{mp4_path.resolve()}"
         )
+        # 仅当本 attempt 真正成功（mp4 文件名不带 FAILED_ 前缀）时，
+        # 再把 mp4 额外复制一份到 videos-success/ 方便单独查阅成功样本。
+        # _latest_recorded_mp4 用精确 (env_id, ep, used_seed) tag 匹配，
+        # 中间失败 seed 的 mp4 不会命中；FAILED_ 前缀检查是双重保险。
+        if not mp4_path.name.startswith("FAILED_"):
+            success_copy = _copy_to_success_dir(output_dir, mp4_path)
+            if success_copy is not None:
+                print(
+                    f"Success MP4 copy ({env_id} episode {episode}, "
+                    f"seed={run_seed}): {success_copy.resolve()}"
+                )
     else:
         print(
             f"No MP4 matched under {output_dir / 'videos'} "
