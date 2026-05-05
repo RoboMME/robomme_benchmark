@@ -22,6 +22,7 @@ seed = base_seed + attempt
 import argparse
 import atexit
 import colorsys
+import fcntl
 import json
 import multiprocessing as mp
 import os
@@ -251,6 +252,8 @@ VISIBLE_OBJECT_CAMERAS = ("base_camera", "hand_camera")
 VISIBLE_OBJECT_JSON_FILENAME = "visible_objects.json"
 # 可见对象 3D 俯视图 PNG 文件名
 VISIBLE_OBJECT_3D_PNG_FILENAME = "visible_object_positions_3d.png"
+# 每个 episode 写一行的结构化结果日志文件名（位于 output_dir 根目录）
+EPISODE_LOG_FILENAME = "episode_results.jsonl"
 
 
 def _dataset_hdf5_dir(dataset_root: Path) -> Path:
@@ -289,6 +292,46 @@ def _reset_segmentation_dir(
         / RESET_SEGMENTATION_DIRNAME
         / f"{env_id}_ep{episode}_seed{seed}"
     )
+
+
+def _episode_log_path(output_root: Path) -> Path:
+    """返回 episode 结果 JSONL 的绝对路径（与其他产物共置于 output_root 下）。"""
+    return output_root / EPISODE_LOG_FILENAME
+
+
+def _format_exception(exc: BaseException) -> str:
+    """统一异常字符串格式 '{ClassName}: {message}'，与脚本现有 print 风格一致。"""
+    return f"{type(exc).__name__}: {exc}"
+
+
+def _append_episode_log(log_path: Path, record: dict) -> None:
+    """以独占文件锁追加一行 JSON 到 episode 结果日志。
+
+    多 worker 并行写入时，fcntl.LOCK_EX 保证每行写入是原子的，避免内容交错；
+    日志写入本身的 IO 异常不应阻断主流程，捕获后只在 stderr 警告——这是脚本里
+    唯一允许的"日志写失败降级"模式，与 CLAUDE.md 禁止的业务静默失败语义不同。
+    """
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        # 用 "a" 模式 + O_APPEND 语义；fcntl.LOCK_EX 防止多 worker 写交错
+        with open(log_path, "a", encoding="utf-8") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            try:
+                handle.write(
+                    json.dumps(record, ensure_ascii=False, default=str) + "\n"
+                )
+                handle.flush()
+                # fsync 不是必需的：进程崩溃时 OS 仍会刷出 page cache，
+                # 加 fsync 反而会拖慢并行写入。仅在用户显式断电时丢失尾部记录。
+            finally:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    except Exception as log_exc:
+        # 日志写失败不影响 episode 结果本身的返回值，print 到 stderr 便于排查
+        print(
+            f"[Log] Warning: failed to append episode log to {log_path}: "
+            f"{_format_exception(log_exc)}",
+            file=sys.stderr,
+        )
 
 
 def _to_numpy(value: object) -> np.ndarray:
@@ -1311,6 +1354,7 @@ def _run_episode(
     difficulty: str,
     output_dir: Path,
     skip_execute: bool = True,
+    attempt: int = 1,
 ) -> tuple[bool, bool]:
     """执行单个 episode。
 
@@ -1324,7 +1368,9 @@ def _run_episode(
 
     retryable_failure 语义：
     - 场景生成失败（SceneGenerationError）或 reset 崩溃 -> True，换 seed 重试
-    - segmentation 导出失败 / HDF5 校验失败 -> False，不重试（换 seed 也无意义）
+    - segmentation 导出失败 / HDF5 校验失败 -> False，不重试（换 seed 也无意义)
+
+    attempt 仅用于 JSONL 日志（1-indexed），方便区分同一 episode 在多 seed 下的多次尝试。
     """
     mode_tag = "setup-only" if skip_execute else "rollout"
     print(
@@ -1336,6 +1382,41 @@ def _run_episode(
     obs: Optional[dict] = None
     # 预先计算本次 episode 对应的 HDF5 路径（env.close() 后才实际写出）
     h5_path = _episode_h5_path(output_dir, env_id, episode, seed)
+    # JSONL 日志路径，每个 worker 各自计算同一文件并通过 fcntl 写入
+    log_path = _episode_log_path(output_dir)
+
+    # 累积式记录：每个 stage 完成后填字段，遇到 return 前调用 _emit() 写 JSONL。
+    # 这样 reset 失败时只填 scene_generation 字段，下游字段保持 not_attempted，
+    # 不丢失任何分支语义。
+    now_epoch = time.time()
+    record: dict = {
+        "timestamp": now_epoch,
+        "timestamp_iso": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now_epoch)),
+        "mode": mode_tag,
+        "env_id": env_id,
+        "episode": episode,
+        "attempt": attempt,
+        "seed": seed,
+        "difficulty": difficulty,
+        "scene_generation": "not_attempted",
+        "scene_generation_error": None,
+        "execute": "not_attempted",
+        "execute_error": None,
+        "artifacts": "not_attempted",
+        "artifacts_error": None,
+        "hdf5_verify": "not_attempted",
+        "hdf5_verify_message": None,
+        "mp4_recorded": False,
+        "h5_path": str(h5_path),
+        "final_status": "failed",
+        "retryable_failure": False,
+    }
+
+    def _emit(success: bool, retryable: bool) -> None:
+        """根据 (success, retryable) 收尾 record 并写一行 JSONL。"""
+        record["final_status"] = "success" if success else "failed"
+        record["retryable_failure"] = bool(retryable)
+        _append_episode_log(log_path, record)
 
     # ── 共同流程：创建环境 + reset ─────────────────────────────────────────
     # 此阶段失败属于"可重试"：换一个 seed 通常能绕过场景生成问题
@@ -1350,6 +1431,10 @@ def _run_episode(
             f"episode={episode} seed={seed}: {exc}"
         )
         _close_env(env, episode, seed)
+        # JSONL：scene_generation 显式标记 failed，错误信息冗余进 scene_generation_error
+        record["scene_generation"] = "failed"
+        record["scene_generation_error"] = _format_exception(exc)
+        _emit(success=False, retryable=True)
         return False, True  # retryable
     except Exception as exc:
         # 其他 reset 异常（GPU OOM、IK 初始化失败等），同样允许重试
@@ -1358,7 +1443,13 @@ def _run_episode(
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
         _close_env(env, episode, seed)
+        record["scene_generation"] = "failed"
+        record["scene_generation_error"] = _format_exception(exc)
+        _emit(success=False, retryable=True)
         return False, True  # retryable
+
+    # reset 成功；下游分支可能仍失败，但不再属于场景生成错误
+    record["scene_generation"] = "success"
 
     # ── 共同流程：导出 reset 帧的 segmentation / visible objects ──────────
     # 此阶段失败属于"不可重试"：obs 已经取到，换 seed 不会改善导出问题
@@ -1386,11 +1477,19 @@ def _run_episode(
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
         _close_env(env, episode, seed)
+        record["artifacts"] = "failed"
+        record["artifacts_error"] = _format_exception(exc)
+        _emit(success=False, retryable=False)
         return False, False  # not retryable
+
+    record["artifacts"] = "success"
 
     # ── 分支 A：setup-only 模式 ───────────────────────────────────────────
     # 目标：只写 setup 元数据到 HDF5，不执行 planner，不保存轨迹
     if skip_execute:
+        # setup-only 模式没有真正的 execute 阶段
+        record["execute"] = "skipped"
+
         try:
             # 执行一次 no-op step 让 RecordWrapper 至少有一帧视频数据
             _attempt_noop_step(env, env_id, episode, seed)
@@ -1410,6 +1509,12 @@ def _run_episode(
                 f"[setup-only] Failed to append task-specific metadata for env={env_id} "
                 f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
             )
+            # metadata 写失败归到 hdf5_verify 字段（任务特定 setup 数据是 HDF5 的一部分）
+            record["hdf5_verify"] = "failed"
+            record["hdf5_verify_message"] = (
+                f"task-specific metadata write failed: {_format_exception(exc)}"
+            )
+            _emit(success=False, retryable=False)
             return False, False
 
         # 校验 HDF5 结构完整性
@@ -1429,6 +1534,10 @@ def _run_episode(
                 f"[setup-only] Warning: no MP4 matched under {output_dir / 'videos'} "
                 f"(expected filename fragment '{env_id}_ep{episode}_seed{seed}')."
             )
+        record["hdf5_verify"] = "success" if setup_ok else "failed"
+        record["hdf5_verify_message"] = setup_message
+        record["mp4_recorded"] = mp4_path is not None
+        _emit(success=setup_ok, retryable=False)
         return setup_ok, False
 
     # ── 分支 B：完整 rollout 模式 ──────────────────────────────────────────
@@ -1448,6 +1557,8 @@ def _run_episode(
         if snapshot_state.get("collision_detected"):
             _mark_episode_failed(env, "bin_collision")
             episode_successful = False
+            # 显式记录碰撞导致的失败原因
+            record["execute_error"] = "bin_collision"
     except Exception as exc:
         print(
             f"[rollout] Planner/task execution failed for env={env_id} "
@@ -1455,11 +1566,21 @@ def _run_episode(
         )
         _mark_episode_failed(env, f"exception: {type(exc).__name__}")
         episode_successful = False
+        record["execute_error"] = f"exception: {_format_exception(exc)}"
     finally:
         # 确保 close 前 wrapper 状态与实际结果一致
         if not episode_successful:
             _mark_episode_failed(env, "task_not_successful")
         _close_env(env, episode, seed)
+
+    # rollout 模式下 execute 字段反映 planner/task list 的最终结果
+    if episode_successful:
+        record["execute"] = "success"
+    else:
+        record["execute"] = "failed"
+        # 若没有更具体的错误（异常或碰撞），补一个 task_not_successful
+        if record["execute_error"] is None:
+            record["execute_error"] = "task_not_successful"
 
     # close 后追加任务特定的元数据
     try:
@@ -1470,6 +1591,11 @@ def _run_episode(
             f"[rollout] Failed to append task-specific metadata for env={env_id} "
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
+        record["hdf5_verify"] = "failed"
+        record["hdf5_verify_message"] = (
+            f"task-specific metadata write failed: {_format_exception(exc)}"
+        )
+        _emit(success=False, retryable=False)
         return False, False
 
     mp4_path = _latest_recorded_mp4(output_dir, env_id, episode, seed)
@@ -1485,6 +1611,15 @@ def _run_episode(
             f"[rollout] Warning: no MP4 matched under {output_dir / 'videos'} "
             f"(expected filename fragment '{env_id}_ep{episode}_seed{seed}')."
         )
+    # rollout 模式不复用 _verify_setup_h5（其会因 timestep_* 报错），只检查文件存在
+    record["hdf5_verify"] = "success" if h5_path.is_file() else "failed"
+    record["hdf5_verify_message"] = (
+        "h5 file present (rollout mode does not run setup-only verifier)"
+        if h5_path.is_file()
+        else f"missing HDF5 file: {h5_path}"
+    )
+    record["mp4_recorded"] = mp4_path is not None
+    _emit(success=episode_successful, retryable=False)
     return episode_successful, False
 
 
@@ -1529,6 +1664,7 @@ def _run_episode_with_retry(
                 difficulty=difficulty,
                 output_dir=output_dir,
                 skip_execute=skip_execute,
+                attempt=attempt + 1,  # 1-indexed，与日志中 "attempt X/Y" 一致
             )
         except Exception as exc:
             # _run_episode 内部不应抛出，此处捕获防止意外崩溃影响其他 episode
@@ -1802,6 +1938,7 @@ def main() -> None:
     print(f"Max workers per env: {worker_count}")
     print(f"Output root: {output_dir}")
     print(f"HDF5 directory: {_dataset_hdf5_dir(output_dir)}")
+    print(f"Episode results JSONL: {_episode_log_path(output_dir)}")
 
     successes: list[bool] = []
     # 按顺序处理每个 env_id（env 间串行，env 内并行）
