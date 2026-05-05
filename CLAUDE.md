@@ -1,5 +1,14 @@
 # CLAUDE.md — RoboMME Benchmark
 
+## 与用户沟通规范
+
+- **始终使用中文**与用户沟通，包括所有文字回复、计划说明、错误提示和进度汇报。
+- **计划（Plan）必须用中文撰写**，包括 Context、Approach、Verification 等各节。
+- **代码、命令、变量名、注释**保持英文原样，不翻译。
+- **端到端验证优先**：完成任何代码改动后，必须通过实际运行脚本或测试来验证功能正确性，除非用户明确指示跳过或说明无法运行（如缺少 GPU/display）。轻量单元测试只能作为辅助，不能代替端到端验证。
+
+---
+
 ## Project Overview
 
 RoboMME is a robotic benchmark for memory-augmented manipulation (CVPR 2026 challenge). It wraps [ManiSkill](https://github.com/haosulab/ManiSkill) environments into 16 tasks across 4 task suites. Participants implement a `Policy` class, serve it via `challenge_interface/`, and the organizer evaluates it end-to-end.

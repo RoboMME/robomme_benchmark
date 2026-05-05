@@ -34,8 +34,11 @@ from typing import Optional, Set
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
+# 用于在父进程与 spawn 子进程之间传递已选 GPU id 的环境变量名
 _GPU_PIN_ENV_MARKER = "_ROBOMME_GPU_PINNED"
+# 默认使用 GPU 1，避免与其他任务争抢 GPU 0
 DEFAULT_GPU_ID = 1
+# 合法的 GPU id 范围，防止误传无效值
 ALLOWED_GPU_IDS = (0, 1)
 
 
@@ -48,12 +51,19 @@ def _early_pin_gpu() -> int:
     2. Spawn worker (re-imports this module with multiprocessing's own argv):
        sees _ROBOMME_GPU_PINNED inherited from parent and re-applies the same
        CUDA_VISIBLE_DEVICES — never falling back to the argparse default.
+
+    必须在模块导入阶段执行，原因：spawn 模式的子进程会重新 import 整个模块，
+    如果此时不立刻设置 CUDA_VISIBLE_DEVICES，后续的 torch/sapien import
+    就会绑定到默认 GPU（通常是 GPU 0），造成 GPU 资源冲突。
     """
+    # 子进程路径：父进程已通过环境变量把选定的 GPU id 传下来，直接复用
     inherited = os.environ.get(_GPU_PIN_ENV_MARKER)
     if inherited is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = inherited
         return int(inherited)
 
+    # 父进程路径：提前用一个只认 --gpu 的轻量 parser 解析命令行，
+    # 其余未知参数用 parse_known_args 忽略，避免与完整 parser 冲突
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--gpu", type=int, default=DEFAULT_GPU_ID)
     args, _ = parser.parse_known_args()
@@ -62,7 +72,9 @@ def _early_pin_gpu() -> int:
         raise SystemExit(
             f"--gpu must be one of {ALLOWED_GPU_IDS}; got {gpu_id}."
         )
+    # 设置 CUDA_VISIBLE_DEVICES 使 PyTorch/SAPIEN 只看到指定的一块 GPU
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    # 同时写入标记环境变量，让 spawn 子进程能读到相同的 gpu_id
     os.environ[_GPU_PIN_ENV_MARKER] = str(gpu_id)
     return gpu_id
 
@@ -88,15 +100,22 @@ _SHUTDOWN_INITIATED = False
 
 
 def _terminate_active_workers(grace_seconds: float = 3.0) -> None:
-    """Force-terminate all live worker processes of the currently active executor."""
+    """强制结束当前活跃 executor 的所有 worker 进程。
+
+    先发 SIGTERM（terminate），等待 grace_seconds 秒后仍存活则强制 SIGKILL（kill）。
+    用于 Ctrl-C / SIGTERM 信号处理和 atexit 清理，确保子进程不会变成孤儿进程。
+    """
     executor = _ACTIVE_EXECUTOR
     if executor is None:
         return
+    # 访问 ProcessPoolExecutor 内部的进程字典（CPython 实现细节）
     try:
         worker_processes = list(executor._processes.values())
     except (AttributeError, RuntimeError):
+        # executor 已销毁或内部结构不可用，安全忽略
         worker_processes = []
 
+    # 第一轮：向所有存活进程发 SIGTERM，允许它们做最后的清理
     for proc in worker_processes:
         try:
             if proc.is_alive():
@@ -104,10 +123,12 @@ def _terminate_active_workers(grace_seconds: float = 3.0) -> None:
         except Exception:
             pass
 
+    # 等待宽限期，轮询直到所有进程退出或超时
     deadline = time.time() + max(0.0, grace_seconds)
     while time.time() < deadline and any(p.is_alive() for p in worker_processes):
         time.sleep(0.05)
 
+    # 第二轮：对仍存活的进程发 SIGKILL，强制立即终止
     for proc in worker_processes:
         try:
             if proc.is_alive():
@@ -117,8 +138,14 @@ def _terminate_active_workers(grace_seconds: float = 3.0) -> None:
 
 
 def _handle_termination_signal(signum, _frame) -> None:
-    """SIGINT/SIGTERM handler: kill all worker processes, then exit the parent."""
+    """SIGINT/SIGTERM 信号处理器：先结束所有 worker，再退出父进程。
+
+    使用 _SHUTDOWN_INITIATED 标志防止重入：如果在清理期间再次收到信号，
+    直接调用 os._exit 强制退出，避免无限递归。
+    退出码遵循 POSIX 惯例：128 + 信号编号。
+    """
     global _SHUTDOWN_INITIATED
+    # 防止信号重入导致递归：第二次收到信号时立刻强制退出
     if _SHUTDOWN_INITIATED:
         os._exit(128 + signum)
     _SHUTDOWN_INITIATED = True
@@ -128,17 +155,27 @@ def _handle_termination_signal(signum, _frame) -> None:
     )
     _terminate_active_workers()
     print("[Parent] Worker processes terminated; exiting.", flush=True)
+    # 用 sys.exit 而非 os._exit，以便触发 atexit 清理（尽管此时已手动清理过）
     sys.exit(128 + signum)
 
 
 def _install_parent_signal_handlers() -> None:
+    """在父进程中安装 SIGINT/SIGTERM 处理器，并注册 atexit 兜底清理。
+
+    atexit 兜底确保即使正常退出（非信号），worker 进程也能被回收。
+    """
     signal.signal(signal.SIGINT, _handle_termination_signal)
     signal.signal(signal.SIGTERM, _handle_termination_signal)
     atexit.register(_terminate_active_workers)
 
 
 def _worker_initializer() -> None:
-    """Ignore SIGINT in worker processes so the parent owns shutdown."""
+    """Worker 进程初始化：忽略 SIGINT，由父进程统一管理关闭流程。
+
+    spawn 子进程默认会继承父进程的信号处理器，这里显式覆盖为 SIG_IGN，
+    确保 Ctrl-C 只触发父进程的 _handle_termination_signal，
+    而不会同时杀死子进程导致 executor 报 BrokenProcessPool。
+    """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -164,6 +201,7 @@ from videorepick_setup_metadata import (
     write_videorepick_setup_metadata,
 )
 
+# 全部 16 个任务环境 ID，顺序决定 env_code（1-indexed），进而影响 seed 计算
 DEFAULT_ENVS = [
     "PickXtimes",
     "StopCube",
@@ -182,18 +220,36 @@ DEFAULT_ENVS = [
     "PatternLock",
     "RouteStick",
 ]
+# env_code 从 1 开始，便于 seed 公式中的块偏移计算
 ENV_ID_TO_CODE = {name: idx + 1 for idx, name in enumerate(DEFAULT_ENVS)}
+
+# Legacy seed 规则：
+#   base_seed = SEED_OFFSET + env_code * ENV_SEED_BLOCK_SIZE + episode * MAX_SEED_ATTEMPTS
+#   seed       = base_seed + attempt
+# 1_500_000 作为起点，与其他 seed 空间（训练/验证等）不重叠
 SEED_OFFSET = 1_500_000
+
 VALID_ENVS: Set[str] = set(DEFAULT_ENVS)
+# 难度等级固定顺序，用于 difficulty_cycle 生成
 DIFFICULTY_ORDER = ("easy", "medium", "hard")
+# 每个 episode 最多尝试 100 个不同 seed，避免场景生成失败时永远卡住
 MAX_SEED_ATTEMPTS = 100
+# 每个 env 最多 1000 个 episode slot（seed 空间按此分块）
 MAX_EPISODES_PER_ENV = 1000
+# screw 规划最多重试 3 次后才切换到 RRT*
 DATASET_SCREW_MAX_ATTEMPTS = 3
+# RRT* 规划最多重试 3 次后放弃并返回 -1
 DATASET_RRT_MAX_ATTEMPTS = 3
+# 每个 env 占用的 seed 总块大小 = 1000 episodes × 100 attempts
 ENV_SEED_BLOCK_SIZE = MAX_EPISODES_PER_ENV * MAX_SEED_ATTEMPTS
+
+# reset segmentation PNG 输出子目录名
 RESET_SEGMENTATION_DIRNAME = "reset_segmentation_pngs"
+# 导出可见对象 world xyz 的两个相机
 VISIBLE_OBJECT_CAMERAS = ("base_camera", "hand_camera")
+# 可见对象 JSON 文件名
 VISIBLE_OBJECT_JSON_FILENAME = "visible_objects.json"
+# 可见对象 3D 俯视图 PNG 文件名
 VISIBLE_OBJECT_3D_PNG_FILENAME = "visible_object_positions_3d.png"
 
 
@@ -251,14 +307,27 @@ def _generate_color_map(
     v_min: float = 0.78,
     v_max: float = 0.95,
 ) -> dict[int, list[int]]:
-    """复刻 RecordWrapper 的固定 segmentation 色表。"""
+    """复刻 RecordWrapper 的固定 segmentation 色表。
+
+    使用黄金比例 phi 对色相（Hue）进行"黄金角哈希"，使相邻 seg_id 的颜色
+    尽量分散，视觉上易于区分。饱和度和明度通过取模运算形成次级分层，
+    避免不同 id 重叠成相同颜色。
+
+    生成结果与 RecordWrapper 完全一致，因此可以直接用于 PNG 叠加对照。
+    """
+    # 黄金比例共轭，用于均匀分布色相
     phi = 0.6180339887498948
     color_map: dict[int, list[int]] = {}
     for index in range(1, n + 1):
+        # 黄金角哈希：相邻 index 的色相差恒为 phi，均匀覆盖色环
         hue = (index * phi) % 1.0
+        # 饱和度在 [s_min, s_max] 内按 7 档循环，增加色彩层次
         saturation = s_min + (s_max - s_min) * ((index % 7) / 6)
+        # 明度在 [v_min, v_max] 内按 5 档循环，与饱和度的周期互质避免重叠
         value = v_min + (v_max - v_min) * (((index * 3) % 5) / 4)
+        # HSV -> RGB 转换，结果在 [0, 1] 区间
         red, green, blue = colorsys.hsv_to_rgb(hue, saturation, value)
+        # 转为 uint8 整数，存入色表
         color_map[index] = [
             int(round(red * 255)),
             int(round(green * 255)),
@@ -310,7 +379,13 @@ def _collect_reset_visible_objects(
     obs: object,
     env: gym.Env,
 ) -> dict[str, object]:
-    """收集 base/hand camera 中非黑色可见对象的 world xyz 信息。"""
+    """收集 base/hand camera 中非黑色可见对象的 world xyz 信息。
+
+    遍历 VISIBLE_OBJECT_CAMERAS 中的每个相机，找出 segmentation 图里
+    出现过的所有 seg_id，过滤掉桌面/地面/机器人链接等黑名单对象，
+    再从 segmentation_id_map 中查出对应 Actor 并提取世界坐标。
+    同一对象可能同时被两个相机看到，最终去重后记录 visible_in 字段。
+    """
     if not isinstance(obs, dict):
         raise ValueError("reset observation is not a dict")
 
@@ -318,12 +393,15 @@ def _collect_reset_visible_objects(
     if not isinstance(sensor_data, dict):
         raise ValueError("reset observation missing sensor_data dict")
 
+    # segmentation_id_map: seg_id -> Actor 对象，由环境在 reset 后填充
     segmentation_id_map = getattr(env.unwrapped, "segmentation_id_map", None)
     if not isinstance(segmentation_id_map, dict):
         raise ValueError("env missing segmentation_id_map dict after reset")
 
     blacklisted_names = _get_reset_blacklisted_object_names(env)
+    # 记录每个相机看到的 seg_id 集合，用于最终写 visible_in 字段
     visible_ids_by_camera: dict[str, set[int]] = {}
+    # 用 seg_id 作 key 去重，避免同一对象被两个相机重复记录
     visible_objects: dict[int, dict[str, object]] = {}
 
     for camera_name in VISIBLE_OBJECT_CAMERAS:
@@ -336,8 +414,10 @@ def _collect_reset_visible_objects(
             )
 
         segmentation = _to_numpy(camera_obs["segmentation"])
+        # 去掉 batch 维度（形状可能是 [1, H, W, C] 或 [H, W, C]）
         if segmentation.ndim >= 4:
             segmentation = segmentation[0]
+        # squeeze 掉最后的 channel 维，得到纯 2D 的 [H, W] seg_id 矩阵
         segmentation_2d = segmentation.squeeze()
         if segmentation_2d.ndim != 2:
             raise ValueError(
@@ -346,7 +426,9 @@ def _collect_reset_visible_objects(
             )
 
         camera_visible_ids: set[int] = set()
+        # 遍历该相机图像中出现的所有唯一 seg_id（已排序，便于日志对比）
         for seg_id in sorted(int(seg_value) for seg_value in np.unique(segmentation_2d)):
+            # seg_id <= 0 表示背景或无效像素，跳过
             if seg_id <= 0:
                 continue
 
@@ -357,9 +439,11 @@ def _collect_reset_visible_objects(
                 )
 
             obj_name = getattr(obj, "name", None)
+            # 黑名单对象（桌面、地面、机器人链接）在 PNG 中显示为黑色，不计入 JSON
             if obj_name in blacklisted_names:
                 continue
 
+            # 从 Actor 对象中提取世界坐标 [x, y, z]
             position_xyz = extract_actor_position_xyz(obj)
             if position_xyz is None:
                 raise ValueError(
@@ -368,6 +452,7 @@ def _collect_reset_visible_objects(
                 )
 
             camera_visible_ids.add(seg_id)
+            # setdefault 确保同一 seg_id 只记录一次（多相机情况下）
             visible_objects.setdefault(
                 seg_id,
                 {
@@ -380,9 +465,11 @@ def _collect_reset_visible_objects(
 
         visible_ids_by_camera[camera_name] = camera_visible_ids
 
+    # 按 seg_id 排序后构建最终列表，并附加每个相机的可见性标记
     objects_payload: list[dict[str, object]] = []
     for seg_id in sorted(visible_objects):
         item = dict(visible_objects[seg_id])
+        # visible_in: {"base_camera": True/False, "hand_camera": True/False}
         item["visible_in"] = {
             camera_name: seg_id in visible_ids_by_camera.get(camera_name, set())
             for camera_name in VISIBLE_OBJECT_CAMERAS
@@ -537,7 +624,12 @@ def _save_reset_segmentation_pngs(
     episode: int,
     seed: int,
 ) -> Path:
-    """导出 reset 帧中所有相机的 segmentation 彩色 PNG。"""
+    """导出 reset 帧中所有相机的 segmentation 彩色 PNG。
+
+    对每个含有 segmentation 字段的相机，把 seg_id 矩阵通过 color_map
+    映射成 RGB 图像并叠加在原始 rgb 帧上，写出到独立的 PNG 文件。
+    返回输出目录路径（供后续写 visible_objects JSON 复用）。
+    """
     if not isinstance(obs, dict):
         raise ValueError("reset observation is not a dict")
 
@@ -545,8 +637,11 @@ def _save_reset_segmentation_pngs(
     if not isinstance(sensor_data, dict):
         raise ValueError("reset observation missing sensor_data dict")
 
+    # 建立输出目录：{output_root}/reset_segmentation_pngs/{env_id}_ep{ep}_seed{seed}/
     output_dir = _reset_segmentation_dir(output_root, env_id, episode, seed)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 从全局色表派生本 episode 的色表（把黑名单对象覆盖为黑色）
     color_map = _build_reset_segmentation_color_map(
         env,
         getattr(env.unwrapped, "segmentation_id_map", None)
@@ -554,8 +649,10 @@ def _save_reset_segmentation_pngs(
 
     saved_paths: list[Path] = []
     for camera_name, camera_obs in sensor_data.items():
+        # 跳过不含 segmentation 的相机（如深度专用相机）
         if not isinstance(camera_obs, dict) or "segmentation" not in camera_obs:
             continue
+        # 有 segmentation 就必须有 rgb，否则无法生成叠加图
         if "rgb" not in camera_obs:
             raise ValueError(
                 f"camera '{camera_name}' has segmentation but missing rgb frame"
@@ -563,11 +660,14 @@ def _save_reset_segmentation_pngs(
 
         segmentation = _to_numpy(camera_obs["segmentation"])
         rgb = _to_numpy(camera_obs["rgb"])
+        # 去掉 batch 维，保证形状为 [H, W, C]
         if segmentation.ndim >= 4:
             segmentation = segmentation[0]
         if rgb.ndim >= 4:
             rgb = rgb[0]
 
+        # create_segmentation_visuals 把 seg_id 矩阵按 color_map 着色，
+        # 并与 rgb 叠加生成可视化图像；后两个返回值（点集、掩码）此处不需要
         segmentation_vis, _, _ = create_segmentation_visuals(
             segmentation=segmentation,
             segmentation_result=segmentation,
@@ -585,6 +685,7 @@ def _save_reset_segmentation_pngs(
             ) from exc
         saved_paths.append(png_path)
 
+    # 至少要有一张 PNG，否则说明 obs 结构有问题
     if not saved_paths:
         raise ValueError("reset observation contained no camera segmentation data")
 
@@ -593,15 +694,23 @@ def _save_reset_segmentation_pngs(
 
 
 def _decode_h5_text(value: object) -> str:
+    """把 HDF5 中读出的文本值统一解码为 Python str。
+
+    HDF5 字符串数据集读出后可能是 bytes、np.bytes_ 或包含单个元素的 ndarray，
+    此函数递归处理所有情况，返回一致的 str。
+    """
     if isinstance(value, bytes):
         return value.decode("utf-8")
     if isinstance(value, np.bytes_):
+        # np.bytes_ 需要先转为内置 bytes 再 decode
         return bytes(value).decode("utf-8")
     if isinstance(value, np.ndarray):
+        # scalar 数组或 shape=(1,) 数组：展平后取第一个元素递归处理
         flattened = value.reshape(-1).tolist()
         if not flattened:
             return ""
         return _decode_h5_text(flattened[0])
+    # 其他类型（如 str）直接转换
     return str(value)
 
 
@@ -664,13 +773,22 @@ def _verify_pickhighlight_setup_metadata(setup_group: h5py.Group) -> tuple[bool,
 
 
 def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, str]:
-    """验证 setup-only HDF5 是否满足 downstream 读取要求。"""
+    """验证 setup-only HDF5 是否满足 downstream 读取要求。
+
+    检查项：
+    1. 文件存在
+    2. episode_N group 存在
+    3. episode_N/setup group 存在，且包含必要字段（difficulty/task_goal/available_multi_choices）
+    4. 不存在任何 timestep_* group（setup-only 模式不应写入轨迹数据）
+    5. 特定任务的额外元数据（PickHighlight / VideoRepick）
+    """
     if not h5_path.is_file():
         return False, f"missing HDF5 file: {h5_path}"
 
     episode_group_name = f"episode_{episode}"
     try:
         with h5py.File(h5_path, "r") as handle:
+            # 检查顶层 episode group 是否存在
             if episode_group_name not in handle:
                 return False, f"missing group '{episode_group_name}'"
 
@@ -678,10 +796,12 @@ def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, st
             if not isinstance(episode_group, h5py.Group):
                 return False, f"'{episode_group_name}' is not an HDF5 group"
 
+            # setup group 是 downstream 读取元数据的入口
             setup_group = episode_group.get("setup")
             if not isinstance(setup_group, h5py.Group):
                 return False, "missing setup group"
 
+            # 三个必需数据集：难度标签、任务目标文本、多选项列表
             required_datasets = (
                 "difficulty",
                 "task_goal",
@@ -695,6 +815,7 @@ def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, st
             if missing:
                 return False, f"missing setup datasets: {', '.join(missing)}"
 
+            # setup-only 模式不允许出现 timestep 数据，若有说明 buffer 清空失败
             timestep_groups = sorted(
                 name for name in episode_group.keys() if name.startswith("timestep_")
             )
@@ -704,9 +825,11 @@ def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, st
                     f"{', '.join(timestep_groups[:3])}"
                 )
 
+            # PickHighlight 额外验证：target_cube_colors 字段
             if env_id == PICKHIGHLIGHT_ENV_ID:
                 return _verify_pickhighlight_setup_metadata(setup_group)
 
+            # VideoRepick 额外验证：target_cube_1_color + num_repeats 字段
             if env_id == VIDEOREPICK_ENV_ID:
                 return _verify_videorepick_setup_metadata(setup_group)
     except Exception as exc:
@@ -716,19 +839,31 @@ def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, st
 
 
 def _tensor_to_bool(value) -> bool:
-    """把 Tensor / ndarray / Python 标量统一转换成布尔值。"""
+    """把 Tensor / ndarray / Python 标量统一转换成布尔值。
+
+    ManiSkill 的 evaluate() 返回值可能是 torch.Tensor（GPU 上）或 np.ndarray，
+    统一在 CPU 上取布尔值，避免类型判断遗漏。
+    """
     if value is None:
         return False
     if isinstance(value, torch.Tensor):
+        # 先 detach 再 cpu，避免在 autograd 图中产生副作用
         return bool(value.detach().cpu().bool().item())
     if isinstance(value, np.ndarray):
+        # 任意元素为 True 即返回 True（兼容 shape=(1,) 的标量数组）
         return bool(np.any(value))
     return bool(value)
 
 
 def _create_planner(env: gym.Env, env_id: str):
-    """按任务类型选择 stick 规划器或机械臂规划器。"""
+    """按任务类型选择 stick 规划器或机械臂规划器。
+
+    PatternLock / RouteStick 使用 stick 末端执行器，关节速度上限更低（0.3）；
+    其他任务使用标准的 Panda 机械臂规划器。
+    FailAware 前缀表示规划失败时抛 ScrewPlanFailure，而非静默返回 -1。
+    """
     if env_id in {"PatternLock", "RouteStick"}:
+        # stick 规划器：控制细长末端执行器，需要较低的关节速度限制防止碰撞
         return FailAwarePandaStickMotionPlanningSolver(
             env,
             debug=False,
@@ -736,8 +871,9 @@ def _create_planner(env: gym.Env, env_id: str):
             base_pose=env.unwrapped.agent.robot.pose,
             visualize_target_grasp_pose=False,
             print_env_info=False,
-            joint_vel_limits=0.3,
+            joint_vel_limits=0.3,  # 比标准臂更保守，避免 stick 震荡
         )
+    # 默认：标准 Panda 机械臂规划器（夹爪抓取）
     return FailAwarePandaArmMotionPlanningSolver(
         env,
         debug=False,
@@ -749,28 +885,43 @@ def _create_planner(env: gym.Env, env_id: str):
 
 
 def _wrap_planner_with_screw_then_rrt_retry(planner) -> None:
-    """给 screw 规划加"多次重试 + RRT* 兜底"逻辑。"""
+    """给 screw 规划器的 move_to_pose_with_screw 方法打补丁，加入多次重试与 RRT* 兜底。
+
+    策略：
+    1. 先尝试 screw 规划（速度快），最多 DATASET_SCREW_MAX_ATTEMPTS 次；
+    2. 若 screw 全部失败（抛 ScrewPlanFailure 或返回 -1），切换到 RRT* 规划，
+       最多 DATASET_RRT_MAX_ATTEMPTS 次；
+    3. RRT* 也全部失败时返回 -1，由调用方标记 episode 失败。
+
+    用 monkey-patch 方式修改，避免改动 planner 类本身。
+    """
+    # 保存原始方法引用，供内部闭包调用
     original_screw = planner.move_to_pose_with_screw
     original_rrt = planner.move_to_pose_with_RRTStar
 
     def _retry(*args, **kwargs):
+        # 第一阶段：screw 规划重试
         for attempt in range(1, DATASET_SCREW_MAX_ATTEMPTS + 1):
             try:
                 result = original_screw(*args, **kwargs)
             except ScrewPlanFailure as exc:
+                # ScrewPlanFailure 是预期的可重试失败类型
                 print(
                     f"[Replay] screw planning failed "
                     f"(attempt {attempt}/{DATASET_SCREW_MAX_ATTEMPTS}): {exc}"
                 )
                 continue
+            # 返回 -1 同样视为失败（规划器内部约定）
             if isinstance(result, int) and result == -1:
                 print(
                     f"[Replay] screw planning returned -1 "
                     f"(attempt {attempt}/{DATASET_SCREW_MAX_ATTEMPTS})"
                 )
                 continue
+            # 规划成功，直接返回
             return result
 
+        # 第二阶段：screw 耗尽后降级到 RRT*
         print(
             "[Replay] screw planning exhausted; "
             f"fallback to RRT* (max {DATASET_RRT_MAX_ATTEMPTS} attempts)"
@@ -792,14 +943,30 @@ def _wrap_planner_with_screw_then_rrt_retry(planner) -> None:
                 continue
             return result
 
+        # 两级规划全部耗尽，返回 -1 告知调用方放弃
         print("[Replay] screw->RRT* planning exhausted; return -1")
         return -1
 
+    # 用包装后的 _retry 替换 planner 实例方法
     planner.move_to_pose_with_screw = _retry
 
 
 def _execute_task_list(env: gym.Env, planner, env_id: str) -> bool:
-    """按任务列表执行 evaluate -> solve -> evaluate 主循环。"""
+    """按任务列表执行 evaluate -> solve -> evaluate 主循环。
+
+    每个 task_entry 包含：
+    - "name": 任务名称（仅用于日志）
+    - "solve": callable(env, planner) -> int | None，执行具体规划动作
+
+    执行流程：
+    1. 调用 env.unwrapped.evaluate() 初始化状态
+    2. 逐个执行 task，调用 solve 后立即 evaluate 检查 success/fail
+    3. 任意 task 成功（success=True）或失败（fail=True / screw 失败）时提前退出循环
+    4. 正常循环结束（for...else）时再做一次最终 evaluate
+
+    返回 True 表示本 episode 成功（wrapper 层或底层 env 任一标记成功均可）。
+    """
+    # 初始化 evaluate 状态，确保内部计数器处于正确起点
     env.unwrapped.evaluate()
     tasks = list(getattr(env.unwrapped, "task_list", []) or [])
     print(f"{env_id}: Task list has {len(tasks)} tasks")
@@ -814,49 +981,65 @@ def _execute_task_list(env: gym.Env, planner, env_id: str) -> bool:
         if not callable(solve_callable):
             raise ValueError(f"Task '{task_name}' must supply a callable 'solve'.")
 
+        # solve_complete_eval=True 触发完整的子任务状态机评估
         env.unwrapped.evaluate(solve_complete_eval=True)
         screw_failed = False
         try:
             solve_result = solve_callable(env, planner)
+            # solve 返回 -1 表示规划全部耗尽
             if isinstance(solve_result, int) and solve_result == -1:
                 screw_failed = True
                 print(f"Screw->RRT* planning exhausted during '{task_name}'")
+                # 手动写入失败标志，以便 evaluate 能正确判断
                 env.unwrapped.failureflag = torch.tensor([True])
                 env.unwrapped.successflag = torch.tensor([False])
                 env.unwrapped.current_task_failure = True
         except ScrewPlanFailure as exc:
+            # ScrewPlanFailure 在包装器未能捕获时抛出，直接视为失败
             screw_failed = True
             print(f"Screw plan failure during '{task_name}': {exc}")
             env.unwrapped.failureflag = torch.tensor([True])
             env.unwrapped.successflag = torch.tensor([False])
             env.unwrapped.current_task_failure = True
         except FailsafeTimeout as exc:
+            # FailsafeTimeout：步数或时间超限，停止整个 task 序列
             print(f"Failsafe: {exc}")
             break
 
+        # solve 完成后立即 evaluate 获取当前成功/失败状态
         evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
         fail_flag = evaluation.get("fail", False)
         success_flag = evaluation.get("success", False)
 
+        # 整个 episode 成功（所有子任务完成），提前退出
         if _tensor_to_bool(success_flag):
             print("All tasks completed successfully.")
             episode_successful = True
             break
 
+        # 遇到失败条件（规划失败或环境报告 fail），停止后续 task
         if screw_failed or _tensor_to_bool(fail_flag):
             print("Encountered failure condition; stopping task sequence.")
             break
     else:
+        # for 循环正常结束（未 break），做最终一次 evaluate
         evaluation = env.unwrapped.evaluate(solve_complete_eval=True)
         episode_successful = _tensor_to_bool(evaluation.get("success", False))
 
+    # 同时检查 wrapper 层的 episode_success，取两者的 OR
     return episode_successful or _tensor_to_bool(
         getattr(env, "episode_success", False)
     )
 
 
 def _mark_episode_failed(env: Optional[gym.Env], reason: str) -> None:
-    """在 close 前把 wrapper 和底层 env 的状态统一压成失败。"""
+    """在 close 前把 wrapper 和底层 env 的状态统一压成失败。
+
+    需要同时设置三层状态，确保 RecordWrapper 写出的 HDF5 正确标记为失败：
+    - env.episode_success：wrapper 层的成功标志
+    - base_env.failureflag / successflag：底层 env 评估状态
+    - base_env.current_task_failure：当前子任务失败标志
+    """
     if env is None:
         return
     if hasattr(env, "episode_success"):
@@ -864,6 +1047,7 @@ def _mark_episode_failed(env: Optional[gym.Env], reason: str) -> None:
     base_env = getattr(env, "unwrapped", None)
     if base_env is None:
         return
+    # 使用 shape=(1,) 的 Tensor，与环境内部约定一致
     base_env.failureflag = torch.tensor([True])
     base_env.successflag = torch.tensor([False])
     base_env.current_task_failure = True
@@ -989,20 +1173,29 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _build_env_kwargs(episode: int, seed: int, difficulty: str) -> dict:
-    """构造环境参数，并按 episode 编号启用不同级别的失败恢复。"""
+    """构造环境参数，并按 episode 编号启用不同级别的失败恢复。
+
+    失败恢复策略（robomme_failure_recovery）：
+    - episode <= 2：仅在 Z 轴方向恢复（最严格，避免水平方向的物理干扰）
+    - episode 3-5：在 XY 平面方向恢复（允许更多位置修正）
+    - episode > 5：不启用失败恢复（依赖规划器自身处理）
+    这是针对前几个 episode（通常用于验证/调试）的特殊照顾。
+    """
     env_kwargs = dict(
-        obs_mode="rgb+depth+segmentation",
-        control_mode="pd_joint_pos",
-        render_mode="rgb_array",
-        reward_mode="dense",
+        obs_mode="rgb+depth+segmentation",   # 同时获取 RGB / 深度 / 分割图
+        control_mode="pd_joint_pos",          # PD 控制器驱动关节位置
+        render_mode="rgb_array",              # 离屏渲染，支持 GPU 无 display
+        reward_mode="dense",                  # 使用稠密奖励，便于规划器跟踪进度
         seed=seed,
         difficulty=difficulty,
     )
     if episode <= 5:
         env_kwargs["robomme_failure_recovery"] = True
         if episode <= 2:
+            # 仅 Z 轴恢复：抬起后下放，避免碰撞
             env_kwargs["robomme_failure_recovery_mode"] = "z"
         else:
+            # XY 平面恢复：允许水平位置的重新对齐
             env_kwargs["robomme_failure_recovery_mode"] = "xy"
     return env_kwargs
 
@@ -1023,9 +1216,16 @@ def _create_env(
 
 
 def _resolve_noop_action(env: gym.Env) -> np.ndarray:
-    """基于当前 qpos 生成 1 个最小 no-op action。"""
+    """基于当前 qpos 生成 1 个最小 no-op action（保持当前关节角度不动）。
+
+    no-op action 只用于给 RecordWrapper 产出一帧视频，不改变物理状态。
+    action_dim = 7：仅臂关节（无夹爪控制）
+    action_dim = 8：臂关节 + 夹爪（夹爪置 1.0 = 打开/保持）
+    """
     robot = env.unwrapped.agent.robot
+    # 兼容两种 API：get_qpos() 方法 或 .qpos 属性
     qpos = robot.get_qpos() if hasattr(robot, "get_qpos") else robot.qpos
+    # 统一转为 CPU numpy，避免 Tensor / numpy 混用
     if hasattr(qpos, "detach"):
         qpos = qpos.detach().cpu().numpy()
     elif hasattr(qpos, "cpu"):
@@ -1034,16 +1234,19 @@ def _resolve_noop_action(env: gym.Env) -> np.ndarray:
     if qpos.size < 7:
         raise ValueError(f"Unexpected qpos size {qpos.size}; expected at least 7")
 
+    # 取前 7 个元素作为臂关节目标角度
     arm_action = qpos[:7]
     action_shape = getattr(getattr(env, "action_space", None), "shape", None)
     action_dim = int(np.prod(action_shape)) if action_shape else None
 
+    # 如果 action_space 不可用，根据 qpos 大小推断 action_dim
     if action_dim is None:
         action_dim = 7 if qpos.size <= 7 else 8
 
     if action_dim == 7:
         return arm_action
     if action_dim == 8:
+        # 第 8 维是夹爪：1.0 表示打开（保持现状，不产生额外夹持力）
         return np.concatenate([arm_action, np.array([1.0], dtype=np.float32)])
     raise ValueError(f"Unsupported action dimension {action_dim}; expected 7 or 8")
 
@@ -1069,10 +1272,18 @@ def _attempt_noop_step(env: gym.Env, env_id: str, episode: int, seed: int) -> No
 
 
 def _prepare_setup_only_close(env: gym.Env, env_id: str, episode: int, seed: int) -> None:
-    """在 close 前移除 timestep 数据，并强制 wrapper 写 setup。"""
+    """在 close 前移除 timestep 数据，并强制 wrapper 写 setup。
+
+    RobommeRecordWrapper 在 close() 时根据 episode_success 决定是否写 HDF5：
+    - episode_success=True  -> 写 setup + timestep 数据
+    - buffer.clear()        -> 清空轨迹，使得只写 setup group
+    两步组合实现"写 setup、不写轨迹"的 setup-only 效果。
+    """
+    # 记录清空数量用于日志，确认 buffer 确实被清空
     dropped_records = len(getattr(env, "buffer", []))
     if hasattr(env, "buffer"):
         env.buffer.clear()
+    # 设为 True 触发 wrapper 的 HDF5 写出逻辑
     env.episode_success = True
     print(
         f"[Setup] Prepared setup-only close for env={env_id} episode={episode} "
@@ -1110,6 +1321,10 @@ def _run_episode(
     skip_execute=True（默认）：setup-only 模式，不运行 planner，只写 setup HDF5。
     skip_execute=False：完整 rollout 模式，运行 planner 并执行 task list。
     两种模式均在 reset 后导出 segmentation PNG / visible objects JSON / 3D PNG。
+
+    retryable_failure 语义：
+    - 场景生成失败（SceneGenerationError）或 reset 崩溃 -> True，换 seed 重试
+    - segmentation 导出失败 / HDF5 校验失败 -> False，不重试（换 seed 也无意义）
     """
     mode_tag = "setup-only" if skip_execute else "rollout"
     print(
@@ -1119,29 +1334,34 @@ def _run_episode(
 
     env: Optional[gym.Env] = None
     obs: Optional[dict] = None
+    # 预先计算本次 episode 对应的 HDF5 路径（env.close() 后才实际写出）
     h5_path = _episode_h5_path(output_dir, env_id, episode, seed)
 
     # ── 共同流程：创建环境 + reset ─────────────────────────────────────────
+    # 此阶段失败属于"可重试"：换一个 seed 通常能绕过场景生成问题
     try:
         env_kwargs = _build_env_kwargs(episode, seed, difficulty)
         env = _create_env(env_id, env_kwargs, output_dir, episode, seed)
         obs, _ = env.reset()
     except SceneGenerationError as exc:
+        # 场景生成失败（物体放置冲突等），换 seed 可解决
         print(
             f"[{mode_tag}] Scene generation failed for env={env_id} "
             f"episode={episode} seed={seed}: {exc}"
         )
         _close_env(env, episode, seed)
-        return False, True
+        return False, True  # retryable
     except Exception as exc:
+        # 其他 reset 异常（GPU OOM、IK 初始化失败等），同样允许重试
         print(
             f"[{mode_tag}] Failed during env creation/reset for env={env_id} "
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
         _close_env(env, episode, seed)
-        return False, True
+        return False, True  # retryable
 
     # ── 共同流程：导出 reset 帧的 segmentation / visible objects ──────────
+    # 此阶段失败属于"不可重试"：obs 已经取到，换 seed 不会改善导出问题
     try:
         reset_output_dir = _save_reset_segmentation_pngs(
             obs=obs,
@@ -1151,6 +1371,7 @@ def _run_episode(
             episode=episode,
             seed=seed,
         )
+        # 在同一输出目录写 visible_objects.json 和 3D 俯视图 PNG
         _save_reset_visible_object_artifacts(
             obs=obs,
             env=env,
@@ -1165,16 +1386,22 @@ def _run_episode(
             f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
         )
         _close_env(env, episode, seed)
-        return False, False
+        return False, False  # not retryable
 
-    # ── 分支：setup-only ───────────────────────────────────────────────────
+    # ── 分支 A：setup-only 模式 ───────────────────────────────────────────
+    # 目标：只写 setup 元数据到 HDF5，不执行 planner，不保存轨迹
     if skip_execute:
         try:
+            # 执行一次 no-op step 让 RecordWrapper 至少有一帧视频数据
             _attempt_noop_step(env, env_id, episode, seed)
+            # 清空 wrapper 的轨迹 buffer，并强制 episode_success=True
+            # 使得 wrapper 在 close() 时只写 setup group，不写 timestep 数据
             _prepare_setup_only_close(env, env_id, episode, seed)
         finally:
+            # 无论 no-op 是否成功，都要关闭环境触发 HDF5 写出
             _close_env(env, episode, seed)
 
+        # env.close() 写出 HDF5 后，再追加任务特定的元数据（close 前 env 仍可访问）
         try:
             write_pickhighlight_setup_metadata(env, h5_path, episode)
             write_videorepick_setup_metadata(env, h5_path, episode)
@@ -1185,6 +1412,7 @@ def _run_episode(
             )
             return False, False
 
+        # 校验 HDF5 结构完整性
         setup_ok, setup_message = _verify_setup_h5(h5_path, env_id, episode)
         mp4_path = _latest_recorded_mp4(output_dir, env_id, episode, seed)
         status_text = "SUCCESS" if setup_ok else "FAILED"
@@ -1196,21 +1424,27 @@ def _run_episode(
         if mp4_path is not None:
             print(f"[setup-only] MP4 recorded: {mp4_path.resolve()}")
         else:
+            # MP4 是尽力产物，缺失时只警告不报失败
             print(
                 f"[setup-only] Warning: no MP4 matched under {output_dir / 'videos'} "
                 f"(expected filename fragment '{env_id}_ep{episode}_seed{seed}')."
             )
         return setup_ok, False
 
-    # ── 分支：完整 rollout ─────────────────────────────────────────────────
+    # ── 分支 B：完整 rollout 模式 ──────────────────────────────────────────
+    # 目标：运行 planner 完成任务，写完整轨迹 HDF5 + 视频
     episode_successful = False
     try:
+        # 安装 snapshot hook（在特定 step 时自动截图保存场景快照）
         snapshot_state = snapshot_utils.install_snapshot_for_step(
             env, env_id, episode, seed, difficulty, output_dir
         )
+        # 创建规划器并包装重试逻辑
         planner = _create_planner(env, env_id)
         _wrap_planner_with_screw_then_rrt_retry(planner)
+        # 执行任务列表，返回是否成功
         episode_successful = _execute_task_list(env, planner, env_id)
+        # 如果 snapshot hook 检测到碰撞，强制标记失败
         if snapshot_state.get("collision_detected"):
             _mark_episode_failed(env, "bin_collision")
             episode_successful = False
@@ -1222,8 +1456,12 @@ def _run_episode(
         _mark_episode_failed(env, f"exception: {type(exc).__name__}")
         episode_successful = False
     finally:
+        # 确保 close 前 wrapper 状态与实际结果一致
+        if not episode_successful:
+            _mark_episode_failed(env, "task_not_successful")
         _close_env(env, episode, seed)
 
+    # close 后追加任务特定的元数据
     try:
         write_pickhighlight_setup_metadata(env, h5_path, episode)
         write_videorepick_setup_metadata(env, h5_path, episode)
@@ -1257,7 +1495,16 @@ def _run_episode_with_retry(
     output_dir: Path,
     skip_execute: bool = True,
 ) -> tuple[bool, int]:
-    """按 legacy seed 规则执行单个 episode。"""
+    """按 legacy seed 规则执行单个 episode，并在可重试失败时尝试不同 seed。
+
+    seed 序列：base_seed, base_seed+1, base_seed+2, ..., base_seed+MAX_SEED_ATTEMPTS-1
+    每次尝试调用 _run_episode，根据 retryable_failure 决定是否继续：
+    - retryable_failure=True（场景生成/reset 失败）：换下一个 seed 继续
+    - retryable_failure=False + success=False：setup-only 模式下直接放弃
+      （rollout 模式下继续尝试，因为规划失败不一定是 seed 问题）
+
+    返回 (success, used_seed)：used_seed 是最后一次尝试使用的 seed。
+    """
     base_seed = _base_seed_for_episode(env_id, episode)
     print(
         f"[Retry] env={env_id} episode={episode} "
@@ -1267,6 +1514,7 @@ def _run_episode_with_retry(
 
     last_seed = base_seed
     for attempt in range(MAX_SEED_ATTEMPTS):
+        # seed = base_seed + attempt，确保每次尝试的场景不同
         seed = base_seed + attempt
         last_seed = seed
         print(
@@ -1283,6 +1531,7 @@ def _run_episode_with_retry(
                 skip_execute=skip_execute,
             )
         except Exception as exc:
+            # _run_episode 内部不应抛出，此处捕获防止意外崩溃影响其他 episode
             print(
                 f"[Retry] env={env_id} episode={episode} seed={seed} "
                 f"raised {type(exc).__name__}: {exc}"
@@ -1298,12 +1547,16 @@ def _run_episode_with_retry(
             )
             return True, seed
 
-        if not retryable_failure:
+        # setup-only 模式：若失败原因不可重试（如 segmentation 导出失败），
+        # 换 seed 也无济于事，直接放弃本 episode
+        if skip_execute and not retryable_failure:
             print(
                 f"[Retry] env={env_id} episode={episode} seed={seed} "
-                "failed after setup generation; skip further seed retries."
+                "failed after setup generation; skip further seed retries (setup-only mode)."
             )
             return False, seed
+
+        # 否则继续尝试下一个 seed（可重试失败 或 rollout 模式）
 
     print(
         f"[Retry] env={env_id} episode={episode} exhausted "
@@ -1395,9 +1648,19 @@ def _run_env_episodes(
     max_workers: int,
     skip_execute: bool = True,
 ) -> list[bool]:
-    """在同一个 env_id 内并行执行多个 episode。"""
+    """在同一个 env_id 内并行执行多个 episode，返回按 episode 编号排序的成功列表。
+
+    max_workers=1 时退化为串行（方便调试和单进程环境）。
+    max_workers>1 时使用 ProcessPoolExecutor（spawn 模式），每个 worker 独立持有
+    一个物理仿真环境，避免 SAPIEN/MuJoCo 的全局状态冲突。
+
+    注意：spawn 模式下子进程会重新 import 整个模块，_early_pin_gpu 会在子进程中
+    再次执行，并通过 _GPU_PIN_ENV_MARKER 环境变量恢复父进程设定的 gpu_id。
+    """
+    # (episode_idx, success) 列表，后续按 episode_idx 排序后返回
     env_successes: list[tuple[int, bool]] = []
 
+    # 串行路径：max_workers=1，直接在当前进程中执行
     if max_workers == 1:
         for ep, difficulty in episode_specs:
             success, used_seed = _run_episode_with_retry(
@@ -1411,15 +1674,19 @@ def _run_env_episodes(
             _print_episode_artifacts(output_dir, env_id, ep, used_seed)
         return [success for _, success in sorted(env_successes)]
 
+    # 并行路径：spawn 新进程池，同时处理多个 episode
     global _ACTIVE_EXECUTOR
+    # spawn 模式：子进程从零开始，不继承父进程的 Python 对象（包括 GPU 上下文）
     ctx = mp.get_context("spawn")
     with ProcessPoolExecutor(
         max_workers=max_workers,
         mp_context=ctx,
-        initializer=_worker_initializer,
+        initializer=_worker_initializer,  # 忽略 SIGINT，由父进程统一关闭
     ) as executor:
+        # 将 executor 注册到全局变量，供信号处理器在 Ctrl-C 时强制关闭
         _ACTIVE_EXECUTOR = executor
         try:
+            # 一次性提交所有 episode，executor 自动调度到空闲 worker
             futures = {
                 executor.submit(
                     _run_episode_with_retry,
@@ -1432,11 +1699,13 @@ def _run_env_episodes(
                 for ep, difficulty in episode_specs
             }
 
+            # as_completed：哪个 future 先完成就先处理，不等顺序
             for future in as_completed(futures):
                 ep = futures[future]
                 try:
                     success, used_seed = future.result()
                 except Exception as exc:
+                    # worker 崩溃（OOM、SIGKILL 等），直接向上抛出终止整个 env
                     raise RuntimeError(
                         f"Worker crashed for env={env_id} episode={ep}"
                     ) from exc
@@ -1447,15 +1716,27 @@ def _run_env_episodes(
                 )
                 _print_episode_artifacts(output_dir, env_id, ep, used_seed)
         finally:
+            # 无论正常退出还是异常，清空全局引用防止 atexit 重复操作
             _ACTIVE_EXECUTOR = None
 
+    # 按 episode 编号排序后返回，保证输出列表与 episode_specs 顺序一致
     return [success for _, success in sorted(env_successes)]
 
 
 def main() -> None:
-    """脚本入口：解析参数、执行 episode 生成、打印结果路径。"""
+    """脚本入口：解析参数、执行 episode 生成、打印结果路径。
+
+    执行流程：
+    1. 解析命令行参数（包含对 --gpu 一致性的检查）
+    2. 安装父进程信号处理器（Ctrl-C 优雅关闭）
+    3. 构建 difficulty_cycle：按比例展开 easy/medium/hard 的循环序列
+    4. 对每个 env_id 串行调用 _run_env_episodes（env 内部并行）
+    5. 汇总并打印整体成功/失败状态
+    """
     args = _build_parser().parse_args()
 
+    # 验证完整 parser 与早期 GPU 绑定 parser 的 --gpu 一致，防止因参数顺序问题
+    # 导致早期已绑定了 GPU X，但完整 parser 解析出 GPU Y 的矛盾
     if int(args.gpu) != _PINNED_GPU_ID:
         raise SystemExit(
             f"GPU mismatch: full parser saw --gpu={args.gpu} but module-level "
@@ -1468,6 +1749,7 @@ def main() -> None:
         f"(GPU id {_PINNED_GPU_ID}); GPU0 must remain untouched."
     )
 
+    # 安装 SIGINT/SIGTERM 处理器，确保 Ctrl-C 时 worker 进程被回收
     _install_parent_signal_handlers()
 
     output_dir = args.output_dir.resolve()
@@ -1476,6 +1758,7 @@ def main() -> None:
     n_episodes = args.episode_number
     if n_episodes < 1:
         raise SystemExit("--episode-number must be at least 1 (run episodes 0..N-1).")
+    # seed 空间按 MAX_EPISODES_PER_ENV=1000 分块，超出会导致不同 episode 的 seed 重叠
     if n_episodes >= MAX_EPISODES_PER_ENV:
         raise SystemExit(
             f"--episode-number must be less than {MAX_EPISODES_PER_ENV}; "
@@ -1499,14 +1782,18 @@ def main() -> None:
         "for env creation/reset failures."
     )
 
+    # 构建难度循环序列：把 [easy, medium, hard] 按 ratio 展开成一个周期列表
+    # 例如 ratio=[2,1,1] -> ["easy","easy","medium","hard","easy","easy","medium","hard",...]
     difficulty_cycle = [
         difficulty
         for difficulty, count in zip(DIFFICULTY_ORDER, args.difficulty)
         for _ in range(count)
     ]
+    # 按 episode 编号对难度循环取模，得到每个 episode 的难度
     difficulty_preview = [
         difficulty_cycle[ep % len(difficulty_cycle)] for ep in episode_numbers
     ]
+    # episode_specs：[(episode_idx, difficulty_str), ...]，传给 _run_env_episodes
     episode_specs = list(zip(episode_numbers, difficulty_preview))
     print(f"Difficulty ratio [easy, medium, hard]: {args.difficulty}")
     print(f"Difficulty per episode: {difficulty_preview}")
@@ -1517,6 +1804,7 @@ def main() -> None:
     print(f"HDF5 directory: {_dataset_hdf5_dir(output_dir)}")
 
     successes: list[bool] = []
+    # 按顺序处理每个 env_id（env 间串行，env 内并行）
     for env_id in args.env:
         print(f"\n========== env={env_id} [{mode_label}] ==========")
         print(
@@ -1533,6 +1821,7 @@ def main() -> None:
             )
         )
 
+    # 汇总打印：所有 episode 全部成功才视为整体成功
     if all(successes):
         print(f"Generation finished successfully ({mode_label}, all episodes).")
     else:

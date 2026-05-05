@@ -208,6 +208,7 @@ __marimo__/
 
 # Local run outputs (replays, videos, snapshots)
 runs/
+runs-legacy/
 
 # Local scratch / temporary outputs (not versioned)
 tmp/
