@@ -189,6 +189,132 @@ Dataset splits: `train` (100 ep/task), `val` (50 ep/task, fixed seeds), `test` (
 
 ---
 
+## Dataset Inspection — `scripts/dev3/inspect_stat.py`
+
+`inspect_stat.py` 把生成的 HDF5 + visible_objects.json 数据扫一遍，落地到
+`runs/replay_videos/inspect-stat/` 下：
+
+- `task-goal/episode_task_metadata.csv` + `<env>_distribution.png`（每个 env 的
+  task-goal 分布）
+- `xy/<env>_xy.png`（每个 env 的 visible-objects 散点图；VideoRepick 拆成
+  `_xy_easy_medium.png` / `_xy_hard.png`；4 个 permanence env 是 2×N 的 2 行 PNG，
+  上行 visible-objects、下行 cubes/swaps）
+
+### 强制保持的拆分结构（**不可回退合并**）
+
+inspect_stat.py 的职责被严格限定在 **distribution pipeline + xy 编排**两件事。
+xy 维度的所有 env-specific 渲染逻辑都已经按 4 个 task suite 拆到
+`scripts/dev3/env_specific_extraction/` 下的独立模块，必须**坚持使用现在的拆分
+数据结构**，禁止把 xy 渲染再合并回 inspect_stat.py。
+
+```
+scripts/dev3/
+  inspect_stat.py                         # 仅做 distribution + 4 次薄调用编排
+  env_specific_extraction/
+    xy_common.py                          # 共享：dataclass / 发现 / 去重 / panel 绘制 / _render_xy_env
+    counting_inspect.py                   # BinFill / PickXtimes / SwingXtimes / StopCube
+    permanance_inspect.py                 # VideoUnmask / VideoUnmaskSwap / ButtonUnmask / ButtonUnmaskSwap
+    reference_inspect.py                  # PickHighlight / VideoRepick / VideoPlaceButton / VideoPlaceOrder
+    imitation_inspect.py                  # MoveCube / InsertPeg / PatternLock / RouteStick
+    permanence.py                         # permanence sidecar 读写（被 permanance_inspect 消费）
+```
+
+每个 suite 模块对外只暴露一个 `visualize(...)` 函数，返回
+`(kept_visible_files, skipped_visible_files)`。inspect_stat.py 在 `main()` 里**必须
+按下面的形态分别调用 4 次薄调用**，不要折叠成循环或单一统一调用，也不要把任一
+visualize() 的逻辑下沉回 inspect_stat：
+
+```python
+# Pipeline 1: pre-discover + dedup HDF5, then run distribution
+kept_h5, skipped_h5, _, difficulty_map = _run_distribution_pipeline(
+    hdf5_dir,
+    task_goal_dir,
+    args.env,
+)
+
+# Pipeline 2: xy 编排 — 4 个 suite 各自一次薄调用，渲染 visible_objects 散点图
+kept_count, skipped_count = counting_inspect_module.visualize(
+    segmentation_dir=segmentation_dir,
+    output_dir=xy_dir,
+    env_id=args.env,
+    difficulty_by_env_episode=difficulty_map,
+)
+
+kept_perm, skipped_perm = permanance_inspect_module.visualize(
+    segmentation_dir=segmentation_dir,
+    output_dir=inspect_dir / "permanance_inspect",
+    env_id=args.env,
+)
+
+kept_ref, skipped_ref = reference_inspect_module.visualize(
+    segmentation_dir=segmentation_dir,
+    output_dir=xy_dir,
+    env_id=args.env,
+    difficulty_by_env_episode=difficulty_map,
+    snapshot_dir=snapshot_dir,
+)
+
+kept_imit, skipped_imit = imitation_inspect_module.visualize(
+    segmentation_dir=segmentation_dir,
+    output_dir=xy_dir,
+    env_id=args.env,
+    difficulty_by_env_episode=difficulty_map,
+)
+```
+
+### 改动 xy 渲染时的落点决策
+
+新增 / 调整渲染时，永远先问“哪个 suite 的 env？”，再确定改动落点：
+
+- **某个 env 的 panel 组合 / 颜色 / 文案**：改对应的 `<suite>_inspect.py`
+  （或 panel 行为本身在 `xy_common._panel_specs_for_env` / `_plot_panel`
+  里按 env_id dispatch）。
+- **跨 suite 共享的渲染原语 / dataclass / 去重 / 发现**：改 `xy_common.py`，
+  保持 4 个 suite 模块都从这里 import。
+- **suite 整体的 figure 布局**（例如 permanence 的 2 行布局）：改对应的
+  `<suite>_inspect.py`，不要污染 xy_common。
+- **distribution（task-goal CSV / 分布 PNG）**：改 inspect_stat.py 内部的 parsing /
+  `_figure_specs_for_env` / `_render_env_figure`；这部分**不**要拆到 suite 模块里。
+- **永远不要**让 suite 模块去 import inspect_stat，也不要再把 xy 渲染逻辑搬回
+  inspect_stat.py。
+
+### 端到端验证规约
+
+任何对上述 5 个文件的改动都必须用真实数据集回归（默认是
+`runs/replay_videos`）：
+
+```bash
+# 1) 备份基线
+uv run python scripts/dev3/inspect_stat.py
+cp -r runs/replay_videos/inspect-stat /tmp/inspect-stat.baseline
+
+# 2) 应用改动 → 重跑
+rm -rf runs/replay_videos/inspect-stat
+uv run python scripts/dev3/inspect_stat.py
+
+# 3) byte-diff（PNG + CSV 必须完全一致，除非本次改动确实意在改变像素）
+diff -r --brief /tmp/inspect-stat.baseline runs/replay_videos/inspect-stat
+```
+
+PNG 比对必须用 `diff --brief` / `md5sum`，不要只看文件大小。matplotlib 在固定
+backend (`Agg`) + 固定 dpi + 同一份输入下是 deterministic 的；任何 byte-level
+diff 都说明数据流确实变了，不要忽略。
+
+每个 suite 模块也支持独立 CLI：
+
+```bash
+uv run python scripts/dev3/env_specific_extraction/counting_inspect.py
+uv run python scripts/dev3/env_specific_extraction/permanance_inspect.py
+uv run python scripts/dev3/env_specific_extraction/reference_inspect.py
+uv run python scripts/dev3/env_specific_extraction/imitation_inspect.py
+```
+
+注意：`reference_inspect.py` 单独运行时没有 HDF5 来源的 difficulty 映射，所以
+VideoRepick 的 easy_medium / hard 拆分会跳过；要看完整 VideoRepick 输出请走
+`inspect_stat.py` 的 4-call 编排路径。
+
+---
+
 ## Challenge Interface (CVPR 2026)
 
 ```bash
