@@ -1281,22 +1281,22 @@ def _build_parser() -> argparse.ArgumentParser:
         "-e",
         nargs="+",
         default=[
-        # "PickXtimes",
-        # "StopCube",
-        # "SwingXtimes",
-        # "BinFill",
-        # "VideoUnmaskSwap",
-        # "VideoUnmask",
-        # "ButtonUnmaskSwap",
-        #"ButtonUnmask",
-         #"VideoRepick",
+        "PickXtimes",
+        "StopCube",
+        "SwingXtimes",
+        "BinFill",
+        "VideoUnmaskSwap",
+        "VideoUnmask",
+        "ButtonUnmaskSwap",
+        "ButtonUnmask",
+         "VideoRepick",
         "VideoPlaceButton",
-        # "VideoPlaceOrder",
-        # "PickHighlight",
-        # "InsertPeg",
-        # "MoveCube",
-        # "PatternLock",
-        # "RouteStick",
+        "VideoPlaceOrder",
+        "PickHighlight",
+        "InsertPeg",
+        "MoveCube",
+        "PatternLock",
+        "RouteStick",
 ],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
@@ -1305,7 +1305,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=50,
+        default=3,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -1316,7 +1316,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--difficulty",
         type=parse_difficulty_ratio,
-        default=[0, 0, 1],
+        default=[1, 1, 1],
         help=(
             "Episode difficulty ratio in easy:medium:hard order, such as "
             "'2:1:1' or '211'. Parsed into a list like [2, 1, 1]. "

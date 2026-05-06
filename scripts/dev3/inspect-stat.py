@@ -31,7 +31,7 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import h5py
 import numpy as np
 
-DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos")
+DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
 DEFAULT_HDF5_DIR = DEFAULT_BASE_DIR / "hdf5_files"
 DEFAULT_SEGMENTATION_DIR = DEFAULT_BASE_DIR / "reset_segmentation_pngs"
 DEFAULT_OUTPUT_DIR = DEFAULT_BASE_DIR / "inspect-stat"
