@@ -2453,6 +2453,24 @@ def _run_xy_pipeline(
     overall_counts: Counter[str] = Counter()
     for env_id in sorted(points_by_env):
         points = points_by_env[env_id]
+        # Permanence env 的 xy PNG 由 Pipeline 3（permanance_inspect.visualize）
+        # 接管渲染（生成 2 行布局：上行 visible-objects、下行 cubes+swaps）。
+        # 这里仍累计统计，保证 [Total] 行与 dedup 报告完整。
+        if env_id in BIN_PANEL_ENVS:
+            counts = _category_counts(points)
+            total_points += len(points)
+            overall_counts.update(counts)
+            print(
+                f"  {env_id}: episodes={episode_counts.get(env_id, 0)} "
+                f"points={len(points)} cube={counts.get('cube', 0)} "
+                f"button={counts.get('button', 0)} peg={counts.get('peg', 0)} "
+                f"bin={counts.get('bin', 0)} goal_site={counts.get('goal_site', 0)} "
+                f"box_with_hole={counts.get('box_with_hole', 0)} "
+                f"target={counts.get('target', 0)} other={counts.get('other', 0)} "
+                f"(xy figure deferred to Pipeline 3)"
+            )
+            continue
+
         counts = _render_xy_env(
             output_dir,
             env_id,
