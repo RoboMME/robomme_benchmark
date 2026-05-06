@@ -184,8 +184,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEV_SCRIPT_DIR = SCRIPT_DIR.parent / "dev"
 if str(DEV_SCRIPT_DIR) not in sys.path:
     sys.path.append(str(DEV_SCRIPT_DIR))
+# permanence.py 与本脚本同目录；spawn 子进程不会自动把脚本目录加入 sys.path，显式加入保证可 import
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.append(str(SCRIPT_DIR))
 
 import snapshot as snapshot_utils  # scripts/dev/snapshot.py — needs DEV_SCRIPT_DIR in sys.path
+from permanence import write_permanence_init_state  # scripts/dev3/permanence.py
 
 from pickhighlight_setup_metadata import (
     PICKHIGHLIGHT_ENV_ID,
@@ -1552,6 +1556,17 @@ def _run_episode(
             episode=episode,
             seed=seed,
         )
+        # Permanence 套件 (Button*Unmask* / Video*Unmask*) 额外写入 cube/swap init 状态
+        # 给非 Permanence env 是 no-op（write_permanence_init_state 内部判定后返回 None）
+        permanence_path = write_permanence_init_state(
+            env=env,
+            env_id=env_id,
+            episode_idx=episode,
+            seed=seed,
+            reset_output_dir=reset_output_dir,
+        )
+        if permanence_path is not None:
+            print(f"[Setup] Permanence init state JSON saved: {permanence_path.resolve()}")
     except Exception as exc:
         print(
             f"[{mode_tag}] Failed to save reset artifacts for env={env_id} "

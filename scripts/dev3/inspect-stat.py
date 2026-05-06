@@ -31,6 +31,13 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import h5py
 import numpy as np
 
+# permanence.py 与本脚本同目录；显式加入 sys.path 保证 module import
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+import permanence as permanence_module  # scripts/dev3/permanence.py
+
 DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
 DEFAULT_HDF5_DIR = DEFAULT_BASE_DIR / "hdf5_files"
 DEFAULT_SEGMENTATION_DIR = DEFAULT_BASE_DIR / "reset_segmentation_pngs"
@@ -2510,12 +2517,20 @@ def main() -> None:
         snapshot_dir=snapshot_dir,
     )
 
+    # Pipeline 3: Permanence 套件专用 — cube 位置图 + swap 对象图（独立成两张）
+    kept_perm, skipped_perm = permanence_module.run_permanence_pipeline(
+        segmentation_dir=segmentation_dir,
+        output_dir=inspect_dir,
+        env_filter=args.env,
+    )
+
     # Report seed-dedup results (consolidated for both pipelines)
     _print_skipped_seed_block(skipped_h5, skipped_json)
 
     print(
         f"[Done] kept_hdf5={len(kept_h5)} skipped_hdf5={len(skipped_h5)} "
-        f"kept_json={len(kept_json)} skipped_json={len(skipped_json)}"
+        f"kept_json={len(kept_json)} skipped_json={len(skipped_json)} "
+        f"kept_permanence={len(kept_perm)} skipped_permanence={len(skipped_perm)}"
     )
 
 
