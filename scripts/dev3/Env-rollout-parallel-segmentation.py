@@ -617,42 +617,6 @@ def _save_visible_objects_json(
 # 落盘时机为 episode 关闭后，对 legacy hook 写出的 JSON 做一次显式后处理。
 SNAPSHOT_DIRNAME = "snapshots"
 AFTER_NO_RECORD_RESET_SUFFIX = "after_no_record_reset"
-_VIDEOREPICK_CUBE_COLORS = ("red", "green", "blue")
-
-
-def _videorepick_color_from_name(name: str | None) -> str | None:
-    """从 cube_<color>_<idx> 风格的 actor name 解析颜色，未知返回 None。"""
-    if not isinstance(name, str):
-        return None
-    lower = name.lower()
-    for color in _VIDEOREPICK_CUBE_COLORS:
-        if color in lower:
-            return color
-    return None
-
-
-def _extract_videorepick_pickup_cube(env) -> dict | None:
-    """从 VideoRepick env 提取 pickup cube 的 name / color / position_xyz。
-
-    缺 target_cube_1 或位置不可解析时返回 None，由调用方决定是否警告。
-    """
-    base_env = getattr(env, "unwrapped", None)
-    if base_env is None:
-        return None
-    target_cube = getattr(base_env, "target_cube_1", None)
-    if target_cube is None:
-        return None
-    pos_arr = extract_actor_position_xyz(target_cube)
-    if pos_arr is None:
-        return None
-    name = getattr(target_cube, "name", None)
-    return {
-        "name": name,
-        "color": _videorepick_color_from_name(name),
-        "position_xyz": [float(pos_arr[0]), float(pos_arr[1]), float(pos_arr[2])],
-    }
-
-
 def _after_no_record_reset_snapshot_path(
     output_root: Path, env_id: str, episode: int, seed: int
 ) -> Path:
@@ -662,37 +626,6 @@ def _after_no_record_reset_snapshot_path(
         / SNAPSHOT_DIRNAME
         / f"{env_id}_ep{episode}_seed{seed}_{AFTER_NO_RECORD_RESET_SUFFIX}.json"
     )
-
-
-def _ensure_solve_pickup_cubes_in_snapshot(
-    snapshot_path: Path, pickup_payload: dict
-) -> None:
-    """在 snapshot JSON 中显式写入 / 覆盖 solve_pickup_cubes 字段。
-
-    与 _save_visible_objects_json 风格一致（indent=2, ensure_ascii=True）。
-    文件不存在或 JSON 解析失败时直接抛错（遵循仓库 No silent fallbacks 规范）。
-    """
-    if not snapshot_path.is_file():
-        raise FileNotFoundError(
-            f"snapshot file not found for solve_pickup_cubes update: {snapshot_path}"
-        )
-    with snapshot_path.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
-    if not isinstance(payload, dict):
-        raise ValueError(
-            f"snapshot payload is not a dict: {snapshot_path} type={type(payload).__name__}"
-        )
-    payload["solve_pickup_cubes"] = [
-        {
-            "pickup_order": 1,
-            "name": pickup_payload.get("name"),
-            "color": pickup_payload.get("color"),
-            "position_xyz": list(pickup_payload.get("position_xyz", [])),
-        }
-    ]
-    with snapshot_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2, ensure_ascii=True)
-        handle.write("\n")
 
 
 def _set_equal_xy_axes(ax, points_xyz: np.ndarray) -> None:
@@ -1632,18 +1565,6 @@ def _run_episode(
 
     record["artifacts"] = "success"
 
-    # 在 env 关闭前缓存 VideoRepick pickup cube 信息（target_cube_1 的 name + xyz）。
-    # close 之后会丢失对 SAPIEN actor 的访问，所以必须在此处读出。
-    videorepick_pickup_cache: dict | None = None
-    if env_id == VIDEOREPICK_ENV_ID:
-        videorepick_pickup_cache = _extract_videorepick_pickup_cube(env)
-        if videorepick_pickup_cache is None:
-            print(
-                f"[{mode_tag}] WARNING: target_cube_1 unavailable for VideoRepick "
-                f"episode={episode} seed={seed}; solve_pickup_cubes will not be "
-                "post-processed."
-            )
-
     # ── 分支 A：setup-only 模式 ───────────────────────────────────────────
     # 目标：只写 setup 元数据到 HDF5，不执行 planner，不保存轨迹
     if skip_execute:
@@ -1757,29 +1678,6 @@ def _run_episode(
         )
         _emit(success=False, retryable=False)
         return False, False
-
-    # 后处理：把 reset 阶段缓存的 VideoRepick pickup cube 写入 snapshot JSON。
-    # legacy snapshot hook 已在 step 内写出 JSON；这里在 dev3 自己的代码里显式
-    # 覆盖 solve_pickup_cubes，确保字段始终来自 dev3 的提取逻辑。
-    if videorepick_pickup_cache is not None:
-        snapshot_path = _after_no_record_reset_snapshot_path(
-            output_dir, env_id, episode, seed
-        )
-        try:
-            _ensure_solve_pickup_cubes_in_snapshot(snapshot_path, videorepick_pickup_cache)
-        except (FileNotFoundError, ValueError, OSError, json.JSONDecodeError) as exc:
-            msg = (
-                f"snapshot solve_pickup_cubes update failed: "
-                f"{type(exc).__name__}: {exc}"
-            )
-            print(
-                f"[rollout] {msg} for env={env_id} episode={episode} seed={seed} "
-                f"(path={snapshot_path})",
-                file=sys.stderr,
-            )
-            record["snapshot_postprocess_error"] = msg
-            _emit(success=False, retryable=False)
-            return False, False
 
     mp4_path = _latest_recorded_mp4(output_dir, env_id, episode, seed)
     status_text = "SUCCESS" if episode_successful else "FAILED"
