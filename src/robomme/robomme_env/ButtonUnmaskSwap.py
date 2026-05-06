@@ -191,7 +191,13 @@ class ButtonUnmaskSwap(BaseEnv):
     def _load_scene(self, options: dict):
         generator = torch.Generator()
         generator.manual_seed(self.seed)
-    
+
+        pickup_generator = torch.Generator()
+        pickup_generator.manual_seed(self.seed * 2654435761 + 1)
+
+        swap_generator = torch.Generator()
+        swap_generator.manual_seed(self.seed * 2654435761 + 2)
+
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
@@ -310,7 +316,7 @@ class ButtonUnmaskSwap(BaseEnv):
         # Randomly select up to 3 bins from the full spawned-bin set to spawn cubes.
         num_bins_to_select = min(3, len(self.spawned_bins))
         selected_bin_indices = torch.randperm(
-            len(self.spawned_bins), generator=generator
+            len(self.spawned_bins), generator=pickup_generator
         )[:num_bins_to_select].tolist()
         selected_bins = [self.spawned_bins[idx] for idx in selected_bin_indices]
         self.selected_bin_indices = selected_bin_indices
@@ -405,7 +411,7 @@ class ButtonUnmaskSwap(BaseEnv):
             setattr(self, f"swap_pair{pair_idx}_idx2", None)
 
         for pair_idx in range(self.swap_times):
-            swap_indices = torch.randperm(len(self.spawned_bins), generator=generator)[:2]
+            swap_indices = torch.randperm(len(self.spawned_bins), generator=swap_generator)[:2]
             setattr(
                 self,
                 f"swap_pair{pair_idx + 1}_idx1",
