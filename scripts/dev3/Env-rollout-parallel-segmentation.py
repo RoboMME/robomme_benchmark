@@ -184,12 +184,14 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DEV_SCRIPT_DIR = SCRIPT_DIR.parent / "dev"
 if str(DEV_SCRIPT_DIR) not in sys.path:
     sys.path.append(str(DEV_SCRIPT_DIR))
-# permanence.py 与本脚本同目录；spawn 子进程不会自动把脚本目录加入 sys.path，显式加入保证可 import
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.append(str(SCRIPT_DIR))
+# permanence.py 已被移到 scripts/dev3/env-specific-extraction/；spawn 子进程不会自动
+# 把脚本目录加入 sys.path，显式加入保证可 import
+PERMANENCE_DIR = SCRIPT_DIR / "env-specific-extraction"
+if str(PERMANENCE_DIR) not in sys.path:
+    sys.path.append(str(PERMANENCE_DIR))
 
 import snapshot as snapshot_utils  # scripts/dev/snapshot.py — needs DEV_SCRIPT_DIR in sys.path
-from permanence import write_permanence_init_state  # scripts/dev3/permanence.py
+from permanence import write_permanence_init_state  # scripts/dev3/env-specific-extraction/permanence.py
 
 from pickhighlight_setup_metadata import (
     PICKHIGHLIGHT_ENV_ID,
@@ -1218,22 +1220,22 @@ def _build_parser() -> argparse.ArgumentParser:
         "-e",
         nargs="+",
         default=[
-        "PickXtimes",
-        "StopCube",
-        "SwingXtimes",
-        "BinFill",
+        # "PickXtimes",
+        # "StopCube",
+        # "SwingXtimes",
+        # "BinFill",
         "VideoUnmaskSwap",
         "VideoUnmask",
         "ButtonUnmaskSwap",
         "ButtonUnmask",
-         "VideoRepick",
-        "VideoPlaceButton",
-        "VideoPlaceOrder",
-        "PickHighlight",
-        "InsertPeg",
-        "MoveCube",
-        "PatternLock",
-        "RouteStick",
+        #  "VideoRepick",
+        # "VideoPlaceButton",
+        # "VideoPlaceOrder",
+        # "PickHighlight",
+        # "InsertPeg",
+        # "MoveCube",
+        # "PatternLock",
+        # "RouteStick",
 ],
         choices=sorted(VALID_ENVS),
         metavar="ENV",
@@ -1242,7 +1244,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=3,
+        default=90,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "

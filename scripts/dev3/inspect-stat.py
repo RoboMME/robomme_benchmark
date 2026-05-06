@@ -31,12 +31,14 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import h5py
 import numpy as np
 
-# permanence.py 与本脚本同目录；显式加入 sys.path 保证 module import
+# permanence.py 已被移到 scripts/dev3/env-specific-extraction/，目录名带连字符无法
+# 当作 package import，所以仍走 sys.path 注入 + 顶层 module import。
 _SCRIPT_DIR = Path(__file__).resolve().parent
-if str(_SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPT_DIR))
+_PERMANENCE_DIR = _SCRIPT_DIR / "env-specific-extraction"
+if str(_PERMANENCE_DIR) not in sys.path:
+    sys.path.insert(0, str(_PERMANENCE_DIR))
 
-import permanence as permanence_module  # scripts/dev3/permanence.py
+import permanence as permanence_module  # scripts/dev3/env-specific-extraction/permanence.py
 
 DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
 DEFAULT_HDF5_DIR = DEFAULT_BASE_DIR / "hdf5_files"
@@ -2012,6 +2014,193 @@ def _plot_target_objects(
     _prepare_axis(ax, _target_panel_title(env_id), len(target_points))
 
 
+# ---------------------------------------------------------------------------
+# Permanence env 专属 panel（数据来自 permanence_init_state.json sidecar）
+# ---------------------------------------------------------------------------
+
+_PERMANENCE_DIFFICULTY_MARKERS = {"easy": "o", "medium": "s", "hard": "^"}
+_PERMANENCE_SWAP_INDEX_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"]
+
+
+def _plot_permanence_cubes_objects(
+    ax,
+    env_id: str,
+    permanence_files: Optional[list],
+) -> None:
+    """渲染 cube reset 位置散点：颜色按 cube 颜色、marker 按 difficulty，
+    并用细线把 cube 连到对应的 bin。无数据时显示 'No cube data'。"""
+    from matplotlib.lines import Line2D
+
+    files = list(permanence_files or [])
+    plotted = 0
+    seen_difficulties: set[str] = set()
+    seen_colors: set[str] = set()
+
+    for entry in files:
+        difficulty = str(entry.payload.get("difficulty", ""))
+        marker = _PERMANENCE_DIFFICULTY_MARKERS.get(difficulty, "x")
+        seen_difficulties.add(difficulty)
+
+        for cube in entry.payload.get("cubes", []):
+            color_name = cube.get("color_name", "unknown")
+            seen_colors.add(color_name)
+            color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
+            pos = cube.get("position_xy") or [0.0, 0.0]
+            bin_pos = cube.get("bin_position_xy") or pos
+            x, y = _xy_rot_cw_90(float(pos[0]), float(pos[1]))
+            bx, by = _xy_rot_cw_90(float(bin_pos[0]), float(bin_pos[1]))
+            ax.plot([x, bx], [y, by], color=color, alpha=0.25, linewidth=0.8)
+            ax.scatter(
+                x,
+                y,
+                s=70,
+                alpha=0.85,
+                c=color,
+                marker=marker,
+                edgecolors="black",
+                linewidths=0.5,
+            )
+            bin_idx = cube.get("bin_index")
+            if bin_idx is not None:
+                ax.text(
+                    x + 0.005,
+                    y + 0.005,
+                    f"ep{entry.episode}/b{bin_idx}",
+                    fontsize=6,
+                    alpha=0.6,
+                )
+            plotted += 1
+
+    if plotted:
+        legend_handles: list[Line2D] = []
+        for color_name in sorted(seen_colors):
+            color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
+            legend_handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    linestyle="",
+                    markersize=8,
+                    markerfacecolor=color,
+                    markeredgecolor="black",
+                    label=f"cube_{color_name}",
+                )
+            )
+        for diff in sorted(seen_difficulties):
+            marker = _PERMANENCE_DIFFICULTY_MARKERS.get(diff, "x")
+            legend_handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker=marker,
+                    linestyle="",
+                    markersize=8,
+                    markerfacecolor="white",
+                    markeredgecolor="black",
+                    label=f"difficulty: {diff or 'unknown'}",
+                )
+            )
+        ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
+    else:
+        ax.text(0.0, 0.0, "No cube data", ha="center", va="center")
+
+    _prepare_axis(ax, "Permanence cubes (Rotated XY)", plotted)
+
+
+def _plot_permanence_swaps_objects(
+    ax,
+    env_id: str,
+    permanence_files: Optional[list],
+) -> None:
+    """渲染 swap pair 双向箭头：每对 (bin_a, bin_b) 按 swap_index 着色，
+    bin 全集画成淡灰色背景点。非 Swap env 或无 swap_pairs 时显示
+    'No swap data'。"""
+    from matplotlib.lines import Line2D
+
+    files = list(permanence_files or [])
+    is_swap_env = env_id in permanence_module.SWAP_ENV_IDS
+
+    pair_count = 0
+    seen_swap_indices: set[int] = set()
+
+    if is_swap_env:
+        for entry in files:
+            for bin_info in entry.payload.get("bins", []):
+                pos = bin_info.get("position_xy") or [0.0, 0.0]
+                bx, by = _xy_rot_cw_90(float(pos[0]), float(pos[1]))
+                ax.scatter(bx, by, s=20, color="lightgray", alpha=0.4, zorder=1)
+
+            for pair in entry.payload.get("swap_pairs", []):
+                swap_idx = int(pair.get("swap_index", 0))
+                seen_swap_indices.add(swap_idx)
+                color = _PERMANENCE_SWAP_INDEX_COLORS[
+                    swap_idx % len(_PERMANENCE_SWAP_INDEX_COLORS)
+                ]
+                a_xy = pair.get("bin_a_position_xy") or [0.0, 0.0]
+                b_xy = pair.get("bin_b_position_xy") or [0.0, 0.0]
+                ax_x, ax_y = _xy_rot_cw_90(float(a_xy[0]), float(a_xy[1]))
+                bx_x, bx_y = _xy_rot_cw_90(float(b_xy[0]), float(b_xy[1]))
+
+                ax.annotate(
+                    "",
+                    xy=(bx_x, bx_y),
+                    xytext=(ax_x, ax_y),
+                    arrowprops=dict(
+                        arrowstyle="<->",
+                        color=color,
+                        lw=1.4,
+                        alpha=0.7,
+                        shrinkA=4,
+                        shrinkB=4,
+                    ),
+                    zorder=3,
+                )
+                ax.scatter(
+                    [ax_x, bx_x],
+                    [ax_y, bx_y],
+                    s=60,
+                    c=color,
+                    edgecolors="black",
+                    linewidths=0.5,
+                    alpha=0.9,
+                    zorder=4,
+                )
+                mid_x = (ax_x + bx_x) / 2
+                mid_y = (ax_y + bx_y) / 2
+                ax.text(
+                    mid_x,
+                    mid_y,
+                    f"ep{entry.episode}#s{swap_idx}",
+                    fontsize=6,
+                    alpha=0.7,
+                )
+                pair_count += 1
+
+    if pair_count:
+        legend_handles: list[Line2D] = []
+        for swap_idx in sorted(seen_swap_indices):
+            color = _PERMANENCE_SWAP_INDEX_COLORS[
+                swap_idx % len(_PERMANENCE_SWAP_INDEX_COLORS)
+            ]
+            legend_handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    linestyle="-",
+                    color=color,
+                    markersize=8,
+                    label=f"swap #{swap_idx}",
+                )
+            )
+        ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
+    else:
+        ax.text(0.0, 0.0, "No swap data", ha="center", va="center")
+
+    _prepare_axis(ax, "Permanence swaps (Rotated XY)", pair_count)
+
+
 def _category_counts(points: Iterable[VisibleObjectPoint]) -> Counter:
     counts: Counter[str] = Counter()
     for point in points:
@@ -2029,7 +2218,11 @@ def _panel_specs_for_env(env_id: str) -> tuple[str, ...]:
     if env_id == MOVECUBE_ENV_ID:
         return ("all", "peg", "goal_site", "cube")
     if env_id in BIN_PANEL_ENVS:
-        return ("all", "cube", "button", "bin")
+        base = ("all", "cube", "button", "bin")
+        # Permanence 套件：右侧追加 cube reset 散点 + swap pair 连线两个 panel
+        if env_id in permanence_module.PERMANENCE_ENV_IDS:
+            return base + ("permanence_cubes", "permanence_swaps")
+        return base
     return ("all", "cube", "button", "target")
 
 
@@ -2077,6 +2270,7 @@ def _plot_panel(
     env_id: str,
     points: list[VisibleObjectPoint],
     pickup_records: Optional[list[_PickupCubeRecord]] = None,
+    permanence_files: Optional[list] = None,
 ) -> None:
     if panel_key == "all":
         _plot_all_objects(ax, points)
@@ -2106,6 +2300,12 @@ def _plot_panel(
             return
         _plot_target_objects(ax, env_id, points)
         return
+    if panel_key == "permanence_cubes":
+        _plot_permanence_cubes_objects(ax, env_id, permanence_files)
+        return
+    if panel_key == "permanence_swaps":
+        _plot_permanence_swaps_objects(ax, env_id, permanence_files)
+        return
     raise ValueError(f"Unsupported panel key: {panel_key}")
 
 
@@ -2118,6 +2318,7 @@ def _render_collage(
     output_filename: str,
     plt,
     pickup_records: Optional[list[_PickupCubeRecord]] = None,
+    permanence_files: Optional[list] = None,
 ) -> Path:
     panel_specs = _panel_specs_for_env(env_id)
     fig, axes = plt.subplots(
@@ -2134,7 +2335,14 @@ def _render_collage(
     fig.suptitle(title, fontsize=18)
 
     for ax, panel_key in zip(axes, panel_specs):
-        _plot_panel(ax, panel_key, env_id, points, pickup_records=pickup_records)
+        _plot_panel(
+            ax,
+            panel_key,
+            env_id,
+            points,
+            pickup_records=pickup_records,
+            permanence_files=permanence_files,
+        )
 
     return _save_combined_figure(fig, output_dir / output_filename, plt)
 
@@ -2146,6 +2354,7 @@ def _render_xy_env(
     episode_count: int,
     plt,
     pickup_records: Optional[list[_PickupCubeRecord]] = None,
+    permanence_files: Optional[list] = None,
 ) -> Counter:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -2187,6 +2396,7 @@ def _render_xy_env(
             None,
             f"{env_id}{XY_DEFAULT_PNG_SUFFIX}",
             plt,
+            permanence_files=permanence_files,
         )
         print(f"[XY] {env_id}: -> {output_path}")
 
@@ -2439,6 +2649,23 @@ def _run_xy_pipeline(
             "VideoRepick pickup overlay will be skipped."
         )
 
+    # 加载 Permanence 套件 sidecar（只用于 xy collage 右侧追加的 2 个 panel；
+    # Pipeline 3 仍会独立扫描一次以生成 permanence/<env>_*.png，此处的成本可忽略）。
+    permanence_by_env: dict[str, list] = {}
+    permanence_entries = permanence_module.discover_permanence_files(
+        segmentation_dir, env_filter=env_filter
+    )
+    if permanence_entries:
+        kept_perm, _ = permanence_module.dedup_permanence_files(permanence_entries)
+        for entry in kept_perm:
+            permanence_by_env.setdefault(entry.env_id, []).append(entry)
+        for bucket in permanence_by_env.values():
+            bucket.sort(key=lambda e: e.episode)
+        print(
+            f"  Permanence:       {len(kept_perm)} sidecar(s) loaded "
+            f"across {len(permanence_by_env)} env(s)"
+        )
+
     plt = _get_pyplot(show=False)
 
     total_points = 0
@@ -2452,6 +2679,7 @@ def _run_xy_pipeline(
             episode_counts.get(env_id, 0),
             plt,
             pickup_records=pickup_by_env.get(env_id),
+            permanence_files=permanence_by_env.get(env_id),
         )
         total_points += len(points)
         overall_counts.update(counts)
