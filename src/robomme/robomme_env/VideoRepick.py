@@ -67,6 +67,7 @@ class VideoRepick(BaseEnv):
     _REPEAT_COUNT_SEED_OFFSET = 100_003
     _SWAP_COUNT_SEED_OFFSET = 200_003
     _MONOCHROME_COLOR_SEED_OFFSET = 300_003
+    _HARD_CUBE_COUNT_SEED_OFFSET = 400_003
     config_easy = {
         "cube":3,
         "swap_min":1,
@@ -167,6 +168,12 @@ class VideoRepick(BaseEnv):
         ).item()
         logger.debug(f"Task will swap {self.swap_times} times")
 
+        hard_count_generator = self._make_generator(self._HARD_CUBE_COUNT_SEED_OFFSET)
+        if self.difficulty == "hard":
+            self.hard_cube_counts = torch.randint(3, 5, (3,), generator=hard_count_generator).tolist()
+            logger.debug(f"Hard mode cube counts per color: {self.hard_cube_counts}")
+        else:
+            self.hard_cube_counts = None
 
         self.static_flag=False
         self.start_step=99999
@@ -228,10 +235,9 @@ class VideoRepick(BaseEnv):
                 self.spawned_cubes = []
                 hard_cubes_by_color = {group["name"]: [] for group in options}
 
-                for idx in range(4):
-                    shuffle_indices = torch.randperm(len(options), generator=self.generator).tolist()
-                    new_options = [options[i] for i in shuffle_indices]
-                    for group in new_options:
+                for color_idx, group in enumerate(options):
+                    count = self.hard_cube_counts[color_idx]  # 3 or 4, decided by independent generator
+                    for i in range(count):
                         try:
                             cube = spawn_random_cube(
                                 self,
@@ -244,12 +250,12 @@ class VideoRepick(BaseEnv):
                                 half_size=self.cube_half_size,
                                 min_gap=self.cube_half_size,
                                 random_yaw=True,
-                                name_prefix=f"cube_{group['name']}_{idx}",
+                                name_prefix=f"cube_{group['name']}_{i}",
                                 generator=self.generator,
                             )
                         except RuntimeError as e:
                             raise SceneGenerationError(
-                                f"Failed to generate {group['name']} cube {idx}"
+                                f"Failed to generate {group['name']} cube {i}"
                             ) from e
 
                         self.spawned_cubes.append(cube)
