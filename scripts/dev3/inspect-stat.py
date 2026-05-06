@@ -31,7 +31,7 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 import h5py
 import numpy as np
 
-DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
+DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos")
 DEFAULT_HDF5_DIR = DEFAULT_BASE_DIR / "hdf5_files"
 DEFAULT_SEGMENTATION_DIR = DEFAULT_BASE_DIR / "reset_segmentation_pngs"
 DEFAULT_OUTPUT_DIR = DEFAULT_BASE_DIR / "inspect-stat"
@@ -140,6 +140,13 @@ SPLIT_H5_PATTERN = re.compile(
 VISIBLE_OBJECT_JSON_FILENAME = "visible_objects.json"
 XY_LIMIT = 0.3
 AGGREGATE_DPI = 300
+
+# snapshot 后处理：用于在 VideoRepick xy_hard 最右侧子图绘制 pickup cube。
+# 文件命名约定：snapshots/<env_id>_ep<episode>_seed<seed>_after_no_record_reset.json
+SNAPSHOT_DIRNAME = "snapshots"
+PICKUP_SNAPSHOT_FILENAME_PATTERN = re.compile(
+    r"^(?P<env_id>.+?)_ep(?P<episode>\d+)_seed(?P<seed>\d+)_after_no_record_reset\.json$"
+)
 
 XY_DEFAULT_PNG_SUFFIX = "_xy.png"
 VIDEOREPICK_EASY_MEDIUM_SUFFIX = "_xy_easy_medium.png"
@@ -1258,6 +1265,19 @@ class _VisibleObjectsFile:
     objects: list[dict]
 
 
+@dataclass(frozen=True)
+class _PickupCubeRecord:
+    env_id: str
+    episode: int
+    seed: int
+    difficulty: Optional[str]
+    name: str
+    color: str
+    world_x: float
+    world_y: float
+    world_z: float
+
+
 def _safe_float_triplet(value: object) -> Optional[tuple[float, float, float]]:
     try:
         arr = np.asarray(value, dtype=np.float64).reshape(-1)
@@ -1363,6 +1383,99 @@ def _discover_visible_object_files(input_dir: Path) -> list[_VisibleObjectsFile]
             )
         )
     return files
+
+
+def _discover_pickup_snapshot_records(
+    snapshot_dir: Path,
+    env_filter: Optional[str],
+    difficulty_by_env_episode: dict[tuple[str, int], str],
+) -> list[_PickupCubeRecord]:
+    """扫描 snapshot 目录，按 episode/seed 加载 solve_pickup_cubes 的第一条记录。
+
+    遵循 No silent fallbacks：异常文件用 [Warn] 打印并跳过，不静默吞掉。
+    后续由 _dedup_pickup_records 做 max-seed-per-episode 去重，与 visible_objects 一致。
+    """
+    if not snapshot_dir.is_dir():
+        return []
+
+    records: list[_PickupCubeRecord] = []
+    for json_path in sorted(snapshot_dir.glob("*.json")):
+        match = PICKUP_SNAPSHOT_FILENAME_PATTERN.match(json_path.name)
+        if match is None:
+            continue
+        env_id = match.group("env_id")
+        if env_filter is not None and env_id != env_filter:
+            continue
+        try:
+            episode = int(match.group("episode"))
+            seed = int(match.group("seed"))
+        except ValueError:
+            print(f"[Warn] Skip snapshot with non-integer episode/seed: {json_path}")
+            continue
+
+        try:
+            with json_path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"[Warn] Skip invalid snapshot JSON {json_path}: {type(exc).__name__}: {exc}")
+            continue
+
+        solve_entries = payload.get("solve_pickup_cubes")
+        if not isinstance(solve_entries, list) or not solve_entries:
+            print(f"[Warn] Skip snapshot without solve_pickup_cubes entries: {json_path}")
+            continue
+
+        first = solve_entries[0]
+        if not isinstance(first, dict):
+            print(f"[Warn] Skip snapshot with malformed solve_pickup_cubes[0]: {json_path}")
+            continue
+
+        world_xyz = _safe_float_triplet(first.get("position_xyz"))
+        if world_xyz is None:
+            print(f"[Warn] Skip snapshot with malformed position_xyz: {json_path}")
+            continue
+
+        name = first.get("name") or ""
+        if not isinstance(name, str):
+            name = ""
+        color_field = first.get("color")
+        color = (
+            color_field
+            if isinstance(color_field, str) and color_field
+            else _cube_color(name)
+        )
+
+        difficulty = difficulty_by_env_episode.get((env_id, episode))
+
+        records.append(
+            _PickupCubeRecord(
+                env_id=env_id,
+                episode=episode,
+                seed=seed,
+                difficulty=difficulty,
+                name=name,
+                color=color,
+                world_x=world_xyz[0],
+                world_y=world_xyz[1],
+                world_z=world_xyz[2],
+            )
+        )
+    return records
+
+
+def _dedup_pickup_records(
+    records: list[_PickupCubeRecord],
+) -> list[_PickupCubeRecord]:
+    """同 (env_id, episode) 多 seed 时只保留 max seed，与 visible_objects 一致。"""
+    grouped: dict[tuple[str, int], list[_PickupCubeRecord]] = defaultdict(list)
+    for rec in records:
+        grouped[(rec.env_id, rec.episode)].append(rec)
+    kept: list[_PickupCubeRecord] = []
+    for bucket in grouped.values():
+        bucket_sorted = sorted(bucket, key=lambda e: e.seed)
+        kept.append(bucket_sorted[-1])
+    kept.sort(key=lambda e: (e.env_id, e.episode))
+    return kept
 
 
 def _dedup_visible_object_files(
@@ -1913,7 +2026,51 @@ def _panel_specs_for_env(env_id: str) -> tuple[str, ...]:
     return ("all", "cube", "button", "target")
 
 
-def _plot_panel(ax, panel_key: str, env_id: str, points: list[VisibleObjectPoint]) -> None:
+def _plot_videorepick_pickup_panel(
+    ax,
+    pickup_records: list[_PickupCubeRecord],
+) -> None:
+    """VideoRepick xy 子图最右侧绘制 pickup cube（按 cube 颜色着色）。"""
+    if not pickup_records:
+        ax.text(0.0, 0.0, "no pickup cube data", ha="center", va="center")
+        _prepare_axis(ax, "pickup", 0)
+        return
+
+    by_color: dict[str, list[_PickupCubeRecord]] = defaultdict(list)
+    for rec in pickup_records:
+        by_color[rec.color or "unknown"].append(rec)
+
+    plotted = 0
+    for color in ("red", "green", "blue", "unknown"):
+        bucket = by_color.get(color)
+        if not bucket:
+            continue
+        rotated = [_xy_rot_cw_90(rec.world_x, rec.world_y) for rec in bucket]
+        ax.scatter(
+            [pt[0] for pt in rotated],
+            [pt[1] for pt in rotated],
+            s=110,
+            alpha=0.85,
+            c=CUBE_COLOR_MAP.get(color, CUBE_COLOR_MAP["unknown"]),
+            marker="*",
+            edgecolors="black",
+            linewidths=0.5,
+            label=f"pickup_{color}",
+        )
+        plotted += len(bucket)
+
+    if plotted:
+        ax.legend(loc="upper right")
+    _prepare_axis(ax, "pickup", plotted)
+
+
+def _plot_panel(
+    ax,
+    panel_key: str,
+    env_id: str,
+    points: list[VisibleObjectPoint],
+    pickup_records: Optional[list[_PickupCubeRecord]] = None,
+) -> None:
     if panel_key == "all":
         _plot_all_objects(ax, points)
         return
@@ -1936,6 +2093,10 @@ def _plot_panel(ax, panel_key: str, env_id: str, points: list[VisibleObjectPoint
         _plot_box_with_hole_objects(ax, points)
         return
     if panel_key == "target":
+        # VideoRepick：右侧 target panel 复用为 pickup cube 视图（其余 env 行为不变）
+        if env_id == VIDEOREPICK_ENV_ID:
+            _plot_videorepick_pickup_panel(ax, pickup_records or [])
+            return
         _plot_target_objects(ax, env_id, points)
         return
     raise ValueError(f"Unsupported panel key: {panel_key}")
@@ -1949,6 +2110,7 @@ def _render_collage(
     title_suffix: Optional[str],
     output_filename: str,
     plt,
+    pickup_records: Optional[list[_PickupCubeRecord]] = None,
 ) -> Path:
     panel_specs = _panel_specs_for_env(env_id)
     fig, axes = plt.subplots(
@@ -1965,7 +2127,7 @@ def _render_collage(
     fig.suptitle(title, fontsize=18)
 
     for ax, panel_key in zip(axes, panel_specs):
-        _plot_panel(ax, panel_key, env_id, points)
+        _plot_panel(ax, panel_key, env_id, points, pickup_records=pickup_records)
 
     return _save_combined_figure(fig, output_dir / output_filename, plt)
 
@@ -1976,6 +2138,7 @@ def _render_xy_env(
     points: list[VisibleObjectPoint],
     episode_count: int,
     plt,
+    pickup_records: Optional[list[_PickupCubeRecord]] = None,
 ) -> Counter:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1989,6 +2152,11 @@ def _render_xy_env(
             if not split_points:
                 print(f"[XY] {env_id}: skip empty split={split_name}")
                 continue
+            split_pickup = (
+                [rec for rec in (pickup_records or []) if rec.difficulty in difficulties]
+                if pickup_records is not None
+                else None
+            )
             output_path = _render_collage(
                 output_dir,
                 env_id,
@@ -1997,8 +2165,12 @@ def _render_xy_env(
                 f"difficulty={split_name}",
                 output_filename,
                 plt,
+                pickup_records=split_pickup,
             )
-            print(f"[XY] {env_id}: split={split_name} -> {output_path}")
+            print(
+                f"[XY] {env_id}: split={split_name} -> {output_path}"
+                f" pickup_points={len(split_pickup) if split_pickup is not None else 0}"
+            )
     else:
         output_path = _render_collage(
             output_dir,
@@ -2032,7 +2204,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--base-dir",
         type=Path,
-        default="/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos",
+        default=DEFAULT_BASE_DIR,
         help="Base directory under runs/replay_videos; hdf5-dir, segmentation-dir, and output-dir are derived from it.",
     )
     parser.add_argument(
@@ -2046,6 +2218,17 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="Directory containing reset segmentation episode folders with visible_objects.json. Defaults to <base-dir>/reset_segmentation_pngs.",
+    )
+    parser.add_argument(
+        "--snapshot-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Directory containing per-episode snapshot JSONs "
+            "(<env_id>_ep<n>_seed<s>_after_no_record_reset.json). "
+            "Currently used to render VideoRepick pickup cube positions on "
+            "the rightmost xy_hard subplot. Defaults to <base-dir>/snapshots."
+        ),
     )
     parser.add_argument(
         "--output-dir",
@@ -2183,6 +2366,7 @@ def _run_xy_pipeline(
     output_dir: Path,
     env_filter: Optional[str],
     difficulty_by_env_episode: dict[tuple[str, int], str],
+    snapshot_dir: Optional[Path] = None,
 ) -> tuple[list[_VisibleObjectsFile], list[_VisibleObjectsFile]]:
     if not segmentation_dir.is_dir():
         print("=" * 72)
@@ -2229,6 +2413,25 @@ def _run_xy_pipeline(
         print()
         return kept_files, skipped_files
 
+    # 加载 VideoRepick pickup cube 数据（仅 VideoRepick 使用，其余 env 忽略）
+    pickup_by_env: dict[str, list[_PickupCubeRecord]] = {}
+    if snapshot_dir is not None and snapshot_dir.is_dir():
+        all_pickup = _discover_pickup_snapshot_records(
+            snapshot_dir, env_filter, difficulty_by_env_episode
+        )
+        for rec in _dedup_pickup_records(all_pickup):
+            pickup_by_env.setdefault(rec.env_id, []).append(rec)
+        print(
+            f"  Snapshot dir:     {snapshot_dir} "
+            f"(pickup records loaded: "
+            f"{sum(len(v) for v in pickup_by_env.values())})"
+        )
+    elif snapshot_dir is not None:
+        print(
+            f"  [Warn] Snapshot dir not found: {snapshot_dir} — "
+            "VideoRepick pickup overlay will be skipped."
+        )
+
     plt = _get_pyplot(show=False)
 
     total_points = 0
@@ -2241,6 +2444,7 @@ def _run_xy_pipeline(
             points,
             episode_counts.get(env_id, 0),
             plt,
+            pickup_records=pickup_by_env.get(env_id),
         )
         total_points += len(points)
         overall_counts.update(counts)
@@ -2274,6 +2478,7 @@ def main() -> None:
     base_dir = args.base_dir.resolve()
     hdf5_dir = (args.hdf5_dir or base_dir / "hdf5_files").resolve()
     segmentation_dir = (args.segmentation_dir or base_dir / "reset_segmentation_pngs").resolve()
+    snapshot_dir = (args.snapshot_dir or base_dir / SNAPSHOT_DIRNAME).resolve()
     inspect_dir = (args.output_dir or base_dir / "inspect-stat").resolve()
     task_goal_dir = inspect_dir / "task-goal"
     xy_dir = inspect_dir / "xy"
@@ -2284,6 +2489,7 @@ def main() -> None:
     print(f"XY dir:         {xy_dir}")
     print(f"HDF5 dir:       {hdf5_dir}")
     print(f"Segmentation:   {segmentation_dir}")
+    print(f"Snapshots:      {snapshot_dir}")
     if args.env:
         print(f"Env filter:     {args.env}")
     print()
@@ -2301,6 +2507,7 @@ def main() -> None:
         xy_dir,
         args.env,
         difficulty_map,
+        snapshot_dir=snapshot_dir,
     )
 
     # Report seed-dedup results (consolidated for both pipelines)
