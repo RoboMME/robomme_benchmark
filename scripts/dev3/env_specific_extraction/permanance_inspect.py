@@ -27,19 +27,13 @@ from typing import Any, Iterable, Optional
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
-# permanence.py 在同一目录下，直接 sys.path 注入
+# permanence.py / xy_common.py 都在同一目录下，直接 sys.path 注入
 _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
-# inspect_stat.py 位于上一级 scripts/dev3/，同样 sys.path 注入；真正的
-# import 推迟到 visualize() 内部，避免和 inspect_stat 的双向 import 冲突
-# （inspect_stat.py 在 module-level 导入本模块）。
-_INSPECT_STAT_DIR = _SCRIPT_DIR.parent
-if str(_INSPECT_STAT_DIR) not in sys.path:
-    sys.path.insert(0, str(_INSPECT_STAT_DIR))
-
 import permanence as permanence_module  # noqa: E402
+import xy_common  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # 默认路径
@@ -263,13 +257,12 @@ def _render_two_row_figure(
     points: list,
     perm_files: list,
     episode_count: int,
-    inspect_stat_module,
     plt,
 ) -> Path:
     """生成 2 行布局：上行 visible-objects 面板，下行 permanence cubes + swaps。"""
     import numpy as np
 
-    panel_specs = inspect_stat_module._panel_specs_for_env(env_id)
+    panel_specs = xy_common._panel_specs_for_env(env_id)
     n_top = len(panel_specs)
     fig, axes = plt.subplots(
         2,
@@ -288,7 +281,7 @@ def _render_two_row_figure(
 
     # 第 1 行：visible-objects 4 个面板（按 _panel_specs_for_env 给出的顺序）
     for ax, key in zip(axes[0], panel_specs):
-        inspect_stat_module._plot_panel(ax, key, env_id, points)
+        xy_common._plot_panel(ax, key, env_id, points)
 
     # 第 2 行：左 2 格放 cubes / swaps，其余隐藏
     _plot_permanence_cubes_panel(axes[1, 0], env_id, perm_files)
@@ -297,7 +290,7 @@ def _render_two_row_figure(
         axes[1, j].axis("off")
 
     output_path = xy_dir / f"{env_id}_xy.png"
-    return inspect_stat_module._save_combined_figure(fig, output_path, plt)
+    return xy_common._save_combined_figure(fig, output_path, plt)
 
 
 # ---------------------------------------------------------------------------
@@ -329,9 +322,6 @@ def visualize(
     -------
     (kept, skipped) : tuple[list[PermanenceFile], list[PermanenceFile]]
     """
-    # 延迟 import 避免与 inspect_stat 的循环 import
-    import inspect_stat as inspect_stat_module  # noqa: WPS433
-
     segmentation_dir = Path(segmentation_dir)
     output_dir = Path(output_dir)
     inspect_dir = output_dir.parent
@@ -361,21 +351,21 @@ def visualize(
         bucket.sort(key=lambda e: e.episode)
 
     # 2) 发现并去重 visible_objects（仅 permanence env 子集）
-    visible_files = inspect_stat_module._discover_visible_object_files(segmentation_dir)
+    visible_files = xy_common._discover_visible_object_files(segmentation_dir)
     visible_files = [
         f
         for f in visible_files
         if f.env_id in permanence_module.PERMANENCE_ENV_IDS
         and (env_id is None or f.env_id == env_id)
     ]
-    visible_kept, _ = inspect_stat_module._dedup_visible_object_files(visible_files)
-    points_by_env, _, episode_counts, _ = inspect_stat_module._build_points_from_files(
+    visible_kept, _ = xy_common._dedup_visible_object_files(visible_files)
+    points_by_env, _, episode_counts, _ = xy_common._build_points_from_files(
         visible_kept, difficulty_by_env_episode={}
     )
 
     # 3) 渲染：每个 permanence env 一张 2×N 的 xy PNG
     xy_dir.mkdir(parents=True, exist_ok=True)
-    plt = inspect_stat_module._get_pyplot(show=False)
+    plt = xy_common._get_pyplot(show=False)
 
     for eid in sorted(perm_by_env):
         out_path = _render_two_row_figure(
@@ -384,7 +374,6 @@ def visualize(
             points_by_env.get(eid, []),
             perm_by_env[eid],
             episode_counts.get(eid, 0),
-            inspect_stat_module,
             plt,
         )
         print(
