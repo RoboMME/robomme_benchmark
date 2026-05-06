@@ -11,9 +11,9 @@
 permanance_inspect/ 目录不再被创建——`output_dir` 仅作 anchor，用来定位
 inspect-stat 根目录下的 xy/ 子目录。
 
-permanence-specific 的两个面板绘制逻辑统一收敛在
-`scripts/dev3/env_specific_extraction/permanence.py` 中
-（plot_permanence_cubes_panel / plot_permanence_swaps_panel）。
+数据层（discover / dedup / sidecar 解析）走 permanence.py；
+可视化层（panel 绘制 / 2 行 figure 拼装）一律落在本文件——
+permanence.py 只负责数据产生，不参与渲染。
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Iterable, Optional
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 
@@ -48,6 +48,208 @@ import permanence as permanence_module  # noqa: E402
 _DEFAULT_BASE = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
 DEFAULT_SEGMENTATION_DIR = _DEFAULT_BASE / "reset_segmentation_pngs"
 DEFAULT_OUTPUT_DIR = _DEFAULT_BASE / "inspect-stat" / "permanance_inspect"
+
+
+# ---------------------------------------------------------------------------
+# 可视化常量（permanence 套件 visualization 的单一事实来源）
+# ---------------------------------------------------------------------------
+
+_PERMANENCE_PANEL_LIMIT = 0.3
+
+CUBE_COLOR_MAP: dict[str, str] = {
+    "red": "#d62728",
+    "green": "#2ca02c",
+    "blue": "#1f77b4",
+    "unknown": "#7f7f7f",
+}
+
+PERMANENCE_DIFFICULTY_MARKERS: dict[str, str] = {
+    "easy": "o",
+    "medium": "s",
+    "hard": "^",
+}
+
+PERMANENCE_SWAP_INDEX_COLORS: list[str] = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+]
+
+
+# ---------------------------------------------------------------------------
+# 内部：axes-level 几何与轴样式
+# ---------------------------------------------------------------------------
+
+
+def _xy_rot_cw_90(x_pos: float, y_pos: float) -> tuple[float, float]:
+    """俯视图顺时针旋转 90°：显示 (y, -x)，与 inspect_stat 一致。"""
+    return y_pos, -x_pos
+
+
+def _prepare_panel_axis(ax: Any, title: str, point_count: int) -> None:
+    ax.set_xlim(-_PERMANENCE_PANEL_LIMIT, _PERMANENCE_PANEL_LIMIT)
+    ax.set_ylim(-_PERMANENCE_PANEL_LIMIT, _PERMANENCE_PANEL_LIMIT)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("World Y")
+    ax.set_ylabel("-World X")
+    ax.grid(True, alpha=0.45)
+    ax.set_title(f"{title}\npoints={point_count}")
+
+
+# ---------------------------------------------------------------------------
+# 内部：permanence cubes / swaps 面板渲染
+# ---------------------------------------------------------------------------
+
+
+def _plot_permanence_cubes_panel(
+    ax: Any,
+    env_id: str,
+    files: Iterable[Any],
+) -> int:
+    """渲染 cube reset 位置散点：颜色按 cube 颜色、marker 按 difficulty，
+    并用细线把 cube 连到对应的 bin。无数据时显示 'No cube data'。"""
+    from matplotlib.lines import Line2D
+
+    files_list = list(files or [])
+    plotted = 0
+    seen_difficulties: set[str] = set()
+    seen_colors: set[str] = set()
+
+    for entry in files_list:
+        difficulty = str(entry.payload.get("difficulty", ""))
+        marker = PERMANENCE_DIFFICULTY_MARKERS.get(difficulty, "x")
+        seen_difficulties.add(difficulty)
+
+        for cube in entry.payload.get("cubes", []):
+            color_name = cube.get("color_name", "unknown")
+            seen_colors.add(color_name)
+            color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
+            pos = cube.get("position_xy") or [0.0, 0.0]
+            bin_pos = cube.get("bin_position_xy") or pos
+            x, y = _xy_rot_cw_90(float(pos[0]), float(pos[1]))
+            bx, by = _xy_rot_cw_90(float(bin_pos[0]), float(bin_pos[1]))
+            ax.plot([x, bx], [y, by], color=color, alpha=0.25, linewidth=0.8)
+            ax.scatter(
+                x, y,
+                s=70, alpha=0.85, c=color, marker=marker,
+                edgecolors="black", linewidths=0.5,
+            )
+            bin_idx = cube.get("bin_index")
+            if bin_idx is not None:
+                ax.text(
+                    x + 0.005, y + 0.005,
+                    f"ep{entry.episode}/b{bin_idx}",
+                    fontsize=6, alpha=0.6,
+                )
+            plotted += 1
+
+    if plotted:
+        legend_handles: list[Line2D] = []
+        for color_name in sorted(seen_colors):
+            color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
+            legend_handles.append(
+                Line2D(
+                    [0], [0],
+                    marker="o", linestyle="", markersize=8,
+                    markerfacecolor=color, markeredgecolor="black",
+                    label=f"cube_{color_name}",
+                )
+            )
+        for diff in sorted(seen_difficulties):
+            marker = PERMANENCE_DIFFICULTY_MARKERS.get(diff, "x")
+            legend_handles.append(
+                Line2D(
+                    [0], [0],
+                    marker=marker, linestyle="", markersize=8,
+                    markerfacecolor="white", markeredgecolor="black",
+                    label=f"difficulty: {diff or 'unknown'}",
+                )
+            )
+        ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
+    else:
+        ax.text(0.0, 0.0, "No cube data", ha="center", va="center")
+
+    _prepare_panel_axis(ax, "Permanence cubes (Rotated XY)", plotted)
+    return plotted
+
+
+def _plot_permanence_swaps_panel(
+    ax: Any,
+    env_id: str,
+    files: Iterable[Any],
+) -> int:
+    """渲染 swap pair 双向箭头：每对 (bin_a, bin_b) 按 swap_index 着色，
+    bin 全集画成淡灰色背景点。非 Swap env 或无 swap_pairs 时显示
+    'No swap data'。"""
+    from matplotlib.lines import Line2D
+
+    files_list = list(files or [])
+    is_swap_env = env_id in permanence_module.SWAP_ENV_IDS
+
+    pair_count = 0
+    seen_swap_indices: set[int] = set()
+
+    if is_swap_env:
+        for entry in files_list:
+            for bin_info in entry.payload.get("bins", []):
+                pos = bin_info.get("position_xy") or [0.0, 0.0]
+                bx, by = _xy_rot_cw_90(float(pos[0]), float(pos[1]))
+                ax.scatter(bx, by, s=20, color="lightgray", alpha=0.4, zorder=1)
+
+            for pair in entry.payload.get("swap_pairs", []):
+                swap_idx = int(pair.get("swap_index", 0))
+                seen_swap_indices.add(swap_idx)
+                color = PERMANENCE_SWAP_INDEX_COLORS[
+                    swap_idx % len(PERMANENCE_SWAP_INDEX_COLORS)
+                ]
+                a_xy = pair.get("bin_a_position_xy") or [0.0, 0.0]
+                b_xy = pair.get("bin_b_position_xy") or [0.0, 0.0]
+                ax_x, ax_y = _xy_rot_cw_90(float(a_xy[0]), float(a_xy[1]))
+                bx_x, bx_y = _xy_rot_cw_90(float(b_xy[0]), float(b_xy[1]))
+
+                ax.annotate(
+                    "",
+                    xy=(bx_x, bx_y), xytext=(ax_x, ax_y),
+                    arrowprops=dict(
+                        arrowstyle="<->", color=color, lw=1.4, alpha=0.7,
+                        shrinkA=4, shrinkB=4,
+                    ),
+                    zorder=3,
+                )
+                ax.scatter(
+                    [ax_x, bx_x], [ax_y, bx_y],
+                    s=60, c=color, edgecolors="black", linewidths=0.5,
+                    alpha=0.9, zorder=4,
+                )
+                mid_x = (ax_x + bx_x) / 2
+                mid_y = (ax_y + bx_y) / 2
+                ax.text(
+                    mid_x, mid_y,
+                    f"ep{entry.episode}#s{swap_idx}",
+                    fontsize=6, alpha=0.7,
+                )
+                pair_count += 1
+
+    if pair_count:
+        legend_handles: list[Line2D] = []
+        for swap_idx in sorted(seen_swap_indices):
+            color = PERMANENCE_SWAP_INDEX_COLORS[
+                swap_idx % len(PERMANENCE_SWAP_INDEX_COLORS)
+            ]
+            legend_handles.append(
+                Line2D(
+                    [0], [0],
+                    marker="o", linestyle="-", color=color, markersize=8,
+                    label=f"swap #{swap_idx}",
+                )
+            )
+        ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
+    else:
+        ax.text(0.0, 0.0, "No swap data", ha="center", va="center")
+
+    _prepare_panel_axis(ax, "Permanence swaps (Rotated XY)", pair_count)
+    return pair_count
 
 
 # ---------------------------------------------------------------------------
@@ -89,8 +291,8 @@ def _render_two_row_figure(
         inspect_stat_module._plot_panel(ax, key, env_id, points)
 
     # 第 2 行：左 2 格放 cubes / swaps，其余隐藏
-    permanence_module.plot_permanence_cubes_panel(axes[1, 0], env_id, perm_files)
-    permanence_module.plot_permanence_swaps_panel(axes[1, 1], env_id, perm_files)
+    _plot_permanence_cubes_panel(axes[1, 0], env_id, perm_files)
+    _plot_permanence_swaps_panel(axes[1, 1], env_id, perm_files)
     for j in range(2, n_top):
         axes[1, j].axis("off")
 
