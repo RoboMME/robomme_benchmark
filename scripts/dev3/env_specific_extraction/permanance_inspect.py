@@ -86,6 +86,23 @@ def _prepare_panel_axis(ax: Any, title: str, point_count: int) -> None:
     ax.set_title(f"{title}\npoints={point_count}")
 
 
+def _unshare_axes(ax: Any) -> None:
+    """脱离 row-shared ±0.3 浮点 xlim/ylim 共享组，并重开 autoscale。
+
+    pair-freq heatmap 与 1D 分布柱状图都需要整数刻度 / 自定义 limit，
+    与 row 0/1/2 左侧 panel 共享的世界坐标轴不兼容。matplotlib 3.6+ 的
+    get_shared_*_axes() 返回只读 GrouperView，必须走底层 _shared_axes
+    Grouper 才能 remove。共享组里其他 panel 已显式 set_xlim/ylim 关闭了
+    autoscale，移除后必须重开，否则 imshow / bar 不会撑开 limits。"""
+    for axis_name in ("x", "y"):
+        try:
+            ax._shared_axes[axis_name].remove(ax)
+        except (KeyError, ValueError):
+            pass
+    ax.set_autoscalex_on(True)
+    ax.set_autoscaley_on(True)
+
+
 # ---------------------------------------------------------------------------
 # 内部：permanence cubes / swaps 面板渲染
 # ---------------------------------------------------------------------------
@@ -305,6 +322,96 @@ def _plot_pickup_bin_panel(
 
 
 # ---------------------------------------------------------------------------
+# 内部：first / second pickup bin_index 1D 分布（不分 cube 颜色）
+# ---------------------------------------------------------------------------
+
+
+_DISTRIBUTION_PANEL_TITLES = {
+    0: "First pickup bin selection (counts)",
+    1: "Second pickup bin selection (counts)",
+}
+
+
+def _plot_pickup_bin_selection_distribution_panel(
+    ax: Any,
+    env_id: str,
+    files: Iterable[Any],
+    pickup_index: int,
+) -> int:
+    """渲染第 (pickup_index+1) 次 pickup 的 bin_index 1D 分布柱状图：
+    X = bin_index（bin_0 .. bin_(N-1)），Y = episode 计数，纯色柱不堆叠。
+    无数据时显示 'No pickup data'。"""
+    from collections import Counter
+    import matplotlib.ticker as mticker
+
+    _unshare_axes(ax)
+    # share group 里 row 0/1 的 "bin" panel 把 yticks 设成了字符串
+    # ("bin_0".."bin_n")，share=True 时会同步过来。_unshare_axes 只移除
+    # share，不清 ticks 本身。这里显式把 Y 轴 locator/formatter 重置回
+    # 数值整数 ticks，否则计数轴会显示成 bin_* 字符串挤在 0 附近。
+    ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+    ax.yaxis.set_major_formatter(mticker.ScalarFormatter())
+
+    files_list = list(files or [])
+    counts: Counter = Counter()
+    max_bin_idx = -1
+
+    for entry in files_list:
+        bins_len = len(entry.payload.get("bins", []) or [])
+        if bins_len > 0:
+            max_bin_idx = max(max_bin_idx, bins_len - 1)
+        cubes = entry.payload.get("cubes") or []
+        if pickup_index >= len(cubes):
+            continue
+        cube = cubes[pickup_index]
+        if not isinstance(cube, dict):
+            continue
+        bin_idx = cube.get("bin_index")
+        if bin_idx is None:
+            continue
+        bin_idx_int = int(bin_idx)
+        counts[bin_idx_int] += 1
+        max_bin_idx = max(max_bin_idx, bin_idx_int)
+
+    total = sum(counts.values())
+    title = _DISTRIBUTION_PANEL_TITLES.get(
+        pickup_index, f"Pickup #{pickup_index + 1} bin selection (counts)"
+    )
+
+    if total == 0 or max_bin_idx < 0:
+        ax.set_title(f"{title}\nepisodes=0")
+        ax.text(0.5, 0.5, "No pickup data", ha="center", va="center",
+                transform=ax.transAxes)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        return 0
+
+    n_bins = max_bin_idx + 1
+    xs = list(range(n_bins))
+    ys = [counts.get(i, 0) for i in xs]
+    y_max = max(ys)
+
+    ax.bar(xs, ys, color="#1f77b4", edgecolor="black", linewidth=0.5)
+    for x, y in zip(xs, ys):
+        if y > 0:
+            ax.text(x, y, str(y), ha="center", va="bottom", fontsize=8)
+
+    ax.set_xticks(xs)
+    ax.set_xticklabels([f"bin_{i}" for i in xs])
+    # row-0/1/2 share group 里其他 panel 已让非首列子图隐藏 tick label，
+    # 移除 share 后还要显式打开。
+    ax.tick_params(axis="x", labelbottom=True)
+    ax.tick_params(axis="y", labelleft=True)
+    ax.set_xlim(-0.5, n_bins - 0.5)
+    ax.set_ylim(0, y_max * 1.15 if y_max > 0 else 1)
+    ax.set_xlabel("bin index")
+    ax.set_ylabel("episode count")
+    ax.grid(True, axis="y", alpha=0.45)
+    ax.set_title(f"{title}\nepisodes={total}")
+    return total
+
+
+# ---------------------------------------------------------------------------
 # 内部：pair frequency heatmap（仅 swap env）
 # ---------------------------------------------------------------------------
 
@@ -321,19 +428,7 @@ def _plot_pair_frequency_panel(
     时降级到提示文字。返回参与统计的 swap pair 总数。"""
     from collections import Counter
 
-    # heatmap 的整数刻度与 row-1 共享的 ±0.3 浮点 limits 不兼容，先脱离
-    # share group。matplotlib 3.6+ 的 get_shared_*_axes() 返回的 GrouperView
-    # 是只读视图，需要走底层 _shared_axes Grouper 才能 remove。
-    # 共享组里别的 panel 已经显式 set_xlim/ylim，会把 autoscale 关掉，所以
-    # 移除后必须重新打开 autoscale，否则 imshow 不会撑开 limits，顶部/右侧
-    # 的格子会被裁掉。
-    for axis_name in ("x", "y"):
-        try:
-            ax._shared_axes[axis_name].remove(ax)
-        except (KeyError, ValueError):
-            pass
-    ax.set_autoscalex_on(True)
-    ax.set_autoscaley_on(True)
+    _unshare_axes(ax)
 
     title = f"Pair freq ({bin_count}-bin)"
 
@@ -465,11 +560,22 @@ def _render_three_row_figure(
         for j in range(2, n_top):
             axes[1, j].axis("off")
 
-    # 第 3 行：左 2 格放 first / second pickup bin；其余 axis off
+    # 第 3 行：左 2 格放 first / second pickup bin 2D 散点；右 2 格放
+    # first / second pickup bin_index 1D 选择分布柱状图。
     _plot_pickup_bin_panel(axes[2, 0], env_id, perm_files, pickup_index=0)
     _plot_pickup_bin_panel(axes[2, 1], env_id, perm_files, pickup_index=1)
-    for j in range(2, n_top):
-        axes[2, j].axis("off")
+    if n_top >= 4:
+        _plot_pickup_bin_selection_distribution_panel(
+            axes[2, 2], env_id, perm_files, pickup_index=0
+        )
+        _plot_pickup_bin_selection_distribution_panel(
+            axes[2, 3], env_id, perm_files, pickup_index=1
+        )
+        for j in range(4, n_top):
+            axes[2, j].axis("off")
+    else:
+        for j in range(2, n_top):
+            axes[2, j].axis("off")
 
     output_path = xy_dir / f"{env_id}_xy.png"
     return xy_common._save_combined_figure(fig, output_path, plt)

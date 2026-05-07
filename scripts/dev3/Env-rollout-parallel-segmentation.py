@@ -1225,9 +1225,9 @@ def _build_parser() -> argparse.ArgumentParser:
         # "SwingXtimes",
         # "BinFill",
         "VideoUnmaskSwap",
-        # "VideoUnmask",
-         "ButtonUnmaskSwap",
-        # "ButtonUnmask",
+        "VideoUnmask",
+        "ButtonUnmaskSwap",
+        "ButtonUnmask",
         #  "VideoRepick",
         # "VideoPlaceButton",
         # "VideoPlaceOrder",
@@ -1244,7 +1244,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=60,
+        default=120,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -1285,12 +1285,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default=30,
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
-            "the same env_id. Default: auto=min(os.cpu_count(), episode count)."
+            "the same env_id. Default: auto=episode count (no CPU cap)."
         ),
     )
     parser.add_argument(
         "--skip-execute",
-        default=False,
+        default=True,
         action=argparse.BooleanOptionalAction,
         help=(
             "When True (default): setup-only mode — reset, export segmentation/JSON/3D PNG, "
@@ -1803,11 +1803,9 @@ def _resolve_max_workers(requested: Optional[int], n_episodes: int) -> int:
     """计算实际启用的 worker 数量。"""
     if requested is not None and requested < 1:
         raise SystemExit("--max-workers must be at least 1.")
-    cpu_count = os.cpu_count() or 1
-    max_allowed = min(cpu_count, n_episodes)
     if requested is None:
-        return max_allowed
-    return min(requested, max_allowed)
+        return max(n_episodes, 1)
+    return min(requested, max(n_episodes, 1))
 
 
 def _print_episode_artifacts(
