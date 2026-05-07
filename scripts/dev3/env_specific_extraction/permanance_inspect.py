@@ -84,6 +84,11 @@ def _prepare_panel_axis(ax: Any, title: str, point_count: int) -> None:
     ax.set_ylabel("-World X")
     ax.grid(True, alpha=0.45)
     ax.set_title(f"{title}\npoints={point_count}")
+    # 3 行 figure 用 sharex/sharey=True，matplotlib 默认会隐藏非底行/
+    # 非首列子图的 tick labels。permanence 视图要求每个 2D 散点 panel
+    # 都显示自己的世界坐标，这里显式打开。
+    ax.tick_params(axis="x", labelbottom=True)
+    ax.tick_params(axis="y", labelleft=True)
 
 
 def _unshare_axes(ax: Any) -> None:
@@ -522,12 +527,18 @@ def _render_three_row_figure(
 
     panel_specs = xy_common._panel_specs_for_env(env_id)
     n_top = len(panel_specs)
+    # 不要用 sharex/sharey=True：row-0 col-3 的 "bin" panel 用字符串
+    # ticks ("bin_0".."bin_n") + ax._sharex 引用会把 ticks sync 到整个
+    # share group，导致其它 2D 散点 panel 的数值刻度被覆盖成 "bin_0"
+    # 单 tick。本视图每个 panel 都显式 set_xlim/set_ylim，share 本来
+    # 也没有实际作用，直接 sharex=False/sharey=False 让 axes 从一开始
+    # 就独立。
     fig, axes = plt.subplots(
         3,
         n_top,
         figsize=(7 * n_top, 21),
-        sharex=True,
-        sharey=True,
+        sharex=False,
+        sharey=False,
     )
     axes = np.atleast_2d(axes)
 
@@ -547,6 +558,11 @@ def _render_three_row_figure(
             ax.axis("off")
         else:
             xy_common._plot_panel(ax, key, env_id, points)
+            # row-0 走 xy_common._plot_panel，share=True 会让非首列 panel
+            # 隐藏 y tick labels、非底行 panel 隐藏 x tick labels。permanence
+            # 视图要求每个 2D 散点 panel 都显式显示自己的坐标。
+            ax.tick_params(axis="x", labelbottom=True)
+            ax.tick_params(axis="y", labelleft=True)
 
     # 第 2 行：左 2 格放 cubes / swaps；swap env 在右 2 格放 pair-freq heatmap
     _plot_permanence_cubes_panel(axes[1, 0], env_id, perm_files)
