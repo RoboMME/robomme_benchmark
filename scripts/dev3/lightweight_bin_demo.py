@@ -4,25 +4,34 @@ Uses torch.Generator + manual_seed in the same pattern as
 src/robomme/robomme_env/VideoUnmaskSwap.py:177-184 so the demo's RNG stream is
 directly comparable to permanence task seeds.
 
+The two distance hyper-parameters are calibrated to match permanence:
+- MIN_CENTER_DIST = 0.135 mirrors VideoUnmask/ButtonUnmask's Poisson disk
+  separation r_sep = (bin_half_size + min_gap) * 2 = (0.0275 + 0.04) * 2 with
+  panda's cube_half_size=0.02 (object_generation.py:1080).
+- BUTTON_MIN_CENTER_DIST = 0.15 mirrors ButtonUnmaskSwap's worst-case button
+  separation: nominal y-spacing 0.2 between button_left/button_right minus
+  randomize_range 0.025 each side -> 0.15 in the closest configuration.
+
 Each episode:
-1. Samples 4 bin (x, y) positions uniformly in [-XY_HALF, XY_HALF]^2 with a
-   minimum centre-to-centre separation (rejection sampling on torch.rand).
+1. Samples N_BINS bin (x, y) positions uniformly in [-XY_HALF, XY_HALF]^2 with a
+   minimum centre-to-centre separation MIN_CENTER_DIST (rejection sampling on
+   torch.rand). Samples falling inside the button strip
+   [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN, BUTTON_Y_MAX] are rejected so
+   cubes/bins never spawn where buttons live (mirrors permanence's
+   avoid=[button_obb] for bins).
 2. Shuffles the 4-tuple ("red", "green", "blue", "no_cube") and assigns one
    colour to each bin (torch.randperm, same as VideoUnmask.py:191).
 3. Picks 2 bins out of the 3 coloured-cube bins without replacement, deriving
    pickup_generator via seed * 2654435761 + 1 (same as VideoUnmaskSwap.py:181).
 4. If --num-buttons N > 0, derives button_generator via seed * 2654435761 + 3
    (offset 3 is demo-local; permanence ButtonUnmask draws buttons from the main
-   stream, but the demo offsets to a separate stream so that the default
-   num_buttons=0 path remains byte-identical to prior runs) and uniformly samples
-   N button (x, y) in [-XY_HALF, XY_HALF] x [BUTTON_Y_MIN, BUTTON_Y_MAX] with
-   rejection sampling, min center-dist = BUTTON_MIN_CENTER_DIST = 0.1
-   (worst-case lower bound from ButtonUnmaskSwap: centers spaced 0.2 with
-   per-axis jitter +-0.025, so the closest two centers can come is ~0.1).
-
-Buttons and bins are sampled independently — their xy footprints may overlap.
-Permanence ButtonUnmask uses avoid=[button_obb] for bins; the demo skips
-collision avoidance since it is visualization-only.
+   stream, but the demo offsets to a separate stream so it can be added without
+   shifting the bin/pickup/swap RNG streams) and uniformly samples N button
+   (x, y) in the vertical strip [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN,
+   BUTTON_Y_MAX] = [-0.25, -0.15] x [-0.2, 0.2] (matching permanence's x ~ -0.2
+   button strip; y range widened to demo workspace full width so rejection
+   sampling at min_dist 0.15 has no geometric dead zone) with rejection
+   sampling, min center-dist = BUTTON_MIN_CENTER_DIST.
 
 Output: a single 2x3 PNG covering 200 episodes (800 bin samples) by default.
 """
@@ -39,8 +48,7 @@ import numpy as np
 import torch
 
 XY_HALF = 0.2
-BIN_HALF_SIZE = 0.025
-MIN_CENTER_DIST = 0.05
+MIN_CENTER_DIST = 0.135
 N_BINS = 6
 N_COLORED_CUBES = 3
 N_NO_CUBE_BINS = N_BINS - N_COLORED_CUBES
@@ -49,11 +57,18 @@ N_PICKUPS = 2
 SWAP_TIMES = 3
 KNUTH_HASH = 2654435761
 
+# Button strip mirrors permanence ButtonUnmask/ButtonUnmaskSwap x position
+# (vertical strip at x ~ -0.2 with y varying). The y range is widened to the
+# full demo workspace [-0.2, 0.2] so that rejection sampling at min center-dist
+# 0.15 has no geometric dead zone (max corner distance from strip mid-point
+# (-0.2, 0) is sqrt(0.05^2 + 0.2^2) ~= 0.206 > 0.15).
+# Bin sampling rejects positions that fall inside this strip so cubes never
+# land where buttons would (mirrors permanence's avoid=[button_obb] for bins).
+BUTTON_X_MIN = -0.25
+BUTTON_X_MAX = -0.15
 BUTTON_Y_MIN = -0.2
-BUTTON_Y_MAX = -0.1
-BUTTON_X_MIN = -XY_HALF
-BUTTON_X_MAX = XY_HALF
-BUTTON_MIN_CENTER_DIST = 0.1
+BUTTON_Y_MAX = 0.2
+BUTTON_MIN_CENTER_DIST = 0.15
 BUTTON_COLOR = "#7f7f7f"
 
 COLORS: tuple[str, ...] = ("red", "green", "blue", "no_cube")
@@ -113,6 +128,11 @@ def sample_bin_positions(
         u = torch.rand(2, generator=generator)
         cx = float((u[0].item() - 0.5) * 2.0 * xy_half)
         cy = float((u[1].item() - 0.5) * 2.0 * xy_half)
+        # Reject samples landing inside the button strip so cubes never
+        # spawn where buttons live.
+        if (BUTTON_X_MIN <= cx <= BUTTON_X_MAX
+                and BUTTON_Y_MIN <= cy <= BUTTON_Y_MAX):
+            continue
         if all((cx - x) ** 2 + (cy - y) ** 2 >= min_dist_sq for x, y in pts):
             pts.append((cx, cy))
     raise RuntimeError(
@@ -270,7 +290,25 @@ def _draw_buttons_panel(ax: plt.Axes, button_samples: list[ButtonSample]) -> Non
     xs = [b.x for b in button_samples]
     ys = [b.y for b in button_samples]
     ax.scatter(xs, ys, s=18, c=BUTTON_COLOR, alpha=0.7, edgecolors="none")
-    _prepare_axis(ax, "buttons", len(button_samples))
+    # Button strip axis differs from the workspace box used by other panels
+    # because the strip lives at x in [-0.25, -0.15], outside [-XY_HALF, XY_HALF].
+    pad_x = (BUTTON_X_MAX - BUTTON_X_MIN) * 0.15
+    pad_y = (BUTTON_Y_MAX - BUTTON_Y_MIN) * 0.15
+    ax.set_xlim(BUTTON_X_MIN - pad_x, BUTTON_X_MAX + pad_x)
+    ax.set_ylim(BUTTON_Y_MIN - pad_y, BUTTON_Y_MAX + pad_y)
+    ax.set_aspect("equal")
+    ax.grid(True, alpha=0.3)
+    ax.set_title(f"buttons  (n={len(button_samples)})", fontsize=11)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.plot(
+        [BUTTON_X_MIN, BUTTON_X_MAX, BUTTON_X_MAX, BUTTON_X_MIN, BUTTON_X_MIN],
+        [BUTTON_Y_MIN, BUTTON_Y_MIN, BUTTON_Y_MAX, BUTTON_Y_MAX, BUTTON_Y_MIN],
+        linestyle="--",
+        color="black",
+        linewidth=1.0,
+        alpha=0.7,
+    )
 
 
 def _draw_swap_pair_panel(
@@ -369,14 +407,15 @@ def main() -> None:
     parser.add_argument(
         "--num-buttons",
         type=int,
-        default=0,
-        help="If > 0, additionally sample N buttons per episode in "
-        f"[-XY_HALF, XY_HALF] x [{BUTTON_Y_MIN}, {BUTTON_Y_MAX}] with "
-        f"min center-dist {BUTTON_MIN_CENTER_DIST} (rejection sampling). "
-        "Default 0 keeps the demo's output byte-identical to prior runs. "
-        "N<=3 is reliably packable at 2000 attempts; N=4 is at the geometric "
-        "capacity of the 0.4x0.1 strip and may raise RuntimeError for ~2.6%% "
-        "of seeds — surface those loudly rather than silently degrading.",
+        default=2,
+        help="If > 0, additionally sample N buttons per episode in the vertical "
+        f"strip [{BUTTON_X_MIN}, {BUTTON_X_MAX}] x [{BUTTON_Y_MIN}, "
+        f"{BUTTON_Y_MAX}] (matching permanence's x~-0.2 button strip; y range "
+        "is the full demo workspace width so rejection sampling has no "
+        f"geometric dead zone) with min center-dist {BUTTON_MIN_CENTER_DIST} "
+        "(value mirrors ButtonUnmaskSwap's worst-case 0.2 - 2*0.025 = 0.15 "
+        "two-button separation). Bin sampling rejects positions inside this "
+        "strip so cubes never overlap buttons.",
     )
     parser.add_argument(
         "--debug-single-episode",
@@ -390,11 +429,19 @@ def main() -> None:
     samples: list[BinSample] = []
     episode_swaps_list: list[EpisodeSwaps] = []
     button_samples_all: list[ButtonSample] = []
+    failed_seeds: list[tuple[int, str]] = []
     for ep in range(args.n_episodes):
         episode_seed = args.base_seed + ep
-        ep_samples, ep_swaps, ep_buttons = generate_episode(
-            episode_seed, ep, args.num_buttons
-        )
+        try:
+            ep_samples, ep_swaps, ep_buttons = generate_episode(
+                episode_seed, ep, args.num_buttons
+            )
+        except RuntimeError as exc:
+            # Surface the failure loudly per CLAUDE.md, but skip this seed and
+            # continue so the remaining seeds still produce a figure.
+            print(f"[skip seed={episode_seed}] RuntimeError: {exc}")
+            failed_seeds.append((episode_seed, str(exc)))
+            continue
         samples.extend(ep_samples)
         episode_swaps_list.append(ep_swaps)
         button_samples_all.extend(ep_buttons)
@@ -410,16 +457,26 @@ def main() -> None:
     swap_pair_counts = Counter(
         pair for ep in episode_swaps_list for pair in ep.pairs
     )
+    n_total = args.n_episodes
+    n_failed = len(failed_seeds)
+    n_success = n_total - n_failed
+    success_rate = n_success / n_total if n_total > 0 else 0.0
     print(
-        f"wrote {args.out}  ({args.n_episodes} episodes, {len(samples)} bin samples)"
+        f"wrote {args.out}  "
+        f"({n_success}/{n_total} episodes succeeded = {success_rate:.1%}, "
+        f"{len(samples)} bin samples)"
     )
+    if n_failed > 0:
+        skipped = ", ".join(str(s) for s, _ in failed_seeds[:10])
+        more = f" (and {n_failed - 10} more)" if n_failed > 10 else ""
+        print(f"skipped seeds (first 10): {skipped}{more}")
     print(f"color counts: {dict(color_counts)}")
     print(f"pickup counts (color, order): {dict(pick_counts)}")
     print(f"swap pair counts (i<j)=count: {dict(sorted(swap_pair_counts.items()))}")
     if args.num_buttons > 0:
         print(
             f"button samples: {len(button_samples_all)} "
-            f"({args.n_episodes} episodes x {args.num_buttons} buttons)"
+            f"({n_success} succeeded episodes x {args.num_buttons} buttons)"
         )
 
     if args.debug_single_episode is not None:
