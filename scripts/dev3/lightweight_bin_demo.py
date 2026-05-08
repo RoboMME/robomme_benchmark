@@ -31,6 +31,7 @@ BIN_HALF_SIZE = 0.025
 MIN_CENTER_DIST = 0.05
 N_BINS = 6
 N_COLORED_CUBES = 3
+N_NO_CUBE_BINS = N_BINS - N_COLORED_CUBES
 N_EPISODES = 1000
 N_PICKUPS = 2
 SWAP_TIMES = 3
@@ -160,6 +161,25 @@ def _draw_color_panel(ax: plt.Axes, samples: list[BinSample], color: str) -> Non
     _prepare_axis(ax, f"{color} bin", len(pts))
 
 
+def _draw_no_cube_panel(ax: plt.Axes, samples: list[BinSample], slot: int) -> None:
+    # Per-episode no_cube bins are shown in bin_index ascending order.
+    # samples[] is generated in (episode, bin_index) order, so the k-th no_cube
+    # encountered for an episode is the slot=k panel.
+    counts: dict[int, int] = {}
+    pts: list[BinSample] = []
+    for s in samples:
+        if s.color != "no_cube":
+            continue
+        idx = counts.get(s.episode, 0)
+        if idx == slot:
+            pts.append(s)
+        counts[s.episode] = idx + 1
+    xs = [p.x for p in pts]
+    ys = [p.y for p in pts]
+    ax.scatter(xs, ys, s=18, c=COLOR_TO_RGB["no_cube"], alpha=0.7, edgecolors="none")
+    _prepare_axis(ax, f"no_cube #{slot + 1} bin", len(pts))
+
+
 def _draw_all_colors_panel(ax: plt.Axes, samples: list[BinSample]) -> None:
     cs = [COLOR_TO_RGB[s.color] for s in samples]
     xs = [s.x for s in samples]
@@ -227,19 +247,30 @@ def render_figure(
     episode_swaps_list: list[EpisodeSwaps],
     out_path: Path,
 ) -> None:
-    fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+    row0_panels = N_COLORED_CUBES + N_NO_CUBE_BINS  # = N_BINS
+    row1_panels = 2 + N_PICKUPS  # combined + N pickups + swap_freq
+    n_cols = max(row0_panels, row1_panels)
+    fig, axes = plt.subplots(2, n_cols, figsize=(n_cols * 5, 10))
 
+    # Row 0: colored cubes (red/green/blue) + per-slot no_cube panels
     _draw_color_panel(axes[0, 0], samples, "red")
     _draw_color_panel(axes[0, 1], samples, "green")
     _draw_color_panel(axes[0, 2], samples, "blue")
-    _draw_color_panel(axes[0, 3], samples, "no_cube")
+    for k in range(N_NO_CUBE_BINS):
+        _draw_no_cube_panel(axes[0, N_COLORED_CUBES + k], samples, k)
+    for c in range(row0_panels, n_cols):
+        axes[0, c].set_visible(False)
+
+    # Row 1: combined, pickup #1..N, swap pair freq
     _draw_all_colors_panel(axes[1, 0], samples)
-    _draw_pickup_panel(axes[1, 1], samples, 0)
-    _draw_pickup_panel(axes[1, 2], samples, 1)
-    _draw_swap_pair_panel(axes[1, 3], episode_swaps_list, N_BINS)
+    for p in range(N_PICKUPS):
+        _draw_pickup_panel(axes[1, 1 + p], samples, p)
+    _draw_swap_pair_panel(axes[1, 1 + N_PICKUPS], episode_swaps_list, N_BINS)
+    for c in range(row1_panels, n_cols):
+        axes[1, c].set_visible(False)
 
     fig.suptitle(
-        f"Lightweight 4-bin demo: xy in [-{XY_HALF}, {XY_HALF}], "
+        f"Lightweight {N_BINS}-bin demo: xy in [-{XY_HALF}, {XY_HALF}], "
         f"min_center_dist={MIN_CENTER_DIST}",
         fontsize=13,
     )
