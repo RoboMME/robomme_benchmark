@@ -11,6 +11,18 @@ Each episode:
    colour to each bin (torch.randperm, same as VideoUnmask.py:191).
 3. Picks 2 bins out of the 3 coloured-cube bins without replacement, deriving
    pickup_generator via seed * 2654435761 + 1 (same as VideoUnmaskSwap.py:181).
+4. If --num-buttons N > 0, derives button_generator via seed * 2654435761 + 3
+   (offset 3 is demo-local; permanence ButtonUnmask draws buttons from the main
+   stream, but the demo offsets to a separate stream so that the default
+   num_buttons=0 path remains byte-identical to prior runs) and uniformly samples
+   N button (x, y) in [-XY_HALF, XY_HALF] x [BUTTON_Y_MIN, BUTTON_Y_MAX] with
+   rejection sampling, min center-dist = BUTTON_MIN_CENTER_DIST = 0.1
+   (worst-case lower bound from ButtonUnmaskSwap: centers spaced 0.2 with
+   per-axis jitter +-0.025, so the closest two centers can come is ~0.1).
+
+Buttons and bins are sampled independently — their xy footprints may overlap.
+Permanence ButtonUnmask uses avoid=[button_obb] for bins; the demo skips
+collision avoidance since it is visualization-only.
 
 Output: a single 2x3 PNG covering 200 episodes (800 bin samples) by default.
 """
@@ -36,6 +48,13 @@ N_EPISODES = 1000
 N_PICKUPS = 2
 SWAP_TIMES = 3
 KNUTH_HASH = 2654435761
+
+BUTTON_Y_MIN = -0.2
+BUTTON_Y_MAX = -0.1
+BUTTON_X_MIN = -XY_HALF
+BUTTON_X_MAX = XY_HALF
+BUTTON_MIN_CENTER_DIST = 0.1
+BUTTON_COLOR = "#7f7f7f"
 
 COLORS: tuple[str, ...] = ("red", "green", "blue", "no_cube")
 COLOR_TO_RGB: dict[str, str] = {
@@ -71,6 +90,14 @@ class EpisodeSwaps:
     pairs: tuple[tuple[int, int], ...]
 
 
+@dataclass(frozen=True)
+class ButtonSample:
+    episode: int
+    button_index: int
+    x: float
+    y: float
+
+
 def sample_bin_positions(
     generator: torch.Generator,
     xy_half: float,
@@ -94,9 +121,34 @@ def sample_bin_positions(
     )
 
 
+def sample_button_positions(
+    generator: torch.Generator,
+    n_buttons: int,
+    max_attempts: int = 2000,
+) -> list[tuple[float, float]]:
+    pts: list[tuple[float, float]] = []
+    min_dist_sq = BUTTON_MIN_CENTER_DIST * BUTTON_MIN_CENTER_DIST
+    x_span = BUTTON_X_MAX - BUTTON_X_MIN
+    y_span = BUTTON_Y_MAX - BUTTON_Y_MIN
+    for _ in range(max_attempts):
+        if len(pts) == n_buttons:
+            return pts
+        u = torch.rand(2, generator=generator)
+        cx = float(BUTTON_X_MIN + u[0].item() * x_span)
+        cy = float(BUTTON_Y_MIN + u[1].item() * y_span)
+        if all((cx - x) ** 2 + (cy - y) ** 2 >= min_dist_sq for x, y in pts):
+            pts.append((cx, cy))
+    raise RuntimeError(
+        f"failed to place {n_buttons} buttons after {max_attempts} attempts "
+        f"(x_range=[{BUTTON_X_MIN}, {BUTTON_X_MAX}], "
+        f"y_range=[{BUTTON_Y_MIN}, {BUTTON_Y_MAX}], "
+        f"min_dist={BUTTON_MIN_CENTER_DIST})"
+    )
+
+
 def generate_episode(
-    episode_seed: int, episode_idx: int
-) -> tuple[list[BinSample], EpisodeSwaps]:
+    episode_seed: int, episode_idx: int, num_buttons: int = 0
+) -> tuple[list[BinSample], EpisodeSwaps, list[ButtonSample]]:
     generator = torch.Generator()
     generator.manual_seed(episode_seed)
     pickup_generator = torch.Generator()
@@ -132,7 +184,23 @@ def generate_episode(
         for i in range(N_BINS)
     ]
     swaps = EpisodeSwaps(episode=episode_idx, pairs=tuple(swap_pairs))
-    return samples, swaps
+
+    button_samples: list[ButtonSample] = []
+    if num_buttons > 0:
+        button_generator = torch.Generator()
+        button_generator.manual_seed(episode_seed * KNUTH_HASH + 3)
+        button_positions = sample_button_positions(button_generator, num_buttons)
+        button_samples = [
+            ButtonSample(
+                episode=episode_idx,
+                button_index=i,
+                x=button_positions[i][0],
+                y=button_positions[i][1],
+            )
+            for i in range(num_buttons)
+        ]
+
+    return samples, swaps, button_samples
 
 
 def _prepare_axis(ax: plt.Axes, title: str, point_count: int) -> None:
@@ -198,6 +266,13 @@ def _draw_pickup_panel(ax: plt.Axes, samples: list[BinSample], order: int) -> No
     _prepare_axis(ax, label, len(pts))
 
 
+def _draw_buttons_panel(ax: plt.Axes, button_samples: list[ButtonSample]) -> None:
+    xs = [b.x for b in button_samples]
+    ys = [b.y for b in button_samples]
+    ax.scatter(xs, ys, s=18, c=BUTTON_COLOR, alpha=0.7, edgecolors="none")
+    _prepare_axis(ax, "buttons", len(button_samples))
+
+
 def _draw_swap_pair_panel(
     ax: plt.Axes, episode_swaps_list: list[EpisodeSwaps], n_bins: int
 ) -> None:
@@ -245,10 +320,13 @@ def _draw_swap_pair_panel(
 def render_figure(
     samples: list[BinSample],
     episode_swaps_list: list[EpisodeSwaps],
+    button_samples: list[ButtonSample],
+    num_buttons: int,
     out_path: Path,
 ) -> None:
     row0_panels = N_COLORED_CUBES + N_NO_CUBE_BINS  # = N_BINS
-    row1_panels = 2 + N_PICKUPS  # combined + N pickups + swap_freq
+    # combined + N pickups + swap_freq, plus optional buttons-only panel.
+    row1_panels = 2 + N_PICKUPS + (1 if num_buttons > 0 else 0)
     n_cols = max(row0_panels, row1_panels)
     fig, axes = plt.subplots(2, n_cols, figsize=(n_cols * 5, 10))
 
@@ -261,11 +339,13 @@ def render_figure(
     for c in range(row0_panels, n_cols):
         axes[0, c].set_visible(False)
 
-    # Row 1: combined, pickup #1..N, swap pair freq
+    # Row 1: combined, pickup #1..N, swap pair freq, [buttons]
     _draw_all_colors_panel(axes[1, 0], samples)
     for p in range(N_PICKUPS):
         _draw_pickup_panel(axes[1, 1 + p], samples, p)
     _draw_swap_pair_panel(axes[1, 1 + N_PICKUPS], episode_swaps_list, N_BINS)
+    if num_buttons > 0:
+        _draw_buttons_panel(axes[1, 2 + N_PICKUPS], button_samples)
     for c in range(row1_panels, n_cols):
         axes[1, c].set_visible(False)
 
@@ -287,6 +367,18 @@ def main() -> None:
     parser.add_argument("--n-episodes", type=int, default=N_EPISODES)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument(
+        "--num-buttons",
+        type=int,
+        default=0,
+        help="If > 0, additionally sample N buttons per episode in "
+        f"[-XY_HALF, XY_HALF] x [{BUTTON_Y_MIN}, {BUTTON_Y_MAX}] with "
+        f"min center-dist {BUTTON_MIN_CENTER_DIST} (rejection sampling). "
+        "Default 0 keeps the demo's output byte-identical to prior runs. "
+        "N<=3 is reliably packable at 2000 attempts; N=4 is at the geometric "
+        "capacity of the 0.4x0.1 strip and may raise RuntimeError for ~2.6%% "
+        "of seeds — surface those loudly rather than silently degrading.",
+    )
+    parser.add_argument(
         "--debug-single-episode",
         type=int,
         default=None,
@@ -297,13 +389,19 @@ def main() -> None:
 
     samples: list[BinSample] = []
     episode_swaps_list: list[EpisodeSwaps] = []
+    button_samples_all: list[ButtonSample] = []
     for ep in range(args.n_episodes):
         episode_seed = args.base_seed + ep
-        ep_samples, ep_swaps = generate_episode(episode_seed, ep)
+        ep_samples, ep_swaps, ep_buttons = generate_episode(
+            episode_seed, ep, args.num_buttons
+        )
         samples.extend(ep_samples)
         episode_swaps_list.append(ep_swaps)
+        button_samples_all.extend(ep_buttons)
 
-    render_figure(samples, episode_swaps_list, args.out)
+    render_figure(
+        samples, episode_swaps_list, button_samples_all, args.num_buttons, args.out
+    )
 
     color_counts = Counter(s.color for s in samples)
     pick_counts = Counter(
@@ -318,10 +416,17 @@ def main() -> None:
     print(f"color counts: {dict(color_counts)}")
     print(f"pickup counts (color, order): {dict(pick_counts)}")
     print(f"swap pair counts (i<j)=count: {dict(sorted(swap_pair_counts.items()))}")
+    if args.num_buttons > 0:
+        print(
+            f"button samples: {len(button_samples_all)} "
+            f"({args.n_episodes} episodes x {args.num_buttons} buttons)"
+        )
 
     if args.debug_single_episode is not None:
         debug_seed = args.debug_single_episode
-        debug_samples, debug_swaps = generate_episode(debug_seed, debug_seed)
+        debug_samples, debug_swaps, debug_buttons = generate_episode(
+            debug_seed, debug_seed, args.num_buttons
+        )
         debug_colors = [s.color for s in debug_samples]
         debug_chosen = [
             s.bin_index for s in sorted(debug_samples, key=lambda s: (s.pickup_order is None, s.pickup_order))
@@ -331,6 +436,11 @@ def main() -> None:
             f"[debug seed={debug_seed}] bin_colors={debug_colors}  "
             f"chosen_bin_indices={debug_chosen}  swap_pairs={list(debug_swaps.pairs)}"
         )
+        if args.num_buttons > 0:
+            debug_button_xy = [(b.x, b.y) for b in debug_buttons]
+            print(
+                f"[debug seed={debug_seed}] button_positions={debug_button_xy}"
+            )
 
 
 if __name__ == "__main__":
