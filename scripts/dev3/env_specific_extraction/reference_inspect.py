@@ -7,15 +7,17 @@
     visualize(segmentation_dir, output_dir, env_id=None,
               difficulty_by_env_episode=None) -> (kept, skipped)
 
-四个 reference env 分两条分支：
+四个 reference env 都走 2 行布局，但第 2 行内容因 env 而异：
 
-- **PickHighlight / VideoPlaceButton / VideoPlaceOrder** 走新 2 行布局：
-  第 1 行 = ("all","cube","button","target") 1×4 collage（与 inspect_stat 普通
-  xy 图一致），第 2 行 = (Panel A 主语义占比 / Panel B 次语义占比 / Panel C
-  task_target xy 分布)。第 2 行数据来源 = visible_objects.json 顶层
-  ``selected_target`` sidecar 字段（由 reference.enrich_visible_payload 写入）。
-- **VideoRepick** 走与其它 reference env 一致的单图 1 行 collage（无 difficulty 拆分、
-  无 pickup overlay）。
+- **PickHighlight / VideoPlaceButton / VideoPlaceOrder** 第 1 行 =
+  ("all","cube","button","target") 1×4 collage，第 2 行 = (Panel A 主语义占比 /
+  Panel B 次语义占比 / Panel C task_target xy 分布)。第 2 行数据来源 =
+  visible_objects.json 顶层 ``selected_target`` 字段（由
+  reference.enrich_visible_payload 写入）。
+- **VideoRepick** 第 1 行 = 同款 1×4 collage，第 2 行 = 单 panel 满列 pickup
+  target xy overlay：背景 spawned_cubes 灰点、前景 target_cube_1 按 RGB
+  着色。数据来源 = visible_objects.json 顶层 ``videorepick_metadata`` 字段
+  （与 selected_target 解耦）。
 
 数据层（discover / dedup / sidecar 解析）走 reference.py；可视化层（panel
 绘制 / 2 行 figure 拼装）一律落在本文件 —— reference.py 只负责数据产生，
@@ -369,6 +371,118 @@ def _render_two_row_figure(
 
 
 # ---------------------------------------------------------------------------
+# VideoRepick 专属：第 2 行 pickup target xy overlay panel
+# ---------------------------------------------------------------------------
+
+
+def _draw_videorepick_pickup_target_xy_panel(
+    ax: Any,
+    records: list[reference_module.VideoRepickRecord],
+) -> None:
+    """背景层 = all_candidates 灰点；前景层 = target_cube_1 按 cube 颜色着色。"""
+
+    bg_xy: list[tuple[float, float]] = []
+    fg_by_color: dict[str, list[tuple[float, float]]] = {}
+    color_counts: Counter[str] = Counter()
+
+    for rec in records:
+        md = rec.metadata
+        for cand in md.get("all_candidates", []) or []:
+            pos = cand.get("position_xy")
+            if isinstance(pos, (list, tuple)) and len(pos) >= 2:
+                bg_xy.append(xy_common._xy_rot_cw_90(float(pos[0]), float(pos[1])))
+
+        target_xy = md.get("target_cube_1_position_xy")
+        color_name = str(md.get("target_cube_1_color", "unknown")) or "unknown"
+        if isinstance(target_xy, (list, tuple)) and len(target_xy) >= 2:
+            fg_by_color.setdefault(color_name, []).append(
+                xy_common._xy_rot_cw_90(float(target_xy[0]), float(target_xy[1]))
+            )
+            color_counts[color_name] += 1
+
+    if bg_xy:
+        ax.scatter(
+            [p[0] for p in bg_xy],
+            [p[1] for p in bg_xy],
+            s=20,
+            color="lightgray",
+            alpha=0.4,
+            edgecolors="none",
+            label="spawned_cubes",
+        )
+
+    ordered_colors = ["red", "green", "blue"] + sorted(
+        c for c in fg_by_color if c not in ("red", "green", "blue")
+    )
+    for color_name in ordered_colors:
+        pts = fg_by_color.get(color_name)
+        if not pts:
+            continue
+        bar_color = xy_common.CUBE_COLOR_MAP.get(
+            color_name, xy_common.CUBE_COLOR_MAP["unknown"]
+        )
+        ax.scatter(
+            [p[0] for p in pts],
+            [p[1] for p in pts],
+            s=80,
+            c=bar_color,
+            edgecolors="black",
+            linewidths=0.6,
+            label=f"target_cube_1={color_name} (n={len(pts)})",
+        )
+
+    ax.set_xlim(-xy_common.XY_LIMIT, xy_common.XY_LIMIT)
+    ax.set_ylim(-xy_common.XY_LIMIT, xy_common.XY_LIMIT)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("World Y")
+    ax.set_ylabel("-World X")
+    ax.grid(True, alpha=0.45)
+
+    total_target = sum(color_counts.values())
+    by_color_text = " ".join(
+        f"{c}={color_counts.get(c, 0)}" for c in ordered_colors if color_counts.get(c)
+    )
+    title = f"Pickup target XY\nepisodes={total_target}"
+    if by_color_text:
+        title = f"{title} | {by_color_text}"
+    ax.set_title(title)
+    if bg_xy or any(fg_by_color.values()):
+        ax.legend(loc="upper right", fontsize=8)
+
+
+def _render_two_row_figure_videorepick(
+    output_dir: Path,
+    points: list[xy_common.VisibleObjectPoint],
+    episode_count: int,
+    videorepick_records: list[reference_module.VideoRepickRecord],
+    plt: Any,
+) -> Path:
+    """VideoRepick 2 行 figure：第 1 行复用 1×4 collage，第 2 行单 panel 满列。"""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"VideoRepick{xy_common.XY_DEFAULT_PNG_SUFFIX}"
+
+    panel_specs = ("all", "cube", "button", "target")
+    n_cols = len(panel_specs)
+
+    fig = plt.figure(figsize=(7 * n_cols, 7 * 2))
+    gs = fig.add_gridspec(2, n_cols)
+
+    for col_idx, panel_key in enumerate(panel_specs):
+        ax = fig.add_subplot(gs[0, col_idx])
+        xy_common._plot_panel(ax, panel_key, "VideoRepick", points)
+
+    ax_xy = fig.add_subplot(gs[1, 0:n_cols])
+    _draw_videorepick_pickup_target_xy_panel(ax_xy, videorepick_records)
+
+    title = (
+        f"VideoRepick | episodes={episode_count} | points={len(points)} "
+        f"| videorepick_records={len(videorepick_records)}"
+    )
+    fig.suptitle(title, fontsize=18)
+    return xy_common._save_combined_figure(fig, output_path, plt)
+
+
+# ---------------------------------------------------------------------------
 # 公开接口：visualize
 # ---------------------------------------------------------------------------
 
@@ -443,6 +557,21 @@ def visualize(
         f"skipped(dup)={len(skipped_records)}"
     )
 
+    # --- 收集 VideoRepick records（与 selected_target 解耦的独立路径）---
+    videorepick_records_by_env: dict[
+        str, list[reference_module.VideoRepickRecord]
+    ] = {}
+    raw_vr = reference_module.discover_videorepick_records(
+        segmentation_dir, env_filter=env_id
+    )
+    kept_vr, skipped_vr = reference_module.dedup_videorepick_records(raw_vr)
+    for rec in kept_vr:
+        videorepick_records_by_env.setdefault(rec.env_id, []).append(rec)
+    print(
+        f"  VideoRepick records: kept={len(kept_vr)} "
+        f"skipped(dup)={len(skipped_vr)}"
+    )
+
     plt = xy_common._get_pyplot(show=False)
     for eid in sorted(points_by_env):
         points = points_by_env[eid]
@@ -461,6 +590,25 @@ def visualize(
                 f"  {eid}: episodes={episode_counts.get(eid, 0)} "
                 f"points={len(points)} "
                 f"selected_records={len(selected_records)} "
+                f"cube={counts.get('cube', 0)} "
+                f"button={counts.get('button', 0)} "
+                f"target={counts.get('target', 0)} "
+                f"other={counts.get('other', 0)}"
+            )
+        elif eid == reference_module.VIDEOREPICK_ENV_ID:
+            vr_records = videorepick_records_by_env.get(eid, [])
+            _render_two_row_figure_videorepick(
+                output_dir,
+                points,
+                episode_counts.get(eid, 0),
+                vr_records,
+                plt,
+            )
+            counts = xy_common._category_counts(points)
+            print(
+                f"  {eid}: episodes={episode_counts.get(eid, 0)} "
+                f"points={len(points)} "
+                f"videorepick_records={len(vr_records)} "
                 f"cube={counts.get('cube', 0)} "
                 f"button={counts.get('button', 0)} "
                 f"target={counts.get('target', 0)} "
@@ -498,10 +646,11 @@ _VALID_ENV_IDS = sorted(REFERENCE_ENV_IDS)
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Reference 套件专用 xy 可视化：扫描 visible_objects.json，为 "
-            "PickHighlight / VideoPlaceButton / VideoPlaceOrder 渲染 2 行 PNG "
-            "(visible-objects collage + selected_target overlay)；"
-            "VideoRepick 走与其它 reference env 一致的单图 1 行 collage。"
+            "Reference 套件专用 xy 可视化：扫描 visible_objects.json，为四个 "
+            "reference env 各渲染一张 2 行 PNG。第 1 行恒为 visible-objects "
+            "1×4 collage；第 2 行：PickHighlight / VideoPlaceButton / "
+            "VideoPlaceOrder 走 selected_target 的 (bar A / bar B / xy) 三 "
+            "panel；VideoRepick 走 pickup target xy overlay 单 panel 满列。"
         )
     )
     parser.add_argument(

@@ -341,8 +341,8 @@ def _color_from_actor(actor: Any) -> str:
 
 
 def _extract_videorepick_metadata(env: Any) -> dict:
-    """从 env.unwrapped 提取 VideoRepick 的 target_cube_1_color + num_repeats。
-    缺关键属性 / 类型不合法时 raise。"""
+    """从 env.unwrapped 提取 VideoRepick 的 target_cube_1 颜色/位置 + num_repeats +
+    spawned_cubes 候选列表。缺关键属性 / 类型不合法时 raise。"""
     base = getattr(env, "unwrapped", env)
     target_cube = getattr(base, "target_cube_1", None)
     if target_cube is None:
@@ -362,7 +362,28 @@ def _extract_videorepick_metadata(env: Any) -> dict:
         raise ValueError(
             f"VideoRepick: num_repeats must be >= 1, got {num_repeats}"
         )
-    return {"target_cube_1_color": color_name, "num_repeats": int(num_repeats)}
+
+    spawned_cubes = list(getattr(base, "spawned_cubes", []) or [])
+    if not spawned_cubes:
+        raise ValueError(
+            "VideoRepick: spawned_cubes is empty after reset"
+        )
+    target_idx = _index_in_list(target_cube, spawned_cubes)
+    if target_idx is None:
+        raise ValueError(
+            "VideoRepick: target_cube_1 not found in spawned_cubes"
+        )
+
+    return {
+        "target_cube_1_color": color_name,
+        "num_repeats": int(num_repeats),
+        "target_cube_1_index": int(target_idx),
+        "target_cube_1_name": _actor_name(target_cube),
+        "target_cube_1_position_xy": _actor_xy(target_cube),
+        "all_candidates": [
+            _candidate_dict(i, cube) for i, cube in enumerate(spawned_cubes)
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -531,6 +552,121 @@ def dedup_selected_target_records(
     return kept, skipped
 
 
+# ---------------------------------------------------------------------------
+# Inspect 端：VideoRepick 专用发现 / 去重（与 selected_target 解耦）
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class VideoRepickRecord:
+    path: Path
+    env_id: str
+    episode: int
+    seed: int
+    metadata: dict
+
+
+def discover_videorepick_records(
+    segmentation_dir: Path,
+    env_filter: Optional[str] = None,
+) -> list[VideoRepickRecord]:
+    """递归扫描 segmentation_dir 下所有 visible_objects.json，提取
+    payload['videorepick_metadata']。
+
+    - 只处理 env_id == 'VideoRepick'，其它 env 跳过。
+    - env_filter 非空且 != 'VideoRepick' 时直接返回空列表。
+    - metadata 缺 'target_cube_1_position_xy' / 'all_candidates' 时打 [Warn]
+      并跳过（说明该条 episode 数据来自旧 rollout，需要重跑）。
+    """
+    seg_dir = Path(segmentation_dir)
+    if not seg_dir.is_dir():
+        return []
+    if env_filter is not None and env_filter != VIDEOREPICK_ENV_ID:
+        return []
+
+    results: list[VideoRepickRecord] = []
+    for json_path in sorted(seg_dir.rglob(VISIBLE_OBJECTS_JSON_FILENAME)):
+        try:
+            payload = _load_visible_objects(json_path)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(
+                f"[Warn] Skip invalid visible_objects JSON {json_path}: "
+                f"{type(exc).__name__}: {exc}"
+            )
+            continue
+
+        env_id = payload.get("env_id")
+        episode = payload.get("episode")
+        seed = payload.get("seed")
+        if (
+            not isinstance(env_id, str)
+            or not isinstance(episode, int)
+            or not isinstance(seed, int)
+        ):
+            print(
+                f"[Warn] Skip visible_objects JSON {json_path} missing "
+                f"env_id/episode/seed"
+            )
+            continue
+
+        if env_id != VIDEOREPICK_ENV_ID:
+            continue
+
+        metadata = payload.get(VIDEOREPICK_METADATA_KEY)
+        if not isinstance(metadata, dict):
+            print(
+                f"[Warn] {env_id} ep{episode} seed{seed}: "
+                f"visible_objects.json missing 'videorepick_metadata' field "
+                f"(re-run rollout to populate). Skipping {json_path}."
+            )
+            continue
+        target_xy = metadata.get("target_cube_1_position_xy")
+        if not (isinstance(target_xy, (list, tuple)) and len(target_xy) >= 2):
+            print(
+                f"[Warn] {env_id} ep{episode} seed{seed}: "
+                f"videorepick_metadata missing 'target_cube_1_position_xy' "
+                f"(re-run rollout to populate). Skipping {json_path}."
+            )
+            continue
+        if not isinstance(metadata.get("all_candidates"), list):
+            print(
+                f"[Warn] {env_id} ep{episode} seed{seed}: "
+                f"videorepick_metadata missing 'all_candidates' "
+                f"(re-run rollout to populate). Skipping {json_path}."
+            )
+            continue
+
+        results.append(
+            VideoRepickRecord(
+                path=json_path,
+                env_id=env_id,
+                episode=episode,
+                seed=seed,
+                metadata=metadata,
+            )
+        )
+    return results
+
+
+def dedup_videorepick_records(
+    entries: list[VideoRepickRecord],
+) -> tuple[list[VideoRepickRecord], list[VideoRepickRecord]]:
+    """同 (env_id, episode) 多 seed 时只保留 max seed —— 与
+    dedup_selected_target_records 一致。"""
+    grouped: dict[tuple[str, int], list[VideoRepickRecord]] = {}
+    for entry in entries:
+        grouped.setdefault((entry.env_id, entry.episode), []).append(entry)
+    kept: list[VideoRepickRecord] = []
+    skipped: list[VideoRepickRecord] = []
+    for bucket in grouped.values():
+        bucket_sorted = sorted(bucket, key=lambda e: e.seed)
+        kept.append(bucket_sorted[-1])
+        skipped.extend(bucket_sorted[:-1])
+    kept.sort(key=lambda e: (e.env_id, e.episode))
+    skipped.sort(key=lambda e: (e.env_id, e.episode, e.seed))
+    return kept, skipped
+
+
 __all__ = [
     "REFERENCE_TARGET_ENV_IDS",
     "VIDEO_PLACE_BUTTON_ENV_ID",
@@ -544,8 +680,11 @@ __all__ = [
     "VIDEOREPICK_METADATA_KEY",
     "VISIBLE_OBJECTS_JSON_FILENAME",
     "SelectedTargetRecord",
+    "VideoRepickRecord",
     "extract_selected_target",
     "enrich_visible_payload",
     "discover_selected_target_records",
     "dedup_selected_target_records",
+    "discover_videorepick_records",
+    "dedup_videorepick_records",
 ]
