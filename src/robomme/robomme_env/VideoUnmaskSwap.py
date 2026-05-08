@@ -26,9 +26,10 @@ from mani_skill.utils.geometry.rotation_conversions import (
 
 from .utils import *
 from .utils.subgoal_evaluate_func import static_check
-from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
+from .utils.object_generation import spawn_fixed_cube, build_board_with_hole, build_bin
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
+from .utils.SceneGenerationError import SceneGenerationError
 from ..logging_utils import logger
 
 
@@ -177,116 +178,105 @@ class VideoUnmaskSwap(BaseEnv):
         generator = torch.Generator()
         generator.manual_seed(self.seed)
 
-        pickup_generator = torch.Generator()
-        pickup_generator.manual_seed(self.seed * 2654435761 + 1)
+        # --- 1. 通过 permanance_task_pos_generator 拿位置（n_buttons=0, n_swaps=swap_times）
+        n_bins = self.configs[self.difficulty]['bin']
+        n_swaps = self.swap_times
+        n_pickups = self.pick_times
+        result = permanance_task_pos_generator(
+            n_bins=n_bins, n_swaps=n_swaps, n_buttons=0,
+            n_pickups=n_pickups, seed=self.seed,
+        )
+        if "fail" in result:
+            raise SceneGenerationError(result["fail"])
 
-        swap_generator = torch.Generator()
-        swap_generator.manual_seed(self.seed * 2654435761 + 2)
+        bin_positions = result["bin_positions"]
+        bin_colors = result["bin_colors"]
+        pickup_map = result["pickup_map"]
+        swap_pairs_raw = result["swap_pairs"]
+
+        # --- 2. pickup-first 重排：pickup 0..n_pickups-1 → 剩余 colored → no_cube
+        inv_pickup = {order: raw for raw, order in pickup_map.items()}
+        pickup_indices_raw = [inv_pickup[k] for k in range(n_pickups)]
+        other_colored_raw = sorted(
+            raw for raw, c in enumerate(bin_colors)
+            if c != "no_cube" and raw not in pickup_indices_raw
+        )
+        no_cube_raw = sorted(
+            raw for raw, c in enumerate(bin_colors) if c == "no_cube"
+        )
+        perm = pickup_indices_raw + other_colored_raw + no_cube_raw
+        inv_perm = {raw: new for new, raw in enumerate(perm)}
 
         self.table_scene = TableSceneBuilder(
             self, robot_init_qpos_noise=self.robot_init_qpos_noise
         )
         self.table_scene.build()
 
-        avoid=[]
-
-
-          # Generate 3 bins
+        # --- 3. 按重排顺序建 bins
         self.spawned_bins = []
-        region4=[[-0.05,-0.1],[-0.05,0.1],[0.1,0.1],[0.1,-0.1]]
-        region3_tri=[[-0.05,-0.1],[-0.05,0.1],[0.1,0]]
-        region3_line=[[0,-0.15],[0,0.15],[0,0]]
-
-        # Use generator to randomly select region3_tri or region3_line
-        region3_choice = torch.randint(0, 2, (1,), generator=generator).item()
-        region3 = region3_tri if region3_choice == 0 else region3_line
-
-        if self.configs[self.difficulty]['bin']==4:
-            region=region4
-        else:
-             region=region3
-        angle, region = rotate_points_random(region,(0,180),generator)
-        
-        for i in range(self.configs[self.difficulty]['bin']):
-            try:
-                bin_actor = spawn_random_bin(
-                    self,
-                    avoid=avoid,  # Use current avoidance list, containing all spawned objects
-                    region_center=region[i],
-                    region_half_size=0.07,
-                    min_gap=self.cube_half_size*1,  # bins need larger gap, increased to 6x to avoid collision
-                    name_prefix=f"bin_{i}",
-                    max_trials=256,
-                    generator=generator
-                )
-            except RuntimeError as e:
-                break
-
+        for new_idx, raw_idx in enumerate(perm):
+            x, y = bin_positions[raw_idx]
+            z_rotation = float(torch.rand(1, generator=generator).item() * 90.0)
+            bin_actor = build_bin(
+                self,
+                callsign=f"bin_{new_idx}",
+                position=[x, y, 0.002],
+                z_rotation_deg=z_rotation,
+            )
             self.spawned_bins.append(bin_actor)
-            # Assign bin to self.bin_0, self.bin_1 etc. attributes
-            setattr(self, f"bin_{i}", bin_actor)
-            # Add newly generated bin to avoidance list
-            avoid.append(bin_actor)
+            setattr(self, f"bin_{new_idx}", bin_actor)
 
+        # --- 4. 颜色重排 + 建 cubes（前 3 个 bin 必为 colored）
+        cube_color_to_rgba = {
+            "red": (1, 0, 0, 1),
+            "green": (0, 1, 0, 1),
+            "blue": (0, 0, 1, 1),
+        }
+        permuted_bin_colors = [bin_colors[perm[i]] for i in range(n_bins)]
+        # color_names[i] 对应 self.bin_i 的 cube 颜色（前 3 个 bin 都有 cube）
+        self.color_names = permuted_bin_colors[:3]
 
-        # Generate 3 dynamic cubes under each bin (use fixed position, colors red, green, blue)
         spawned_dynamic_cubes = []
         self.cube_bin_pairs = []
         self.bin_to_cube = {}
         self.bin_to_color = {}
         self.spawned_dynamic_cubes = spawned_dynamic_cubes
-        cube_colors = [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1)]  # Red, Green, Blue
-        color_names = ["red", "green", "blue"]
 
-        # Use seed to randomly shuffle color order
+        # --- 5. selected_bins / selected_bin_indices（长度 3：3 个 colored bin，
+        # 前 n_pickups 个是 pickup 目标，task_list 引用 selected_bins[0/1]）
+        self.selected_bin_indices = list(range(min(3, n_bins)))
+        self.selected_bins = self.spawned_bins[:3]
 
-        shuffle_indices = torch.randperm(len(cube_colors), generator=generator).tolist()
-        cube_colors = [cube_colors[i] for i in shuffle_indices]
-        color_names = [color_names[i] for i in shuffle_indices]
-
-        # Store color_names for RecordWrapper access
-        self.color_names = color_names
-
-        # Randomly select 3 bins from all bins to generate cube
-        num_bins_to_select = min(3, len(self.spawned_bins))
-        selected_bin_indices = torch.randperm(3, generator=pickup_generator)[:num_bins_to_select].tolist()
-        selected_bins = [self.spawned_bins[idx] for idx in selected_bin_indices]
-        self.selected_bin_indices = selected_bin_indices
-        self.selected_bins = selected_bins  # Save selected bins, corresponding to color_names order
-
-        for i, (bin_idx, bin_actor) in enumerate(zip(selected_bin_indices, selected_bins)):
-            # Get bin position
+        for i in range(min(3, n_bins)):
+            color = permuted_bin_colors[i]
+            bin_actor = self.spawned_bins[i]
             bin_pos = bin_actor.pose.p
             if isinstance(bin_pos, torch.Tensor):
                 bin_pos = bin_pos[0].detach().cpu().numpy()
 
             cube_position = [bin_pos[0], bin_pos[1]]
-            # Generate cube using fixed position, colors red, green, blue
             cube_actor = spawn_fixed_cube(
                 self,
                 position=cube_position,
-                half_size=self.cube_half_size/1.2,
-                color=cube_colors[i],  # Use red, green, blue in order
-                name_prefix=f"target_cube_{color_names[i]}",
-                yaw=0.0,  # No rotation
-                dynamic=True
+                half_size=self.cube_half_size / 1.2,
+                color=cube_color_to_rgba[color],
+                name_prefix=f"target_cube_{color}",
+                yaw=0.0,
+                dynamic=True,
             )
 
             spawned_dynamic_cubes.append(cube_actor)
-            # Assign cube to attributes like self.target_cube_red, self.target_cube_green, etc.
-            setattr(self, f"target_cube_{color_names[i]}", cube_actor)
-            # Also store using numeric index for easy access
+            setattr(self, f"target_cube_{color}", cube_actor)
             setattr(self, f"target_cube_{i}", cube_actor)
-            setattr(self, f"target_cube_for_bin_{bin_idx}", cube_actor)
+            setattr(self, f"target_cube_for_bin_{i}", cube_actor)
             self.cube_bin_pairs.append((cube_actor, bin_actor))
-            self.bin_to_cube[bin_idx] = cube_actor
-            self.bin_to_color[bin_idx] = color_names[i]
+            self.bin_to_cube[i] = cube_actor
+            self.bin_to_color[i] = color
 
-            # Add newly generated cube to avoidance list
-            avoid.append(cube_actor)
+        self.cube_bins = self.selected_bins[:]
+        self.cube_bin_indices = self.selected_bin_indices[:]
 
-        self.cube_bins = selected_bins
-        self.cube_bin_indices = selected_bin_indices
+        # --- 6. target_* 字段（保留原 _load_scene 的 target_choice / target_indices 段）
         self.target_bin = None
         self.target_bin_index = None
         self.target_cube = None
@@ -306,8 +296,8 @@ class VideoUnmaskSwap(BaseEnv):
             target_cube_actor, target_bin_actor = self.cube_bin_pairs[target_choice]
             self.target_cube = target_cube_actor
             self.target_bin = target_bin_actor
-            self.target_bin_index = selected_bin_indices[target_choice]
-            self.target_cube_color = color_names[target_choice]
+            self.target_bin_index = self.selected_bin_indices[target_choice]
+            self.target_cube_color = self.color_names[target_choice]
             self.target_cube_name = (
                 getattr(target_cube_actor, "name", None)
                 or f"target_cube_{self.target_cube_color}"
@@ -318,7 +308,7 @@ class VideoUnmaskSwap(BaseEnv):
                 if idx_i == target_choice:
                     continue
                 self.other_cube_bins.append(bin_actor)
-                self.other_cube_bin_indices.append(selected_bin_indices[idx_i])
+                self.other_cube_bin_indices.append(self.selected_bin_indices[idx_i])
                 self.other_cubes.append(cube_actor)
         else:
             self.target_cube = None
@@ -328,31 +318,29 @@ class VideoUnmaskSwap(BaseEnv):
             self.target_cube_name = None
             self.target_label = "target"
 
-       # Randomly select 2 unique bins as target_bin_1 and target_bin_2
-        # target_indices are indices into selected_bin_indices (0, 1, 2)
-        target_indices = torch.randperm(len(selected_bin_indices), generator=generator)[:2]
-        # Use selected_bins to get correct bin (corresponding to color_names order)
-        self.target_bin_1=self.selected_bins[target_indices[0]]
-        self.target_bin_2=self.selected_bins[target_indices[1]]
-        # Record cube colors for these two bins, using color_names direct indexing
-        self.target_bin_1_cube_color = color_names[target_indices[0].item()]
-        self.target_bin_2_cube_color = color_names[target_indices[1].item()]
+        # Randomly select 2 unique bins as target_bin_1 and target_bin_2
+        target_indices = torch.randperm(
+            len(self.selected_bin_indices), generator=generator,
+        )[:2]
+        self.target_bin_1 = self.selected_bins[target_indices[0]]
+        self.target_bin_2 = self.selected_bins[target_indices[1]]
+        self.target_bin_1_cube_color = self.color_names[target_indices[0].item()]
+        self.target_bin_2_cube_color = self.color_names[target_indices[1].item()]
 
+        # --- 7. swap_pairs 索引重映射 + 设属性
         for pair_idx in range(1, 4):
             setattr(self, f"swap_pair{pair_idx}_idx1", None)
             setattr(self, f"swap_pair{pair_idx}_idx2", None)
-
-        for pair_idx in range(self.swap_times):
-            swap_indices = torch.randperm(len(self.spawned_bins), generator=swap_generator)[:2]
+        for k, (raw_a, raw_b) in enumerate(swap_pairs_raw):
             setattr(
                 self,
-                f"swap_pair{pair_idx + 1}_idx1",
-                self.spawned_bins[swap_indices[0].item()],
+                f"swap_pair{k + 1}_idx1",
+                self.spawned_bins[inv_perm[raw_a]],
             )
             setattr(
                 self,
-                f"swap_pair{pair_idx + 1}_idx2",
-                self.spawned_bins[swap_indices[1].item()],
+                f"swap_pair{k + 1}_idx2",
+                self.spawned_bins[inv_perm[raw_b]],
             )
         self._refresh_swap_schedule()
 

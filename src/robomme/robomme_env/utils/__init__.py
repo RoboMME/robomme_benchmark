@@ -9,3 +9,4 @@ from .vqa_options import *
 from .task4recovery import task4recovery, inject_fail_grasp
 from .constant import *
 from .generate_sample_action import generate_sample_actions
+from .permanance_task_pos_generator import permanance_task_pos_generator
