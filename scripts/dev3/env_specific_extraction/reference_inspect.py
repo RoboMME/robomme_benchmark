@@ -5,17 +5,17 @@
 单一公开接口：
 
     visualize(segmentation_dir, output_dir, env_id=None,
-              difficulty_by_env_episode=None, snapshot_dir=None) -> (kept, skipped)
+              difficulty_by_env_episode=None) -> (kept, skipped)
 
-四个 reference env 走 3 条不同分支：
+四个 reference env 分两条分支：
 
 - **PickHighlight / VideoPlaceButton / VideoPlaceOrder** 走新 2 行布局：
   第 1 行 = ("all","cube","button","target") 1×4 collage（与 inspect_stat 普通
   xy 图一致），第 2 行 = (Panel A 主语义占比 / Panel B 次语义占比 / Panel C
   task_target xy 分布)。第 2 行数据来源 = visible_objects.json 顶层
   ``selected_target`` sidecar 字段（由 reference.enrich_visible_payload 写入）。
-- **VideoRepick** 维持原 1 行 collage + difficulty 拆分 + pickup overlay。
-  pickup snapshot 仍由 ``snapshot_dir`` 提供。
+- **VideoRepick** 走与其它 reference env 一致的单图 1 行 collage（无 difficulty 拆分、
+  无 pickup overlay）。
 
 数据层（discover / dedup / sidecar 解析）走 reference.py；可视化层（panel
 绘制 / 2 行 figure 拼装）一律落在本文件 —— reference.py 只负责数据产生，
@@ -55,7 +55,6 @@ TWO_ROW_ENV_IDS: frozenset[str] = frozenset(
 _DEFAULT_BASE = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
 DEFAULT_SEGMENTATION_DIR = _DEFAULT_BASE / "reset_segmentation_pngs"
 DEFAULT_OUTPUT_DIR = _DEFAULT_BASE / "inspect-stat" / "xy"
-DEFAULT_SNAPSHOT_DIR = _DEFAULT_BASE / xy_common.SNAPSHOT_DIRNAME
 
 
 # ---------------------------------------------------------------------------
@@ -337,7 +336,7 @@ def _render_two_row_figure(
     row0_axes = []
     for col_idx, panel_key in enumerate(panel_specs):
         ax = fig.add_subplot(gs[0, col_idx])
-        xy_common._plot_panel(ax, panel_key, env_id, points, pickup_records=None)
+        xy_common._plot_panel(ax, panel_key, env_id, points)
         row0_axes.append(ax)
 
     # Row 1: bar1 / bar2 / xy(span 2)
@@ -380,7 +379,6 @@ def visualize(
     *,
     env_id: Optional[str] = None,
     difficulty_by_env_episode: Optional[dict[tuple[str, int], str]] = None,
-    snapshot_dir: Optional[Path] = None,
 ) -> tuple[list, list]:
     """渲染 Reference 套件每个 env 的 xy collage。
 
@@ -395,11 +393,8 @@ def visualize(
         时静默返回空列表。
     difficulty_by_env_episode:
         来自 distribution pipeline 的 (env, episode) -> difficulty 映射。
-        用于把 VideoRepick 拆成 easy_medium / hard 两张 PNG，以及决定每条
-        pickup snapshot 走哪一张 PNG。
-    snapshot_dir:
-        包含 ``<env_id>_ep<n>_seed<s>_after_no_record_reset.json`` 的目录。
-        仅 VideoRepick 使用；其他 env 即使路径有效也不会读取。
+        Reference 套件不做 difficulty 拆分，但保留以与其它 suite 接口一致
+        （也是 _build_points_from_files 的必要输入）。
 
     Returns
     -------
@@ -428,20 +423,9 @@ def visualize(
         )
         return kept, skipped
 
-    difficulty_map = difficulty_by_env_episode or {}
-    points_by_env, skipped_objects, episode_counts, missing_difficulty = (
-        xy_common._build_points_from_files(kept, difficulty_map)
+    points_by_env, skipped_objects, episode_counts, _ = (
+        xy_common._build_points_from_files(kept, difficulty_by_env_episode or {})
     )
-
-    if missing_difficulty:
-        unique_missing = sorted(set(missing_difficulty))
-        print(
-            f"[Reference-inspect] [Warn] {len(unique_missing)} episodes have "
-            f"visible_objects.json but no matching HDF5 difficulty — "
-            f"VideoRepick split routing will skip them:"
-        )
-        for eid, episode in unique_missing:
-            print(f"    - env={eid} ep={episode}")
 
     # --- 收集 selected_target 记录（仅 TWO_ROW envs 用得到）---
     selected_records_by_env: dict[str, list[reference_module.SelectedTargetRecord]] = {}
@@ -458,32 +442,6 @@ def visualize(
         f"  Selected-target records: kept={len(kept_records)} "
         f"skipped(dup)={len(skipped_records)}"
     )
-
-    # --- VideoRepick pickup overlay (与原实现一致) ---
-    pickup_by_env: dict[str, list] = {}
-    if snapshot_dir is not None:
-        snapshot_dir_path = Path(snapshot_dir)
-        if snapshot_dir_path.is_dir():
-            effective_pickup_filter = (
-                env_id
-                if env_id is not None
-                else xy_common.VIDEOREPICK_ENV_ID
-            )
-            all_pickup = xy_common._discover_pickup_snapshot_records(
-                snapshot_dir_path, effective_pickup_filter, difficulty_map
-            )
-            for rec in xy_common._dedup_pickup_records(all_pickup):
-                pickup_by_env.setdefault(rec.env_id, []).append(rec)
-            print(
-                f"  Snapshot dir:     {snapshot_dir_path} "
-                f"(pickup records loaded: "
-                f"{sum(len(v) for v in pickup_by_env.values())})"
-            )
-        else:
-            print(
-                f"[Reference-inspect] [Warn] Snapshot dir not found: "
-                f"{snapshot_dir_path} — VideoRepick pickup overlay will be skipped."
-            )
 
     plt = xy_common._get_pyplot(show=False)
     for eid in sorted(points_by_env):
@@ -515,7 +473,6 @@ def visualize(
                 points,
                 episode_counts.get(eid, 0),
                 plt,
-                pickup_records=pickup_by_env.get(eid),
             )
             print(
                 f"  {eid}: episodes={episode_counts.get(eid, 0)} "
@@ -544,7 +501,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "Reference 套件专用 xy 可视化：扫描 visible_objects.json，为 "
             "PickHighlight / VideoPlaceButton / VideoPlaceOrder 渲染 2 行 PNG "
             "(visible-objects collage + selected_target overlay)；"
-            "VideoRepick 维持原 1 行 collage + difficulty 拆分 + pickup overlay。"
+            "VideoRepick 走与其它 reference env 一致的单图 1 行 collage。"
         )
     )
     parser.add_argument(
@@ -558,12 +515,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         type=Path,
         default=DEFAULT_OUTPUT_DIR,
         help="PNG 输出目录。",
-    )
-    parser.add_argument(
-        "--snapshot-dir",
-        type=Path,
-        default=DEFAULT_SNAPSHOT_DIR,
-        help="VideoRepick pickup snapshot 所在目录。",
     )
     parser.add_argument(
         "--env-id",
@@ -582,11 +533,9 @@ def main() -> None:
     args = _build_arg_parser().parse_args()
     segmentation_dir = args.segmentation_dir.resolve()
     output_dir = args.output_dir.resolve()
-    snapshot_dir = args.snapshot_dir.resolve()
 
     print(f"Segmentation dir: {segmentation_dir}")
     print(f"Output dir:       {output_dir}")
-    print(f"Snapshot dir:     {snapshot_dir}")
     if args.env_id:
         print(f"Env filter:       {args.env_id}")
     print()
@@ -595,7 +544,6 @@ def main() -> None:
         segmentation_dir=segmentation_dir,
         output_dir=output_dir,
         env_id=args.env_id,
-        snapshot_dir=snapshot_dir,
     )
 
     print()

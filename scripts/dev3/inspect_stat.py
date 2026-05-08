@@ -147,9 +147,9 @@ SPLIT_H5_PATTERN = re.compile(
     r"^(?P<env_id>.+?)_ep(?P<episode>\d+)(?:_seed(?P<seed>\d+))?$"
 )
 
-# XY-pipeline 相关常量（VISIBLE_OBJECT_JSON_FILENAME / SNAPSHOT_DIRNAME / 颜色 /
-# 样式表 / env-id 等）现统一定义在 env_specific_extraction/xy_common.py，由 4 个
-# suite-specific inspect 模块共享，inspect_stat.py 不再直接引用它们。
+# XY-pipeline 相关常量（VISIBLE_OBJECT_JSON_FILENAME / 颜色 / 样式表 / env-id 等）
+# 现统一定义在 env_specific_extraction/xy_common.py，由 4 个 suite-specific inspect
+# 模块共享，inspect_stat.py 不再直接引用它们。
 
 
 # ---------------------------------------------------------------------------
@@ -1193,17 +1193,6 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="Directory containing reset segmentation episode folders with visible_objects.json. Defaults to <base-dir>/reset_segmentation_pngs.",
     )
     parser.add_argument(
-        "--snapshot-dir",
-        type=Path,
-        default=None,
-        help=(
-            "Directory containing per-episode snapshot JSONs "
-            "(<env_id>_ep<n>_seed<s>_after_no_record_reset.json). "
-            "Currently used to render VideoRepick pickup cube positions on "
-            "the rightmost xy_hard subplot. Defaults to <base-dir>/snapshots."
-        ),
-    )
-    parser.add_argument(
         "--output-dir",
         type=Path,
         default=None,
@@ -1328,7 +1317,6 @@ def main() -> None:
     base_dir = args.base_dir.resolve()
     hdf5_dir = (args.hdf5_dir or base_dir / "hdf5_files").resolve()
     segmentation_dir = (args.segmentation_dir or base_dir / "reset_segmentation_pngs").resolve()
-    snapshot_dir = (args.snapshot_dir or base_dir / xy_common.SNAPSHOT_DIRNAME).resolve()
     inspect_dir = (args.output_dir or base_dir / "inspect-stat").resolve()
     task_goal_dir = inspect_dir / "task-goal"
     xy_dir = inspect_dir / "xy"
@@ -1339,7 +1327,6 @@ def main() -> None:
     print(f"XY dir:         {xy_dir}")
     print(f"HDF5 dir:       {hdf5_dir}")
     print(f"Segmentation:   {segmentation_dir}")
-    print(f"Snapshots:      {snapshot_dir}")
     if args.env:
         print(f"Env filter:     {args.env}")
     print()
@@ -1370,7 +1357,6 @@ def main() -> None:
         output_dir=xy_dir,
         env_id=args.env,
         difficulty_by_env_episode=difficulty_map,
-        snapshot_dir=snapshot_dir,
     )
 
     kept_imit, skipped_imit = imitation_inspect_module.visualize(

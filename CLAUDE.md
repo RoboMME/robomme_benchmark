@@ -196,9 +196,8 @@ Dataset splits: `train` (100 ep/task), `val` (50 ep/task, fixed seeds), `test` (
 
 - `task-goal/episode_task_metadata.csv` + `<env>_distribution.png`（每个 env 的
   task-goal 分布）
-- `xy/<env>_xy.png`（每个 env 的 visible-objects 散点图；VideoRepick 拆成
-  `_xy_easy_medium.png` / `_xy_hard.png`；4 个 permanence env 是 2×N 的 2 行 PNG，
-  上行 visible-objects、下行 cubes/swaps）
+- `xy/<env>_xy.png`（每个 env 的 visible-objects 散点图；4 个 permanence env 是
+  2×N 的 2 行 PNG，上行 visible-objects、下行 cubes/swaps）
 
 ### 强制保持的拆分结构（**不可回退合并**）
 
@@ -251,7 +250,6 @@ kept_ref, skipped_ref = reference_inspect_module.visualize(
     output_dir=xy_dir,
     env_id=args.env,
     difficulty_by_env_episode=difficulty_map,
-    snapshot_dir=snapshot_dir,
 )
 
 kept_imit, skipped_imit = imitation_inspect_module.visualize(
@@ -308,10 +306,6 @@ uv run python scripts/dev3/env_specific_extraction/permanance_inspect.py
 uv run python scripts/dev3/env_specific_extraction/reference_inspect.py
 uv run python scripts/dev3/env_specific_extraction/imitation_inspect.py
 ```
-
-注意：`reference_inspect.py` 单独运行时没有 HDF5 来源的 difficulty 映射，所以
-VideoRepick 的 easy_medium / hard 拆分会跳过；要看完整 VideoRepick 输出请走
-`inspect_stat.py` 的 4-call 编排路径。
 
 ---
 

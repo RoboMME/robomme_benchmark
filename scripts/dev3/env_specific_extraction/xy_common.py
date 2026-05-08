@@ -2,9 +2,9 @@
 
 把原本散在 inspect_stat.py 里的：
 - XY 渲染常量（XY_LIMIT / AGGREGATE_DPI / 颜色 / 样式表 / env-id）
-- VisibleObjectPoint / _VisibleObjectsFile / _PickupCubeRecord 三个 dataclass
-- visible_objects.json 与 pickup snapshot 的发现 + 去重 + 解析
-- 全部 panel 绘制 + per-env collage 渲染 + VideoRepick 的 split 调度
+- VisibleObjectPoint / _VisibleObjectsFile 两个 dataclass
+- visible_objects.json 的发现 + 去重 + 解析
+- 全部 panel 绘制 + per-env collage 渲染
 
 整体迁移到本模块，让 4 个 suite-specific 的 inspect 模块（counting / permanance /
 reference / imitation）和 inspect_stat.py 自身都从这里取共享逻辑，避免循环 import。
@@ -37,17 +37,9 @@ VISIBLE_OBJECT_JSON_FILENAME = "visible_objects.json"
 XY_LIMIT = 0.3
 AGGREGATE_DPI = 300
 
-SNAPSHOT_DIRNAME = "snapshots"
-PICKUP_SNAPSHOT_FILENAME_PATTERN = re.compile(
-    r"^(?P<env_id>.+?)_ep(?P<episode>\d+)_seed(?P<seed>\d+)_after_no_record_reset\.json$"
-)
-
 XY_DEFAULT_PNG_SUFFIX = "_xy.png"
-VIDEOREPICK_EASY_MEDIUM_SUFFIX = "_xy_easy_medium.png"
-VIDEOREPICK_HARD_SUFFIX = "_xy_hard.png"
 BINFILL_ENV_ID = "BinFill"
 BINFILL_BOARD_WITH_HOLE_NAME = "board_with_hole"
-VIDEOREPICK_ENV_ID = "VideoRepick"
 INSERTPEG_ENV_ID = "InsertPeg"
 MOVECUBE_ENV_ID = "MoveCube"
 ROUTESTICK_ENV_ID = "RouteStick"
@@ -151,19 +143,6 @@ class _VisibleObjectsFile:
     episode: int
     seed: int
     objects: list[dict]
-
-
-@dataclass(frozen=True)
-class _PickupCubeRecord:
-    env_id: str
-    episode: int
-    seed: int
-    difficulty: Optional[str]
-    name: str
-    color: str
-    world_x: float
-    world_y: float
-    world_z: float
 
 
 def _safe_float_triplet(value: object) -> Optional[tuple[float, float, float]]:
@@ -271,99 +250,6 @@ def _discover_visible_object_files(input_dir: Path) -> list[_VisibleObjectsFile]
             )
         )
     return files
-
-
-def _discover_pickup_snapshot_records(
-    snapshot_dir: Path,
-    env_filter: Optional[str],
-    difficulty_by_env_episode: dict[tuple[str, int], str],
-) -> list[_PickupCubeRecord]:
-    """扫描 snapshot 目录，按 episode/seed 加载 solve_pickup_cubes 的第一条记录。
-
-    遵循 No silent fallbacks：异常文件用 [Warn] 打印并跳过，不静默吞掉。
-    后续由 _dedup_pickup_records 做 max-seed-per-episode 去重，与 visible_objects 一致。
-    """
-    if not snapshot_dir.is_dir():
-        return []
-
-    records: list[_PickupCubeRecord] = []
-    for json_path in sorted(snapshot_dir.glob("*.json")):
-        match = PICKUP_SNAPSHOT_FILENAME_PATTERN.match(json_path.name)
-        if match is None:
-            continue
-        env_id = match.group("env_id")
-        if env_filter is not None and env_id != env_filter:
-            continue
-        try:
-            episode = int(match.group("episode"))
-            seed = int(match.group("seed"))
-        except ValueError:
-            print(f"[Warn] Skip snapshot with non-integer episode/seed: {json_path}")
-            continue
-
-        try:
-            with json_path.open("r", encoding="utf-8") as handle:
-                payload = json.load(handle)
-        except (OSError, json.JSONDecodeError) as exc:
-            print(f"[Warn] Skip invalid snapshot JSON {json_path}: {type(exc).__name__}: {exc}")
-            continue
-
-        solve_entries = payload.get("solve_pickup_cubes")
-        if not isinstance(solve_entries, list) or not solve_entries:
-            print(f"[Warn] Skip snapshot without solve_pickup_cubes entries: {json_path}")
-            continue
-
-        first = solve_entries[0]
-        if not isinstance(first, dict):
-            print(f"[Warn] Skip snapshot with malformed solve_pickup_cubes[0]: {json_path}")
-            continue
-
-        world_xyz = _safe_float_triplet(first.get("position_xyz"))
-        if world_xyz is None:
-            print(f"[Warn] Skip snapshot with malformed position_xyz: {json_path}")
-            continue
-
-        name = first.get("name") or ""
-        if not isinstance(name, str):
-            name = ""
-        color_field = first.get("color")
-        color = (
-            color_field
-            if isinstance(color_field, str) and color_field
-            else _cube_color(name)
-        )
-
-        difficulty = difficulty_by_env_episode.get((env_id, episode))
-
-        records.append(
-            _PickupCubeRecord(
-                env_id=env_id,
-                episode=episode,
-                seed=seed,
-                difficulty=difficulty,
-                name=name,
-                color=color,
-                world_x=world_xyz[0],
-                world_y=world_xyz[1],
-                world_z=world_xyz[2],
-            )
-        )
-    return records
-
-
-def _dedup_pickup_records(
-    records: list[_PickupCubeRecord],
-) -> list[_PickupCubeRecord]:
-    """同 (env_id, episode) 多 seed 时只保留 max seed，与 visible_objects 一致。"""
-    grouped: dict[tuple[str, int], list[_PickupCubeRecord]] = defaultdict(list)
-    for rec in records:
-        grouped[(rec.env_id, rec.episode)].append(rec)
-    kept: list[_PickupCubeRecord] = []
-    for bucket in grouped.values():
-        bucket_sorted = sorted(bucket, key=lambda e: e.seed)
-        kept.append(bucket_sorted[-1])
-    kept.sort(key=lambda e: (e.env_id, e.episode))
-    return kept
 
 
 def _dedup_visible_object_files(
@@ -900,10 +786,6 @@ def _category_counts(points: Iterable[VisibleObjectPoint]) -> Counter:
     return counts
 
 
-def _count_unique_episodes(points: Iterable[VisibleObjectPoint]) -> int:
-    return len({(point.episode, point.seed) for point in points})
-
-
 def _panel_specs_for_env(env_id: str) -> tuple[str, ...]:
     if env_id == INSERTPEG_ENV_ID:
         return ("all", "peg", "box_with_hole")
@@ -914,50 +796,11 @@ def _panel_specs_for_env(env_id: str) -> tuple[str, ...]:
     return ("all", "cube", "button", "target")
 
 
-def _plot_videorepick_pickup_panel(
-    ax,
-    pickup_records: list[_PickupCubeRecord],
-) -> None:
-    """VideoRepick xy 子图最右侧绘制 pickup cube（按 cube 颜色着色）。"""
-    if not pickup_records:
-        ax.text(0.0, 0.0, "no pickup cube data", ha="center", va="center")
-        _prepare_axis(ax, "pickup", 0)
-        return
-
-    by_color: dict[str, list[_PickupCubeRecord]] = defaultdict(list)
-    for rec in pickup_records:
-        by_color[rec.color or "unknown"].append(rec)
-
-    plotted = 0
-    for color in ("red", "green", "blue", "unknown"):
-        bucket = by_color.get(color)
-        if not bucket:
-            continue
-        rotated = [_xy_rot_cw_90(rec.world_x, rec.world_y) for rec in bucket]
-        ax.scatter(
-            [pt[0] for pt in rotated],
-            [pt[1] for pt in rotated],
-            s=110,
-            alpha=0.85,
-            c=CUBE_COLOR_MAP.get(color, CUBE_COLOR_MAP["unknown"]),
-            marker="*",
-            edgecolors="black",
-            linewidths=0.5,
-            label=f"pickup_{color}",
-        )
-        plotted += len(bucket)
-
-    if plotted:
-        ax.legend(loc="upper right")
-    _prepare_axis(ax, "pickup", plotted)
-
-
 def _plot_panel(
     ax,
     panel_key: str,
     env_id: str,
     points: list[VisibleObjectPoint],
-    pickup_records: Optional[list[_PickupCubeRecord]] = None,
 ) -> None:
     if panel_key == "all":
         _plot_all_objects(ax, points)
@@ -981,10 +824,6 @@ def _plot_panel(
         _plot_box_with_hole_objects(ax, points)
         return
     if panel_key == "target":
-        # VideoRepick：右侧 target panel 复用为 pickup cube 视图（其余 env 行为不变）
-        if env_id == VIDEOREPICK_ENV_ID:
-            _plot_videorepick_pickup_panel(ax, pickup_records or [])
-            return
         _plot_target_objects(ax, env_id, points)
         return
     raise ValueError(f"Unsupported panel key: {panel_key}")
@@ -998,7 +837,6 @@ def _render_collage(
     title_suffix: Optional[str],
     output_filename: str,
     plt,
-    pickup_records: Optional[list[_PickupCubeRecord]] = None,
 ) -> Path:
     panel_specs = _panel_specs_for_env(env_id)
     fig, axes = plt.subplots(
@@ -1015,13 +853,7 @@ def _render_collage(
     fig.suptitle(title, fontsize=18)
 
     for ax, panel_key in zip(axes, panel_specs):
-        _plot_panel(
-            ax,
-            panel_key,
-            env_id,
-            points,
-            pickup_records=pickup_records,
-        )
+        _plot_panel(ax, panel_key, env_id, points)
 
     return _save_combined_figure(fig, output_dir / output_filename, plt)
 
@@ -1032,51 +864,18 @@ def _render_xy_env(
     points: list[VisibleObjectPoint],
     episode_count: int,
     plt,
-    pickup_records: Optional[list[_PickupCubeRecord]] = None,
 ) -> Counter:
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    if env_id == VIDEOREPICK_ENV_ID:
-        split_specs = (
-            ("easy+medium", {"easy", "medium"}, f"{env_id}{VIDEOREPICK_EASY_MEDIUM_SUFFIX}"),
-            ("hard", {"hard"}, f"{env_id}{VIDEOREPICK_HARD_SUFFIX}"),
-        )
-        for split_name, difficulties, output_filename in split_specs:
-            split_points = [point for point in points if point.difficulty in difficulties]
-            if not split_points:
-                print(f"[XY] {env_id}: skip empty split={split_name}")
-                continue
-            split_pickup = (
-                [rec for rec in (pickup_records or []) if rec.difficulty in difficulties]
-                if pickup_records is not None
-                else None
-            )
-            output_path = _render_collage(
-                output_dir,
-                env_id,
-                split_points,
-                _count_unique_episodes(split_points),
-                f"difficulty={split_name}",
-                output_filename,
-                plt,
-                pickup_records=split_pickup,
-            )
-            print(
-                f"[XY] {env_id}: split={split_name} -> {output_path}"
-                f" pickup_points={len(split_pickup) if split_pickup is not None else 0}"
-            )
-    else:
-        output_path = _render_collage(
-            output_dir,
-            env_id,
-            points,
-            episode_count,
-            None,
-            f"{env_id}{XY_DEFAULT_PNG_SUFFIX}",
-            plt,
-        )
-        print(f"[XY] {env_id}: -> {output_path}")
-
+    output_path = _render_collage(
+        output_dir,
+        env_id,
+        points,
+        episode_count,
+        None,
+        f"{env_id}{XY_DEFAULT_PNG_SUFFIX}",
+        plt,
+    )
+    print(f"[XY] {env_id}: -> {output_path}")
     return _category_counts(points)
 
 

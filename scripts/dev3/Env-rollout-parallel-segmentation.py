@@ -1,7 +1,7 @@
 """生成仅含 setup 元数据的 Robomme HDF5。
 
 这个脚本专门为 `scripts/dev/dataset-distribution.py` 准备输入，不再执行 planner
-rollout、snapshot 抓取或真实任务求解。每个 episode 的执行流程固定为：
+rollout 或真实任务求解。每个 episode 的执行流程固定为：
 
 参数解析 -> 创建环境 -> reset -> 尝试 1 次 no-op step（仅尽力产出 MP4） ->
 清空 wrapper buffer -> 强制写出 HDF5 setup -> 关闭环境 -> 校验 setup HDF5。
@@ -181,6 +181,7 @@ def _worker_initializer() -> None:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+# pickhighlight_setup_metadata / videorepick_setup_metadata 仍住在 scripts/dev/
 DEV_SCRIPT_DIR = SCRIPT_DIR.parent / "dev"
 if str(DEV_SCRIPT_DIR) not in sys.path:
     sys.path.append(str(DEV_SCRIPT_DIR))
@@ -190,7 +191,6 @@ PERMANENCE_DIR = SCRIPT_DIR / "env_specific_extraction"
 if str(PERMANENCE_DIR) not in sys.path:
     sys.path.append(str(PERMANENCE_DIR))
 
-import snapshot as snapshot_utils  # scripts/dev/snapshot.py — needs DEV_SCRIPT_DIR in sys.path
 from permanence import write_permanence_init_state  # scripts/dev3/env-specific-extraction/permanence.py
 from reference import enrich_visible_payload as enrich_visible_payload_with_reference  # scripts/dev3/env_specific_extraction/reference.py
 
@@ -625,23 +625,6 @@ def _save_visible_objects_json(
         json.dump(payload, handle, indent=2, ensure_ascii=True)
         handle.write("\n")
     return json_path
-
-
-# ── VideoRepick pickup cube 记录 ───────────────────────────────────────────
-# 目的：保证 snapshot JSON 的 solve_pickup_cubes 字段在 dev3 流水线下可靠写入，
-# 不依赖 legacy scripts/dev/snapshot.py。捕获时机为 reset 后、env 关闭前；
-# 落盘时机为 episode 关闭后，对 legacy hook 写出的 JSON 做一次显式后处理。
-SNAPSHOT_DIRNAME = "snapshots"
-AFTER_NO_RECORD_RESET_SUFFIX = "after_no_record_reset"
-def _after_no_record_reset_snapshot_path(
-    output_root: Path, env_id: str, episode: int, seed: int
-) -> Path:
-    """拼出 snapshots/<env_id>_ep<episode>_seed<seed>_after_no_record_reset.json。"""
-    return (
-        output_root
-        / SNAPSHOT_DIRNAME
-        / f"{env_id}_ep{episode}_seed{seed}_{AFTER_NO_RECORD_RESET_SUFFIX}.json"
-    )
 
 
 def _set_equal_xy_axes(ax, points_xyz: np.ndarray) -> None:
@@ -1235,10 +1218,10 @@ def _build_parser() -> argparse.ArgumentParser:
         # "StopCube",
         # "SwingXtimes",
         # "BinFill",
-        # "VideoUnmaskSwap",
-        # "VideoUnmask",
-        # "ButtonUnmaskSwap",
-        # "ButtonUnmask",
+        "VideoUnmaskSwap",
+        "VideoUnmask",
+        "ButtonUnmaskSwap",
+        "ButtonUnmask",
          "VideoRepick",
         "VideoPlaceButton",
         "VideoPlaceOrder",
@@ -1255,7 +1238,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=30,
+        default=3,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -1653,21 +1636,9 @@ def _run_episode(
     # 目标：运行 planner 完成任务，写完整轨迹 HDF5 + 视频
     episode_successful = False
     try:
-        # 安装 snapshot hook（在特定 step 时自动截图保存场景快照）
-        snapshot_state = snapshot_utils.install_snapshot_for_step(
-            env, env_id, episode, seed, difficulty, output_dir
-        )
-        # 创建规划器并包装重试逻辑
         planner = _create_planner(env, env_id)
         _wrap_planner_with_screw_then_rrt_retry(planner)
-        # 执行任务列表，返回是否成功
         episode_successful = _execute_task_list(env, planner, env_id)
-        # 如果 snapshot hook 检测到碰撞，强制标记失败
-        if snapshot_state.get("collision_detected"):
-            _mark_episode_failed(env, "bin_collision")
-            episode_successful = False
-            # 显式记录碰撞导致的失败原因
-            record["execute_error"] = "bin_collision"
     except Exception as exc:
         print(
             f"[rollout] Planner/task execution failed for env={env_id} "
@@ -1687,7 +1658,6 @@ def _run_episode(
         record["execute"] = "success"
     else:
         record["execute"] = "failed"
-        # 若没有更具体的错误（异常或碰撞），补一个 task_not_successful
         if record["execute_error"] is None:
             record["execute_error"] = "task_not_successful"
 
