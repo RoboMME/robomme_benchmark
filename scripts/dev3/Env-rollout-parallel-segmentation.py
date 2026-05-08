@@ -1145,10 +1145,10 @@ def _build_parser() -> argparse.ArgumentParser:
         # "VideoUnmask",
         # "ButtonUnmaskSwap",
         # "ButtonUnmask",
-        "VideoRepick",
-        # "VideoPlaceButton",
-        # "VideoPlaceOrder",
-        # "PickHighlight",
+        # "VideoRepick",
+        "VideoPlaceButton",
+        "VideoPlaceOrder",
+       # "PickHighlight",
         # "InsertPeg",
         # "MoveCube",
         # "PatternLock",
@@ -1161,7 +1161,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=90,
+        default=300,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "

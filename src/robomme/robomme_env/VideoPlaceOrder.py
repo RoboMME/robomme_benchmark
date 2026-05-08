@@ -370,14 +370,9 @@ class VideoPlaceOrder(BaseEnv):
                     logger.debug(
                         f"Swap targets selected: target_{swap_idx_a} <-> target_{swap_idx_b}"
                     )
-            num_targets_to_pick = torch.randint(
-                2, len(self.targets) + 1, (1,), generator=order_generator
-            ).item()
-
-
             indices = torch.randperm(
                 len(self.targets), generator=scene_generator
-            )[:num_targets_to_pick]
+            )
 
             self.which_targets_to_pick = [self.targets[i] for i in indices]
 
@@ -391,7 +386,7 @@ class VideoPlaceOrder(BaseEnv):
 
             self.which_in_subset = torch.randint(
                 1,
-                len(self.which_targets_to_pick) + 1,
+                len(self.targets) + 1,
                 (1,),
                 generator=order_generator,
             ).item()
