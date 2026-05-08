@@ -1,39 +1,36 @@
-"""Lightweight 4-bin uniform sampling demo for permanence randomization reference.
+"""permanence 任务位置生成的 lightweight 演示脚本（多桶均匀采样可视化）.
 
-Uses torch.Generator + manual_seed in the same pattern as
-src/robomme/robomme_env/VideoUnmaskSwap.py:177-184 so the demo's RNG stream is
-directly comparable to permanence task seeds.
+生成机制使用 torch.Generator + manual_seed，与 permanence 任务
+(src/robomme/robomme_env/VideoUnmaskSwap.py:177-184) 保持同一 RNG stream 风格，
+便于直接对照 demo 与 permanence 任务的种子流。
 
-The two distance hyper-parameters are calibrated to match permanence:
-- MIN_CENTER_DIST = 0.135 mirrors VideoUnmask/ButtonUnmask's Poisson disk
-  separation r_sep = (bin_half_size + min_gap) * 2 = (0.0275 + 0.04) * 2 with
-  panda's cube_half_size=0.02 (object_generation.py:1080).
-- BUTTON_MIN_CENTER_DIST = 0.15 mirrors ButtonUnmaskSwap's worst-case button
-  separation: nominal y-spacing 0.2 between button_left/button_right minus
-  randomize_range 0.025 each side -> 0.15 in the closest configuration.
+两个距离类超参数严格对齐 permanence 任务：
+- MIN_CENTER_DIST = 0.135：对应 VideoUnmask/ButtonUnmask 的 Poisson disk 间隔
+  r_sep = (bin_half_size + min_gap) * 2 = (0.0275 + 0.04) * 2，配合 panda
+  cube_half_size=0.02（object_generation.py:1080）。
+- BUTTON_MIN_CENTER_DIST = 0.15：对应 ButtonUnmaskSwap 中两按钮最坏间隔——
+  名义 y-spacing 0.2 减去左右各自的 randomize_range 0.025 = 0.15。
 
-Each episode:
-1. Samples N_BINS bin (x, y) positions uniformly in [-XY_HALF, XY_HALF]^2 with a
-   minimum centre-to-centre separation MIN_CENTER_DIST (rejection sampling on
-   torch.rand). Samples falling inside the button strip
-   [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN, BUTTON_Y_MAX] are rejected so
-   cubes/bins never spawn where buttons live (mirrors permanence's
-   avoid=[button_obb] for bins).
-2. Shuffles the 4-tuple ("red", "green", "blue", "no_cube") and assigns one
-   colour to each bin (torch.randperm, same as VideoUnmask.py:191).
-3. Picks 2 bins out of the 3 coloured-cube bins without replacement, deriving
-   pickup_generator via seed * 2654435761 + 1 (same as VideoUnmaskSwap.py:181).
-4. If --num-buttons N > 0, derives button_generator via seed * 2654435761 + 3
-   (offset 3 is demo-local; permanence ButtonUnmask draws buttons from the main
-   stream, but the demo offsets to a separate stream so it can be added without
-   shifting the bin/pickup/swap RNG streams) and uniformly samples N button
-   (x, y) in the vertical strip [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN,
-   BUTTON_Y_MAX] = [-0.25, -0.15] x [-0.2, 0.2] (matching permanence's x ~ -0.2
-   button strip; y range widened to demo workspace full width so rejection
-   sampling at min_dist 0.15 has no geometric dead zone) with rejection
-   sampling, min center-dist = BUTTON_MIN_CENTER_DIST.
+每个 episode 流程：
+1. 在 [-XY_HALF, XY_HALF]^2 上均匀采样 n_bins 个 (x, y)，最小中心距
+   MIN_CENTER_DIST（rejection sampling）；落入 button strip
+   [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN, BUTTON_Y_MAX] 的样本被拒绝，
+   保证 cube/bin 不与 button 位置重叠（对应 permanence 中 avoid=[button_obb]）。
+2. 随机洗牌 (red, green, blue, "no_cube" * (n_bins - 3)) 多重集，给每个 bin
+   分配颜色（torch.randperm，与 VideoUnmask.py:191 一致）。
+3. 用独立 pickup_generator（seed * KNUTH_HASH + 1）从 3 个有色 bin 中无放回挑出
+   n_pickups 个作为目标（与 VideoUnmaskSwap.py:181 一致）。
+4. 用独立 swap_generator（seed * KNUTH_HASH + 2）循环 n_swaps 次抽取 (i, j) 对
+   作为 swap 对象。
+5. 仅当 n_buttons > 0：用独立 button_generator（seed * KNUTH_HASH + 3；offset 3
+   是 demo 私有的，permanence ButtonUnmask 实际从主 stream 抽，但 demo 用独立
+   stream 以便在不影响 bin/pickup/swap 的前提下叠加 button 采样）在 vertical
+   strip [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN, BUTTON_Y_MAX] =
+   [-0.25, -0.15] x [-0.2, 0.2]（x 对应 permanence x ~ -0.2 button strip；y
+   范围扩到完整 demo 工作区，避免 rejection sampling 在 0.15 最小中心距下出现
+   几何死区）上均匀采样 n_buttons 个位置。
 
-Output: a single 2x3 PNG covering 200 episodes (800 bin samples) by default.
+输出：默认 1000 episodes 的 2 行多列 PNG 一张。
 """
 
 from __future__ import annotations
@@ -47,30 +44,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-XY_HALF = 0.2
-MIN_CENTER_DIST = 0.135
-N_BINS = 6
-N_COLORED_CUBES = 3
-N_NO_CUBE_BINS = N_BINS - N_COLORED_CUBES
-N_EPISODES = 1000
-N_PICKUPS = 2
-SWAP_TIMES = 3
-KNUTH_HASH = 2654435761
+# === 间隔/范围超参数（permanance_task_pos_generator 不接受这些；固定模块级值）===
+XY_HALF = 0.2                  # bin 生成 xy 范围 [-XY_HALF, XY_HALF]^2
+MIN_CENTER_DIST = 0.135        # bin 之间的最小中心距
+BUTTON_X_MIN = -0.25           # button strip x 下界
+BUTTON_X_MAX = -0.15           # button strip x 上界
+BUTTON_Y_MIN = -0.2            # button strip y 下界
+BUTTON_Y_MAX = 0.2             # button strip y 上界
+BUTTON_MIN_CENTER_DIST = 0.15  # button 之间的最小中心距
 
-# Button strip mirrors permanence ButtonUnmask/ButtonUnmaskSwap x position
-# (vertical strip at x ~ -0.2 with y varying). The y range is widened to the
-# full demo workspace [-0.2, 0.2] so that rejection sampling at min center-dist
-# 0.15 has no geometric dead zone (max corner distance from strip mid-point
-# (-0.2, 0) is sqrt(0.05^2 + 0.2^2) ~= 0.206 > 0.15).
-# Bin sampling rejects positions that fall inside this strip so cubes never
-# land where buttons would (mirrors permanence's avoid=[button_obb] for bins).
-BUTTON_X_MIN = -0.25
-BUTTON_X_MAX = -0.15
-BUTTON_Y_MIN = -0.2
-BUTTON_Y_MAX = 0.2
-BUTTON_MIN_CENTER_DIST = 0.15
-BUTTON_COLOR = "#7f7f7f"
-
+# === 调色板与 CLI 默认输出（绘图/CLI 资产，与超参数概念正交）===
 COLORS: tuple[str, ...] = ("red", "green", "blue", "no_cube")
 COLOR_TO_RGB: dict[str, str] = {
     "red": "#d62728",
@@ -78,14 +61,7 @@ COLOR_TO_RGB: dict[str, str] = {
     "blue": "#1f77b4",
     "no_cube": "#7f7f7f",
 }
-# Multiset assigned to bins: 3 unique colored cubes + (N_BINS - 3) no_cube placeholders
-COLOR_POOL: tuple[str, ...] = (
-    COLORS[:N_COLORED_CUBES] + ("no_cube",) * (N_BINS - N_COLORED_CUBES)
-)
-assert len(COLOR_POOL) == N_BINS, (
-    f"COLOR_POOL size {len(COLOR_POOL)} must equal N_BINS={N_BINS}"
-)
-
+BUTTON_COLOR = "#7f7f7f"
 DEFAULT_OUT = Path("runs/lightweight_bin_demo/bin_distribution.png")
 
 
@@ -115,21 +91,24 @@ class ButtonSample:
 
 def sample_bin_positions(
     generator: torch.Generator,
-    xy_half: float,
     n_bins: int,
-    min_dist: float,
     max_attempts: int = 2000,
 ) -> list[tuple[float, float]]:
+    """在 [-XY_HALF, XY_HALF]^2 上 rejection-sample 出 n_bins 个 (x, y).
+
+    位置必须满足两个约束：互相之间最小中心距 MIN_CENTER_DIST；不落入
+    button strip [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN, BUTTON_Y_MAX]。
+    超过 max_attempts 仍无法填满则抛 RuntimeError。
+    """
     pts: list[tuple[float, float]] = []
-    min_dist_sq = min_dist * min_dist
+    min_dist_sq = MIN_CENTER_DIST * MIN_CENTER_DIST
     for _ in range(max_attempts):
         if len(pts) == n_bins:
             return pts
         u = torch.rand(2, generator=generator)
-        cx = float((u[0].item() - 0.5) * 2.0 * xy_half)
-        cy = float((u[1].item() - 0.5) * 2.0 * xy_half)
-        # Reject samples landing inside the button strip so cubes never
-        # spawn where buttons live.
+        cx = float((u[0].item() - 0.5) * 2.0 * XY_HALF)
+        cy = float((u[1].item() - 0.5) * 2.0 * XY_HALF)
+        # 拒绝落入 button strip 的样本，避免 cube 与 button 位置重叠
         if (BUTTON_X_MIN <= cx <= BUTTON_X_MAX
                 and BUTTON_Y_MIN <= cy <= BUTTON_Y_MAX):
             continue
@@ -137,7 +116,7 @@ def sample_bin_positions(
             pts.append((cx, cy))
     raise RuntimeError(
         f"failed to place {n_bins} bins after {max_attempts} attempts "
-        f"(xy_half={xy_half}, min_dist={min_dist})"
+        f"(xy_half={XY_HALF}, min_dist={MIN_CENTER_DIST})"
     )
 
 
@@ -146,6 +125,10 @@ def sample_button_positions(
     n_buttons: int,
     max_attempts: int = 2000,
 ) -> list[tuple[float, float]]:
+    """在 button strip 矩形内 rejection-sample 出 n_buttons 个 (x, y).
+
+    最小中心距 BUTTON_MIN_CENTER_DIST。超过 max_attempts 抛 RuntimeError。
+    """
     pts: list[tuple[float, float]] = []
     min_dist_sq = BUTTON_MIN_CENTER_DIST * BUTTON_MIN_CENTER_DIST
     x_span = BUTTON_X_MAX - BUTTON_X_MIN
@@ -166,61 +149,81 @@ def sample_button_positions(
     )
 
 
-def generate_episode(
-    episode_seed: int, episode_idx: int, num_buttons: int = 0
-) -> tuple[list[BinSample], EpisodeSwaps, list[ButtonSample]]:
+def permanance_task_pos_generator(
+    n_bins: int,
+    n_swaps: int,
+    n_buttons: int,
+    n_pickups: int,
+    seed: int,
+) -> dict:
+    """生成单个 episode 的 permanence 任务位置.
+
+    入参：
+        n_bins:    bin 数量（≥ N_COLORED_CUBES = 3）
+        n_swaps:   生成的 swap 对数量
+        n_buttons: button 数量；为 0 则不采样 button
+        n_pickups: 从有色 bin 中挑选的 pickup 数量
+        seed:      episode 种子
+
+    成功返回 dict：
+        {
+            "bin_positions":   list[(x, y)]，长度 n_bins
+            "bin_colors":      list[str]，每个 bin 的 cube 颜色（含 "no_cube"）
+            "pickup_map":      dict[bin_index -> pickup_order(0,1,...)]
+            "swap_pairs":      list[(i, j)]，长度 n_swaps，按 i<j 排序
+            "button_positions": list[(x, y)]，长度 n_buttons
+        }
+
+    rejection sampling 失败返回 {"fail": "<error message>"}（无其他字段）；
+    调用方用 `if "fail" in result:` 判定。
+    """
+    # 任务设计内部常量（不暴露到模块层）
+    N_COLORED_CUBES = 3       # red / green / blue（与 COLORS 调色板对齐）
+    KNUTH_HASH = 2654435761   # RNG stream offset 共用（Knuth multiplicative hash）
+
     generator = torch.Generator()
-    generator.manual_seed(episode_seed)
+    generator.manual_seed(seed)
     pickup_generator = torch.Generator()
-    pickup_generator.manual_seed(episode_seed * KNUTH_HASH + 1)
+    pickup_generator.manual_seed(seed * KNUTH_HASH + 1)
     swap_generator = torch.Generator()
-    swap_generator.manual_seed(episode_seed * KNUTH_HASH + 2)
+    swap_generator.manual_seed(seed * KNUTH_HASH + 2)
 
-    positions = sample_bin_positions(generator, XY_HALF, N_BINS, MIN_CENTER_DIST)
+    try:
+        positions = sample_bin_positions(generator, n_bins)
+    except RuntimeError as exc:
+        return {"fail": str(exc)}
 
-    shuffle_indices = torch.randperm(N_BINS, generator=generator).tolist()
-    bin_colors = [COLOR_POOL[i] for i in shuffle_indices]
+    color_pool = list(COLORS[:N_COLORED_CUBES]) + ["no_cube"] * (n_bins - N_COLORED_CUBES)
+    shuffle_indices = torch.randperm(n_bins, generator=generator).tolist()
+    bin_colors = [color_pool[i] for i in shuffle_indices]
 
     target_indices = [i for i, c in enumerate(bin_colors) if c != "no_cube"]
-    sel = torch.randperm(len(target_indices), generator=pickup_generator)[:N_PICKUPS].tolist()
+    sel = torch.randperm(len(target_indices), generator=pickup_generator)[:n_pickups].tolist()
     chosen_bin_indices = [target_indices[k] for k in sel]
-    pickup_map = {chosen_bin_indices[0]: 0, chosen_bin_indices[1]: 1}
+    pickup_map = {chosen_bin_indices[k]: k for k in range(n_pickups)}
 
     swap_pairs: list[tuple[int, int]] = []
-    for _ in range(SWAP_TIMES):
-        idx = torch.randperm(N_BINS, generator=swap_generator)[:2].tolist()
+    for _ in range(n_swaps):
+        idx = torch.randperm(n_bins, generator=swap_generator)[:2].tolist()
         a, b = sorted((idx[0], idx[1]))
         swap_pairs.append((a, b))
 
-    samples = [
-        BinSample(
-            episode=episode_idx,
-            bin_index=i,
-            x=positions[i][0],
-            y=positions[i][1],
-            color=bin_colors[i],
-            pickup_order=pickup_map.get(i),
-        )
-        for i in range(N_BINS)
-    ]
-    swaps = EpisodeSwaps(episode=episode_idx, pairs=tuple(swap_pairs))
-
-    button_samples: list[ButtonSample] = []
-    if num_buttons > 0:
+    button_positions: list[tuple[float, float]] = []
+    if n_buttons > 0:
         button_generator = torch.Generator()
-        button_generator.manual_seed(episode_seed * KNUTH_HASH + 3)
-        button_positions = sample_button_positions(button_generator, num_buttons)
-        button_samples = [
-            ButtonSample(
-                episode=episode_idx,
-                button_index=i,
-                x=button_positions[i][0],
-                y=button_positions[i][1],
-            )
-            for i in range(num_buttons)
-        ]
+        button_generator.manual_seed(seed * KNUTH_HASH + 3)
+        try:
+            button_positions = sample_button_positions(button_generator, n_buttons)
+        except RuntimeError as exc:
+            return {"fail": str(exc)}
 
-    return samples, swaps, button_samples
+    return {
+        "bin_positions": positions,
+        "bin_colors": bin_colors,
+        "pickup_map": pickup_map,
+        "swap_pairs": swap_pairs,
+        "button_positions": button_positions,
+    }
 
 
 def _prepare_axis(ax: plt.Axes, title: str, point_count: int) -> None:
@@ -250,9 +253,9 @@ def _draw_color_panel(ax: plt.Axes, samples: list[BinSample], color: str) -> Non
 
 
 def _draw_no_cube_panel(ax: plt.Axes, samples: list[BinSample], slot: int) -> None:
-    # Per-episode no_cube bins are shown in bin_index ascending order.
-    # samples[] is generated in (episode, bin_index) order, so the k-th no_cube
-    # encountered for an episode is the slot=k panel.
+    # 每个 episode 的 no_cube bin 按 bin_index 升序展示。
+    # samples 按 (episode, bin_index) 排好序，因此每个 episode 第 k 个遇到的
+    # no_cube 就放在 slot=k 这个面板上。
     counts: dict[int, int] = {}
     pts: list[BinSample] = []
     for s in samples:
@@ -290,8 +293,8 @@ def _draw_buttons_panel(ax: plt.Axes, button_samples: list[ButtonSample]) -> Non
     xs = [b.x for b in button_samples]
     ys = [b.y for b in button_samples]
     ax.scatter(xs, ys, s=18, c=BUTTON_COLOR, alpha=0.7, edgecolors="none")
-    # Button strip axis differs from the workspace box used by other panels
-    # because the strip lives at x in [-0.25, -0.15], outside [-XY_HALF, XY_HALF].
+    # button strip 坐标轴和其他 panel 的 workspace 不一样：strip 在
+    # x ∈ [-0.25, -0.15]，超出 [-XY_HALF, XY_HALF]，所以单独设范围。
     pad_x = (BUTTON_X_MAX - BUTTON_X_MIN) * 0.15
     pad_y = (BUTTON_Y_MAX - BUTTON_Y_MIN) * 0.15
     ax.set_xlim(BUTTON_X_MIN - pad_x, BUTTON_X_MAX + pad_x)
@@ -362,33 +365,49 @@ def render_figure(
     num_buttons: int,
     out_path: Path,
 ) -> None:
-    row0_panels = N_COLORED_CUBES + N_NO_CUBE_BINS  # = N_BINS
-    # combined + N pickups + swap_freq, plus optional buttons-only panel.
-    row1_panels = 2 + N_PICKUPS + (1 if num_buttons > 0 else 0)
+    """把聚合后的 samples / swaps / buttons 渲染成 2 行 N 列的 PNG.
+
+    layout 数字均从数据 / 调色板派生（不再依赖模块全局常量）：
+    - n_bins:           samples 中最大 bin_index + 1
+    - n_colored_cubes:  COLORS 调色板长度 - 1（末项是 "no_cube"）
+    - n_no_cube_bins:   n_bins - n_colored_cubes
+    - n_pickups:        samples 中最大 pickup_order + 1
+    """
+    n_bins = max(s.bin_index for s in samples) + 1
+    n_colored_cubes = len(COLORS) - 1
+    n_no_cube_bins = n_bins - n_colored_cubes
+    n_pickups = max(
+        (s.pickup_order for s in samples if s.pickup_order is not None),
+        default=-1,
+    ) + 1
+
+    row0_panels = n_colored_cubes + n_no_cube_bins  # = n_bins
+    # combined + N pickups + swap_freq，再加一个可选的 buttons-only panel
+    row1_panels = 2 + n_pickups + (1 if num_buttons > 0 else 0)
     n_cols = max(row0_panels, row1_panels)
     fig, axes = plt.subplots(2, n_cols, figsize=(n_cols * 5, 10))
 
-    # Row 0: colored cubes (red/green/blue) + per-slot no_cube panels
+    # 第 0 行：3 个有色 cube panel + 每个 slot 一个 no_cube panel
     _draw_color_panel(axes[0, 0], samples, "red")
     _draw_color_panel(axes[0, 1], samples, "green")
     _draw_color_panel(axes[0, 2], samples, "blue")
-    for k in range(N_NO_CUBE_BINS):
-        _draw_no_cube_panel(axes[0, N_COLORED_CUBES + k], samples, k)
+    for k in range(n_no_cube_bins):
+        _draw_no_cube_panel(axes[0, n_colored_cubes + k], samples, k)
     for c in range(row0_panels, n_cols):
         axes[0, c].set_visible(False)
 
-    # Row 1: combined, pickup #1..N, swap pair freq, [buttons]
+    # 第 1 行：combined / pickup #1..N / swap pair freq / [buttons]
     _draw_all_colors_panel(axes[1, 0], samples)
-    for p in range(N_PICKUPS):
+    for p in range(n_pickups):
         _draw_pickup_panel(axes[1, 1 + p], samples, p)
-    _draw_swap_pair_panel(axes[1, 1 + N_PICKUPS], episode_swaps_list, N_BINS)
+    _draw_swap_pair_panel(axes[1, 1 + n_pickups], episode_swaps_list, n_bins)
     if num_buttons > 0:
-        _draw_buttons_panel(axes[1, 2 + N_PICKUPS], button_samples)
+        _draw_buttons_panel(axes[1, 2 + n_pickups], button_samples)
     for c in range(row1_panels, n_cols):
         axes[1, c].set_visible(False)
 
     fig.suptitle(
-        f"Lightweight {N_BINS}-bin demo: xy in [-{XY_HALF}, {XY_HALF}], "
+        f"Lightweight {n_bins}-bin demo: xy in [-{XY_HALF}, {XY_HALF}], "
         f"min_center_dist={MIN_CENTER_DIST}",
         fontsize=13,
     )
@@ -399,57 +418,13 @@ def render_figure(
     plt.close(fig)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--base-seed", type=int, default=0)
-    parser.add_argument("--n-episodes", type=int, default=N_EPISODES)
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
-    parser.add_argument(
-        "--num-buttons",
-        type=int,
-        default=2,
-        help="If > 0, additionally sample N buttons per episode in the vertical "
-        f"strip [{BUTTON_X_MIN}, {BUTTON_X_MAX}] x [{BUTTON_Y_MIN}, "
-        f"{BUTTON_Y_MAX}] (matching permanence's x~-0.2 button strip; y range "
-        "is the full demo workspace width so rejection sampling has no "
-        f"geometric dead zone) with min center-dist {BUTTON_MIN_CENTER_DIST} "
-        "(value mirrors ButtonUnmaskSwap's worst-case 0.2 - 2*0.025 = 0.15 "
-        "two-button separation). Bin sampling rejects positions inside this "
-        "strip so cubes never overlap buttons.",
-    )
-    parser.add_argument(
-        "--debug-single-episode",
-        type=int,
-        default=None,
-        help="If set, also print bin_colors and chosen_bin_indices for this seed value "
-        "(useful to cross-check against permanence task internals).",
-    )
-    args = parser.parse_args()
-
-    samples: list[BinSample] = []
-    episode_swaps_list: list[EpisodeSwaps] = []
-    button_samples_all: list[ButtonSample] = []
-    failed_seeds: list[tuple[int, str]] = []
-    for ep in range(args.n_episodes):
-        episode_seed = args.base_seed + ep
-        try:
-            ep_samples, ep_swaps, ep_buttons = generate_episode(
-                episode_seed, ep, args.num_buttons
-            )
-        except RuntimeError as exc:
-            # Surface the failure loudly per CLAUDE.md, but skip this seed and
-            # continue so the remaining seeds still produce a figure.
-            print(f"[skip seed={episode_seed}] RuntimeError: {exc}")
-            failed_seeds.append((episode_seed, str(exc)))
-            continue
-        samples.extend(ep_samples)
-        episode_swaps_list.append(ep_swaps)
-        button_samples_all.extend(ep_buttons)
-
-    render_figure(
-        samples, episode_swaps_list, button_samples_all, args.num_buttons, args.out
-    )
-
+def _print_summary(
+    args: argparse.Namespace,
+    samples: list[BinSample],
+    episode_swaps_list: list[EpisodeSwaps],
+    button_samples: list[ButtonSample],
+    failed_seeds: list[tuple[int, str]],
+) -> None:
     color_counts = Counter(s.color for s in samples)
     pick_counts = Counter(
         (s.color, s.pickup_order) for s in samples if s.pickup_order is not None
@@ -475,29 +450,99 @@ def main() -> None:
     print(f"swap pair counts (i<j)=count: {dict(sorted(swap_pair_counts.items()))}")
     if args.num_buttons > 0:
         print(
-            f"button samples: {len(button_samples_all)} "
+            f"button samples: {len(button_samples)} "
             f"({n_success} succeeded episodes x {args.num_buttons} buttons)"
         )
 
-    if args.debug_single_episode is not None:
-        debug_seed = args.debug_single_episode
-        debug_samples, debug_swaps, debug_buttons = generate_episode(
-            debug_seed, debug_seed, args.num_buttons
+
+def _print_debug_episode(
+    seed: int, n_bins: int, n_swaps: int, n_buttons: int, n_pickups: int
+) -> None:
+    result = permanance_task_pos_generator(n_bins, n_swaps, n_buttons, n_pickups, seed)
+    if "fail" in result:
+        print(f"[debug seed={seed}] FAILED: {result['fail']}")
+        return
+    bin_colors = result["bin_colors"]
+    pickup_map = result["pickup_map"]
+    chosen = sorted(pickup_map.keys(), key=lambda i: pickup_map[i])
+    print(
+        f"[debug seed={seed}] bin_colors={bin_colors}  "
+        f"chosen_bin_indices={chosen}  swap_pairs={list(result['swap_pairs'])}"
+    )
+    if n_buttons > 0:
+        print(f"[debug seed={seed}] button_positions={result['button_positions']}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base-seed", type=int, default=0)
+    parser.add_argument("--n-episodes", type=int, default=1000)
+    parser.add_argument("--n-bins", type=int, default=6)
+    parser.add_argument("--n-swaps", type=int, default=3)
+    parser.add_argument("--n-pickups", type=int, default=2)
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--num-buttons",
+        type=int,
+        default=2,
+        help=(
+            "如果 > 0，每个 episode 额外在 vertical strip "
+            f"[{BUTTON_X_MIN}, {BUTTON_X_MAX}] x [{BUTTON_Y_MIN}, "
+            f"{BUTTON_Y_MAX}] 中采样 N 个 button（对应 permanence 的 x ~ -0.2 "
+            "button strip；y 范围扩到完整 demo workspace 以避免 0.15 最小中心距"
+            "下出现几何死区），最小中心距 "
+            f"{BUTTON_MIN_CENTER_DIST}（值与 ButtonUnmaskSwap 最坏情况 "
+            "0.2 - 2*0.025 = 0.15 一致）。bin 采样会拒绝落入此 strip 的位置，"
+            "保证 cube 与 button 不重叠。"
+        ),
+    )
+    parser.add_argument(
+        "--debug-single-episode",
+        type=int,
+        default=None,
+        help="若设置，则额外打印这个 seed 下的 bin_colors 和 chosen_bin_indices "
+        "（便于和 permanence 任务内部对照）。",
+    )
+    args = parser.parse_args()
+
+    samples: list[BinSample] = []
+    episode_swaps_list: list[EpisodeSwaps] = []
+    button_samples_all: list[ButtonSample] = []
+    failed_seeds: list[tuple[int, str]] = []
+    for ep in range(args.n_episodes):
+        seed = args.base_seed + ep
+        result = permanance_task_pos_generator(
+            args.n_bins, args.n_swaps, args.num_buttons, args.n_pickups, seed,
         )
-        debug_colors = [s.color for s in debug_samples]
-        debug_chosen = [
-            s.bin_index for s in sorted(debug_samples, key=lambda s: (s.pickup_order is None, s.pickup_order))
-            if s.pickup_order is not None
-        ]
-        print(
-            f"[debug seed={debug_seed}] bin_colors={debug_colors}  "
-            f"chosen_bin_indices={debug_chosen}  swap_pairs={list(debug_swaps.pairs)}"
-        )
-        if args.num_buttons > 0:
-            debug_button_xy = [(b.x, b.y) for b in debug_buttons]
-            print(
-                f"[debug seed={debug_seed}] button_positions={debug_button_xy}"
+        if "fail" in result:
+            # CLAUDE.md 要求显式暴露错误：打印一行并跳过这个 seed，其余 seed 继续
+            print(f"[skip seed={seed}] RuntimeError: {result['fail']}")
+            failed_seeds.append((seed, result["fail"]))
+            continue
+        samples.extend(
+            BinSample(ep, i, x, y, c, result["pickup_map"].get(i))
+            for i, ((x, y), c) in enumerate(
+                zip(result["bin_positions"], result["bin_colors"])
             )
+        )
+        episode_swaps_list.append(EpisodeSwaps(ep, tuple(result["swap_pairs"])))
+        button_samples_all.extend(
+            ButtonSample(ep, i, x, y)
+            for i, (x, y) in enumerate(result["button_positions"])
+        )
+
+    render_figure(
+        samples, episode_swaps_list, button_samples_all, args.num_buttons, args.out
+    )
+    _print_summary(args, samples, episode_swaps_list, button_samples_all, failed_seeds)
+    if args.debug_single_episode is not None:
+        _print_debug_episode(
+            args.debug_single_episode,
+            args.n_bins,
+            args.n_swaps,
+            args.num_buttons,
+            args.n_pickups,
+        )
 
 
 if __name__ == "__main__":
