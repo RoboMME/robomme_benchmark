@@ -19,6 +19,8 @@ target_cube_1 / num_repeats)。
 visible_objects.json 的顶层 ——
 - VideoPlaceButton / VideoPlaceOrder / PickHighlight → 'selected_target'
 - VideoRepick                                       → 'videorepick_metadata'
+- VideoPlaceButton / VideoPlaceOrder                → 'videoplace_swap_pair'
+                                                       （与 'selected_target' 平级独立顶层字段）
 这样 inspect 端无需额外路径，复用 visible_objects.json 的发现逻辑即可读到。
 """
 from __future__ import annotations
@@ -35,6 +37,11 @@ REFERENCE_TARGET_ENV_IDS: frozenset[str] = frozenset(
     {"VideoPlaceButton", "VideoPlaceOrder", "PickHighlight"}
 )
 
+# VideoPlaceButton / VideoPlaceOrder 共享 hard 难度的 swap 机制
+VIDEOPLACE_ENV_IDS: frozenset[str] = frozenset(
+    {"VideoPlaceButton", "VideoPlaceOrder"}
+)
+
 VIDEO_PLACE_BUTTON_ENV_ID = "VideoPlaceButton"
 VIDEO_PLACE_ORDER_ENV_ID = "VideoPlaceOrder"
 PICK_HIGHLIGHT_ENV_ID = "PickHighlight"
@@ -47,6 +54,7 @@ KIND_PICK_HIGHLIGHT = "pick_highlight"
 VISIBLE_OBJECTS_JSON_FILENAME = "visible_objects.json"
 SELECTED_TARGET_JSON_KEY = "selected_target"
 VIDEOREPICK_METADATA_KEY = "videorepick_metadata"
+VIDEOPLACE_SWAP_PAIR_KEY = "videoplace_swap_pair"
 
 _VIDEOREPICK_COLOR_TOLERANCE = 0.05
 _VIDEOREPICK_COLOR_RGB_MAP: dict[str, tuple[float, float, float]] = {
@@ -387,6 +395,61 @@ def _extract_videorepick_metadata(env: Any) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# VideoPlaceButton / VideoPlaceOrder：swap 配对信息提取
+# ---------------------------------------------------------------------------
+
+
+def _extract_videoplace_swap_pair(env: Any, env_id: str) -> dict:
+    """从 env 提取 VideoPlaceButton / VideoPlaceOrder 的 swap 配对信息。
+
+    永远返回 dict（与 VideoRepick metadata 模式对齐）：
+    - hard 难度且 swap_target_a/b 非 None → has_swap=True，填字段
+    - easy/medium 难度（swap_target_a/b == None）→ has_swap=False，
+      所有 a/b 字段为 None
+    """
+    if env_id not in VIDEOPLACE_ENV_IDS:
+        raise ValueError(
+            f"_extract_videoplace_swap_pair called with unsupported env_id={env_id!r}"
+        )
+    base = getattr(env, "unwrapped", env)
+    targets = list(getattr(base, "targets", []) or [])
+    if not targets:
+        raise ValueError(f"{env_id}.targets is empty after reset")
+
+    swap_a = getattr(base, "swap_target_a", None)
+    swap_b = getattr(base, "swap_target_b", None)
+    has_swap = swap_a is not None and swap_b is not None
+    if not has_swap:
+        return {
+            "env_id": env_id,
+            "has_swap": False,
+            "swap_target_a_index": None,
+            "swap_target_a_name": None,
+            "swap_target_a_position_xy": None,
+            "swap_target_b_index": None,
+            "swap_target_b_name": None,
+            "swap_target_b_position_xy": None,
+        }
+
+    a_idx = _index_in_list(swap_a, targets)
+    b_idx = _index_in_list(swap_b, targets)
+    if a_idx is None or b_idx is None:
+        raise ValueError(
+            f"{env_id}: swap_target_a/b not found in targets list (corrupted state)"
+        )
+    return {
+        "env_id": env_id,
+        "has_swap": True,
+        "swap_target_a_index": int(a_idx),
+        "swap_target_a_name": _actor_name(swap_a),
+        "swap_target_a_position_xy": _actor_xy(swap_a),
+        "swap_target_b_index": int(b_idx),
+        "swap_target_b_name": _actor_name(swap_b),
+        "swap_target_b_position_xy": _actor_xy(swap_b),
+    }
+
+
+# ---------------------------------------------------------------------------
 # 公开接口：提取 + payload enrich
 # ---------------------------------------------------------------------------
 
@@ -423,6 +486,8 @@ def enrich_visible_payload(payload: dict, env: Any, env_id: str) -> None:
 
     PickHighlight / VideoPlaceButton / VideoPlaceOrder
         → payload['selected_target'] = extract_selected_target(...)
+    VideoPlaceButton / VideoPlaceOrder（额外，与 selected_target 平级）
+        → payload['videoplace_swap_pair'] = {has_swap, swap_target_{a,b}_*}
     VideoRepick
         → payload['videorepick_metadata'] = {target_cube_1_color, num_repeats}
     其他 env_id
@@ -436,6 +501,10 @@ def enrich_visible_payload(payload: dict, env: Any, env_id: str) -> None:
                 f"for env_id={env_id!r}"
             )
         payload[SELECTED_TARGET_JSON_KEY] = state
+        if env_id in VIDEOPLACE_ENV_IDS:
+            payload[VIDEOPLACE_SWAP_PAIR_KEY] = _to_jsonable(
+                _extract_videoplace_swap_pair(env, env_id)
+            )
         return
     if env_id == VIDEOREPICK_ENV_ID:
         payload[VIDEOREPICK_METADATA_KEY] = _to_jsonable(
@@ -667,8 +736,119 @@ def dedup_videorepick_records(
     return kept, skipped
 
 
+# ---------------------------------------------------------------------------
+# Inspect 端：VideoPlaceButton / VideoPlaceOrder swap_pair 专用发现 / 去重
+# （与 selected_target 解耦的独立路径，仿 VideoRepick）
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class VideoPlaceSwapPairRecord:
+    path: Path
+    env_id: str
+    episode: int
+    seed: int
+    swap_pair: dict   # 永远是 dict（has_swap True/False）
+
+
+def discover_videoplace_swap_pair_records(
+    segmentation_dir: Path,
+    env_filter: Optional[str] = None,
+) -> list[VideoPlaceSwapPairRecord]:
+    """递归扫描 segmentation_dir 下所有 visible_objects.json，提取
+    payload['videoplace_swap_pair']。
+
+    - 只处理 env_id ∈ VIDEOPLACE_ENV_IDS（VideoPlaceButton / VideoPlaceOrder）
+    - env_filter 非空且不在 VIDEOPLACE_ENV_IDS 时直接返回空列表
+    - swap_pair 字段缺失 / 类型不合法时打 [Warn] 并跳过（说明该条 episode
+      数据来自旧 rollout，需要重跑）
+    """
+    seg_dir = Path(segmentation_dir)
+    if not seg_dir.is_dir():
+        return []
+    if env_filter is not None and env_filter not in VIDEOPLACE_ENV_IDS:
+        return []
+
+    results: list[VideoPlaceSwapPairRecord] = []
+    for json_path in sorted(seg_dir.rglob(VISIBLE_OBJECTS_JSON_FILENAME)):
+        try:
+            payload = _load_visible_objects(json_path)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(
+                f"[Warn] Skip invalid visible_objects JSON {json_path}: "
+                f"{type(exc).__name__}: {exc}"
+            )
+            continue
+
+        env_id = payload.get("env_id")
+        episode = payload.get("episode")
+        seed = payload.get("seed")
+        if (
+            not isinstance(env_id, str)
+            or not isinstance(episode, int)
+            or not isinstance(seed, int)
+        ):
+            print(
+                f"[Warn] Skip visible_objects JSON {json_path} missing "
+                f"env_id/episode/seed"
+            )
+            continue
+
+        if env_id not in VIDEOPLACE_ENV_IDS:
+            continue
+        if env_filter is not None and env_id != env_filter:
+            continue
+
+        swap_pair = payload.get(VIDEOPLACE_SWAP_PAIR_KEY)
+        if not isinstance(swap_pair, dict):
+            print(
+                f"[Warn] {env_id} ep{episode} seed{seed}: "
+                f"visible_objects.json missing 'videoplace_swap_pair' field "
+                f"(re-run rollout to populate). Skipping {json_path}."
+            )
+            continue
+        if not isinstance(swap_pair.get("has_swap"), bool):
+            print(
+                f"[Warn] {env_id} ep{episode} seed{seed}: "
+                f"videoplace_swap_pair missing/invalid 'has_swap' "
+                f"(re-run rollout to populate). Skipping {json_path}."
+            )
+            continue
+
+        results.append(
+            VideoPlaceSwapPairRecord(
+                path=json_path,
+                env_id=env_id,
+                episode=episode,
+                seed=seed,
+                swap_pair=swap_pair,
+            )
+        )
+    return results
+
+
+def dedup_videoplace_swap_pair_records(
+    entries: list[VideoPlaceSwapPairRecord],
+) -> tuple[list[VideoPlaceSwapPairRecord], list[VideoPlaceSwapPairRecord]]:
+    """同 (env_id, episode) 多 seed 时只保留 max seed —— 与
+    dedup_videorepick_records 行为完全一致。"""
+    grouped: dict[tuple[str, int], list[VideoPlaceSwapPairRecord]] = {}
+    for entry in entries:
+        grouped.setdefault((entry.env_id, entry.episode), []).append(entry)
+    kept: list[VideoPlaceSwapPairRecord] = []
+    skipped: list[VideoPlaceSwapPairRecord] = []
+    for bucket in grouped.values():
+        bucket_sorted = sorted(bucket, key=lambda e: e.seed)
+        kept.append(bucket_sorted[-1])
+        skipped.extend(bucket_sorted[:-1])
+    kept.sort(key=lambda e: (e.env_id, e.episode))
+    skipped.sort(key=lambda e: (e.env_id, e.episode, e.seed))
+    return kept, skipped
+
+
 __all__ = [
     "REFERENCE_TARGET_ENV_IDS",
+    "VIDEOPLACE_ENV_IDS",
     "VIDEO_PLACE_BUTTON_ENV_ID",
     "VIDEO_PLACE_ORDER_ENV_ID",
     "PICK_HIGHLIGHT_ENV_ID",
@@ -678,13 +858,17 @@ __all__ = [
     "KIND_PICK_HIGHLIGHT",
     "SELECTED_TARGET_JSON_KEY",
     "VIDEOREPICK_METADATA_KEY",
+    "VIDEOPLACE_SWAP_PAIR_KEY",
     "VISIBLE_OBJECTS_JSON_FILENAME",
     "SelectedTargetRecord",
     "VideoRepickRecord",
+    "VideoPlaceSwapPairRecord",
     "extract_selected_target",
     "enrich_visible_payload",
     "discover_selected_target_records",
     "dedup_selected_target_records",
     "discover_videorepick_records",
     "dedup_videorepick_records",
+    "discover_videoplace_swap_pair_records",
+    "dedup_videoplace_swap_pair_records",
 ]
