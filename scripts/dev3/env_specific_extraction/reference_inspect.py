@@ -457,11 +457,11 @@ def _render_two_row_figure_videorepick(
     videorepick_records: list[reference_module.VideoRepickRecord],
     plt: Any,
 ) -> Path:
-    """VideoRepick 2 行 figure：第 1 行复用 1×4 collage，第 2 行单 panel 满列。"""
+    """VideoRepick 2 行 figure：第 1 行复用 1×3 collage，第 2 行单 panel 满列。"""
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"VideoRepick{xy_common.XY_DEFAULT_PNG_SUFFIX}"
 
-    panel_specs = ("all", "cube", "button", "target")
+    panel_specs = ("all", "cube", "button")
     n_cols = len(panel_specs)
 
     fig = plt.figure(figsize=(7 * n_cols, 7 * 2))
