@@ -92,7 +92,6 @@ import torch
 from robomme.env_record_wrapper import FailsafeTimeout
 from robomme.robomme_env.utils.planner_fail_safe import (
     FailAwarePandaArmMotionPlanningSolver,
-    FailAwarePandaStickMotionPlanningSolver,
     ScrewPlanFailure,
 )
 
@@ -181,34 +180,24 @@ def _worker_initializer() -> None:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-# pickhighlight_setup_metadata / videorepick_setup_metadata 仍住在 scripts/dev/
-DEV_SCRIPT_DIR = SCRIPT_DIR.parent / "dev"
-if str(DEV_SCRIPT_DIR) not in sys.path:
-    sys.path.append(str(DEV_SCRIPT_DIR))
-# permanence.py 已被移到 scripts/dev3/env-specific-extraction/；spawn 子进程不会自动
-# 把脚本目录加入 sys.path，显式加入保证可 import
-PERMANENCE_DIR = SCRIPT_DIR / "env_specific_extraction"
-if str(PERMANENCE_DIR) not in sys.path:
-    sys.path.append(str(PERMANENCE_DIR))
+# 4 个 suite 模块住在 scripts/dev3/env_specific_extraction/；spawn 子进程不会
+# 自动把脚本目录加入 sys.path，显式加入保证可 import。
+ENV_SPECIFIC_EXTRACTION_DIR = SCRIPT_DIR / "env_specific_extraction"
+if str(ENV_SPECIFIC_EXTRACTION_DIR) not in sys.path:
+    sys.path.append(str(ENV_SPECIFIC_EXTRACTION_DIR))
 
-from permanence import write_permanence_init_state  # scripts/dev3/env-specific-extraction/permanence.py
-from reference import enrich_visible_payload as enrich_visible_payload_with_reference  # scripts/dev3/env_specific_extraction/reference.py
+# 4 个 suite 模块同位于 env_specific_extraction/，各自管自己 env 的 reset
+# enrich + suite 特有的 execute 阶段钩子（imitation.select_planner）。
+import counting  # noqa: E402
+import imitation  # noqa: E402
+import permanence  # noqa: E402
+import reference  # noqa: E402
 
-from pickhighlight_setup_metadata import (
-    PICKHIGHLIGHT_ENV_ID,
-    PICKHIGHLIGHT_METADATA_DATASET,
-    write_pickhighlight_setup_metadata,
-)
 from robomme.env_record_wrapper import RobommeRecordWrapper
 from robomme.robomme_env import *  # noqa: F401,F403
 from robomme.robomme_env.utils.SceneGenerationError import SceneGenerationError
 from robomme.robomme_env.utils.choice_action_mapping import extract_actor_position_xyz
 from robomme.robomme_env.utils.segmentation_utils import create_segmentation_visuals
-from videorepick_setup_metadata import (
-    VIDEOREPICK_ENV_ID,
-    VIDEOREPICK_METADATA_DATASET,
-    write_videorepick_setup_metadata,
-)
 
 # 全部 16 个任务环境 ID，顺序决定 env_code（1-indexed），进而影响 seed 计算
 DEFAULT_ENVS = [
@@ -606,9 +595,11 @@ def _save_visible_objects_json(
 ) -> Path:
     """写出 reset 可见对象 JSON。
 
-    若 env_id 属于 reference 套件且传入了 env，则在写出前由
-    reference.enrich_visible_payload 原地添加 'selected_target' 字段。
-    其他 env 行为不变。
+    visible_objects.json 是 reset 阶段所有 env-specific 数据的唯一权威 sidecar。
+    4 个 suite 模块各自暴露同名 enrich_visible_payload(payload, env, env_id)
+    钩子，主脚本盲调 4 次：每个 suite 内部判断 env_id 是否在自己范围内，
+    在则原地写入顶层字段（permanence_init_state / selected_target /
+    videorepick_metadata），否则 no-op。
     """
     json_path = _visible_object_json_path(reset_output_dir)
     payload = {
@@ -619,8 +610,10 @@ def _save_visible_objects_json(
         "objects": visible_payload["objects"],
     }
     if env is not None:
-        # no-op for envs outside REFERENCE_TARGET_ENV_IDS
-        enrich_visible_payload_with_reference(payload, env=env, env_id=env_id)
+        counting.enrich_visible_payload(payload, env=env, env_id=env_id)
+        permanence.enrich_visible_payload(payload, env=env, env_id=env_id)
+        reference.enrich_visible_payload(payload, env=env, env_id=env_id)
+        imitation.enrich_visible_payload(payload, env=env, env_id=env_id)
     with json_path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=True)
         handle.write("\n")
@@ -838,64 +831,6 @@ def _decode_h5_text(value: object) -> str:
     return str(value)
 
 
-def _verify_videorepick_setup_metadata(setup_group: h5py.Group) -> tuple[bool, str]:
-    if VIDEOREPICK_METADATA_DATASET not in setup_group:
-        return False, f"missing setup dataset: {VIDEOREPICK_METADATA_DATASET}"
-
-    try:
-        payload_raw = _decode_h5_text(setup_group[VIDEOREPICK_METADATA_DATASET][()])
-        payload = json.loads(payload_raw)
-    except Exception as exc:
-        return (
-            False,
-            f"invalid {VIDEOREPICK_METADATA_DATASET} JSON "
-            f"({type(exc).__name__}: {exc})",
-        )
-
-    if not isinstance(payload, dict):
-        return False, f"{VIDEOREPICK_METADATA_DATASET} is not a JSON object"
-
-    target_color = payload.get("target_cube_1_color")
-    if target_color not in {"red", "blue", "green"}:
-        return False, "invalid target_cube_1_color in videorepick_metadata"
-
-    num_repeats = payload.get("num_repeats")
-    if isinstance(num_repeats, bool) or not isinstance(num_repeats, int):
-        return False, "invalid num_repeats type in videorepick_metadata"
-    if num_repeats < 1:
-        return False, "num_repeats must be >= 1 in videorepick_metadata"
-
-    return True, "videorepick metadata verified"
-
-
-def _verify_pickhighlight_setup_metadata(setup_group: h5py.Group) -> tuple[bool, str]:
-    if PICKHIGHLIGHT_METADATA_DATASET not in setup_group:
-        return False, f"missing setup dataset: {PICKHIGHLIGHT_METADATA_DATASET}"
-
-    try:
-        payload_raw = _decode_h5_text(setup_group[PICKHIGHLIGHT_METADATA_DATASET][()])
-        payload = json.loads(payload_raw)
-    except Exception as exc:
-        return (
-            False,
-            f"invalid {PICKHIGHLIGHT_METADATA_DATASET} JSON "
-            f"({type(exc).__name__}: {exc})",
-        )
-
-    if not isinstance(payload, dict):
-        return False, f"{PICKHIGHLIGHT_METADATA_DATASET} is not a JSON object"
-
-    target_cube_colors = payload.get("target_cube_colors")
-    if not isinstance(target_cube_colors, list) or not target_cube_colors:
-        return False, "invalid target_cube_colors in pickhighlight_metadata"
-
-    for color_name in target_cube_colors:
-        if color_name not in {"red", "blue", "green"}:
-            return False, "invalid target cube color in pickhighlight_metadata"
-
-    return True, "pickhighlight metadata verified"
-
-
 def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, str]:
     """验证 setup-only HDF5 是否满足 downstream 读取要求。
 
@@ -904,7 +839,10 @@ def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, st
     2. episode_N group 存在
     3. episode_N/setup group 存在，且包含必要字段（difficulty/task_goal/available_multi_choices）
     4. 不存在任何 timestep_* group（setup-only 模式不应写入轨迹数据）
-    5. 特定任务的额外元数据（PickHighlight / VideoRepick）
+
+    所有 env-specific 元数据（PickHighlight target_cube_colors / VideoRepick
+    target_cube_1_color + num_repeats 等）已迁移到 visible_objects.json，
+    不再写入 HDF5；本函数因此不再做 env-specific dispatch。
     """
     if not h5_path.is_file():
         return False, f"missing HDF5 file: {h5_path}"
@@ -948,14 +886,6 @@ def _verify_setup_h5(h5_path: Path, env_id: str, episode: int) -> tuple[bool, st
                     "unexpected timestep data present: "
                     f"{', '.join(timestep_groups[:3])}"
                 )
-
-            # PickHighlight 额外验证：target_cube_colors 字段
-            if env_id == PICKHIGHLIGHT_ENV_ID:
-                return _verify_pickhighlight_setup_metadata(setup_group)
-
-            # VideoRepick 额外验证：target_cube_1_color + num_repeats 字段
-            if env_id == VIDEOREPICK_ENV_ID:
-                return _verify_videorepick_setup_metadata(setup_group)
     except Exception as exc:
         return False, f"failed to inspect HDF5 ({type(exc).__name__}: {exc})"
 
@@ -982,21 +912,14 @@ def _tensor_to_bool(value) -> bool:
 def _create_planner(env: gym.Env, env_id: str):
     """按任务类型选择 stick 规划器或机械臂规划器。
 
-    PatternLock / RouteStick 使用 stick 末端执行器，关节速度上限更低（0.3）；
-    其他任务使用标准的 Panda 机械臂规划器。
+    Imitation 套件 (PatternLock / RouteStick) 由 imitation.select_planner
+    返回 stick planner（joint_vel_limits=0.3，避免 stick 震荡）；其余 env
+    走默认 Panda 机械臂规划器。
     FailAware 前缀表示规划失败时抛 ScrewPlanFailure，而非静默返回 -1。
     """
-    if env_id in {"PatternLock", "RouteStick"}:
-        # stick 规划器：控制细长末端执行器，需要较低的关节速度限制防止碰撞
-        return FailAwarePandaStickMotionPlanningSolver(
-            env,
-            debug=False,
-            vis=False,
-            base_pose=env.unwrapped.agent.robot.pose,
-            visualize_target_grasp_pose=False,
-            print_env_info=False,
-            joint_vel_limits=0.3,  # 比标准臂更保守，避免 stick 震荡
-        )
+    suite_planner = imitation.select_planner(env, env_id)
+    if suite_planner is not None:
+        return suite_planner
     # 默认：标准 Panda 机械臂规划器（夹爪抓取）
     return FailAwarePandaArmMotionPlanningSolver(
         env,
@@ -1214,10 +1137,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "-e",
         nargs="+",
         default=[
-        # "PickXtimes",
-        # "StopCube",
-        # "SwingXtimes",
-        # "BinFill",
+        "PickXtimes",
+        "StopCube",
+        "SwingXtimes",
+        "BinFill",
         "VideoUnmaskSwap",
         "VideoUnmask",
         "ButtonUnmaskSwap",
@@ -1544,6 +1467,10 @@ def _run_episode(
             seed=seed,
         )
         # 在同一输出目录写 visible_objects.json 和 3D 俯视图 PNG
+        # 4 个 suite 的 enrich_visible_payload 钩子已在 _save_visible_objects_json
+        # 内部统一调用，所有 env-specific 数据（permanence_init_state /
+        # selected_target / videorepick_metadata）都汇入 visible_objects.json，
+        # 不再写独立 sidecar。
         _save_reset_visible_object_artifacts(
             obs=obs,
             env=env,
@@ -1552,17 +1479,6 @@ def _run_episode(
             episode=episode,
             seed=seed,
         )
-        # Permanence 套件 (Button*Unmask* / Video*Unmask*) 额外写入 cube/swap init 状态
-        # 给非 Permanence env 是 no-op（write_permanence_init_state 内部判定后返回 None）
-        permanence_path = write_permanence_init_state(
-            env=env,
-            env_id=env_id,
-            episode_idx=episode,
-            seed=seed,
-            reset_output_dir=reset_output_dir,
-        )
-        if permanence_path is not None:
-            print(f"[Setup] Permanence init state JSON saved: {permanence_path.resolve()}")
     except Exception as exc:
         print(
             f"[{mode_tag}] Failed to save reset artifacts for env={env_id} "
@@ -1592,22 +1508,8 @@ def _run_episode(
             # 无论 no-op 是否成功，都要关闭环境触发 HDF5 写出
             _close_env(env, episode, seed)
 
-        # env.close() 写出 HDF5 后，再追加任务特定的元数据（close 前 env 仍可访问）
-        try:
-            write_pickhighlight_setup_metadata(env, h5_path, episode)
-            write_videorepick_setup_metadata(env, h5_path, episode)
-        except Exception as exc:
-            print(
-                f"[setup-only] Failed to append task-specific metadata for env={env_id} "
-                f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
-            )
-            # metadata 写失败归到 hdf5_verify 字段（任务特定 setup 数据是 HDF5 的一部分）
-            record["hdf5_verify"] = "failed"
-            record["hdf5_verify_message"] = (
-                f"task-specific metadata write failed: {_format_exception(exc)}"
-            )
-            _emit(success=False, retryable=False)
-            return False, False
+        # env-specific 元数据已在 reset 阶段通过 enrich_visible_payload 写到
+        # visible_objects.json 顶层；HDF5 不再追加任务特定字段。
 
         # 校验 HDF5 结构完整性
         setup_ok, setup_message = _verify_setup_h5(h5_path, env_id, episode)
@@ -1661,21 +1563,8 @@ def _run_episode(
         if record["execute_error"] is None:
             record["execute_error"] = "task_not_successful"
 
-    # close 后追加任务特定的元数据
-    try:
-        write_pickhighlight_setup_metadata(env, h5_path, episode)
-        write_videorepick_setup_metadata(env, h5_path, episode)
-    except Exception as exc:
-        print(
-            f"[rollout] Failed to append task-specific metadata for env={env_id} "
-            f"episode={episode} seed={seed}: {type(exc).__name__}: {exc}"
-        )
-        record["hdf5_verify"] = "failed"
-        record["hdf5_verify_message"] = (
-            f"task-specific metadata write failed: {_format_exception(exc)}"
-        )
-        _emit(success=False, retryable=False)
-        return False, False
+    # env-specific 元数据已在 reset 阶段通过 enrich_visible_payload 写到
+    # visible_objects.json 顶层；HDF5 不再追加任务特定字段。
 
     mp4_path = _latest_recorded_mp4(output_dir, env_id, episode, seed)
     status_text = "SUCCESS" if episode_successful else "FAILED"

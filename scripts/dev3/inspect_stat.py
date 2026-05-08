@@ -141,8 +141,12 @@ CONSTANT_GOAL_ENVS = {
     "RouteStick",
 }
 AGGREGATED_H5_PREFIX = "record_dataset_"
-PICKHIGHLIGHT_METADATA_FIELD = "pickhighlight_metadata"
-VIDEOREPICK_METADATA_FIELD = "videorepick_metadata"
+# Reset 阶段 env-specific 元数据已迁移到 reset_segmentation_pngs/<env>_ep*_seed*/
+# visible_objects.json 顶层（取代旧的 HDF5 setup/pickhighlight_metadata 与
+# setup/videorepick_metadata 数据集）。
+VISIBLE_OBJECTS_JSON_FILENAME = "visible_objects.json"
+SELECTED_TARGET_JSON_KEY = "selected_target"
+VIDEOREPICK_METADATA_KEY = "videorepick_metadata"
 SPLIT_H5_PATTERN = re.compile(
     r"^(?P<env_id>.+?)_ep(?P<episode>\d+)(?:_seed(?P<seed>\d+))?$"
 )
@@ -340,26 +344,66 @@ def _merge_error_messages(existing_error: object, errors: list[str]) -> str:
     return "; ".join(unique_errors)
 
 
-def _parse_videorepick_setup_fields(
-    setup_group: h5py.Group | None,
-) -> tuple[dict[str, int | str], str | None]:
-    if setup_group is None or VIDEOREPICK_METADATA_FIELD not in setup_group:
-        return ({}, f"missing {VIDEOREPICK_METADATA_FIELD}")
+def _load_visible_objects_for_episode(
+    segmentation_dir: Path | None,
+    env_id: str,
+    episode_idx: int,
+) -> tuple[dict | None, str | None]:
+    """按 (env_id, episode_idx) 在 segmentation_dir 下找 visible_objects.json
+    并加载。同一 episode 多 seed 时取 max seed（与 inspect_stat 别处去重一致）。
+    返回 (payload, error_message)；找不到/损坏返回 (None, error_message)。"""
+    if segmentation_dir is None:
+        return None, "segmentation_dir not provided"
+    if not segmentation_dir.is_dir():
+        return None, f"segmentation_dir not found: {segmentation_dir}"
 
-    payload_raw = _decode_dataset_string(
-        setup_group[VIDEOREPICK_METADATA_FIELD][()],
-        default="",
-    ).strip()
-    if not payload_raw:
-        return ({}, f"missing {VIDEOREPICK_METADATA_FIELD}")
+    candidates: list[tuple[int, Path]] = []
+    for episode_dir in segmentation_dir.iterdir():
+        if not episode_dir.is_dir():
+            continue
+        match = SPLIT_H5_PATTERN.match(episode_dir.name)
+        if not match:
+            continue
+        if match.group("env_id") != env_id:
+            continue
+        if int(match.group("episode")) != episode_idx:
+            continue
+        seed_str = match.group("seed")
+        seed_val = int(seed_str) if seed_str is not None else -1
+        json_path = episode_dir / VISIBLE_OBJECTS_JSON_FILENAME
+        if json_path.is_file():
+            candidates.append((seed_val, json_path))
 
+    if not candidates:
+        return None, (
+            f"no {VISIBLE_OBJECTS_JSON_FILENAME} for {env_id} episode {episode_idx} "
+            f"under {segmentation_dir}"
+        )
+
+    candidates.sort(key=lambda pair: pair[0])
+    _, json_path = candidates[-1]
     try:
-        payload = json.loads(payload_raw)
-    except (TypeError, ValueError, json.JSONDecodeError) as exc:
-        return ({}, f"invalid {VIDEOREPICK_METADATA_FIELD} json ({exc})")
+        with json_path.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"failed to load {json_path}: {type(exc).__name__}: {exc}"
 
     if not isinstance(payload, dict):
-        return ({}, f"invalid {VIDEOREPICK_METADATA_FIELD} payload type")
+        return None, f"{json_path}: visible_objects payload is not a dict"
+    return payload, None
+
+
+def _parse_videorepick_setup_fields(
+    vobjects_payload: dict | None,
+) -> tuple[dict[str, int | str], str | None]:
+    """从 visible_objects.json 顶层 'videorepick_metadata' 字段读 VideoRepick
+    元数据（target_cube_1_color + num_repeats）。"""
+    if vobjects_payload is None:
+        return ({}, f"missing {VIDEOREPICK_METADATA_KEY}")
+
+    payload = vobjects_payload.get(VIDEOREPICK_METADATA_KEY)
+    if not isinstance(payload, dict):
+        return ({}, f"missing {VIDEOREPICK_METADATA_KEY}")
 
     target_color = payload.get("target_cube_1_color")
     if target_color not in COLOR_ORDER:
@@ -381,29 +425,21 @@ def _parse_videorepick_setup_fields(
 
 
 def _parse_pickhighlight_setup_fields(
-    setup_group: h5py.Group | None,
+    vobjects_payload: dict | None,
 ) -> tuple[dict[str, int | str], str | None]:
-    if setup_group is None or PICKHIGHLIGHT_METADATA_FIELD not in setup_group:
-        return ({}, f"missing {PICKHIGHLIGHT_METADATA_FIELD}")
+    """从 visible_objects.json 顶层 'selected_target' 字段读 PickHighlight 的
+    target_cube_colors（即 reference.enrich_visible_payload 写入的
+    selected_target.task_target_colors）。"""
+    if vobjects_payload is None:
+        return ({}, f"missing {SELECTED_TARGET_JSON_KEY}")
 
-    payload_raw = _decode_dataset_string(
-        setup_group[PICKHIGHLIGHT_METADATA_FIELD][()],
-        default="",
-    ).strip()
-    if not payload_raw:
-        return ({}, f"missing {PICKHIGHLIGHT_METADATA_FIELD}")
+    selected_target = vobjects_payload.get(SELECTED_TARGET_JSON_KEY)
+    if not isinstance(selected_target, dict):
+        return ({}, f"missing {SELECTED_TARGET_JSON_KEY}")
 
-    try:
-        payload = json.loads(payload_raw)
-    except (TypeError, ValueError, json.JSONDecodeError) as exc:
-        return ({}, f"invalid {PICKHIGHLIGHT_METADATA_FIELD} json ({exc})")
-
-    if not isinstance(payload, dict):
-        return ({}, f"invalid {PICKHIGHLIGHT_METADATA_FIELD} payload type")
-
-    target_cube_colors = payload.get("target_cube_colors")
+    target_cube_colors = selected_target.get("task_target_colors")
     if not isinstance(target_cube_colors, list) or not target_cube_colors:
-        return ({}, "invalid pickhighlight target_cube_colors")
+        return ({}, "invalid pickhighlight task_target_colors")
 
     normalized_colors: list[str] = []
     for color_name in target_cube_colors:
@@ -457,7 +493,14 @@ def _default_row(env_id: str, episode_name: str) -> dict[str, object]:
 def _parse_semantic_fields(
     row: dict[str, object],
     setup_group: h5py.Group | None = None,
+    vobjects_payload: dict | None = None,
 ) -> None:
+    """解析 env-specific 语义字段。
+
+    PickHighlight / VideoRepick 的 reset 元数据来自 visible_objects.json 顶层
+    (vobjects_payload)，由调用方按 (env_id, episode_idx) 加载好传入。
+    其他 env 的字段仍从 task_goal 字符串里解析，与 setup_group 无关。
+    """
     env_id = str(row["env_id"])
     goal = str(row["canonical_goal"]).lower()
     errors: list[str] = []
@@ -467,7 +510,7 @@ def _parse_semantic_fields(
         if goal == MISSING_TASK_GOAL.lower():
             errors.append("missing task_goal")
 
-        parsed_fields, error = _parse_videorepick_setup_fields(setup_group)
+        parsed_fields, error = _parse_videorepick_setup_fields(vobjects_payload)
         if parsed_fields:
             row.update(parsed_fields)
         if error:
@@ -480,7 +523,7 @@ def _parse_semantic_fields(
         if goal == MISSING_TASK_GOAL.lower():
             errors.append("missing task_goal")
 
-        parsed_fields, error = _parse_pickhighlight_setup_fields(setup_group)
+        parsed_fields, error = _parse_pickhighlight_setup_fields(vobjects_payload)
         if parsed_fields:
             row.update(parsed_fields)
         if error:
@@ -666,6 +709,7 @@ def _append_episode_row(
     env_id: str,
     episode_name: str,
     episode_group: h5py.Group,
+    segmentation_dir: Path | None = None,
 ) -> None:
     row = _default_row(env_id, episode_name)
     setup_group = episode_group.get("setup")
@@ -690,7 +734,22 @@ def _append_episode_row(
         row["parse_error"] = "missing task_goal"
         warnings.append(f"{env_id}/{episode_name}: missing task_goal")
 
-    _parse_semantic_fields(row, setup_group)
+    # PickHighlight / VideoRepick 的 reset 元数据已迁移到 visible_objects.json
+    # 顶层（不再写 HDF5 setup group）；按 (env_id, episode_idx) 加载对应 payload。
+    vobjects_payload: dict | None = None
+    if env_id in {"PickHighlight", "VideoRepick"} and segmentation_dir is not None:
+        episode_suffix = episode_name.removeprefix("episode_")
+        if episode_suffix.isdigit():
+            payload, vload_error = _load_visible_objects_for_episode(
+                segmentation_dir, env_id, int(episode_suffix)
+            )
+            vobjects_payload = payload
+            if vload_error and payload is None:
+                # 找不到 visible_objects.json：降级让 _parse_*_setup_fields 报
+                # missing 错误，走与原行为一致的 warning 路径
+                pass
+
+    _parse_semantic_fields(row, setup_group, vobjects_payload)
     if row["parse_error"]:
         warnings.append(f"{env_id}/{episode_name}: {row['parse_error']}")
     rows.append(row)
@@ -702,6 +761,7 @@ def _read_episode_rows(
     *,
     env_filter: Optional[str],
     max_per_difficulty: int | None,
+    segmentation_dir: Path | None = None,
 ) -> tuple[list[dict[str, object]], list[str], dict[tuple[str, int], str]]:
     rows: list[dict[str, object]] = []
     warnings: list[str] = []
@@ -752,6 +812,7 @@ def _read_episode_rows(
                         env_id=env_id,
                         episode_name=episode_name,
                         episode_group=episode_group,
+                        segmentation_dir=segmentation_dir,
                     )
                     _bump_difficulty(env_id, difficulty)
         except Exception as exc:
@@ -780,6 +841,7 @@ def _read_episode_rows(
                     env_id=entry.env_id,
                     episode_name=episode_name,
                     episode_group=episode_group,
+                    segmentation_dir=segmentation_dir,
                 )
                 _bump_difficulty(entry.env_id, difficulty)
         except Exception as exc:
@@ -1245,6 +1307,7 @@ def _run_distribution_pipeline(
     hdf5_dir: Path,
     output_dir: Path,
     env_filter: Optional[str],
+    segmentation_dir: Path | None = None,
 ) -> tuple[
     list[_SplitH5Entry],
     list[_SplitH5Entry],
@@ -1270,6 +1333,7 @@ def _run_distribution_pipeline(
         kept_for_processing,
         env_filter=env_filter,
         max_per_difficulty=DEFAULT_MAX_PER_DIFFICULTY,
+        segmentation_dir=segmentation_dir,
     )
 
     csv_path = output_dir / "episode_task_metadata.csv"
@@ -1332,10 +1396,13 @@ def main() -> None:
     print()
 
     # Pipeline 1: pre-discover + dedup HDF5, then run distribution
+    # PickHighlight / VideoRepick 的 reset 元数据已迁移到 visible_objects.json，
+    # 把 segmentation_dir 传下去让 distribution pipeline 也能从中读取。
     kept_h5, skipped_h5, _, difficulty_map = _run_distribution_pipeline(
         hdf5_dir,
         task_goal_dir,
         args.env,
+        segmentation_dir=segmentation_dir,
     )
 
     # Pipeline 2: xy 编排 — 4 个 suite 各自一次薄调用，渲染 visible_objects 散点图

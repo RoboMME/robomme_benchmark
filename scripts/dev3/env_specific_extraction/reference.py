@@ -1,6 +1,6 @@
-"""Reference 套件 reset 时刻 task_target 选择状态的提取、序列化与发现。
+"""Reference 套件 reset 时刻 env-specific 数据的提取、序列化与发现。
 
-适用 env：VideoPlaceButton / VideoPlaceOrder / PickHighlight。
+适用 env：VideoPlaceButton / VideoPlaceOrder / PickHighlight / VideoRepick。
 
 为什么独立成模块（与 permanence.py 同款理由）：
 - Env-rollout-parallel-segmentation.py 已超过 2000 行，reference 相关
@@ -12,11 +12,14 @@
 env 文件本身不做任何修改：本模块直接从 env.unwrapped 读 _load_scene 已经
 设置好的属性 (target_target / targets / target_color_name /
 target_target_language / which_in_subset / which_targets_to_pick /
-target_cubes / target_cube_colors / all_cubes / all_cube_names)。
+target_cubes / target_cube_colors / all_cubes / all_cube_names /
+target_cube_1 / num_repeats)。
 
-与 permanence 的关键差异：reference 不写独立 sidecar 文件，而是把
-selected_target dict 原地塞进 visible_objects.json 的顶层。这样 inspect
-端无需额外路径，复用 visible_objects.json 的发现逻辑即可读到。
+数据写入策略：reference 不写独立 sidecar 文件，所有字段都原地塞进
+visible_objects.json 的顶层 ——
+- VideoPlaceButton / VideoPlaceOrder / PickHighlight → 'selected_target'
+- VideoRepick                                       → 'videorepick_metadata'
+这样 inspect 端无需额外路径，复用 visible_objects.json 的发现逻辑即可读到。
 """
 from __future__ import annotations
 
@@ -35,6 +38,7 @@ REFERENCE_TARGET_ENV_IDS: frozenset[str] = frozenset(
 VIDEO_PLACE_BUTTON_ENV_ID = "VideoPlaceButton"
 VIDEO_PLACE_ORDER_ENV_ID = "VideoPlaceOrder"
 PICK_HIGHLIGHT_ENV_ID = "PickHighlight"
+VIDEOREPICK_ENV_ID = "VideoRepick"
 
 KIND_VIDEO_PLACE_BUTTON = "video_place_button"
 KIND_VIDEO_PLACE_ORDER = "video_place_order"
@@ -42,6 +46,15 @@ KIND_PICK_HIGHLIGHT = "pick_highlight"
 
 VISIBLE_OBJECTS_JSON_FILENAME = "visible_objects.json"
 SELECTED_TARGET_JSON_KEY = "selected_target"
+VIDEOREPICK_METADATA_KEY = "videorepick_metadata"
+
+_VIDEOREPICK_COLOR_TOLERANCE = 0.05
+_VIDEOREPICK_COLOR_RGB_MAP: dict[str, tuple[float, float, float]] = {
+    "red": (1.0, 0.0, 0.0),
+    "blue": (0.0, 0.0, 1.0),
+    "green": (0.0, 1.0, 0.0),
+}
+_VIDEOREPICK_COLOR_NAME_PATTERN = re.compile(r"\b(red|blue|green)\b")
 
 # 与 inspect-stat / permanence 保持一致的目录命名 regex
 _DIR_NAME_PATTERN = re.compile(
@@ -238,6 +251,121 @@ def _extract_pick_highlight(base: Any) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# VideoRepick：从 actor 渲染材质 / actor.name 推断 cube 颜色（容差 0.05）
+# ---------------------------------------------------------------------------
+
+
+def _normalize_rgba(base_color: Any) -> Optional[tuple[float, float, float, float]]:
+    try:
+        color_values = [float(value) for value in list(base_color)]
+    except Exception:
+        return None
+    if len(color_values) == 3:
+        color_values.append(1.0)
+    if len(color_values) < 4:
+        return None
+    return (
+        color_values[0],
+        color_values[1],
+        color_values[2],
+        color_values[3],
+    )
+
+
+def _match_rgb_to_name(rgba: tuple[float, float, float, float]) -> Optional[str]:
+    for color_name, expected_rgb in _VIDEOREPICK_COLOR_RGB_MAP.items():
+        if all(
+            abs(rgba[channel_idx] - expected_rgb[channel_idx])
+            <= _VIDEOREPICK_COLOR_TOLERANCE
+            for channel_idx in range(3)
+        ):
+            return color_name
+    return None
+
+
+def _iter_actor_rgba_colors(actor: Any):
+    for entity in list(getattr(actor, "_objs", []) or []):
+        for component in list(getattr(entity, "components", []) or []):
+            render_shapes = getattr(component, "render_shapes", None)
+            if render_shapes is None:
+                continue
+            for render_shape in list(render_shapes):
+                material = getattr(render_shape, "material", None)
+                if material is None:
+                    get_material = getattr(render_shape, "get_material", None)
+                    if callable(get_material):
+                        try:
+                            material = get_material()
+                        except Exception:
+                            material = None
+                if material is None:
+                    continue
+                base_color = getattr(material, "base_color", None)
+                if base_color is None:
+                    get_base_color = getattr(material, "get_base_color", None)
+                    if callable(get_base_color):
+                        try:
+                            base_color = get_base_color()
+                        except Exception:
+                            base_color = None
+                if base_color is None:
+                    continue
+                rgba = _normalize_rgba(base_color)
+                if rgba is not None:
+                    yield rgba
+
+
+def _color_from_actor_name(actor_name: object) -> Optional[str]:
+    if not actor_name:
+        return None
+    match = _VIDEOREPICK_COLOR_NAME_PATTERN.search(str(actor_name).lower())
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _color_from_actor(actor: Any) -> str:
+    """从 actor 渲染材质 base_color 或 actor.name 推断颜色名（容差 0.05）。
+    无法判定时 raise。"""
+    for rgba in _iter_actor_rgba_colors(actor):
+        color_name = _match_rgb_to_name(rgba)
+        if color_name is not None:
+            return color_name
+    actor_name = getattr(actor, "name", None)
+    color_name = _color_from_actor_name(actor_name)
+    if color_name is not None:
+        return color_name
+    raise ValueError(
+        "failed to resolve cube color from render material or actor name"
+    )
+
+
+def _extract_videorepick_metadata(env: Any) -> dict:
+    """从 env.unwrapped 提取 VideoRepick 的 target_cube_1_color + num_repeats。
+    缺关键属性 / 类型不合法时 raise。"""
+    base = getattr(env, "unwrapped", env)
+    target_cube = getattr(base, "target_cube_1", None)
+    if target_cube is None:
+        raise ValueError("VideoRepick: target_cube_1 not set after reset")
+    color_name = _color_from_actor(target_cube)
+    if color_name not in {"red", "blue", "green"}:
+        raise ValueError(
+            f"VideoRepick: invalid target_cube_1 color {color_name!r}"
+        )
+    num_repeats = getattr(base, "num_repeats", None)
+    if isinstance(num_repeats, bool) or not isinstance(num_repeats, int):
+        raise ValueError(
+            f"VideoRepick: num_repeats has invalid type "
+            f"{type(num_repeats).__name__}"
+        )
+    if num_repeats < 1:
+        raise ValueError(
+            f"VideoRepick: num_repeats must be >= 1, got {num_repeats}"
+        )
+    return {"target_cube_1_color": color_name, "num_repeats": int(num_repeats)}
+
+
+# ---------------------------------------------------------------------------
 # 公开接口：提取 + payload enrich
 # ---------------------------------------------------------------------------
 
@@ -270,23 +398,30 @@ def extract_selected_target(env: Any, env_id: Optional[str] = None) -> Optional[
 
 
 def enrich_visible_payload(payload: dict, env: Any, env_id: str) -> None:
-    """原地修改 visible_objects.json 的 payload —— 给 reference target env
-    添加顶层 'selected_target' key。其他 env_id 是 no-op。
+    """原地修改 visible_objects.json 的 payload。
 
-    Env-rollout-parallel-segmentation.py 在写 visible_objects.json 之前
-    调用一次即可。
+    PickHighlight / VideoPlaceButton / VideoPlaceOrder
+        → payload['selected_target'] = extract_selected_target(...)
+    VideoRepick
+        → payload['videorepick_metadata'] = {target_cube_1_color, num_repeats}
+    其他 env_id
+        → no-op
     """
-    if env_id not in REFERENCE_TARGET_ENV_IDS:
+    if env_id in REFERENCE_TARGET_ENV_IDS:
+        state = extract_selected_target(env, env_id=env_id)
+        if state is None:
+            raise ValueError(
+                f"enrich_visible_payload: extract_selected_target returned None "
+                f"for env_id={env_id!r}"
+            )
+        payload[SELECTED_TARGET_JSON_KEY] = state
         return
-    state = extract_selected_target(env, env_id=env_id)
-    if state is None:
-        # extract 同样判断了 env_id；理论上走到这里只能是 mismatch，但保留
-        # 保护以避免静默失败
-        raise ValueError(
-            f"enrich_visible_payload: extract_selected_target returned None "
-            f"for env_id={env_id!r}"
+    if env_id == VIDEOREPICK_ENV_ID:
+        payload[VIDEOREPICK_METADATA_KEY] = _to_jsonable(
+            _extract_videorepick_metadata(env)
         )
-    payload[SELECTED_TARGET_JSON_KEY] = state
+        return
+    # 其他 env：no-op
 
 
 # ---------------------------------------------------------------------------
@@ -401,10 +536,12 @@ __all__ = [
     "VIDEO_PLACE_BUTTON_ENV_ID",
     "VIDEO_PLACE_ORDER_ENV_ID",
     "PICK_HIGHLIGHT_ENV_ID",
+    "VIDEOREPICK_ENV_ID",
     "KIND_VIDEO_PLACE_BUTTON",
     "KIND_VIDEO_PLACE_ORDER",
     "KIND_PICK_HIGHLIGHT",
     "SELECTED_TARGET_JSON_KEY",
+    "VIDEOREPICK_METADATA_KEY",
     "VISIBLE_OBJECTS_JSON_FILENAME",
     "SelectedTargetRecord",
     "extract_selected_target",

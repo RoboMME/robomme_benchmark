@@ -12,9 +12,9 @@
 permanance_inspect/ 目录不再被创建——`output_dir` 仅作 anchor，用来定位
 inspect-stat 根目录下的 xy/ 子目录。
 
-数据层（discover / dedup / sidecar 解析）走 permanence.py；
-可视化层（panel 绘制 / 3 行 figure 拼装）一律落在本文件——
-permanence.py 只负责数据产生，不参与渲染。
+数据层（discover / dedup / 从 visible_objects.json 顶层 'permanence_init_state'
+字段读取）走 permanence.py；可视化层（panel 绘制 / 3 行 figure 拼装）一律落
+在本文件—— permanence.py 只负责数据产生，不参与渲染。
 """
 
 from __future__ import annotations
@@ -127,7 +127,7 @@ def _plot_permanence_cubes_panel(
     seen_colors: set[str] = set()
 
     for entry in files_list:
-        for cube in entry.payload.get("cubes", []):
+        for cube in entry.init_state.get("cubes", []):
             color_name = cube.get("color_name", "unknown")
             seen_colors.add(color_name)
             color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
@@ -188,12 +188,12 @@ def _plot_permanence_swaps_panel(
 
     if is_swap_env:
         for entry in files_list:
-            for bin_info in entry.payload.get("bins", []):
+            for bin_info in entry.init_state.get("bins", []):
                 pos = bin_info.get("position_xy") or [0.0, 0.0]
                 bx, by = _xy_rot_cw_90(float(pos[0]), float(pos[1]))
                 ax.scatter(bx, by, s=20, color="lightgray", alpha=0.4, zorder=1)
 
-            for pair in entry.payload.get("swap_pairs", []):
+            for pair in entry.init_state.get("swap_pairs", []):
                 swap_idx = int(pair.get("swap_index", 0))
                 seen_swap_indices.add(swap_idx)
                 color = PERMANENCE_SWAP_INDEX_COLORS[
@@ -276,7 +276,7 @@ def _plot_pickup_bin_panel(
     seen_colors: set[str] = set()
 
     for entry in files_list:
-        cubes = entry.payload.get("cubes") or []
+        cubes = entry.init_state.get("cubes") or []
         if pickup_index >= len(cubes):
             continue
         cube = cubes[pickup_index]
@@ -362,10 +362,10 @@ def _plot_pickup_bin_selection_distribution_panel(
     max_bin_idx = -1
 
     for entry in files_list:
-        bins_len = len(entry.payload.get("bins", []) or [])
+        bins_len = len(entry.init_state.get("bins", []) or [])
         if bins_len > 0:
             max_bin_idx = max(max_bin_idx, bins_len - 1)
-        cubes = entry.payload.get("cubes") or []
+        cubes = entry.init_state.get("cubes") or []
         if pickup_index >= len(cubes):
             continue
         cube = cubes[pickup_index]
@@ -447,13 +447,13 @@ def _plot_pair_frequency_panel(
 
     matched = [
         e for e in (files or [])
-        if len(e.payload.get("bins", [])) == bin_count
+        if len(e.init_state.get("bins", [])) == bin_count
     ]
     n_eps = len(matched)
 
     counter: Counter = Counter()
     for entry in matched:
-        for pair in entry.payload.get("swap_pairs", []):
+        for pair in entry.init_state.get("swap_pairs", []):
             a = pair.get("bin_a_index")
             b = pair.get("bin_b_index")
             if a is None or b is None:
@@ -624,7 +624,7 @@ def visualize(
 
     Returns
     -------
-    (kept, skipped) : tuple[list[PermanenceFile], list[PermanenceFile]]
+    (kept, skipped) : tuple[list[PermanenceRecord], list[PermanenceRecord]]
     """
     segmentation_dir = Path(segmentation_dir)
     output_dir = Path(output_dir)
@@ -634,20 +634,22 @@ def visualize(
     if env_id is not None and env_id not in permanence_module.PERMANENCE_ENV_IDS:
         return [], []
 
-    # 1) 发现并去重 permanence sidecar
-    perm_files = permanence_module.discover_permanence_files(
+    # 1) 发现并去重 permanence init state（数据源：visible_objects.json 顶层
+    #    'permanence_init_state' 字段，已不再走独立 sidecar）
+    perm_records = permanence_module.discover_permanence_records(
         segmentation_dir, env_filter=env_id
     )
-    if not perm_files:
+    if not perm_records:
         env_part = f" for env_id={env_id!r}" if env_id else ""
         print(
-            f"[Permanance-inspect] No permanence_init_state.json found "
-            f"under {segmentation_dir}{env_part}."
+            f"[Permanance-inspect] No permanence_init_state in "
+            f"visible_objects.json under {segmentation_dir}{env_part}."
         )
         return [], []
 
-    kept, skipped = permanence_module.dedup_permanence_files(perm_files)
+    kept, skipped = permanence_module.dedup_permanence_records(perm_records)
 
+    # 把 record 按 env_id 分桶，与历史 perm_files 调用方一致
     perm_by_env: dict[str, list] = {}
     for entry in kept:
         perm_by_env.setdefault(entry.env_id, []).append(entry)
@@ -709,8 +711,8 @@ _VALID_ENV_IDS = sorted(permanence_module.PERMANENCE_ENV_IDS)
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Permanence 套件专用可视化：扫描 permanence_init_state.json + "
-            "visible_objects.json，为 VideoUnmask / VideoUnmaskSwap / "
+            "Permanence 套件专用可视化：扫描 visible_objects.json（含顶层 "
+            "'permanence_init_state' 字段），为 VideoUnmask / VideoUnmaskSwap / "
             "ButtonUnmask / ButtonUnmaskSwap 各生成一张 3 行 PNG（行 1 visible-"
             "objects、行 2 cubes + swaps、行 3 first/second pickup bin），"
             "写入 inspect-stat/xy/。"
@@ -720,8 +722,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--segmentation-dir",
         type=Path,
         default=DEFAULT_SEGMENTATION_DIR,
-        help="包含各 episode 子目录（内有 permanence_init_state.json / "
-        "visible_objects.json）的根目录。",
+        help="包含各 episode 子目录（内有 visible_objects.json，含顶层 "
+        "'permanence_init_state' 字段）的根目录。",
     )
     parser.add_argument(
         "--output-dir",

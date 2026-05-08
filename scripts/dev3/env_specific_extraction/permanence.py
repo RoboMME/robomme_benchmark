@@ -1,16 +1,20 @@
-"""Permanence 套件 reset 时刻 cube/swap 状态的提取、序列化与渲染。
+"""Permanence 套件 reset 时刻 cube/swap 状态的提取、序列化与发现。
 
 适用 env：ButtonUnmask / ButtonUnmaskSwap / VideoUnmask / VideoUnmaskSwap。
 
 为什么独立成模块：
-- Env-rollout-parallel-segmentation.py 已经超过 2000 行，permanence 相关逻辑
-  (从 env 读属性 / 写 JSON / 做可视化) 不应继续往主脚本里堆。
-- 同时 inspect-stat.py 也需要消费同一份 sidecar 数据；把读写两端的契约
-  集中在一个文件里能让 schema 始终一致。
+- Env-rollout-parallel-segmentation.py 已经超过 2000 行，permanence 相关
+  逻辑（从 env 读属性 / 写 payload / 做可视化）不应继续往主脚本里堆。
+- 同时 inspect-stat.py 也需要消费同一份数据；把读写两端的契约集中在一个文件里
+  能让 schema 始终一致。
 
 env 文件本身不做任何修改：本模块直接从 env.unwrapped 读 _load_scene 已经
 设置好的属性 (color_names / spawned_bins / cube_bin_pairs / swap_schedule
 / target_cube_<color>)。
+
+数据写入策略：permanence 不再写独立 sidecar，init state dict 原地塞进
+visible_objects.json 的顶层 'permanence_init_state' 字段（与 reference 的
+'selected_target' 字段平行）。inspect 端只需扫描 visible_objects.json 单一源。
 """
 from __future__ import annotations
 
@@ -18,7 +22,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -27,7 +31,8 @@ PERMANENCE_ENV_IDS: frozenset[str] = frozenset(
 )
 SWAP_ENV_IDS: frozenset[str] = frozenset({"ButtonUnmaskSwap", "VideoUnmaskSwap"})
 
-PERMANENCE_JSON_FILENAME = "permanence_init_state.json"
+VISIBLE_OBJECTS_JSON_FILENAME = "visible_objects.json"
+PERMANENCE_INIT_STATE_KEY = "permanence_init_state"
 
 # 与 env 内部 cube_colors 常量保持一致（red/green/blue 对应 RGBA）
 COLOR_NAME_TO_RGBA: dict[str, tuple[float, float, float, float]] = {
@@ -36,7 +41,7 @@ COLOR_NAME_TO_RGBA: dict[str, tuple[float, float, float, float]] = {
     "blue": (0.0, 0.0, 1.0, 1.0),
 }
 
-# 与 inspect-stat.py / Env-rollout 保持一致的目录命名 regex
+# 与 inspect-stat / Env-rollout 保持一致的目录命名 regex
 _DIR_NAME_PATTERN = re.compile(
     r"^(?P<env_id>.+?)_ep(?P<episode>\d+)_seed(?P<seed>\d+)$"
 )
@@ -104,7 +109,7 @@ def _index_in_bins(bin_actor: Any, spawned_bins: list[Any]) -> Optional[int]:
 
 
 # ---------------------------------------------------------------------------
-# 提取与写入
+# 提取与 enrich
 # ---------------------------------------------------------------------------
 
 
@@ -215,76 +220,68 @@ def extract_permanence_init_state(env: Any) -> Optional[dict]:
     return _to_jsonable(state)
 
 
-def write_permanence_init_state(
-    env: Any,
-    env_id: str,
-    episode_idx: int,
-    seed: int,
-    reset_output_dir: Path,
-) -> Optional[Path]:
-    """提取 permanence init state 并写入 sidecar JSON。非 Permanence env 返回 None。"""
+def enrich_visible_payload(payload: dict, env: Any, env_id: str) -> None:
+    """原地把 permanence init state dict 塞进 payload 顶层
+    'permanence_init_state' 字段。非 Permanence env 是 no-op。
+
+    与 reference.enrich_visible_payload 设计对称：inspect-stat 端无需读
+    独立 sidecar，所有数据来自 visible_objects.json 单一源。
+    """
+    if env_id not in PERMANENCE_ENV_IDS:
+        return
     state = extract_permanence_init_state(env)
     if state is None:
-        return None
-
-    payload = {
-        "env_id": env_id,
-        "episode": int(episode_idx),
-        "seed": int(seed),
-        **state,
-    }
-    # extract 已经填了 env_id（来自 class name），这里以传入的 env_id 为准
-    payload["env_id"] = env_id
-
-    reset_output_dir = Path(reset_output_dir)
-    reset_output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = reset_output_dir / PERMANENCE_JSON_FILENAME
-    with out_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2, ensure_ascii=True)
-        handle.write("\n")
-    return out_path
+        # extract 已按 env class name 判断；进入这里说明 env_id/class 不一致
+        raise ValueError(
+            f"enrich_visible_payload: extract_permanence_init_state returned None "
+            f"for env_id={env_id!r} (class mismatch?)"
+        )
+    payload[PERMANENCE_INIT_STATE_KEY] = state
 
 
 # ---------------------------------------------------------------------------
-# 加载与发现（inspect-stat 端）
+# 加载与发现（inspect-stat 端，从 visible_objects.json 顶层读）
 # ---------------------------------------------------------------------------
 
 
 @dataclass
-class PermanenceFile:
-    path: Path
+class PermanenceRecord:
+    path: Path        # visible_objects.json 路径
     env_id: str
     episode: int
     seed: int
-    payload: dict
+    init_state: dict  # 即 payload[PERMANENCE_INIT_STATE_KEY]
 
 
-def load_permanence_init_state(path: Path) -> dict:
+def _load_visible_objects(path: Path) -> dict:
     with Path(path).open("r", encoding="utf-8") as handle:
         return json.load(handle)
 
 
-def discover_permanence_files(
+def discover_permanence_records(
     segmentation_dir: Path,
     env_filter: Optional[str] = None,
-) -> list[PermanenceFile]:
-    """递归扫描 segmentation_dir 下所有 permanence_init_state.json。
+) -> list[PermanenceRecord]:
+    """递归扫描 segmentation_dir 下所有 visible_objects.json，提取
+    payload['permanence_init_state']。
 
-    - 用 payload 的 env_id/episode/seed 作为权威来源；目录名解析仅作 sanity check。
-    - env_filter 非空时过滤 env_id（精确匹配）。
-    - 文件结构异常用 [Warn] 打印并跳过，与 inspect-stat 现有风格一致。
+    - 用 payload 的 env_id/episode/seed 作为权威来源；目录名解析仅作 fallback。
+    - env_filter 非空时按 env_id 过滤（精确匹配）。
+    - env 不在 PERMANENCE_ENV_IDS 时跳过（非 Permanence env 没有该字段）。
+    - env 在范围内但缺 'permanence_init_state' 字段时打 [Warn]（说明该条
+      episode 数据来自旧 rollout，需要重跑）。
     """
     seg_dir = Path(segmentation_dir)
     if not seg_dir.is_dir():
         return []
 
-    results: list[PermanenceFile] = []
-    for json_path in sorted(seg_dir.rglob(PERMANENCE_JSON_FILENAME)):
+    results: list[PermanenceRecord] = []
+    for json_path in sorted(seg_dir.rglob(VISIBLE_OBJECTS_JSON_FILENAME)):
         try:
-            payload = load_permanence_init_state(json_path)
+            payload = _load_visible_objects(json_path)
         except (OSError, json.JSONDecodeError) as exc:
             print(
-                f"[Warn] Skip invalid permanence JSON {json_path}: "
+                f"[Warn] Skip invalid visible_objects JSON {json_path}: "
                 f"{type(exc).__name__}: {exc}"
             )
             continue
@@ -292,36 +289,53 @@ def discover_permanence_files(
         env_id = payload.get("env_id")
         episode = payload.get("episode")
         seed = payload.get("seed")
-        if not isinstance(env_id, str) or not isinstance(episode, int) or not isinstance(seed, int):
+        if (
+            not isinstance(env_id, str)
+            or not isinstance(episode, int)
+            or not isinstance(seed, int)
+        ):
             print(
-                f"[Warn] Skip permanence JSON {json_path} missing env_id/episode/seed"
+                f"[Warn] Skip visible_objects JSON {json_path} missing "
+                f"env_id/episode/seed"
             )
             continue
 
+        if env_id not in PERMANENCE_ENV_IDS:
+            continue
         if env_filter is not None and env_id != env_filter:
             continue
 
+        init_state = payload.get(PERMANENCE_INIT_STATE_KEY)
+        if not isinstance(init_state, dict):
+            print(
+                f"[Warn] {env_id} ep{episode} seed{seed}: "
+                f"visible_objects.json missing 'permanence_init_state' field "
+                f"(re-run rollout to populate). Skipping {json_path}."
+            )
+            continue
+
         results.append(
-            PermanenceFile(
+            PermanenceRecord(
                 path=json_path,
                 env_id=env_id,
                 episode=episode,
                 seed=seed,
-                payload=payload,
+                init_state=init_state,
             )
         )
     return results
 
 
-def dedup_permanence_files(
-    entries: list[PermanenceFile],
-) -> tuple[list[PermanenceFile], list[PermanenceFile]]:
-    """同 (env_id, episode) 多 seed 时只保留 max seed，与 visible_objects 一致。"""
-    grouped: dict[tuple[str, int], list[PermanenceFile]] = {}
+def dedup_permanence_records(
+    entries: list[PermanenceRecord],
+) -> tuple[list[PermanenceRecord], list[PermanenceRecord]]:
+    """同 (env_id, episode) 多 seed 时只保留 max seed —— 与 visible_objects /
+    reference 一致。"""
+    grouped: dict[tuple[str, int], list[PermanenceRecord]] = {}
     for entry in entries:
         grouped.setdefault((entry.env_id, entry.episode), []).append(entry)
-    kept: list[PermanenceFile] = []
-    skipped: list[PermanenceFile] = []
+    kept: list[PermanenceRecord] = []
+    skipped: list[PermanenceRecord] = []
     for bucket in grouped.values():
         bucket_sorted = sorted(bucket, key=lambda e: e.seed)
         kept.append(bucket_sorted[-1])
@@ -334,12 +348,12 @@ def dedup_permanence_files(
 __all__ = [
     "PERMANENCE_ENV_IDS",
     "SWAP_ENV_IDS",
-    "PERMANENCE_JSON_FILENAME",
+    "VISIBLE_OBJECTS_JSON_FILENAME",
+    "PERMANENCE_INIT_STATE_KEY",
     "COLOR_NAME_TO_RGBA",
-    "PermanenceFile",
+    "PermanenceRecord",
     "extract_permanence_init_state",
-    "write_permanence_init_state",
-    "load_permanence_init_state",
-    "discover_permanence_files",
-    "dedup_permanence_files",
+    "enrich_visible_payload",
+    "discover_permanence_records",
+    "dedup_permanence_records",
 ]

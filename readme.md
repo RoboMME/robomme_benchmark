@@ -107,7 +107,7 @@ The environment input/output format is described in [doc/env_format.md](doc/env_
 You can also re-generate your own HDF5 data via parallel processing using
 @hongze
 ```bash
-uv run scripts/dev/xxxx
+uv run scripts/dev3/Env-rollout-parallel-segmentation.py
 ``` -->
 
 
