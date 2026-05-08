@@ -192,6 +192,7 @@ if str(PERMANENCE_DIR) not in sys.path:
 
 import snapshot as snapshot_utils  # scripts/dev/snapshot.py — needs DEV_SCRIPT_DIR in sys.path
 from permanence import write_permanence_init_state  # scripts/dev3/env-specific-extraction/permanence.py
+from reference import enrich_visible_payload as enrich_visible_payload_with_reference  # scripts/dev3/env_specific_extraction/reference.py
 
 from pickhighlight_setup_metadata import (
     PICKHIGHLIGHT_ENV_ID,
@@ -601,8 +602,14 @@ def _save_visible_objects_json(
     episode: int,
     seed: int,
     visible_payload: dict[str, object],
+    env: Optional[gym.Env] = None,
 ) -> Path:
-    """写出 reset 可见对象 JSON。"""
+    """写出 reset 可见对象 JSON。
+
+    若 env_id 属于 reference 套件且传入了 env，则在写出前由
+    reference.enrich_visible_payload 原地添加 'selected_target' 字段。
+    其他 env 行为不变。
+    """
     json_path = _visible_object_json_path(reset_output_dir)
     payload = {
         "env_id": env_id,
@@ -611,6 +618,9 @@ def _save_visible_objects_json(
         "cameras": visible_payload["cameras"],
         "objects": visible_payload["objects"],
     }
+    if env is not None:
+        # no-op for envs outside REFERENCE_TARGET_ENV_IDS
+        enrich_visible_payload_with_reference(payload, env=env, env_id=env_id)
     with json_path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=True)
         handle.write("\n")
@@ -733,6 +743,7 @@ def _save_reset_visible_object_artifacts(
         episode=episode,
         seed=seed,
         visible_payload=visible_payload,
+        env=env,
     )
     plot_path = _save_visible_objects_3d_plot(
         reset_output_dir=reset_output_dir,
@@ -1224,14 +1235,14 @@ def _build_parser() -> argparse.ArgumentParser:
         # "StopCube",
         # "SwingXtimes",
         # "BinFill",
-        "VideoUnmaskSwap",
-        "VideoUnmask",
-        "ButtonUnmaskSwap",
-        "ButtonUnmask",
-        #  "VideoRepick",
-        # "VideoPlaceButton",
-        # "VideoPlaceOrder",
-        # "PickHighlight",
+        # "VideoUnmaskSwap",
+        # "VideoUnmask",
+        # "ButtonUnmaskSwap",
+        # "ButtonUnmask",
+         "VideoRepick",
+        "VideoPlaceButton",
+        "VideoPlaceOrder",
+        "PickHighlight",
         # "InsertPeg",
         # "MoveCube",
         # "PatternLock",
@@ -1244,7 +1255,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=3,
+        default=30,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -1290,7 +1301,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--skip-execute",
-        default=False,
+        default=True,
         action=argparse.BooleanOptionalAction,
         help=(
             "When True (default): setup-only mode — reset, export segmentation/JSON/3D PNG, "
