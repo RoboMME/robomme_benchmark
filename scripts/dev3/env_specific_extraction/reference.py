@@ -350,7 +350,15 @@ def _color_from_actor(actor: Any) -> str:
 
 def _extract_videorepick_metadata(env: Any) -> dict:
     """从 env.unwrapped 提取 VideoRepick 的 target_cube_1 颜色/位置 + num_repeats +
-    spawned_cubes 候选列表。缺关键属性 / 类型不合法时 raise。"""
+    spawned_cubes 候选列表 + swap_times/swap_pairs。缺关键属性 / 类型不合法时
+    raise。
+
+    swap_pairs 结构对齐 permanence.py 的 swap_pairs_payload，但用 cube_a/cube_b
+    命名（VideoRepick 没有 bin 概念）。step_window 在 reset 阶段是占位值
+    （_refresh_swap_schedule 默认 start_step=400），真正的窗口由
+    current_task_specialflag 触发时动态决定；inspect 端只用 position_xy 渲染，
+    不依赖 step_window。
+    """
     base = getattr(env, "unwrapped", env)
     target_cube = getattr(base, "target_cube_1", None)
     if target_cube is None:
@@ -382,6 +390,42 @@ def _extract_videorepick_metadata(env: Any) -> dict:
             "VideoRepick: target_cube_1 not found in spawned_cubes"
         )
 
+    swap_times = getattr(base, "swap_times", None)
+    if isinstance(swap_times, bool) or not isinstance(swap_times, int):
+        raise ValueError(
+            f"VideoRepick: swap_times has invalid type "
+            f"{type(swap_times).__name__}"
+        )
+    if swap_times < 0:
+        raise ValueError(
+            f"VideoRepick: swap_times must be >= 0, got {swap_times}"
+        )
+
+    swap_pairs_payload: list[dict] = []
+    swap_schedule = getattr(base, "swap_schedule", None) or []
+    for swap_idx, entry in enumerate(swap_schedule):
+        if not isinstance(entry, (tuple, list)) or len(entry) < 4:
+            raise ValueError(
+                f"VideoRepick: swap_schedule entry #{swap_idx} has invalid "
+                f"shape {entry!r}"
+            )
+        cube_a, cube_b, start_step, end_step = entry[0], entry[1], entry[2], entry[3]
+        if cube_a is None or cube_b is None:
+            raise ValueError(
+                f"VideoRepick: swap_schedule entry #{swap_idx} has None "
+                f"cube_a/cube_b after scene-load"
+            )
+        swap_pairs_payload.append({
+            "swap_index": swap_idx,
+            "step_window": [int(start_step), int(end_step)],
+            "cube_a_index": _index_in_list(cube_a, spawned_cubes),
+            "cube_a_name": _actor_name(cube_a),
+            "cube_a_position_xy": _actor_xy(cube_a),
+            "cube_b_index": _index_in_list(cube_b, spawned_cubes),
+            "cube_b_name": _actor_name(cube_b),
+            "cube_b_position_xy": _actor_xy(cube_b),
+        })
+
     return {
         "target_cube_1_color": color_name,
         "num_repeats": int(num_repeats),
@@ -391,6 +435,8 @@ def _extract_videorepick_metadata(env: Any) -> dict:
         "all_candidates": [
             _candidate_dict(i, cube) for i, cube in enumerate(spawned_cubes)
         ],
+        "swap_times": int(swap_times),
+        "swap_pairs": swap_pairs_payload,
     }
 
 
@@ -701,6 +747,22 @@ def discover_videorepick_records(
             print(
                 f"[Warn] {env_id} ep{episode} seed{seed}: "
                 f"videorepick_metadata missing 'all_candidates' "
+                f"(re-run rollout to populate). Skipping {json_path}."
+            )
+            continue
+        swap_times = metadata.get("swap_times")
+        if not isinstance(swap_times, int) or isinstance(swap_times, bool):
+            print(
+                f"[Warn] {env_id} ep{episode} seed{seed}: "
+                f"videorepick_metadata missing/invalid 'swap_times' "
+                f"(re-run rollout to populate). Skipping {json_path}."
+            )
+            continue
+        swap_pairs = metadata.get("swap_pairs")
+        if not isinstance(swap_pairs, list):
+            print(
+                f"[Warn] {env_id} ep{episode} seed{seed}: "
+                f"videorepick_metadata missing/invalid 'swap_pairs' "
                 f"(re-run rollout to populate). Skipping {json_path}."
             )
             continue

@@ -71,6 +71,12 @@ VIDEOPLACE_SWAP_EPISODE_COLORS: list[str] = [
     "#9467bd", "#8c564b", "#e377c2", "#bcbd22",
 ]
 
+# VideoRepick swap_pair 着色 palette（按 swap_index 取色，与
+# permanance_inspect.PERMANENCE_SWAP_INDEX_COLORS 视觉风格对齐）
+VIDEOREPICK_SWAP_INDEX_COLORS: list[str] = [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728",
+]
+
 
 _DEFAULT_BASE = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
 DEFAULT_SEGMENTATION_DIR = _DEFAULT_BASE / "reset_segmentation_pngs"
@@ -695,6 +701,164 @@ def _render_two_row_figure_videorepick(
 
 
 # ---------------------------------------------------------------------------
+# VideoRepick 专属：第 3 行 swap_pair 散点 + 双向箭头 panel
+# ---------------------------------------------------------------------------
+
+
+def _draw_videorepick_swap_pair_panel(
+    ax: Any,
+    records: list[reference_module.VideoRepickRecord],
+) -> int:
+    """背景层 = 所有 record 的 all_candidates 灰点；前景层 = 每个 record 的
+    swap_pairs：按 swap_index % 4 着色 → 双向 ``<->`` 箭头 + 端点 scatter +
+    中点 ``ep{ep}#s{idx}`` 文字。空数据显示 'No swap data'。
+
+    视觉风格 mirror permanance_inspect._plot_permanence_swaps_panel（按
+    swap_index 着色），而非 VideoPlace 的 episode 着色——与 VideoUnmaskSwap /
+    ButtonUnmaskSwap 的 swap panel 一致。
+    """
+    from matplotlib.lines import Line2D
+
+    bg_xy: list[tuple[float, float]] = []
+    for rec in records:
+        for cand in rec.metadata.get("all_candidates", []) or []:
+            pos = cand.get("position_xy")
+            if isinstance(pos, (list, tuple)) and len(pos) >= 2:
+                bg_xy.append(xy_common._xy_rot_cw_90(float(pos[0]), float(pos[1])))
+
+    if bg_xy:
+        ax.scatter(
+            [p[0] for p in bg_xy],
+            [p[1] for p in bg_xy],
+            s=20,
+            color="lightgray",
+            alpha=0.4,
+            edgecolors="none",
+            label="all_candidates",
+            zorder=1,
+        )
+
+    pair_count = 0
+    seen_swap_indices: set[int] = set()
+    for rec in records:
+        swap_pairs = rec.metadata.get("swap_pairs") or []
+        for pair in swap_pairs:
+            if not isinstance(pair, dict):
+                continue
+            swap_idx = int(pair.get("swap_index", 0))
+            seen_swap_indices.add(swap_idx)
+            color = VIDEOREPICK_SWAP_INDEX_COLORS[
+                swap_idx % len(VIDEOREPICK_SWAP_INDEX_COLORS)
+            ]
+            a_xy = pair.get("cube_a_position_xy")
+            b_xy = pair.get("cube_b_position_xy")
+            if not (
+                isinstance(a_xy, (list, tuple)) and len(a_xy) >= 2
+                and isinstance(b_xy, (list, tuple)) and len(b_xy) >= 2
+            ):
+                continue
+            ax_x, ax_y = xy_common._xy_rot_cw_90(float(a_xy[0]), float(a_xy[1]))
+            bx_x, bx_y = xy_common._xy_rot_cw_90(float(b_xy[0]), float(b_xy[1]))
+
+            ax.annotate(
+                "",
+                xy=(bx_x, bx_y), xytext=(ax_x, ax_y),
+                arrowprops=dict(
+                    arrowstyle="<->", color=color, lw=1.4, alpha=0.7,
+                    shrinkA=4, shrinkB=4,
+                ),
+                zorder=3,
+            )
+            ax.scatter(
+                [ax_x, bx_x], [ax_y, bx_y],
+                s=60, c=color, edgecolors="black", linewidths=0.5,
+                alpha=0.9, zorder=4,
+            )
+            mid_x = (ax_x + bx_x) / 2
+            mid_y = (ax_y + bx_y) / 2
+            ax.text(
+                mid_x, mid_y,
+                f"ep{rec.episode}#s{swap_idx}",
+                fontsize=6, alpha=0.7,
+            )
+            pair_count += 1
+
+    ax.set_xlim(-xy_common.XY_LIMIT, xy_common.XY_LIMIT)
+    ax.set_ylim(-xy_common.XY_LIMIT, xy_common.XY_LIMIT)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("World Y")
+    ax.set_ylabel("-World X")
+    ax.grid(True, alpha=0.45)
+    ax.set_title(
+        f"VideoRepick swaps (Rotated XY)\n"
+        f"pairs={pair_count} / records={len(records)}"
+    )
+
+    if pair_count == 0 and not bg_xy:
+        ax.text(0.0, 0.0, "No swap data", ha="center", va="center")
+    elif pair_count == 0:
+        ax.text(
+            0.0, 0.0,
+            "No swap pairs (all records are hard difficulty)",
+            ha="center", va="center", zorder=5,
+        )
+    else:
+        legend_handles: list[Line2D] = []
+        for swap_idx in sorted(seen_swap_indices):
+            color = VIDEOREPICK_SWAP_INDEX_COLORS[
+                swap_idx % len(VIDEOREPICK_SWAP_INDEX_COLORS)
+            ]
+            legend_handles.append(
+                Line2D(
+                    [0], [0],
+                    marker="o", linestyle="-", color=color, markersize=8,
+                    label=f"swap #{swap_idx}",
+                )
+            )
+        ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
+
+    return pair_count
+
+
+def _render_three_row_figure_videorepick(
+    output_dir: Path,
+    points: list[xy_common.VisibleObjectPoint],
+    episode_count: int,
+    videorepick_records: list[reference_module.VideoRepickRecord],
+    plt: Any,
+) -> tuple[Path, int]:
+    """VideoRepick 3 行 figure：第 1 行 1×3 collage（all/cube/button），第 2 行
+    pickup target xy overlay 单 panel，第 3 行 swap_pair 散点 + 双向箭头单
+    panel。"""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"VideoRepick{xy_common.XY_DEFAULT_PNG_SUFFIX}"
+
+    panel_specs = ("all", "cube", "button")
+    n_cols = len(panel_specs)
+
+    fig = plt.figure(figsize=(7 * n_cols, 7 * 3))
+    gs = fig.add_gridspec(3, n_cols)
+
+    for col_idx, panel_key in enumerate(panel_specs):
+        ax = fig.add_subplot(gs[0, col_idx])
+        xy_common._plot_panel(ax, panel_key, "VideoRepick", points)
+
+    ax_xy = fig.add_subplot(gs[1, 0:n_cols])
+    _draw_videorepick_pickup_target_xy_panel(ax_xy, videorepick_records)
+
+    ax_swap = fig.add_subplot(gs[2, 0:n_cols])
+    swap_pair_count = _draw_videorepick_swap_pair_panel(ax_swap, videorepick_records)
+
+    title = (
+        f"VideoRepick | episodes={episode_count} | points={len(points)} "
+        f"| videorepick_records={len(videorepick_records)} "
+        f"| swap_pairs={swap_pair_count}"
+    )
+    fig.suptitle(title, fontsize=18)
+    return xy_common._save_combined_figure(fig, output_path, plt), swap_pair_count
+
+
+# ---------------------------------------------------------------------------
 # 公开接口：visualize
 # ---------------------------------------------------------------------------
 
@@ -850,18 +1014,33 @@ def visualize(
             )
         elif eid == reference_module.VIDEOREPICK_ENV_ID:
             vr_records = videorepick_records_by_env.get(eid, [])
-            _render_two_row_figure_videorepick(
-                output_dir,
-                points,
-                episode_counts.get(eid, 0),
-                vr_records,
-                plt,
+            has_swap_record = any(
+                int(rec.metadata.get("swap_times", 0) or 0) >= 1
+                for rec in vr_records
             )
+            if has_swap_record:
+                _, swap_pair_count = _render_three_row_figure_videorepick(
+                    output_dir,
+                    points,
+                    episode_counts.get(eid, 0),
+                    vr_records,
+                    plt,
+                )
+            else:
+                _render_two_row_figure_videorepick(
+                    output_dir,
+                    points,
+                    episode_counts.get(eid, 0),
+                    vr_records,
+                    plt,
+                )
+                swap_pair_count = 0
             counts = xy_common._category_counts(points)
             print(
                 f"  {eid}: episodes={episode_counts.get(eid, 0)} "
                 f"points={len(points)} "
                 f"videorepick_records={len(vr_records)} "
+                f"swap_pairs={swap_pair_count} "
                 f"cube={counts.get('cube', 0)} "
                 f"button={counts.get('button', 0)} "
                 f"target={counts.get('target', 0)} "

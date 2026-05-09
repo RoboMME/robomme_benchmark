@@ -68,6 +68,7 @@ class VideoRepick(BaseEnv):
     _SWAP_COUNT_SEED_OFFSET = 200_003
     _MONOCHROME_COLOR_SEED_OFFSET = 300_003
     _HARD_CUBE_COUNT_SEED_OFFSET = 400_003
+    _SWAP_PARTNER_SEED_OFFSET = 500_003
     config_easy = {
         "cube":3,
         "swap_min":1,
@@ -359,9 +360,33 @@ class VideoRepick(BaseEnv):
                     self.swap_pair1_idx1 = self.spawned_cubes[swap_indices[0]]
                     self.swap_pair2_idx1 = self.spawned_cubes[swap_indices[1]]
                     self.swap_pair3_idx1 = self.spawned_cubes[swap_indices[2]]
-                    self.swap_pair1_idx2 = None
-                    self.swap_pair2_idx2 = None
-                    self.swap_pair3_idx2 = None
+
+                    swap_partner_generator = self._make_generator(
+                        self._SWAP_PARTNER_SEED_OFFSET
+                    )
+                    for k in range(1, 4):
+                        idx1_actor = getattr(self, f"swap_pair{k}_idx1")
+                        candidates = [
+                            c for c in self.spawned_cubes if c is not idx1_actor
+                        ]
+                        if not candidates:
+                            raise SceneGenerationError(
+                                f"VideoRepick: no candidate for swap_pair{k}_idx2"
+                            )
+                        partner_idx = int(
+                            torch.randint(
+                                0,
+                                len(candidates),
+                                (1,),
+                                generator=swap_partner_generator,
+                            ).item()
+                        )
+                        setattr(
+                            self,
+                            f"swap_pair{k}_idx2",
+                            candidates[partner_idx],
+                        )
+
                     self._refresh_swap_schedule()
         except SceneGenerationError:
             raise
@@ -573,70 +598,6 @@ class VideoRepick(BaseEnv):
             if i not in (idx_a, idx_b)
         ]
 
-    def _get_actor_position(self, actor):
-        """Return actor position as a numpy array."""
-        if actor is None:
-            return np.zeros(3, dtype=np.float32)
-
-        pos = actor.pose.p if hasattr(actor, "pose") else actor.get_pose().p
-        if isinstance(pos, torch.Tensor):
-            pos = pos.detach().cpu().numpy()
-
-        pos = np.asarray(pos, dtype=np.float32).reshape(-1)
-        if pos.size < 3:
-            padded = np.zeros(3, dtype=np.float32)
-            padded[: pos.size] = pos
-            return padded
-        return pos
-
-    def _compute_dynamic_swap_candidates(self, positions):
-        """Compute nearest-neighbour swap candidates using provided positions."""
-        candidate_map = {}
-        num_positions = len(positions)
-        if num_positions <= 1:
-            return candidate_map
-
-        for idx, pos in enumerate(positions):
-            distances = []
-            for other_idx, other_pos in enumerate(positions):
-                if other_idx == idx:
-                    continue
-                dist = np.linalg.norm(pos[:2] - other_pos[:2])
-                distances.append((other_idx, dist))
-
-            distances.sort(key=lambda item: item[1])
-            candidate_map[idx] = [j for j, _ in distances[:2]]
-
-        return candidate_map
-
-    def _select_swap_pair_from_positions(self, positions, generator=None):
-        """Select one swap pair given current planned positions."""
-        num_bins = len(positions)
-        if num_bins < 2:
-            return None
-
-        candidate_map = self._compute_dynamic_swap_candidates(positions)
-        valid_indices = [idx for idx, cands in candidate_map.items() if cands]
-        if not valid_indices:
-            return None
-
-        if generator is None:
-            generator = self.generator
-
-        first_idx = valid_indices[
-            int(torch.randint(0, len(valid_indices), (1,), generator=generator).item())
-        ]
-        candidates = candidate_map[first_idx]
-        second_idx = candidates[
-            int(torch.randint(0, len(candidates), (1,), generator=generator).item())
-        ]
-
-        distance = float(
-            np.linalg.norm(positions[first_idx][:2] - positions[second_idx][:2])
-        )
-
-        return {"idx1": first_idx, "idx2": second_idx, "distance": distance}
-
     def _refresh_swap_schedule(self,start_step=400):
         if self.swap_times==1:
                     self.swap_schedule = [
@@ -667,31 +628,6 @@ class VideoRepick(BaseEnv):
                 logger.debug("tag!")
              
         if self.static_flag==True:
-            for i in range(len(self.swap_schedule)):
-                start = self.swap_schedule[i][2]
-                end = self.swap_schedule[i][3]
-                if self.elapsed_steps in range (start,end):
-                    # Select corresponding swap pair based on index
-                    pair_idx1 = getattr(self, f'swap_pair{i+1}_idx1')
-                    pair_idx2 = getattr(self, f'swap_pair{i+1}_idx2')
-
-                    if pair_idx2 is None and pair_idx1 is not None:
-                        reference_pos = self._get_actor_position(pair_idx1)
-                        closest_actor = None
-                        closest_dist = float("inf")
-                        for candidate in self.spawned_cubes:
-                            if candidate is None or candidate is pair_idx1:
-                                continue
-                            candidate_pos = self._get_actor_position(candidate)
-                            dist = np.linalg.norm(reference_pos[:2] - candidate_pos[:2])
-                            if dist < closest_dist:
-                                closest_dist = dist
-                                closest_actor = candidate
-                        if closest_actor is not None:
-                            setattr(self, f'swap_pair{i+1}_idx2', closest_actor)
-                            self._refresh_swap_schedule(self.start_step)
-
-
             for idx_a, idx_b, start_step, end_step in self.swap_schedule:
                 if idx_a is None or idx_b is None:
                     continue

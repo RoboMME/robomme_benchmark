@@ -1148,7 +1148,7 @@ def _build_parser() -> argparse.ArgumentParser:
          "VideoRepick",
         # "VideoPlaceButton",
         # "VideoPlaceOrder",
-        "PickHighlight",
+        #"PickHighlight",
         # "InsertPeg",
         # "MoveCube",
         # "PatternLock",
@@ -1207,7 +1207,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--skip-execute",
-        default=True,
+        default=False,
         action=argparse.BooleanOptionalAction,
         help=(
             "When True (default): setup-only mode — reset, export segmentation/JSON/3D PNG, "
