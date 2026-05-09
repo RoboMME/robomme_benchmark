@@ -1,6 +1,6 @@
 # 5/9 robomme env 分布审查
 
-全部使用 easy medium hard 各100episode 不进行实际rollout（影响分布）
+全部使用 easy medium hard 各100episode来评估 不进行实际rollout（影响分布）
 ---
 
 ## MoveCube
