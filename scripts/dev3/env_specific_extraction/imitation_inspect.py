@@ -95,7 +95,6 @@ _ROUTESTICK_COMBO_BAR_COLORS = {
 _WALK_PATH_BACKGROUND_COLOR = "lightgray"
 _WALK_PATH_START_COLOR = "#2ca02c"   # tab:green：起点 marker
 _WALK_PATH_END_COLOR = "#d62728"     # tab:red：终点 marker
-_WALK_PATH_STICK_COLOR = "#9467bd"   # tab:purple：RouteStick 4 sticks marker
 
 
 # ---------------------------------------------------------------------------
@@ -885,6 +884,8 @@ def _draw_walk_path_overlay_panel(
     ax: Any,
     env_id: str,
     records: list,
+    *,
+    axis_limit: float = xy_common.XY_LIMIT,
 ) -> None:
     """绝对位置 panel：每个 episode 只画起点 + 终点散点（不画折线）。
 
@@ -893,11 +894,14 @@ def _draw_walk_path_overlay_panel(
     - 背景层（zorder=1）：所有 record 的 all_button_xy 灰点；同一 (x,y) 去重一次。
     - 起点层（zorder=3）：绿色圆（marker='o'），多 episode 叠加。
     - 终点层（zorder=3）：红色三角（marker='^'），多 episode 叠加。
-    - 仅 RouteStick：stick 层（zorder=4）= 紫色 'X' 标记 stick_xy 的所有点。
 
-    坐标系：复用 xy_common._xy_rot_cw_90，xlim/ylim = (-XY_LIMIT, XY_LIMIT)，
+    坐标系：复用 xy_common._xy_rot_cw_90，xlim/ylim = (-axis_limit, axis_limit)，
     xlabel='World Y' / ylabel='-World X' —— 与 _draw_insertpeg_insert_end_xy_panel
-    一致。
+    一致。axis_limit 默认 = xy_common.XY_LIMIT；caller 可传入按数据范围扩展后
+    的更大值，避免边缘 marker 被 axis 裁切。
+
+    注：env_id 参数保留是为了让两个 caller (PatternLock / RouteStick) 用同一签名
+    调用，函数体内 panel 行为不依赖 env_id。
     """
     from matplotlib.lines import Line2D
 
@@ -962,28 +966,6 @@ def _draw_walk_path_overlay_panel(
             zorder=3,
         )
 
-    stick_pts: list[tuple[float, float]] = []
-    if env_id == ROUTESTICK_ENV_ID:
-        for rec in records:
-            for raw in rec.walk.get("stick_xy", []):
-                if not (isinstance(raw, (list, tuple)) and len(raw) >= 2):
-                    continue
-                stick_pts.append(
-                    xy_common._xy_rot_cw_90(float(raw[0]), float(raw[1]))
-                )
-        if stick_pts:
-            ax.scatter(
-                [p[0] for p in stick_pts],
-                [p[1] for p in stick_pts],
-                s=70,
-                color=_WALK_PATH_STICK_COLOR,
-                marker="X",
-                edgecolors="black",
-                linewidths=0.6,
-                alpha=0.85,
-                zorder=4,
-            )
-
     legend_handles: list[Line2D] = [
         Line2D(
             [0], [0],
@@ -1010,20 +992,9 @@ def _draw_walk_path_overlay_panel(
             label=f"end (n={len(ends)})",
         ),
     ]
-    if env_id == ROUTESTICK_ENV_ID and stick_pts:
-        legend_handles.append(
-            Line2D(
-                [0], [0],
-                marker="X", linestyle="",
-                markersize=10,
-                markerfacecolor=_WALK_PATH_STICK_COLOR,
-                markeredgecolor="black",
-                label=f"sticks (n={len(stick_pts)})",
-            )
-        )
 
-    ax.set_xlim(-xy_common.XY_LIMIT, xy_common.XY_LIMIT)
-    ax.set_ylim(-xy_common.XY_LIMIT, xy_common.XY_LIMIT)
+    ax.set_xlim(-axis_limit, axis_limit)
+    ax.set_ylim(-axis_limit, axis_limit)
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel("World Y")
     ax.set_ylabel("-World X")
@@ -1046,36 +1017,56 @@ def _render_patternlock_two_row_figure(
     records: list[PatternLockWalkRecord],
     plt: Any,
 ) -> Path:
-    """PatternLock 2 行 × 4 列 figure：第 1 行 = ('all', 'cube', 'button',
-    'target') 复用 xy_common._plot_panel；第 2 行 = (walk-path overlay 跨 2 列 /
-    8 方向柱状图跨 2 列)。"""
+    """PatternLock 2 行 × 2 列 figure：第 1 行 = 单 'all' panel 跨整行（visible
+    objects 全部归类为 target，cube/button panel 都为空所以省略；保留 'all' 一个
+    panel 即足够展示按钮网格分布）；第 2 行 col 0 = walk-path overlay，col 1 =
+    8 方向柱状图。axis_limit 按 row 0 + row 1 col 0 的实际数据扩到能容纳边缘
+    marker，避免被 axis 裁切。"""
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = (
         output_dir / f"{PATTERNLOCK_ENV_ID}{xy_common.XY_DEFAULT_PNG_SUFFIX}"
     )
 
-    panel_specs = xy_common._panel_specs_for_env(PATTERNLOCK_ENV_ID)
-    n_cols = len(panel_specs)
+    rotated_xys: list[tuple[float, float]] = []
+    for point in points:
+        rotated_xys.append(
+            xy_common._xy_rot_cw_90(point.world_x, point.world_y)
+        )
+    for rec in records:
+        for raw in rec.walk.get("all_button_xy", []) or []:
+            if isinstance(raw, (list, tuple)) and len(raw) >= 2:
+                rotated_xys.append(
+                    xy_common._xy_rot_cw_90(float(raw[0]), float(raw[1]))
+                )
+        for raw in rec.walk.get("path_xy", []) or []:
+            if isinstance(raw, (list, tuple)) and len(raw) >= 2:
+                rotated_xys.append(
+                    xy_common._xy_rot_cw_90(float(raw[0]), float(raw[1]))
+                )
+    if rotated_xys:
+        max_abs = max(max(abs(x), abs(y)) for x, y in rotated_xys)
+        axis_limit = max(xy_common.XY_LIMIT, round(max_abs * 1.05, 2))
+    else:
+        axis_limit = xy_common.XY_LIMIT
 
-    fig = plt.figure(figsize=(7 * n_cols, 7 * 2))
-    gs = fig.add_gridspec(2, n_cols)
+    fig = plt.figure(figsize=(7 * 2, 7 * 2))
+    gs = fig.add_gridspec(2, 2)
 
-    # Row 0: 现有 visible-objects panel collage
-    for col_idx, panel_key in enumerate(panel_specs):
-        ax = fig.add_subplot(gs[0, col_idx])
-        xy_common._plot_panel(ax, panel_key, PATTERNLOCK_ENV_ID, points)
+    ax_all = fig.add_subplot(gs[0, :])
+    xy_common._plot_panel(ax_all, "all", PATTERNLOCK_ENV_ID, points)
+    ax_all.set_xlim(-axis_limit, axis_limit)
+    ax_all.set_ylim(-axis_limit, axis_limit)
 
-    # Row 1 col 0:n_cols//2 — walk-path overlay (绝对位置)
-    half = n_cols // 2
-    ax_walk = fig.add_subplot(gs[1, 0:half])
-    _draw_walk_path_overlay_panel(ax_walk, PATTERNLOCK_ENV_ID, records)
+    ax_walk = fig.add_subplot(gs[1, 0])
+    _draw_walk_path_overlay_panel(
+        ax_walk, PATTERNLOCK_ENV_ID, records, axis_limit=axis_limit
+    )
 
-    # Row 1 col half:n_cols — 8 compass bins 柱状图（相对位置）
     direction_labels = list(imitation_module.PATTERNLOCK_DIRECTION_LABELS)
     direction_counts = _count_relative_directions(
         records, imitation_module.PATTERNLOCK_DIRECTION_LABELS
     )
-    ax_bar = fig.add_subplot(gs[1, half:n_cols])
+    ax_bar = fig.add_subplot(gs[1, 1])
     _draw_categorical_bar(
         ax_bar,
         title="Relative direction (8 compass bins)",
@@ -1098,16 +1089,39 @@ def _render_routestick_two_row_figure(
     records: list[RouteStickWalkRecord],
     plt: Any,
 ) -> Path:
-    """RouteStick 2 行 × 4 列 figure：第 1 行 = ('all', 'cube', 'button',
-    'target') 复用 xy_common._plot_panel；第 2 行 = (walk-path overlay 跨 2 列 /
-    4 组合柱状图跨 2 列)。"""
+    """RouteStick 2 行 × 3 列 figure：第 1 行 = ('all', 'cube', 'target') 复用
+    xy_common._plot_panel（visible_objects 中没有 button-语义对象，省略空 panel）；
+    第 2 行 col 0 = walk-path overlay，col 1-2 = 4 组合柱状图。axis_limit 按 row
+    0 + row 1 col 0 的实际数据扩到能容纳边缘 marker，避免被 axis 裁切。"""
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = (
         output_dir / f"{ROUTESTICK_ENV_ID}{xy_common.XY_DEFAULT_PNG_SUFFIX}"
     )
 
-    panel_specs = xy_common._panel_specs_for_env(ROUTESTICK_ENV_ID)
+    panel_specs = ("all", "cube", "target")
     n_cols = len(panel_specs)
+
+    rotated_xys: list[tuple[float, float]] = []
+    for point in points:
+        rotated_xys.append(
+            xy_common._xy_rot_cw_90(point.world_x, point.world_y)
+        )
+    for rec in records:
+        for raw in rec.walk.get("all_button_xy", []) or []:
+            if isinstance(raw, (list, tuple)) and len(raw) >= 2:
+                rotated_xys.append(
+                    xy_common._xy_rot_cw_90(float(raw[0]), float(raw[1]))
+                )
+        for raw in rec.walk.get("path_xy", []) or []:
+            if isinstance(raw, (list, tuple)) and len(raw) >= 2:
+                rotated_xys.append(
+                    xy_common._xy_rot_cw_90(float(raw[0]), float(raw[1]))
+                )
+    if rotated_xys:
+        max_abs = max(max(abs(x), abs(y)) for x, y in rotated_xys)
+        axis_limit = max(xy_common.XY_LIMIT, round(max_abs * 1.05, 2))
+    else:
+        axis_limit = xy_common.XY_LIMIT
 
     fig = plt.figure(figsize=(7 * n_cols, 7 * 2))
     gs = fig.add_gridspec(2, n_cols)
@@ -1115,10 +1129,14 @@ def _render_routestick_two_row_figure(
     for col_idx, panel_key in enumerate(panel_specs):
         ax = fig.add_subplot(gs[0, col_idx])
         xy_common._plot_panel(ax, panel_key, ROUTESTICK_ENV_ID, points)
+        ax.set_xlim(-axis_limit, axis_limit)
+        ax.set_ylim(-axis_limit, axis_limit)
 
     half = n_cols // 2
     ax_walk = fig.add_subplot(gs[1, 0:half])
-    _draw_walk_path_overlay_panel(ax_walk, ROUTESTICK_ENV_ID, records)
+    _draw_walk_path_overlay_panel(
+        ax_walk, ROUTESTICK_ENV_ID, records, axis_limit=axis_limit
+    )
 
     combo_labels = list(imitation_module.ROUTESTICK_DIRECTION_COMBOS)
     combo_counts = _count_relative_directions(
