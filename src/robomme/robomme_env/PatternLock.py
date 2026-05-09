@@ -33,6 +33,23 @@ from .utils.difficulty import normalize_robomme_difficulty
 from ..logging_utils import logger
 
 
+# Module-level seed offsets for PatternLock independent random streams.
+# These constants are XOR-mixed with the per-episode seed to derive each
+# decision's torch.Generator (mirrors InsertPeg/MoveCube's pattern of
+# `_INSERTPEG_*_SEED_OFFSET` / `_MOVECUBE_WAY_SEED_OFFSET`):
+#   1. each constant chooses an independent random stream — changing the
+#      number of randperm/rand calls in one decision does not perturb the
+#      others;
+#   2. the streams are independent of the scene-level _hb_generator-style
+#      stream that may be introduced in the future;
+#   3. switching from the previous splitmix64(seed + int_offset) scheme
+#      changes the seed→data mapping. Pre-existing visible_objects.json /
+#      HDF5 data captured before this commit must be regenerated.
+_PATTERNLOCK_SCENE_SEED_OFFSET = 0x9E3779B1
+_PATTERNLOCK_PATH_NODE_SELECTION_SEED_OFFSET = 0xC2B2AE35
+_PATTERNLOCK_PATH_SEARCH_SEED_OFFSET = 0x27D4EB2F
+
+
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
 capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
@@ -63,8 +80,6 @@ class PatternLock(BaseEnv):
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
-    _PATH_NODE_SELECTION_SEED_OFFSET = 100_003
-    _PATH_SEARCH_SEED_OFFSET = 200_003
 
     config_hard = {
         "grid":5,
@@ -87,19 +102,6 @@ class PatternLock(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
-
-    @staticmethod
-    def _splitmix64(x: int) -> int:
-        """Splitmix64 bit mixing to break linear seed correlation."""
-        x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
-        x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
-        return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF
-
-    def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
-        generator = torch.Generator()
-        generator.manual_seed(self._splitmix64(self.seed + seed_offset))
-        return generator
-
 
     def __init__(self, *args, robot_uids="panda_stick", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
@@ -151,10 +153,6 @@ class PatternLock(BaseEnv):
             else:  # seed_mod == 2
                 self.difficulty = "hard"
         #self.difficulty = "hard"
-               # Use seed to determine number of repetitions (1-5) arbitrarily
-        generator = torch.Generator()
-        generator.manual_seed(seed)
-
 
         self.highlight_starts = {}  # Use dictionary to store highlight start time for each button
         super().__init__(*args, robot_uids=robot_uids, **kwargs)
@@ -182,11 +180,18 @@ class PatternLock(BaseEnv):
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
-        scene_generator = self._make_generator()
-        node_selection_generator = self._make_generator(
-            self._PATH_NODE_SELECTION_SEED_OFFSET
+        scene_generator = torch.Generator()
+        scene_generator.manual_seed(
+            int(self.seed) ^ _PATTERNLOCK_SCENE_SEED_OFFSET
         )
-        path_search_generator = self._make_generator(self._PATH_SEARCH_SEED_OFFSET)
+        node_selection_generator = torch.Generator()
+        node_selection_generator.manual_seed(
+            int(self.seed) ^ _PATTERNLOCK_PATH_NODE_SELECTION_SEED_OFFSET
+        )
+        path_search_generator = torch.Generator()
+        path_search_generator.manual_seed(
+            int(self.seed) ^ _PATTERNLOCK_PATH_SEARCH_SEED_OFFSET
+        )
         self._scene_generator = scene_generator
 
         self.table_scene = TableSceneBuilder(

@@ -96,7 +96,6 @@ _WALK_PATH_BACKGROUND_COLOR = "lightgray"
 _WALK_PATH_START_COLOR = "#2ca02c"   # tab:green：起点 marker
 _WALK_PATH_END_COLOR = "#d62728"     # tab:red：终点 marker
 _WALK_PATH_STICK_COLOR = "#9467bd"   # tab:purple：RouteStick 4 sticks marker
-_WALK_PATH_LINE_CMAP = "tab20"       # 多 episode 折线轮转色板
 
 
 # ---------------------------------------------------------------------------
@@ -887,21 +886,19 @@ def _draw_walk_path_overlay_panel(
     env_id: str,
     records: list,
 ) -> None:
-    """绝对位置 panel：多 episode 路径折线叠加 + 全网格按钮背景灰点。
+    """绝对位置 panel：每个 episode 只画起点 + 终点散点（不画折线）。
 
     布局
     ----
     - 背景层（zorder=1）：所有 record 的 all_button_xy 灰点；同一 (x,y) 去重一次。
-    - 路径层（zorder=2）：每条路径 1 条折线 (alpha=0.4, lw=1.5)，颜色按 record 索引
-      在 ``_WALK_PATH_LINE_CMAP`` 中轮转。
-    - 端点层（zorder=3）：起点 = 绿圆，终点 = 红三角。
+    - 起点层（zorder=3）：绿色圆（marker='o'），多 episode 叠加。
+    - 终点层（zorder=3）：红色三角（marker='^'），多 episode 叠加。
     - 仅 RouteStick：stick 层（zorder=4）= 紫色 'X' 标记 stick_xy 的所有点。
 
-    坐标系与 _draw_insertpeg_insert_end_xy_panel 一致：复用
-    xy_common._xy_rot_cw_90，xlim/ylim = (-XY_LIMIT, XY_LIMIT)，
-    xlabel='World Y' / ylabel='-World X'。
+    坐标系：复用 xy_common._xy_rot_cw_90，xlim/ylim = (-XY_LIMIT, XY_LIMIT)，
+    xlabel='World Y' / ylabel='-World X' —— 与 _draw_insertpeg_insert_end_xy_panel
+    一致。
     """
-    from matplotlib import cm
     from matplotlib.lines import Line2D
 
     bg_seen: set[tuple[float, float]] = set()
@@ -925,63 +922,48 @@ def _draw_walk_path_overlay_panel(
             alpha=0.6,
             edgecolors="none",
             zorder=1,
-            label=f"all buttons ({len(bg_points)})",
         )
 
-    cmap = cm.get_cmap(_WALK_PATH_LINE_CMAP)
-    n_colors = max(getattr(cmap, "N", 20), 1)
     starts: list[tuple[float, float]] = []
     ends: list[tuple[float, float]] = []
-    for idx, rec in enumerate(records):
+    for rec in records:
         path_xy = rec.walk.get("path_xy", [])
         if len(path_xy) < 2:
             continue
-        rotated = [
-            xy_common._xy_rot_cw_90(float(p[0]), float(p[1]))
-            for p in path_xy
-        ]
-        color = cmap(idx % n_colors)
-        ax.plot(
-            [p[0] for p in rotated],
-            [p[1] for p in rotated],
-            color=color,
-            alpha=0.5,
-            linewidth=1.5,
-            zorder=2,
+        starts.append(
+            xy_common._xy_rot_cw_90(float(path_xy[0][0]), float(path_xy[0][1]))
         )
-        starts.append(rotated[0])
-        ends.append(rotated[-1])
+        ends.append(
+            xy_common._xy_rot_cw_90(float(path_xy[-1][0]), float(path_xy[-1][1]))
+        )
 
     if starts:
         ax.scatter(
             [p[0] for p in starts],
             [p[1] for p in starts],
-            s=70,
+            s=80,
             color=_WALK_PATH_START_COLOR,
             marker="o",
             edgecolors="black",
             linewidths=0.6,
             alpha=0.9,
             zorder=3,
-            label=f"start (n={len(starts)})",
         )
     if ends:
         ax.scatter(
             [p[0] for p in ends],
             [p[1] for p in ends],
-            s=80,
+            s=90,
             color=_WALK_PATH_END_COLOR,
             marker="^",
             edgecolors="black",
             linewidths=0.6,
             alpha=0.9,
             zorder=3,
-            label=f"end (n={len(ends)})",
         )
 
-    legend_handles: list[Line2D] = []
+    stick_pts: list[tuple[float, float]] = []
     if env_id == ROUTESTICK_ENV_ID:
-        stick_pts: list[tuple[float, float]] = []
         for rec in records:
             for raw in rec.walk.get("stick_xy", []):
                 if not (isinstance(raw, (list, tuple)) and len(raw) >= 2):
@@ -1000,48 +982,45 @@ def _draw_walk_path_overlay_panel(
                 linewidths=0.6,
                 alpha=0.85,
                 zorder=4,
-                label=f"sticks (n={len(stick_pts)})",
-            )
-            legend_handles.append(
-                Line2D(
-                    [0], [0],
-                    marker="X", linestyle="",
-                    markersize=10,
-                    markerfacecolor=_WALK_PATH_STICK_COLOR,
-                    markeredgecolor="black",
-                    label=f"sticks (n={len(stick_pts)})",
-                )
             )
 
-    legend_handles = (
-        [
+    legend_handles: list[Line2D] = [
+        Line2D(
+            [0], [0],
+            marker="o", linestyle="",
+            markersize=8,
+            markerfacecolor=_WALK_PATH_BACKGROUND_COLOR,
+            markeredgecolor="none",
+            label=f"all buttons ({len(bg_points)})",
+        ),
+        Line2D(
+            [0], [0],
+            marker="o", linestyle="",
+            markersize=9,
+            markerfacecolor=_WALK_PATH_START_COLOR,
+            markeredgecolor="black",
+            label=f"start (n={len(starts)})",
+        ),
+        Line2D(
+            [0], [0],
+            marker="^", linestyle="",
+            markersize=10,
+            markerfacecolor=_WALK_PATH_END_COLOR,
+            markeredgecolor="black",
+            label=f"end (n={len(ends)})",
+        ),
+    ]
+    if env_id == ROUTESTICK_ENV_ID and stick_pts:
+        legend_handles.append(
             Line2D(
                 [0], [0],
-                marker="o", linestyle="",
-                markersize=8,
-                markerfacecolor=_WALK_PATH_BACKGROUND_COLOR,
-                markeredgecolor="none",
-                label=f"all buttons ({len(bg_points)})",
-            ),
-            Line2D(
-                [0], [0],
-                marker="o", linestyle="",
-                markersize=9,
-                markerfacecolor=_WALK_PATH_START_COLOR,
-                markeredgecolor="black",
-                label=f"start (n={len(starts)})",
-            ),
-            Line2D(
-                [0], [0],
-                marker="^", linestyle="",
+                marker="X", linestyle="",
                 markersize=10,
-                markerfacecolor=_WALK_PATH_END_COLOR,
+                markerfacecolor=_WALK_PATH_STICK_COLOR,
                 markeredgecolor="black",
-                label=f"end (n={len(ends)})",
-            ),
-        ]
-        + legend_handles
-    )
+                label=f"sticks (n={len(stick_pts)})",
+            )
+        )
 
     ax.set_xlim(-xy_common.XY_LIMIT, xy_common.XY_LIMIT)
     ax.set_ylim(-xy_common.XY_LIMIT, xy_common.XY_LIMIT)
@@ -1050,10 +1029,9 @@ def _draw_walk_path_overlay_panel(
     ax.set_ylabel("-World X")
     ax.grid(True, alpha=0.45)
     ax.set_title(
-        f"Walk-path overlay (absolute xy)\nepisodes={len(records)}"
+        f"Start / end positions (absolute xy)\nepisodes={len(records)}"
     )
-    if legend_handles:
-        ax.legend(handles=legend_handles, loc="upper right", fontsize=8)
+    ax.legend(handles=legend_handles, loc="upper right", fontsize=8)
 
 
 # ---------------------------------------------------------------------------

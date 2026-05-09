@@ -36,6 +36,21 @@ from .utils.difficulty import normalize_robomme_difficulty
 
 from ..logging_utils import logger
 
+
+# Module-level seed offsets for RouteStick independent random streams.
+# Each constant is XOR-mixed with the per-episode seed to derive the
+# corresponding torch.Generator (mirrors InsertPeg/MoveCube's
+# `_INSERTPEG_*_SEED_OFFSET` / `_MOVECUBE_WAY_SEED_OFFSET` pattern):
+#   1. independent streams — changing one decision's number of rand calls
+#      does not perturb the others;
+#   2. switching from the previous splitmix64(seed + int_offset) scheme
+#      changes the seed→data mapping. Pre-existing visible_objects.json /
+#      HDF5 data captured before this commit must be regenerated.
+_ROUTESTICK_SCENE_SEED_OFFSET = 0x165667B1
+_ROUTESTICK_STEP_COUNT_SEED_OFFSET = 0xCC9E2D51
+_ROUTESTICK_ROUTE_SELECTION_SEED_OFFSET = 0x1B873593
+_ROUTESTICK_SWING_DIRECTION_SEED_OFFSET = 0xE6546B64
+
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
 capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
@@ -68,9 +83,6 @@ class RouteStick(BaseEnv):
     goal_thresh = 0.025
     cube_spawn_half_size = 0.05
     cube_spawn_center = (0, 0)
-    _STEP_COUNT_SEED_OFFSET = 100_003
-    _ROUTE_SELECTION_SEED_OFFSET = 200_003
-    _SWING_DIRECTION_SEED_OFFSET = 300_003
 
 
 
@@ -93,18 +105,6 @@ class RouteStick(BaseEnv):
         'easy': config_easy,
         'medium': config_medium
     }
-
-    @staticmethod
-    def _splitmix64(x: int) -> int:
-        """Splitmix64 bit mixing to break linear seed correlation."""
-        x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
-        x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
-        return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF
-
-    def _make_generator(self, seed_offset: int = 0) -> torch.Generator:
-        generator = torch.Generator()
-        generator.manual_seed(self._splitmix64(self.seed + seed_offset))
-        return generator
 
     def __init__(self, *args, robot_uids="panda_stick", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
@@ -157,12 +157,6 @@ class RouteStick(BaseEnv):
             else:  # seed_mod == 2
                 self.difficulty = "hard"
             self.difficulty = "easy"
-               # Use seed to randomly determine number of repetitions (1-5)
-        generator = torch.Generator()
-        generator.manual_seed(seed)
-
-
-
 
         self.highlight_starts = {}  # Use dictionary to store highlight start time for each button
         self._first_non_record_step = None  # Start timestep for delayed highlight
@@ -198,13 +192,21 @@ class RouteStick(BaseEnv):
         super()._load_agent(options, sapien.Pose(p=[-0.615, 0, 0]))
 
     def _load_scene(self, options: dict):
-        scene_generator = self._make_generator()
-        step_count_generator = self._make_generator(self._STEP_COUNT_SEED_OFFSET)
-        route_selection_generator = self._make_generator(
-            self._ROUTE_SELECTION_SEED_OFFSET
+        scene_generator = torch.Generator()
+        scene_generator.manual_seed(
+            int(self.seed) ^ _ROUTESTICK_SCENE_SEED_OFFSET
         )
-        swing_direction_generator = self._make_generator(
-            self._SWING_DIRECTION_SEED_OFFSET
+        step_count_generator = torch.Generator()
+        step_count_generator.manual_seed(
+            int(self.seed) ^ _ROUTESTICK_STEP_COUNT_SEED_OFFSET
+        )
+        route_selection_generator = torch.Generator()
+        route_selection_generator.manual_seed(
+            int(self.seed) ^ _ROUTESTICK_ROUTE_SELECTION_SEED_OFFSET
+        )
+        swing_direction_generator = torch.Generator()
+        swing_direction_generator.manual_seed(
+            int(self.seed) ^ _ROUTESTICK_SWING_DIRECTION_SEED_OFFSET
         )
         self._scene_generator = scene_generator
 
