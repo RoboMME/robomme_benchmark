@@ -28,6 +28,10 @@ from .utils.SceneGenerationError import SceneGenerationError
 from .utils import *
 from .utils.subgoal_evaluate_func import static_check
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
+from .utils.permanance_task_pos_generator import (
+    permanance_task_pos_generator,
+    MIN_CENTER_DIST as PERMANANCE_MIN_CENTER_DIST,
+)
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 
@@ -212,74 +216,96 @@ class VideoRepick(BaseEnv):
             )
             self.table_scene.build()
 
-            button_obb_1 = build_button(
+            if self.difficulty == "hard":
+                n_bins = sum(self.hard_cube_counts)
+                min_center_dist_override = PERMANANCE_MIN_CENTER_DIST / 2
+            else:
+                n_bins = self.configs[self.difficulty]['cube']
+                min_center_dist_override = None
+
+            result = permanance_task_pos_generator(
+                n_bins=n_bins,
+                n_swaps=self.swap_times,
+                n_buttons=1,
+                n_pickups=1,
+                seed=self.seed,
+                min_center_dist_override=min_center_dist_override,
+            )
+            if "fail" in result:
+                raise SceneGenerationError(result["fail"])
+            bin_positions = result["bin_positions"]
+            swap_pairs_raw = result["swap_pairs"]
+            button_positions = result["button_positions"]
+
+            build_button(
                 self,
-                center_xy=(-0.2, 0),
+                center_xy=button_positions[0],
                 scale=1.5,
                 generator=self.generator,
                 name="button",
-                randomize=True,
-                randomize_range=(0.1, 0.1)
+                randomize=False,
+                randomize_range=(0.0, 0.0),
             )
-            # Store first button before building second one
             self.button_left = self.button
             self.button_joint_1 = self.button_joint
 
-            avoid = [button_obb_1]
-
-            options = [
+            color_options = [
                 {"color": (1, 0, 0, 1), "name": "red"},
                 {"color": (0, 0, 1, 1), "name": "blue"},
                 {"color": (0, 1, 0, 1), "name": "green"},
             ]
             if self.difficulty == "hard":
-                self.spawned_cubes = []
-                hard_cubes_by_color = {group["name"]: [] for group in options}
-
-                for color_idx, group in enumerate(options):
-                    count = self.hard_cube_counts[color_idx]  # 3 or 4, decided by independent generator
-                    for i in range(count):
-                        try:
-                            cube = spawn_random_cube(
-                                self,
-                                color=group["color"],
-                                avoid=avoid,
-                                include_existing=False,
-                                include_goal=False,
-                                region_center=[-0.1, 0],
-                                region_half_size=[0.2, 0.25],
-                                half_size=self.cube_half_size,
-                                min_gap=self.cube_half_size,
-                                random_yaw=True,
-                                name_prefix=f"cube_{group['name']}_{i}",
-                                generator=self.generator,
-                            )
-                        except RuntimeError as e:
-                            raise SceneGenerationError(
-                                f"Failed to generate {group['name']} cube {i}"
-                            ) from e
-
-                        self.spawned_cubes.append(cube)
-                        hard_cubes_by_color[group["name"]].append(cube)
-                        avoid.append(cube)
-
-                if not self.spawned_cubes:
-                    raise SceneGenerationError("Failed to generate any cube")
-
-                color_idx = torch.randint(
-                    0,
-                    len(options),
-                    (1,),
-                    generator=monochrome_color_generator,
+                cube_colors = []
+                cube_color_names = []
+                for color_idx, group in enumerate(color_options):
+                    count = self.hard_cube_counts[color_idx]
+                    cube_colors.extend([group["color"]] * count)
+                    cube_color_names.extend([group["name"]] * count)
+                assert len(cube_colors) == n_bins, (
+                    f"hard mode: cube_colors length {len(cube_colors)} != n_bins {n_bins}"
+                )
+            else:
+                idx = torch.randint(
+                    0, len(color_options), (1,), generator=monochrome_color_generator
                 ).item()
-                target_color = options[color_idx]
-                target_candidates = hard_cubes_by_color.get(target_color["name"], [])
+                chosen = color_options[idx]
+                cube_colors = [chosen["color"]] * n_bins
+                cube_color_names = [chosen["name"]] * n_bins
+
+            self.spawned_cubes = []
+            hard_cubes_by_color = {group["name"]: [] for group in color_options}
+            for i, (cx, cy) in enumerate(bin_positions):
+                yaw = float(
+                    torch.rand(1, generator=self.generator).item() * 2 * np.pi
+                )
+                cube_actor = spawn_fixed_cube(
+                    self,
+                    position=[cx, cy],
+                    half_size=self.cube_half_size,
+                    color=cube_colors[i],
+                    name_prefix=f"bin_{i}",
+                    yaw=yaw,
+                    dynamic=True,
+                )
+                self.spawned_cubes.append(cube_actor)
+                setattr(self, f"bin_{i}", cube_actor)
+                if self.difficulty == "hard":
+                    hard_cubes_by_color[cube_color_names[i]].append(cube_actor)
+
+            if not self.spawned_cubes:
+                raise SceneGenerationError("Failed to generate any cube")
+
+            if self.difficulty == "hard":
+                color_idx = torch.randint(
+                    0, len(color_options), (1,), generator=monochrome_color_generator
+                ).item()
+                target_color = color_options[color_idx]
+                target_candidates = hard_cubes_by_color[target_color["name"]]
                 if not target_candidates:
                     raise SceneGenerationError(
                         f"Failed to select a {target_color['name']} target cube"
                     )
-
-                target_idx = torch.randint(
+                target_idx_in_color = torch.randint(
                     0,
                     len(target_candidates),
                     (1,),
@@ -288,106 +314,24 @@ class VideoRepick(BaseEnv):
                 logger.debug(
                     "target color: %s, target index in color group: %s",
                     target_color["name"],
-                    target_idx,
+                    target_idx_in_color,
                 )
-                self.target_cube_1 = target_candidates[target_idx]
-
+                self.target_cube_1 = target_candidates[target_idx_in_color]
             else:
-                idx = torch.randint(
-                    0,
-                    len(options),
-                    (1,),
-                    generator=monochrome_color_generator,
-                ).item()
-                chosen_color = options[idx]["color"]
-
-                cube_colors = [chosen_color] * 4
-                shuffle_indices = torch.randperm(len(cube_colors), generator=self.generator).tolist()
-                cube_colors = [cube_colors[i] for i in shuffle_indices]
-
-                self.spawned_cubes = []
-
-                region4 = [[-0.05, -0.1], [-0.05, 0.1], [0.1, 0.1], [0.1, -0.1]]
-                region3_tri = [[-0.05, -0.1], [-0.05, 0.1], [0.1, 0]]
-                region3_line = [[0, -0.15], [0, 0.15], [0, 0]]
-
-                region3_choice = torch.randint(0, 2, (1,), generator=self.generator).item()
-                region3 = region3_tri if region3_choice == 0 else region3_line
-
-                if self.configs[self.difficulty]['cube'] == 4:
-                    region = region4
-                else:
-                    region = region3
-                angle, region = rotate_points_random(region, (0, 180), self.generator)
-
-                for i in range(self.configs[self.difficulty]['cube']):
-                    try:
-                        cube_actor = spawn_random_cube(
-                            self,
-                            avoid=avoid,
-                            region_center=region[i],
-                            region_half_size=0.07,
-                            min_gap=self.cube_half_size * 1,
-                            half_size=self.cube_half_size,
-                            name_prefix=f"bin_{i}",
-                            max_trials=256,
-                            color=cube_colors[i],
-                            generator=self.generator
-
-                        )
-                    except RuntimeError as e:
-                        raise SceneGenerationError(f"Failed to generate bin_{i}") from e
-
-                    self.spawned_cubes.append(cube_actor)
-                    setattr(self, f"bin_{i}", cube_actor)
-                    avoid.append(cube_actor)
-
-                if not self.spawned_cubes:
-                    raise SceneGenerationError("Failed to generate any bin")
-
-                target_indices = torch.randperm(len(self.spawned_cubes), generator=self.generator)[:1].tolist()
+                target_indices = torch.randperm(
+                    len(self.spawned_cubes), generator=self.generator
+                )[:1].tolist()
                 self.target_cube_1 = self.spawned_cubes[target_indices[0]]
 
-                if self.difficulty != "hard":
-                    remaining_indices = [i for i in range(len(self.spawned_cubes)) if i not in target_indices]
-                    if len(remaining_indices) < 2:
-                        raise SceneGenerationError("Not enough cubes for swapping")
+            for pair_idx in range(1, 4):
+                setattr(self, f"swap_pair{pair_idx}_idx1", None)
+                setattr(self, f"swap_pair{pair_idx}_idx2", None)
+            for k, (raw_a, raw_b) in enumerate(swap_pairs_raw):
+                setattr(self, f"swap_pair{k+1}_idx1", self.spawned_cubes[raw_a])
+                setattr(self, f"swap_pair{k+1}_idx2", self.spawned_cubes[raw_b])
 
-                    selected_remaining = torch.randperm(len(remaining_indices), generator=self.generator)[:2].tolist()
-                    selected_indices = [remaining_indices[i] for i in selected_remaining]
-                    swap_indices = target_indices + selected_indices
-
-                    self.swap_pair1_idx1 = self.spawned_cubes[swap_indices[0]]
-                    self.swap_pair2_idx1 = self.spawned_cubes[swap_indices[1]]
-                    self.swap_pair3_idx1 = self.spawned_cubes[swap_indices[2]]
-
-                    swap_partner_generator = self._make_generator(
-                        self._SWAP_PARTNER_SEED_OFFSET
-                    )
-                    for k in range(1, 4):
-                        idx1_actor = getattr(self, f"swap_pair{k}_idx1")
-                        candidates = [
-                            c for c in self.spawned_cubes if c is not idx1_actor
-                        ]
-                        if not candidates:
-                            raise SceneGenerationError(
-                                f"VideoRepick: no candidate for swap_pair{k}_idx2"
-                            )
-                        partner_idx = int(
-                            torch.randint(
-                                0,
-                                len(candidates),
-                                (1,),
-                                generator=swap_partner_generator,
-                            ).item()
-                        )
-                        setattr(
-                            self,
-                            f"swap_pair{k}_idx2",
-                            candidates[partner_idx],
-                        )
-
-                    self._refresh_swap_schedule()
+            if self.swap_times >= 1:
+                self._refresh_swap_schedule()
         except SceneGenerationError:
             raise
         except Exception as exc:

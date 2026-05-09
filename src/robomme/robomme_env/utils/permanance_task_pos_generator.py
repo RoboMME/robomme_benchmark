@@ -50,15 +50,17 @@ def sample_bin_positions(
     generator: torch.Generator,
     n_bins: int,
     max_attempts: int = 2000,
+    min_center_dist: float = MIN_CENTER_DIST,
 ) -> list[tuple[float, float]]:
     """在 [-XY_HALF, XY_HALF]^2 上 rejection-sample 出 n_bins 个 (x, y).
 
-    位置必须满足两个约束：互相之间最小中心距 MIN_CENTER_DIST；不落入
-    button strip [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN, BUTTON_Y_MAX]。
+    位置必须满足两个约束：互相之间最小中心距 min_center_dist（默认
+    MIN_CENTER_DIST，permanence 4 env 必须使用默认值）；不落入 button strip
+    [BUTTON_X_MIN, BUTTON_X_MAX] x [BUTTON_Y_MIN, BUTTON_Y_MAX]。
     超过 max_attempts 仍无法填满则抛 RuntimeError。
     """
     pts: list[tuple[float, float]] = []
-    min_dist_sq = MIN_CENTER_DIST * MIN_CENTER_DIST
+    min_dist_sq = min_center_dist * min_center_dist
     for _ in range(max_attempts):
         if len(pts) == n_bins:
             return pts
@@ -72,7 +74,7 @@ def sample_bin_positions(
             pts.append((cx, cy))
     raise RuntimeError(
         f"failed to place {n_bins} bins after {max_attempts} attempts "
-        f"(xy_half={XY_HALF}, min_dist={MIN_CENTER_DIST})"
+        f"(xy_half={XY_HALF}, min_dist={min_center_dist})"
     )
 
 
@@ -111,6 +113,7 @@ def permanance_task_pos_generator(
     n_buttons: int,
     n_pickups: int,
     seed: int,
+    min_center_dist_override: float | None = None,
 ) -> dict:
     """生成单个 episode 的 permanence 任务位置.
 
@@ -120,6 +123,10 @@ def permanance_task_pos_generator(
         n_buttons: button 数量；为 0 则不采样 button
         n_pickups: 从有色 bin 中挑选的 pickup 数量
         seed:      episode 种子
+        min_center_dist_override: 可选，覆盖 bin 之间的最小中心距（默认
+            MIN_CENTER_DIST=0.135）。permanence 4 env 不要传此参数；只有
+            VideoRepick 这种"放 cube 而非 bin"的 env 在需要塞 9+ 个 cube 时才
+            传一个更小值（如 MIN_CENTER_DIST/2）。
 
     成功返回 dict：
         {
@@ -137,6 +144,11 @@ def permanance_task_pos_generator(
     N_COLORED_CUBES = 3       # red / green / blue（与 COLORS 调色板对齐）
     KNUTH_HASH = 2654435761   # RNG stream offset 共用（Knuth multiplicative hash）
 
+    min_center_dist = (
+        MIN_CENTER_DIST if min_center_dist_override is None
+        else float(min_center_dist_override)
+    )
+
     generator = torch.Generator()
     generator.manual_seed(seed)
     pickup_generator = torch.Generator()
@@ -145,7 +157,9 @@ def permanance_task_pos_generator(
     swap_generator.manual_seed(seed * KNUTH_HASH + 2)
 
     try:
-        positions = sample_bin_positions(generator, n_bins)
+        positions = sample_bin_positions(
+            generator, n_bins, min_center_dist=min_center_dist
+        )
     except RuntimeError as exc:
         return {"fail": str(exc)}
 
