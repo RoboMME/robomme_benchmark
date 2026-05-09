@@ -337,3 +337,147 @@
 2. **第 1 行第 2 列** — Cube xy 分布，**全部为 `cube_unknown`（灰色）**：StopCube 的 cube 不带颜色 label，不拆 red / blue / green。
 3. **第 1 行第 3 列** — Button xy 分布。
 4. **第 1 行第 4 列** — Target xy 分布（红色三角 marker）。
+
+---
+
+## VideoUnmask
+
+
+<img src="VideoUnmask_distribution.png" alt="VideoUnmask distribution" width="70%">
+
+**单图（不按难度分行，n=300，2 个 panel）**
+
+1. **第 1 行第 1 列（1st Target Color）** — 第 1 个要 pickup 的 cube 颜色（red / blue / green）的 episode 数与占比，三色基本均衡；所有 episode 都至少 pickup 一次，没有 `none`。
+2. **第 1 行第 2 列（2nd Target Color）** — 第 2 个要 pickup 的 cube 颜色，含 `none`（pickup_count=1 的 episode 落到 `none`）。Easy / Medium 档默认 pickup_count=1、Hard 档 pickup_count=2，所以 `none` 占比约 66.7%。
+
+> Permanence 套件**不**按 Easy / Medium / Hard 分行；非 Swap 版本（VideoUnmask / ButtonUnmask）的 `Pickup Count` panel 因为信息量低被隐藏，仅 Swap 版本保留。
+
+
+<img src="VideoUnmask_xy.png" alt="VideoUnmask xy" width="70%">
+
+**第 1 行（visible-objects 散点 collage，4 列）**
+
+1. **第 1 行第 1 列** — All Visible Objects xy 总览。VideoUnmask 的 cube 全程藏在 bin 内对相机不可见，所以图上看到的主要是 bin 的 xy 点。
+2. **第 1 行第 2 列** — Cube panel：cube 不可见 → 此 panel 数据为空被隐藏。
+3. **第 1 行第 3 列** — Button panel：VideoUnmask 没有 button → 此 panel 数据为空被隐藏。
+4. **第 1 行第 4 列** — Bin xy 分布，按 `bin_index` 着色（bin_0 ~ bin_5；Easy 3 个、Medium / Hard 6 个）。
+
+**第 2 行（permanence cubes，仅左 1 列有内容）**
+
+5. **第 2 行第 1 列（Permanence cubes Rotated XY）** — 从 `permanence_init_state.cubes` 读出每个 cube 在 reset 时的 xy 与 color_name，按颜色（red / blue / green）拆开散点。VideoUnmask 没有 swap，第 2 行右 3 列留空。
+
+**第 3 行（pickup bin xy + selection counts，4 列）**
+
+6. **第 3 行第 1 列（First pickup bin Rotated XY）** — 第 1 次要 pickup 的 cube（`cubes[0]`）所在 bin 的 xy，按 cubes[0].color_name 着色。
+7. **第 3 行第 2 列（Second pickup bin Rotated XY）** — 第 2 次要 pickup 的 cube（`cubes[1]`）所在 bin 的 xy；只有 pickup_count=2 的 episode 才会真正触发第 2 次 pickup（约 1/3 的 episode）。
+8. **第 3 行第 3 列（First pickup bin selection counts）** — 统计 `cubes[0].bin_index` 的分布；reset 阶段 cubes[0] 永远放在 bin_0，所以仅 1 根柱（bin_0=300）。
+9. **第 3 行第 4 列（Second pickup bin selection counts）** — 同上，`cubes[1].bin_index` 永远为 1，仅 1 根柱（bin_1=300）。
+
+---
+
+## VideoUnmaskSwap
+
+
+<img src="VideoUnmaskSwap_distribution.png" alt="VideoUnmaskSwap distribution" width="70%">
+
+**单图（不按难度分行，n=300，3 个 panel）**
+
+1. **第 1 行第 1 列（Pickup Count）** — 该 episode 实际要 pickup 的次数（`1` / `2`）的 episode 数与占比；Swap 版本保留此 panel。约 48% / 52% 大致均衡。
+2. **第 1 行第 2 列（1st Target Color）** — 第 1 个 target 颜色（red / blue / green），三色基本均衡。
+3. **第 2 行第 1 列（2nd Target Color）** — 第 2 个 target 颜色，含 `none`；`none` 占比 ≈ 48%（与 Pickup Count=1 比例对齐）。
+
+
+<img src="VideoUnmaskSwap_xy.png" alt="VideoUnmaskSwap xy" width="70%">
+
+**第 1 行（visible-objects 散点 collage，4 列）**
+
+1. **第 1 行第 1 列** — All Visible Objects xy 总览（cube 不可见 → 图上主要是 bin 的 xy 点）。
+2. **第 1 行第 2 列** — Cube panel：Swap 版本通过 `hidden_top_keys = {"cube", "button"}` 显式 `axis("off")`。
+3. **第 1 行第 3 列** — Button panel：VideoUnmaskSwap 没有 button，且 Swap 版本同样显式 `axis("off")`。
+4. **第 1 行第 4 列** — Bin xy 分布，按 `bin_index` 着色（bin_0 ~ bin_3；Easy 3 个、Medium / Hard 4 个）。
+
+**第 2 行（Swap 版本特有：cubes + swaps + 2 张 heatmap）**
+
+5. **第 2 行第 1 列（Permanence cubes Rotated XY）** — cubes 按 color_name 拆开的 xy 分布（同 VideoUnmask 行 2 第 1 列）。
+6. **第 2 行第 2 列（Permanence swaps Rotated XY）** — 每条 swap 的两个 bin 端点用双向箭头连起来，按 `swap_index` 着色（第 0 / 1 / 2 次 swap 各一个颜色）。
+7. **第 2 行第 3 列（Pair freq 3-bin）** — 仅在 `bin_count==3` 的 Easy episode 中统计 swap pair 的 (`bin_a_index`, `bin_b_index`) 共现频率，3×3 对称矩阵，对角线为 `—`，非对角线为出现次数（YlOrRd colormap）。标题里 `episodes=N | swaps=M` 显示参与统计的 episode 数与 swap 总条数。
+8. **第 2 行第 4 列（Pair freq 4-bin）** — 在 `bin_count==4` 的 Medium / Hard episode 中做同样统计，4×4 对称矩阵。
+
+**第 3 行（pickup bin xy + selection counts，4 列）**
+
+9. **第 3 行第 1 列（First pickup bin Rotated XY）** — `cubes[0].bin_position_xy`，按颜色着色。
+10. **第 3 行第 2 列（Second pickup bin Rotated XY）** — `cubes[1].bin_position_xy`。
+11. **第 3 行第 3 列（First pickup bin selection counts）** — `cubes[0].bin_index` 永远为 0（reset 时的初始 bin，swap 在 episode 中后才触发），仅 1 根柱（bin_0=300）。
+12. **第 3 行第 4 列（Second pickup bin selection counts）** — `cubes[1].bin_index` 永远为 1，仅 1 根柱（bin_1=300）。
+
+---
+
+## ButtonUnmask
+
+
+<img src="ButtonUnmask_distribution.png" alt="ButtonUnmask distribution" width="70%">
+
+**单图（不按难度分行，n=300，2 个 panel）**
+
+1. **第 1 行第 1 列（1st Target Color）** — 第 1 个 target cube 颜色（red / blue / green），三色基本均衡，无 `none`。
+2. **第 1 行第 2 列（2nd Target Color）** — 第 2 个 target 颜色，含 `none`；与 VideoUnmask 同样的设定（Easy / Medium pickup_count=1、Hard pickup_count=2），所以 `none` 占比约 66.7%。
+
+> 非 Swap 版本同样隐藏 `Pickup Count` panel。
+
+
+<img src="ButtonUnmask_xy.png" alt="ButtonUnmask xy" width="70%">
+
+**第 1 行（visible-objects 散点 collage，4 列）**
+
+1. **第 1 行第 1 列** — All Visible Objects xy 总览：cube 在 bin 内不可见，所以图上看到的是 button + bin 的 xy 点。
+2. **第 1 行第 2 列** — Cube panel：cube 不可见 → 此 panel 数据为空被隐藏。
+3. **第 1 行第 3 列** — Button xy 分布：ButtonUnmask 有 1 个 button（在 button strip `[-0.25, -0.15] × [-0.2, 0.2]` 内，紫色 marker）。
+4. **第 1 行第 4 列** — Bin xy 分布，按 `bin_index` 着色（bin_0 ~ bin_5；Easy 3 个、Medium / Hard 6 个）。
+
+**第 2 行（permanence cubes，仅左 1 列有内容）**
+
+5. **第 2 行第 1 列（Permanence cubes Rotated XY）** — 3 cube 按颜色（red / blue / green）的 xy 分布。ButtonUnmask 没有 swap，第 2 行右 3 列留空。
+
+**第 3 行（pickup bin xy + selection counts，4 列）**
+
+6. **第 3 行第 1 列（First pickup bin Rotated XY）** — `cubes[0].bin_position_xy`，按 cubes[0].color_name 着色。
+7. **第 3 行第 2 列（Second pickup bin Rotated XY）** — `cubes[1].bin_position_xy`；只有 pickup_count=2 的 episode 才会真正触发第 2 次 pickup。
+8. **第 3 行第 3 列（First pickup bin selection counts）** — `cubes[0].bin_index` 永远为 0，仅 1 根柱（bin_0=300）。
+9. **第 3 行第 4 列（Second pickup bin selection counts）** — `cubes[1].bin_index` 永远为 1，仅 1 根柱（bin_1=300）。
+
+---
+
+## ButtonUnmaskSwap
+
+
+<img src="ButtonUnmaskSwap_distribution.png" alt="ButtonUnmaskSwap distribution" width="70%">
+
+**单图（不按难度分行，n=300，3 个 panel）**
+
+1. **第 1 行第 1 列（Pickup Count）** — `1` / `2` 的 episode 数与占比（约 53% / 47%）。
+2. **第 1 行第 2 列（1st Target Color）** — 第 1 个 target 颜色，三色基本均衡。
+3. **第 2 行第 1 列（2nd Target Color）** — 第 2 个 target 颜色，含 `none`；`none` 占比约 53%（与 Pickup Count=1 比例对齐）。
+
+
+<img src="ButtonUnmaskSwap_xy.png" alt="ButtonUnmaskSwap xy" width="70%">
+
+**第 1 行（visible-objects 散点 collage，4 列）**
+
+1. **第 1 行第 1 列** — All Visible Objects xy 总览（button + bin 的 xy 点；cube 不可见）。
+2. **第 1 行第 2 列** — Cube panel：Swap 版本被显式 `axis("off")`（`hidden_top_keys = {"cube", "button"}`）。
+3. **第 1 行第 3 列** — Button panel：尽管 ButtonUnmaskSwap 实际有 2 个 button，但 Swap 版本同样被显式隐藏（行 0 仅留 all 与 bin，避免与行 1 的 swap 信息抢空间）。
+4. **第 1 行第 4 列** — Bin xy 分布，按 `bin_index` 着色（bin_0 ~ bin_3；Easy 3 个、Medium / Hard 4 个）。
+
+**第 2 行（Swap 版本特有：cubes + swaps + 2 张 heatmap）**
+
+5. **第 2 行第 1 列（Permanence cubes Rotated XY）** — 3 cube 按颜色（red / blue / green）的 xy 分布。
+6. **第 2 行第 2 列（Permanence swaps Rotated XY）** — 每条 swap 两端 bin 用双向箭头连起来，按 `swap_index` 着色（每个 episode 的 swap 数 = `swap_times`，由难度的 `swap_min/swap_max` 区间随机决定）。
+7. **第 2 行第 3 列（Pair freq 3-bin）** — `bin_count==3`（Easy）episode 中 swap pair 的 (`bin_a_index`, `bin_b_index`) 共现频率热图，3×3 对称矩阵。
+8. **第 2 行第 4 列（Pair freq 4-bin）** — `bin_count==4`（Medium / Hard）episode 中同样统计的 4×4 对称矩阵。
+
+**第 3 行（pickup bin xy + selection counts，4 列）**
+
+9. **第 3 行第 1 列（First pickup bin Rotated XY）** — `cubes[0].bin_position_xy`，按颜色着色。
+10. **第 3 行第 2 列（Second pickup bin Rotated XY）** — `cubes[1].bin_position_xy`。
+11. **第 3 行第 3 列（First pickup bin selection counts）** — `cubes[0].bin_index` 永远为 0（reset 阶段的初始 bin），仅 1 根柱（bin_0=300）。
+12. **第 3 行第 4 列（Second pickup bin selection counts）** — `cubes[1].bin_index` 永远为 1，仅 1 根柱（bin_1=300）。
