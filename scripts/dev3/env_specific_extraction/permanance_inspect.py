@@ -520,9 +520,22 @@ def _render_three_row_figure(
     # 第 1 行：visible-objects 4 个面板（按 _panel_specs_for_env 给出的顺序）；
     # swap env 隐藏中间两个 panel（cube / button）。
     hidden_top_keys = {"cube", "button"} if is_swap_env else set()
+    # 非 swap env（ButtonUnmask / VideoUnmask）中，cube / button panel 若
+    # visible_objects 没有对应 semantic 的点，xy_common._plot_*_objects 会
+    # 画出 "No X data" 占位框；提前检测并隐藏，避免空 panel 出现在 figure 里。
+    # panel key 与 point.semantic 字面相等（_plot_cube_objects/_plot_button_objects
+    # 都用 semantic == key 过滤）。
+    empty_top_keys: set[str] = set()
+    if not is_swap_env:
+        for empty_key in ("cube", "button"):
+            if not any(point.semantic == empty_key for point in points):
+                empty_top_keys.add(empty_key)
+
     for ax, key in zip(axes[0], panel_specs):
         if key in hidden_top_keys:
             ax.axis("off")
+        elif key in empty_top_keys:
+            ax.set_visible(False)
         else:
             xy_common._plot_panel(ax, key, env_id, points)
             # row-0 走 xy_common._plot_panel，share=True 会让非首列 panel
