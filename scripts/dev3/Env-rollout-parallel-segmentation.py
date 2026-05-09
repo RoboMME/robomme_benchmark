@@ -1161,7 +1161,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=300,
+        default=15,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -1207,7 +1207,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--skip-execute",
-        default=True,
+        default=False,
         action=argparse.BooleanOptionalAction,
         help=(
             "When True (default): setup-only mode — reset, export segmentation/JSON/3D PNG, "
