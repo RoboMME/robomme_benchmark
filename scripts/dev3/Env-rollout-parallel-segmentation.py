@@ -1137,14 +1137,14 @@ def _build_parser() -> argparse.ArgumentParser:
         "-e",
         nargs="+",
         default=[
-        "PickXtimes",
-        "StopCube",
-        "SwingXtimes",
-        "BinFill",
-        # "VideoUnmaskSwap",
-        # "VideoUnmask",
-        # "ButtonUnmaskSwap",
-        # "ButtonUnmask",
+        # "PickXtimes",
+        # "StopCube",
+        # "SwingXtimes",
+        # "BinFill",
+        "VideoUnmaskSwap",
+        "VideoUnmask",
+        "ButtonUnmaskSwap",
+        "ButtonUnmask",
         # "VideoRepick",
         # "VideoPlaceButton",
         # "VideoPlaceOrder",
@@ -1161,7 +1161,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=15,
+        default=300,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -1207,7 +1207,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--skip-execute",
-        default=False,
+        default=True,
         action=argparse.BooleanOptionalAction,
         help=(
             "When True (default): setup-only mode — reset, export segmentation/JSON/3D PNG, "

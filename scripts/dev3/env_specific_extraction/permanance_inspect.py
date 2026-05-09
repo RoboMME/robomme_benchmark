@@ -119,7 +119,8 @@ def _plot_permanence_cubes_panel(
     files: Iterable[Any],
 ) -> int:
     """渲染 cube reset 位置散点：颜色按 cube 颜色（不区分 difficulty），
-    并用细线把 cube 连到对应的 bin。无数据时显示 'No cube data'。"""
+    并用细线把 cube 连到对应的 bin。无数据时返回 0、不绘制——调用方据此
+    把对应 axes set_visible(False) 隐藏 panel。"""
     from matplotlib.lines import Line2D
 
     files_list = list(files or [])
@@ -141,31 +142,23 @@ def _plot_permanence_cubes_panel(
                 s=70, alpha=0.85, c=color, marker="o",
                 edgecolors="black", linewidths=0.5,
             )
-            bin_idx = cube.get("bin_index")
-            if bin_idx is not None:
-                ax.text(
-                    x + 0.005, y + 0.005,
-                    f"ep{entry.episode}/b{bin_idx}",
-                    fontsize=6, alpha=0.6,
-                )
             plotted += 1
 
-    if plotted:
-        legend_handles: list[Line2D] = []
-        for color_name in sorted(seen_colors):
-            color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
-            legend_handles.append(
-                Line2D(
-                    [0], [0],
-                    marker="o", linestyle="", markersize=8,
-                    markerfacecolor=color, markeredgecolor="black",
-                    label=f"cube_{color_name}",
-                )
-            )
-        ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
-    else:
-        ax.text(0.0, 0.0, "No cube data", ha="center", va="center")
+    if plotted == 0:
+        return 0
 
+    legend_handles: list[Line2D] = []
+    for color_name in sorted(seen_colors):
+        color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
+        legend_handles.append(
+            Line2D(
+                [0], [0],
+                marker="o", linestyle="", markersize=8,
+                markerfacecolor=color, markeredgecolor="black",
+                label=f"cube_{color_name}",
+            )
+        )
+    ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
     _prepare_panel_axis(ax, "Permanence cubes (Rotated XY)", plotted)
     return plotted
 
@@ -176,8 +169,8 @@ def _plot_permanence_swaps_panel(
     files: Iterable[Any],
 ) -> int:
     """渲染 swap pair 双向箭头：每对 (bin_a, bin_b) 按 swap_index 着色，
-    bin 全集画成淡灰色背景点。非 Swap env 或无 swap_pairs 时显示
-    'No swap data'。"""
+    bin 全集画成淡灰色背景点。非 Swap env 或无 swap_pairs 时返回 0、
+    不绘制——调用方据此 set_visible(False) 隐藏 panel。"""
     from matplotlib.lines import Line2D
 
     files_list = list(files or [])
@@ -218,32 +211,24 @@ def _plot_permanence_swaps_panel(
                     s=60, c=color, edgecolors="black", linewidths=0.5,
                     alpha=0.9, zorder=4,
                 )
-                mid_x = (ax_x + bx_x) / 2
-                mid_y = (ax_y + bx_y) / 2
-                ax.text(
-                    mid_x, mid_y,
-                    f"ep{entry.episode}#s{swap_idx}",
-                    fontsize=6, alpha=0.7,
-                )
                 pair_count += 1
 
-    if pair_count:
-        legend_handles: list[Line2D] = []
-        for swap_idx in sorted(seen_swap_indices):
-            color = PERMANENCE_SWAP_INDEX_COLORS[
-                swap_idx % len(PERMANENCE_SWAP_INDEX_COLORS)
-            ]
-            legend_handles.append(
-                Line2D(
-                    [0], [0],
-                    marker="o", linestyle="-", color=color, markersize=8,
-                    label=f"swap #{swap_idx}",
-                )
-            )
-        ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
-    else:
-        ax.text(0.0, 0.0, "No swap data", ha="center", va="center")
+    if pair_count == 0:
+        return 0
 
+    legend_handles: list[Line2D] = []
+    for swap_idx in sorted(seen_swap_indices):
+        color = PERMANENCE_SWAP_INDEX_COLORS[
+            swap_idx % len(PERMANENCE_SWAP_INDEX_COLORS)
+        ]
+        legend_handles.append(
+            Line2D(
+                [0], [0],
+                marker="o", linestyle="-", color=color, markersize=8,
+                label=f"swap #{swap_idx}",
+            )
+        )
+    ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
     _prepare_panel_axis(ax, "Permanence swaps (Rotated XY)", pair_count)
     return pair_count
 
@@ -268,7 +253,8 @@ def _plot_pickup_bin_panel(
     """渲染第 (pickup_index+1) 次 pickup 的 bin 位置：颜色=被遮挡 cube 的颜色
     （不区分 difficulty）。pickup 顺序与 cubes_payload 顺序对齐——非 swap env 是
     spawned_bins[i]，swap env 是 selected_bins[i]，两者在 permanence.py 写入
-    sidecar 时都按 cube/bin pair 顺序展开。无数据时显示 'No pickup data'。"""
+    sidecar 时都按 cube/bin pair 顺序展开。无数据时返回 0、不绘制——调用方据
+    此 set_visible(False) 隐藏 panel。"""
     from matplotlib.lines import Line2D
 
     files_list = list(files or [])
@@ -296,28 +282,23 @@ def _plot_pickup_bin_panel(
             s=70, alpha=0.85, c=color, marker="o",
             edgecolors="black", linewidths=0.5,
         )
-        ax.text(
-            bx + 0.005, by + 0.005,
-            f"ep{entry.episode}",
-            fontsize=6, alpha=0.6,
-        )
         plotted += 1
 
-    if plotted:
-        legend_handles: list[Line2D] = []
-        for color_name in sorted(seen_colors):
-            color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
-            legend_handles.append(
-                Line2D(
-                    [0], [0],
-                    marker="o", linestyle="", markersize=8,
-                    markerfacecolor=color, markeredgecolor="black",
-                    label=f"cube_{color_name}",
-                )
+    if plotted == 0:
+        return 0
+
+    legend_handles: list[Line2D] = []
+    for color_name in sorted(seen_colors):
+        color = CUBE_COLOR_MAP.get(color_name, CUBE_COLOR_MAP["unknown"])
+        legend_handles.append(
+            Line2D(
+                [0], [0],
+                marker="o", linestyle="", markersize=8,
+                markerfacecolor=color, markeredgecolor="black",
+                label=f"cube_{color_name}",
             )
-        ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
-    else:
-        ax.text(0.0, 0.0, "No pickup data", ha="center", va="center")
+        )
+    ax.legend(handles=legend_handles, loc="upper right", fontsize=7)
 
     title = _PICKUP_PANEL_TITLES.get(
         pickup_index, f"Pickup #{pickup_index + 1} bin (Rotated XY)"
@@ -345,7 +326,7 @@ def _plot_pickup_bin_selection_distribution_panel(
 ) -> int:
     """渲染第 (pickup_index+1) 次 pickup 的 bin_index 1D 分布柱状图：
     X = bin_index（bin_0 .. bin_(N-1)），Y = episode 计数，纯色柱不堆叠。
-    无数据时显示 'No pickup data'。"""
+    无数据时返回 0、不绘制——调用方据此 set_visible(False) 隐藏 panel。"""
     from collections import Counter
     import matplotlib.ticker as mticker
 
@@ -384,11 +365,6 @@ def _plot_pickup_bin_selection_distribution_panel(
     )
 
     if total == 0 or max_bin_idx < 0:
-        ax.set_title(f"{title}\nepisodes=0")
-        ax.text(0.5, 0.5, "No pickup data", ha="center", va="center",
-                transform=ax.transAxes)
-        ax.set_xticks([])
-        ax.set_yticks([])
         return 0
 
     n_bins = max_bin_idx + 1
@@ -430,7 +406,8 @@ def _plot_pair_frequency_panel(
 ) -> int:
     """渲染 bin 对频次 heatmap (bin_count × bin_count)，仅统计 episode bin
     数恰好等于 ``bin_count`` 的 swap_pairs。非 swap env 或无匹配 episode
-    时降级到提示文字。返回参与统计的 swap pair 总数。"""
+    时返回 0、不绘制——调用方据此 set_visible(False) 隐藏 panel。返回
+    参与统计的 swap pair 总数。"""
     from collections import Counter
 
     _unshare_axes(ax)
@@ -438,11 +415,6 @@ def _plot_pair_frequency_panel(
     title = f"Pair freq ({bin_count}-bin)"
 
     if env_id not in permanence_module.SWAP_ENV_IDS:
-        ax.set_title(title)
-        ax.text(0.5, 0.5, "Not a swap env", ha="center", va="center",
-                transform=ax.transAxes)
-        ax.set_xticks([])
-        ax.set_yticks([])
         return 0
 
     matched = [
@@ -466,11 +438,6 @@ def _plot_pair_frequency_panel(
     total = sum(counter.values())
 
     if n_eps == 0:
-        ax.set_title(f"{title}\nepisodes=0 | swaps=0")
-        ax.text(0.5, 0.5, f"No {bin_count}-bin episodes", ha="center",
-                va="center", transform=ax.transAxes)
-        ax.set_xticks([])
-        ax.set_yticks([])
         return 0
 
     mat = [[0] * bin_count for _ in range(bin_count)]
@@ -564,12 +531,18 @@ def _render_three_row_figure(
             ax.tick_params(axis="x", labelbottom=True)
             ax.tick_params(axis="y", labelleft=True)
 
-    # 第 2 行：左 2 格放 cubes / swaps；swap env 在右 2 格放 pair-freq heatmap
-    _plot_permanence_cubes_panel(axes[1, 0], env_id, perm_files)
-    _plot_permanence_swaps_panel(axes[1, 1], env_id, perm_files)
+    # 第 2 行：左 2 格放 cubes / swaps；swap env 在右 2 格放 pair-freq heatmap。
+    # 各 _plot_*_panel 在数据为 0 时直接 return 0，不绘制 fallback；
+    # 调用方据返回值把对应 axes 设为不可见，保留 grid 位置但完全空白。
+    if _plot_permanence_cubes_panel(axes[1, 0], env_id, perm_files) == 0:
+        axes[1, 0].set_visible(False)
+    if _plot_permanence_swaps_panel(axes[1, 1], env_id, perm_files) == 0:
+        axes[1, 1].set_visible(False)
     if is_swap_env and n_top >= 4:
-        _plot_pair_frequency_panel(axes[1, 2], env_id, perm_files, 3, plt)
-        _plot_pair_frequency_panel(axes[1, 3], env_id, perm_files, 4, plt)
+        if _plot_pair_frequency_panel(axes[1, 2], env_id, perm_files, 3, plt) == 0:
+            axes[1, 2].set_visible(False)
+        if _plot_pair_frequency_panel(axes[1, 3], env_id, perm_files, 4, plt) == 0:
+            axes[1, 3].set_visible(False)
         for j in range(4, n_top):
             axes[1, j].axis("off")
     else:
@@ -577,16 +550,20 @@ def _render_three_row_figure(
             axes[1, j].axis("off")
 
     # 第 3 行：左 2 格放 first / second pickup bin 2D 散点；右 2 格放
-    # first / second pickup bin_index 1D 选择分布柱状图。
-    _plot_pickup_bin_panel(axes[2, 0], env_id, perm_files, pickup_index=0)
-    _plot_pickup_bin_panel(axes[2, 1], env_id, perm_files, pickup_index=1)
+    # first / second pickup bin_index 1D 选择分布柱状图。空 panel 同上隐藏。
+    if _plot_pickup_bin_panel(axes[2, 0], env_id, perm_files, pickup_index=0) == 0:
+        axes[2, 0].set_visible(False)
+    if _plot_pickup_bin_panel(axes[2, 1], env_id, perm_files, pickup_index=1) == 0:
+        axes[2, 1].set_visible(False)
     if n_top >= 4:
-        _plot_pickup_bin_selection_distribution_panel(
+        if _plot_pickup_bin_selection_distribution_panel(
             axes[2, 2], env_id, perm_files, pickup_index=0
-        )
-        _plot_pickup_bin_selection_distribution_panel(
+        ) == 0:
+            axes[2, 2].set_visible(False)
+        if _plot_pickup_bin_selection_distribution_panel(
             axes[2, 3], env_id, perm_files, pickup_index=1
-        )
+        ) == 0:
+            axes[2, 3].set_visible(False)
         for j in range(4, n_top):
             axes[2, j].axis("off")
     else:
