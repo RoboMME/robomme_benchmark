@@ -472,11 +472,14 @@ def _render_two_row_figure(
     plt: Any,
 ) -> Path:
     """对 PickHighlight 渲染 2 行 figure（VideoPlaceButton / VideoPlaceOrder
-    走 _render_three_row_figure_videoplace 升到 3 行）。"""
+    走 _render_three_row_figure_videoplace 升到 3 行）。
+
+    PickHighlight 的 visible_objects 只有 cube + button，没有 target 语义物体，
+    因此跳过 "target" panel（保留 "all"/"cube"/"button" 三列）。"""
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{env_id}{xy_common.XY_DEFAULT_PNG_SUFFIX}"
 
-    panel_specs = ("all", "cube", "button", "target")
+    panel_specs = ("all", "cube", "button")
     n_cols = len(panel_specs)
 
     fig = plt.figure(figsize=(7 * n_cols, 7 * 2))
@@ -675,11 +678,14 @@ def _render_two_row_figure_videorepick(
     videorepick_records: list[reference_module.VideoRepickRecord],
     plt: Any,
 ) -> Path:
-    """VideoRepick 2 行 figure：第 1 行复用 1×3 collage，第 2 行单 panel 满列。"""
+    """VideoRepick 2 行 figure：第 1 行复用 1×N collage，第 2 行单 panel 满列。
+
+    VideoRepick 的 visible_objects 顶层只含 button + bin（归为 ``other``），不存在
+    cube 语义物体，因此跳过 "cube" panel（保留 "all"/"button" 两列）。"""
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"VideoRepick{xy_common.XY_DEFAULT_PNG_SUFFIX}"
 
-    panel_specs = ("all", "cube", "button")
+    panel_specs = ("all", "button")
     n_cols = len(panel_specs)
 
     fig = plt.figure(figsize=(7 * n_cols, 7 * 2))
@@ -827,13 +833,13 @@ def _render_three_row_figure_videorepick(
     videorepick_records: list[reference_module.VideoRepickRecord],
     plt: Any,
 ) -> tuple[Path, int]:
-    """VideoRepick 3 行 figure：第 1 行 1×3 collage（all/cube/button），第 2 行
-    pickup target xy overlay 单 panel，第 3 行 swap_pair 散点 + 双向箭头单
-    panel。"""
+    """VideoRepick 3 行 figure：第 1 行 1×N collage（all/button — 不画恒空的
+    cube panel），第 2 行 pickup target xy overlay 单 panel，第 3 行 swap_pair
+    散点 + 双向箭头单 panel。"""
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"VideoRepick{xy_common.XY_DEFAULT_PNG_SUFFIX}"
 
-    panel_specs = ("all", "cube", "button")
+    panel_specs = ("all", "button")
     n_cols = len(panel_specs)
 
     fig = plt.figure(figsize=(7 * n_cols, 7 * 3))
