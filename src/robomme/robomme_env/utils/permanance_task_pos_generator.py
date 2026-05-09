@@ -113,7 +113,7 @@ def permanance_task_pos_generator(
     n_buttons: int,
     n_pickups: int,
     seed: int,
-    min_center_dist_override: float | None = None,
+    min_center_dist_scale: float = 1.0,
 ) -> dict:
     """生成单个 episode 的 permanence 任务位置.
 
@@ -123,10 +123,10 @@ def permanance_task_pos_generator(
         n_buttons: button 数量；为 0 则不采样 button
         n_pickups: 从有色 bin 中挑选的 pickup 数量
         seed:      episode 种子
-        min_center_dist_override: 可选，覆盖 bin 之间的最小中心距（默认
-            MIN_CENTER_DIST=0.135）。permanence 4 env 不要传此参数；只有
-            VideoRepick 这种"放 cube 而非 bin"的 env 在需要塞 9+ 个 cube 时才
-            传一个更小值（如 MIN_CENTER_DIST/2）。
+        min_center_dist_scale: bin 最小中心距相对 MIN_CENTER_DIST=0.135 的缩放
+            因子（默认 1.0）。permanence 4 env 必须用 1.0；只有 VideoRepick 这种
+            "放 cube 而非 bin"的 env 在需要塞 9+ 个 cube 时才传 < 1.0（如 0.5
+            将间距减半到 0.0675）。
 
     成功返回 dict：
         {
@@ -144,10 +144,7 @@ def permanance_task_pos_generator(
     N_COLORED_CUBES = 3       # red / green / blue（与 COLORS 调色板对齐）
     KNUTH_HASH = 2654435761   # RNG stream offset 共用（Knuth multiplicative hash）
 
-    min_center_dist = (
-        MIN_CENTER_DIST if min_center_dist_override is None
-        else float(min_center_dist_override)
-    )
+    min_center_dist = MIN_CENTER_DIST * float(min_center_dist_scale)
 
     generator = torch.Generator()
     generator.manual_seed(seed)

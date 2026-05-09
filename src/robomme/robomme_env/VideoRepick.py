@@ -28,10 +28,7 @@ from .utils.SceneGenerationError import SceneGenerationError
 from .utils import *
 from .utils.subgoal_evaluate_func import static_check
 from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
-from .utils.permanance_task_pos_generator import (
-    permanance_task_pos_generator,
-    MIN_CENTER_DIST as PERMANANCE_MIN_CENTER_DIST,
-)
+from .utils.permanance_task_pos_generator import permanance_task_pos_generator
 from .utils import reset_panda
 from .utils.difficulty import normalize_robomme_difficulty
 
@@ -218,10 +215,10 @@ class VideoRepick(BaseEnv):
 
             if self.difficulty == "hard":
                 n_bins = sum(self.hard_cube_counts)
-                min_center_dist_override = PERMANANCE_MIN_CENTER_DIST / 2
+                min_center_dist_scale = 0.5
             else:
                 n_bins = self.configs[self.difficulty]['cube']
-                min_center_dist_override = None
+                min_center_dist_scale = 1.0
 
             result = permanance_task_pos_generator(
                 n_bins=n_bins,
@@ -229,7 +226,7 @@ class VideoRepick(BaseEnv):
                 n_buttons=1,
                 n_pickups=1,
                 seed=self.seed,
-                min_center_dist_override=min_center_dist_override,
+                min_center_dist_scale=min_center_dist_scale,
             )
             if "fail" in result:
                 raise SceneGenerationError(result["fail"])
