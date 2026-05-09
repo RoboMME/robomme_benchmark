@@ -95,7 +95,7 @@
 
 1. **第 1 行第 1 列** — All Visible Objects（cube + button）xy 总览。
 2. **第 1 行第 2 列** — Cube 按颜色（red / blue / green）拆开的 xy 分布。
-3. **第 1 行第 3 列** — Button（base + cap）xy 分布。
+3. **第 1 行第 3 列** — Button xy 分布。
 
 **第 2 行（任务选择分布 + 选中端散点）**
 
@@ -220,3 +220,120 @@
 2. **第 1 行第 2 列** — Button xy 分布。
 3. **第 2 行（跨整行）** — `Pickup target XY`：每个 episode 的目标 cube xy 位置，按颜色（red / blue / green）拆开标记，看三色 pickup 目标在桌面 xy 上是否均匀覆盖。
 4. **第 3 行（跨整行）** — `VideoRepick swaps XY`：所有 swap 记录两端 cube 位置的连线图（每个 episode 的 swap_pairs ≈ 1-2 条），整体看 swap 几何关系覆盖是否充分。
+
+---
+
+## BinFill
+
+
+<img src="BinFill_distribution.png" alt="BinFill distribution" width="70%">
+
+**第 1 行（Easy 难度，n=100）**
+
+1. **第 1 行第 1 列（Put-In Color Count）** — Easy 档内本 episode 需要装入 bin 的颜色种数（`1` / `2` / `3` / `unknown`），Easy 全部为单色。
+2. **第 1 行第 2 列（Put-In Cube Count）** — Easy 档内本 episode 需要装入的 cube 总数（`1` / `2` / `3` / `4` / `5` / `6` / `unknown`），主要落在 1-3 个。
+
+**第 2 行（Medium 难度，n=100）**
+
+3. **第 2 行第 1 列** — Medium 档颜色种数分布，落在 1-2 色。
+4. **第 2 行第 2 列** — Medium 档 cube 总数分布，主要落在 2-4 个。
+
+**第 3 行（Hard 难度，n=100）**
+
+5. **第 3 行第 1 列** — Hard 档颜色种数分布，落在 2-3 色（无单色）。
+6. **第 3 行第 2 列** — Hard 档 cube 总数分布，主要落在 3-5 个。
+
+
+<img src="BinFill_xy.png" alt="BinFill xy" width="70%">
+
+**第 1 行（visible-objects 散点 collage，4 列）**
+
+1. **第 1 行第 1 列** — All Visible Objects（cube + button + board_with_hole）xy 总览。
+2. **第 1 行第 2 列** — Cube 按颜色（red / blue / green）拆开的 xy 分布。
+3. **第 1 行第 3 列** — Button xy 分布。
+4. **第 1 行第 4 列** — `board_with_hole`（BinFill 的目标板）xy 分布，红色三角 marker；BinFill 此 panel 是目标板而非 cube target。
+
+---
+
+## PickXtimes
+
+
+<img src="PickXtimes_distribution.png" alt="PickXtimes distribution" width="70%">
+
+**第 1 行（Easy 难度，n=100）**
+
+1. **第 1 行第 1 列（Target Color）** — Easy 档内目标 cube 颜色（red / blue / green）分布，三色基本均衡。
+2. **第 1 行第 2 列（Repeat Count）** — Easy 档内目标 cube 被 pick 的总次数（`1` / `2` / `3` / `4` / `5` / `6` / `unknown`），落在 1-3 次。
+
+**第 2 行（Medium 难度，n=100）**
+
+3. **第 2 行第 1 列** — Medium 档 Target Color，三色均衡。
+4. **第 2 行第 2 列** — Medium 档 Repeat Count，落在 1-3 次。
+
+**第 3 行（Hard 难度，n=100）**
+
+5. **第 3 行第 1 列** — Hard 档 Target Color，三色均衡。
+6. **第 3 行第 2 列** — Hard 档 Repeat Count，全部落在 4-5 次（各约 50%）。
+
+
+<img src="PickXtimes_xy.png" alt="PickXtimes xy" width="70%">
+
+**第 1 行（visible-objects 散点 collage，4 列）**
+
+1. **第 1 行第 1 列** — All Visible Objects（cube + button + target）xy 总览。
+2. **第 1 行第 2 列** — Cube 按颜色（red / blue / green）拆开的 xy 分布。
+3. **第 1 行第 3 列** — Button xy 分布。
+4. **第 1 行第 4 列** — Target xy 分布（红色三角 marker）。
+
+---
+
+## SwingXtimes
+
+
+<img src="SwingXtimes_distribution.png" alt="SwingXtimes distribution" width="70%">
+
+**第 1 行（Easy 难度，n=100）**
+
+1. **第 1 行第 1 列（Target Color）** — Easy 档内目标 cube 颜色（red / blue / green）分布，三色基本均衡。
+2. **第 1 行第 2 列（Repeat Count）** — Easy 档内目标 cube 被 swing 的次数（`1` / `2` / `3` / `4` / `5` / `6` / `unknown`），落在 1-3 次。
+
+**第 2 行（Medium 难度，n=100）**
+
+3. **第 2 行第 1 列** — Medium 档 Target Color，三色均衡。
+4. **第 2 行第 2 列** — Medium 档 Repeat Count，落在 1-2 次（无 3 次）。
+
+**第 3 行（Hard 难度，n=100）**
+
+5. **第 3 行第 1 列** — Hard 档 Target Color，三色均衡。
+6. **第 3 行第 2 列** — Hard 档 Repeat Count，全部落在 3 次（100%）。
+
+
+<img src="SwingXtimes_xy.png" alt="SwingXtimes xy" width="70%">
+
+**第 1 行（visible-objects 散点 collage，4 列）**
+
+1. **第 1 行第 1 列** — All Visible Objects（cube + button + target）xy 总览。
+2. **第 1 行第 2 列** — Cube 按颜色（red / blue / green）拆开的 xy 分布。
+3. **第 1 行第 3 列** — Button xy 分布。
+4. **第 1 行第 4 列** — Target xy 分布（红色三角 marker）。
+
+---
+
+## StopCube
+
+
+<img src="StopCube_distribution.png" alt="StopCube distribution" width="70%">
+
+**单图（不按难度分行，n=300）**
+
+1. **Stop Visit** — policy 应当在目标 cube 第几次被 visit 时停下（`2` / `3` / `4` / `5`），4 个槽位大致均衡（约 26 / 27 / 24 / 23%）。整张图只有 1 行 1 列，**不**按难度档分行。
+
+
+<img src="StopCube_xy.png" alt="StopCube xy" width="70%">
+
+**第 1 行（visible-objects 散点 collage，4 列）**
+
+1. **第 1 行第 1 列** — All Visible Objects（cube + button + target）xy 总览；cube 与 target 在桌面上各成一团，与 button 区域分离。
+2. **第 1 行第 2 列** — Cube xy 分布，**全部为 `cube_unknown`（灰色）**：StopCube 的 cube 不带颜色 label，不拆 red / blue / green。
+3. **第 1 行第 3 列** — Button xy 分布。
+4. **第 1 行第 4 列** — Target xy 分布（红色三角 marker）。
