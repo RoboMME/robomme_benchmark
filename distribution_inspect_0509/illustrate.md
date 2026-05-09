@@ -88,9 +88,9 @@
 2. **第 1 行第 2 列** — cube 按颜色 xy。
 3. **第 1 行第 3 列** — button xy。
 4. **第 1 行第 4 列** — target xy。
-5. **第 2 行第 1 列** — before / after 计数。
-6. **第 2 行第 2 列** — 选中 target 是哪一个。
-7. **第 2 行第 3 列** — 选中 target xy。
+5. **第 2 行第 1 列** — 全难度 before / after 计数。
+6. **第 2 行第 2 列** — 全难度 选中 target 是哪一个对象。
+7. **第 2 行第 3 列** — 全难度 选中 target xy。
 8. **第 3 行（跨整行）** — swap_pair xy 连线。
 
 ---
@@ -104,18 +104,18 @@
 1. **第 1 行第 1 列** — target cube 颜色。
 2. **第 1 行第 2 列** — target 在 reference 序列中的次序（1st-6th）。
 3. **第 2 行第 1 列** — target cube 颜色。
-4. **第 2 行第 2 列** — target 次序槽位。
+4. **第 2 行第 2 列** — target 次序。
 5. **第 3 行第 1 列** — target cube 颜色。
-6. **第 3 行第 2 列** — target 次序槽位。
+6. **第 3 行第 2 列** — target 次序。
 
 <img src="VideoPlaceOrder_xy.png" alt="VideoPlaceOrder xy" width="70%">
 
 1. **第 1 行第 1 列** — cube + button + target xy 总览。
 2. **第 1 行第 2 列** — cube 按颜色 xy。
 3. **第 1 行第 3 列** — button xy。
-4. **第 1 行第 4 列** — target xy。
-5. **第 2 行第 1 列** — target 在 reference 序列中的次序计数。
-6. **第 2 行第 2 列** — target_index 计数。
+4. **第 1 行第 4 列** — target xy 注意这里target需要避让上方一个空间。
+5. **第 2 行第 1 列** — 全难度 target 在 reference 序列中的次序计数。
+6. **第 2 行第 2 列** — 全难度 选中 target 是哪一个对象。
 7. **第 2 行第 3 列** — 选中 target xy。
 8. **第 3 行（跨整行）** — swap_pair xy 连线。
 
@@ -240,8 +240,8 @@
 5. **第 2 行第 1 列** — cubes 按颜色 xy。
 6. **第 3 行第 1 列** — 第 1 次 pickup bin xy。
 7. **第 3 行第 2 列** — 第 2 次 pickup bin xy。
-8. **第 3 行第 3 列** — 第 1 次 pickup bin index 计数。
-9. **第 3 行第 4 列** — 第 2 次 pickup bin index 计数。
+8. **第 3 行第 3 列** — 第 1 次 pickup bin 对象。
+9. **第 3 行第 4 列** — 第 2 次 pickup bin 对象。
 
 ---
 
@@ -265,8 +265,8 @@
 8. **第 2 行第 4 列** — 4-bin 共现频率热图。
 9. **第 3 行第 1 列** — 第 1 次 pickup bin xy。
 10. **第 3 行第 2 列** — 第 2 次 pickup bin xy。
-11. **第 3 行第 3 列** — 第 1 次 pickup bin index 计数。
-12. **第 3 行第 4 列** — 第 2 次 pickup bin index 计数。
+11. **第 3 行第 3 列** — 第 1 次 pickup bin 对象。
+12. **第 3 行第 4 列** — 第 2 次 pickup bin 对象。
 
 ---
 
@@ -286,8 +286,8 @@
 5. **第 2 行第 1 列** — cubes 按颜色 xy。
 6. **第 3 行第 1 列** — 第 1 次 pickup bin xy。
 7. **第 3 行第 2 列** — 第 2 次 pickup bin xy。
-8. **第 3 行第 3 列** — 第 1 次 pickup bin index 计数。
-9. **第 3 行第 4 列** — 第 2 次 pickup bin index 计数。
+8. **第 3 行第 3 列** — 第 1 次 pickup bin 对象。
+9. **第 3 行第 4 列** — 第 2 次 pickup bin 对象。
 
 ---
 
@@ -311,5 +311,5 @@
 8. **第 2 行第 4 列** — 4-bin 共现频率热图。
 9. **第 3 行第 1 列** — 第 1 次 pickup bin xy。
 10. **第 3 行第 2 列** — 第 2 次 pickup bin xy。
-11. **第 3 行第 3 列** — 第 1 次 pickup bin index 计数。
-12. **第 3 行第 4 列** — 第 2 次 pickup bin index 计数。
+11. **第 3 行第 3 列** — 第 1 次 pickup bin 对象。
+12. **第 3 行第 4 列** — 第 2 次 pickup bin 对象。
