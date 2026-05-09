@@ -31,6 +31,12 @@ from .utils.object_generation import spawn_fixed_cube, build_board_with_hole
 from .utils import reset_panda
 from ..logging_utils import logger
 
+# Independent seed offset for the per-episode `way` choice. The `way` only
+# depends on self.seed (deterministic across rollouts; matches metadata's
+# per-episode seed) and does not consume from self._hb_generator's stream.
+_MOVECUBE_WAY_SEED_OFFSET = 0x85EBCA77
+_MOVECUBE_WAYS = ("peg_push", "gripper_push", "grasp_putdown")
+
 
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
@@ -357,8 +363,10 @@ class MoveCube(BaseEnv):
             ],
             dtype=np.float32,
             )
-            self.ways=["peg_push","gripper_push","grasp_putdown"]
-            way_idx = torch.randint(len(self.ways), (1,), generator=self._hb_generator).item()
+            self.ways = list(_MOVECUBE_WAYS)
+            way_gen = torch.Generator()
+            way_gen.manual_seed(int(self.seed) ^ _MOVECUBE_WAY_SEED_OFFSET)
+            way_idx = torch.randint(len(self.ways), (1,), generator=way_gen).item()
             self.way = self.ways[way_idx]
             #self.way="gripper_push"
 

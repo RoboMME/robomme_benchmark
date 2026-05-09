@@ -32,6 +32,17 @@ from .utils import reset_panda
 from .utils import subgoal_evaluate_func
 from ..logging_utils import logger
 
+# Independent seed offsets for the per-episode (direction, obj_flag) choices.
+# Two distinct torch.Generator() instances are seeded as
+# ``int(self.seed) ^ <OFFSET>`` so that:
+#   1. (direction, obj_flag) only depend on self.seed (deterministic across
+#      rollouts; matches metadata's per-episode seed)
+#   2. they do not consume from self._hb_generator's stream — any change to
+#      upstream RNG consumers (scene placement, jitter) will not perturb the
+#      direction/obj_flag distribution.
+_INSERTPEG_DIRECTION_SEED_OFFSET = 0x1A2B3C4D
+_INSERTPEG_OBJFLAG_SEED_OFFSET = 0x5E6F7081
+
 PICK_CUBE_DOC_STRING = """**Task Description:**
 A simple task where the objective is to grasp a red cube with the {robot_id} robot and move it to a target goal position. This is also the *baseline* task to test whether a robot with manipulation
 capabilities can be simulated and trained properly. Hence there is extra code for some robots to set them up properly in this environment as well as the table scene builder.
@@ -284,8 +295,12 @@ class InsertPeg(BaseEnv):
 
 
                     # Define task list, each task contains a dictionary with function, name, demonstration flag, and optional failure_func
-            obj_sample = torch.randint(0, 2, (1,), generator=self._hb_generator)
-            dir_sample = torch.randint(0, 2, (1,), generator=self._hb_generator)
+            direction_gen = torch.Generator()
+            direction_gen.manual_seed(int(self.seed) ^ _INSERTPEG_DIRECTION_SEED_OFFSET)
+            obj_flag_gen = torch.Generator()
+            obj_flag_gen.manual_seed(int(self.seed) ^ _INSERTPEG_OBJFLAG_SEED_OFFSET)
+            dir_sample = torch.randint(0, 2, (1,), generator=direction_gen)
+            obj_sample = torch.randint(0, 2, (1,), generator=obj_flag_gen)
             self.obj_flag = -1 if obj_sample.item() == 0 else 1
             self.direction = -1 if dir_sample.item() == 0 else 1
             
