@@ -99,6 +99,8 @@
 
 <img src="VideoPlaceOrder_distribution.png" alt="VideoPlaceOrder distribution" width="70%">
 
+**分难度审查**：
+
 1. **第 1 行第 1 列** — target cube 颜色。
 2. **第 1 行第 2 列** — target 在 reference 序列中的次序（1st-6th）。
 3. **第 2 行第 1 列** — target cube 颜色。
@@ -123,6 +125,8 @@
 
 <img src="VideoRepick_distribution.png" alt="VideoRepick distribution" width="70%">
 
+**分难度审查**：
+
 1. **第 1 行第 1 列** — target cube 颜色。
 2. **第 1 行第 2 列** — target cube 重复拾取次数。
 3. **第 2 行第 1 列** — target cube 颜色。
@@ -142,6 +146,8 @@
 ## BinFill
 
 <img src="BinFill_distribution.png" alt="BinFill distribution" width="70%">
+
+**分难度审查**：
 
 1. **第 1 行第 1 列** — 装入 bin 的颜色种数。
 2. **第 1 行第 2 列** — 装入 cube 总数。
@@ -163,6 +169,8 @@
 
 <img src="PickXtimes_distribution.png" alt="PickXtimes distribution" width="70%">
 
+**分难度审查**：
+
 1. **第 1 行第 1 列** — target cube 颜色。
 2. **第 1 行第 2 列** — pick 次数。
 3. **第 2 行第 1 列** — target cube 颜色。
@@ -182,6 +190,8 @@
 ## SwingXtimes
 
 <img src="SwingXtimes_distribution.png" alt="SwingXtimes distribution" width="70%">
+
+**分难度审查**：
 
 1. **第 1 行第 1 列** — target cube 颜色。
 2. **第 1 行第 2 列** — swing 次数。
