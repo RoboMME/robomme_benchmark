@@ -1074,26 +1074,29 @@ def _figure_specs_for_env(env_id: str) -> list[dict[str, object]]:
             }
         ]
     if env_id in UNMASK_ENVS:
-        return [
-            {
+        specs: list[dict[str, object]] = []
+        # ButtonUnmask / VideoUnmask（非 swap）的 pickup_count panel 信息量低，
+        # 用户要求隐藏；ButtonUnmaskSwap / VideoUnmaskSwap 仍保留。
+        if env_id not in {"ButtonUnmask", "VideoUnmask"}:
+            specs.append({
                 "field": "pickup_count",
                 "title": "Pickup Count",
                 "color": "#F58518",
                 "preferred_order": [str(value) for value in range(1, 4)] + ["unknown"],
-            },
-            {
-                "field": "first_target_color",
-                "title": "1st Target Color",
-                "color": "#72B7B2",
-                "preferred_order": COLOR_ORDER + ["unknown"],
-            },
-            {
-                "field": "second_target_color",
-                "title": "2nd Target Color",
-                "color": "#B279A2",
-                "preferred_order": COLOR_ORDER + ["none", "unknown"],
-            },
-        ]
+            })
+        specs.append({
+            "field": "first_target_color",
+            "title": "1st Target Color",
+            "color": "#72B7B2",
+            "preferred_order": COLOR_ORDER + ["unknown"],
+        })
+        specs.append({
+            "field": "second_target_color",
+            "title": "2nd Target Color",
+            "color": "#B279A2",
+            "preferred_order": COLOR_ORDER + ["none", "unknown"],
+        })
+        return specs
     return [
         {
             "field": FIXED_TASK_GOAL_LABEL,
