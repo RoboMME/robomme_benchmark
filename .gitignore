@@ -220,3 +220,6 @@ tmp/
 
 # Distribution inspect videos (large MP4 files)
 distribution_inspect_0509/videos-success/
+
+# Challenge evaluation results (videos, metrics, local runs)
+challenge_results/

@@ -536,6 +536,124 @@ uv run python -m challenge_interface.scripts.phase1_eval --port 8001
 
 Participants implement `Policy.infer()` and `Policy.reset()` in `challenge_interface/policy.py`.
 
+> 本章节是面向 challenge 参赛者的通用说明。**Claude 在本仓库内执行 evaluate / 部署模型类任务时，
+> 必须使用下方 "Val Seed 模型 Evaluate Pipeline" 章节的约束流程，与上面的 seed 挑选 pipeline
+> （数据生成管线 + Dataset Inspection）保持严格分离。**
+
+---
+
+## Val Seed 模型 Evaluate Pipeline — Claude 自动化执行规范
+
+本节是 **Claude 在 `cvpr2026Challenge-heldOutSeed-4-5/4` 分支自动执行 challenge_interface 评测**
+的规范。**与上面"数据生成管线"（rollout 阶段挑 seed）与"Dataset Inspection"（inspect_stat 阶段挑
+seed）严格分离 —— 两条 pipeline 不互相 import、不互相下沉逻辑，混用即视为退化。**
+
+读到此节即表示 Claude 接到了 "evaluate 模型 / 验证 val seed / 部署 modul / 跑一下
+perceptual-framesamp" 这类任务。严格按本节约束执行。
+
+### 强制约束（不可绕过）
+
+- **默认 = 1 task × 1 seed = `VideoUnmaskSwap` ep `0`**。无论用户措辞多模糊，Claude 接到
+  evaluate 类请求时**默认只跑这一条 episode**，绝不主动扩 scope。
+- **扩到 16 task × 1 seed（冒烟）必须先 AskUserQuestion 显式确认**。不要根据上下文揣测用户想跑
+  16 个，必须让用户回答 "你确认要 16 个 env 都跑 ep 0 吗？（默认只跑 VideoUnmaskSwap ep 0）"。
+- **永远不跑 16 task × 50 ep（800 episodes）或 16 task × 100 ep（1600 episodes）**。用户硬约束。
+  若用户主动要求全量：给出命令清单让他自己在 tmux/screen 跑，**Claude 不替执行**（见末尾段落）。
+- **不要再改 `challenge_interface/scripts/phase1_eval.py` 的 dataset 硬编码**：L210 + L232 已固定
+  为 `"val"`（本分支约定）。既不要恢复成 `"test"`，也不要加 `--dataset` CLI 参数。
+- **GPU 单卡共享**：deploy + sim 同 GPU 0（模型 ~12 GB Orbax 权重 + ManiSkill Vulkan sim ~10 GB，
+  46 GB 卡刚好）。若 OOM 回退 `SAPIEN_RENDER_DEVICE=cpu MUJOCO_GL=osmesa`，**不**主动切多卡。
+
+### 固定参数（不可变）
+
+| 项 | 值 |
+|---|---|
+| Server 仓库 | `/data/hongzefu/robomme_policy_learning` |
+| Client 仓库 | 本仓库 |
+| Checkpoint | `run/ckpt/perceptual-framesamp-modul/79999`（policy_learning 内相对路径） |
+| Transport | `websocket` |
+| Port | `8001` |
+| Dataset split | `val`（`phase1_eval.py` 与 `phase1_eval_single.py` 都已固定） |
+| GPU | `CUDA_VISIBLE_DEVICES=0` |
+| Default env / episode | `VideoUnmaskSwap` / `0` |
+
+### Step 1 — 启动 policy server（后台）
+
+Orbax 权重 ~12 GB，加载需 30 s – 2 min。**以端口 8001 LISTEN 为就绪标志**（deploy 进程加载
+JAX/CUDA 时 stdout buffered，日志可能长时间无新行，不要靠 grep 日志关键字判断 ready）：
+
+```bash
+cd /data/hongzefu/robomme_policy_learning
+CUDA_VISIBLE_DEVICES=0 nohup uv run python -m challenge_interface.scripts.deploy \
+  --transport websocket --host 0.0.0.0 --port 8001 \
+  --checkpoint-dir run/ckpt/perceptual-framesamp-modul/79999 \
+  > /tmp/deploy_modul_79999.log 2>&1 &
+echo $! > /tmp/deploy_modul_79999.pid
+
+until ss -lntp 2>/dev/null | grep -q ":8001\b"; do sleep 3; done
+```
+
+### Step 2 — 跑 evaluate
+
+**默认 1 × 1（无需用户确认，直接跑）**：
+
+```bash
+cd /data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed
+CUDA_VISIBLE_DEVICES=0 uv run python -m challenge_interface.scripts.phase1_eval_single \
+  --env VideoUnmaskSwap --episode 0 \
+  --transport websocket --host localhost --port 8001 \
+  --team_id single_modul_VideoUnmaskSwap_ep0
+```
+
+`phase1_eval_single.py` 是本流程专属 wrapper，复用 `phase1_eval.py:run_episode()` 跑单
+env × 单 episode，输出到 `challenge_results/<team_id>/videos/`。**不要再修改 `phase1_eval.py`
+去支持单 env 过滤** —— 那条路径属于 "16 × 1 冒烟"。
+
+**扩到 16 × 1（必须先 AskUserQuestion，否则不要跑）**：
+
+```bash
+cd /data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed
+CUDA_VISIBLE_DEVICES=0 uv run python -m challenge_interface.scripts.phase1_eval \
+  --transport websocket --host localhost --port 8001 \
+  --num_episodes 1 --action_space joint_angle \
+  --team_id smoke16_modul
+```
+
+### Step 3 — 关 server
+
+```bash
+kill $(cat /tmp/deploy_modul_79999.pid); sleep 3
+pkill -9 -P $(cat /tmp/deploy_modul_79999.pid) 2>/dev/null
+```
+
+### 端到端验证标准
+
+每次 evaluate 跑完检查：
+
+- `challenge_results/<team_id>/videos/` 下有对应 mp4，命名形如
+  `<env>_ep_<idx>_<outcome>_<task_goal>.mp4`。
+- 16 × 1 跑还要看 `progress.json`（含 16 env × 1 ep）与 `metrics.json`（per_task 16 项 + overall）。
+- `outcome` 字段允许集合：`{success, fail, failure, timeout}` —— **不能出现 `"error"`**。
+- 任何 `info["status"] == "error"` 都要追根因（按 "No silent fallbacks" 原则），不能忽略。
+
+### 用户索要全量 50 ep × 16 env —— 给清单不替执行
+
+用户主动要求全量（800 episodes）时，给以下命令清单 + 提示用户自己在 tmux/screen 内跑
+（预计 6–12 小时）：
+
+```bash
+# (1) 启 server（同 Step 1，team_id 后缀建议改 _full）
+# (2) 全量 client
+CUDA_VISIBLE_DEVICES=0 uv run python -m challenge_interface.scripts.phase1_eval \
+  --transport websocket --host localhost --port 8001 \
+  --num_episodes 50 --action_space joint_angle \
+  --team_id val_modul_79999_full
+# (3) 关 server（同 Step 3）
+```
+
+`phase1_eval.py` 支持 `progress.json` 断点续跑（基于 `_config_fingerprint`），中途 Ctrl-C 重跑同
+命令即可。**Claude 不替用户跑这条命令**。
+
 ---
 
 ## Headless / GPU Notes

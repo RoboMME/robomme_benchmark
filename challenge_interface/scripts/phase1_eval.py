@@ -207,7 +207,7 @@ def main() -> None:
         "max_steps": int(args.max_steps),
         "host": args.host,
         "port": int(args.port),
-        "dataset": "test",
+        "dataset": "val",
     }
     config_fp = _config_fingerprint(config)
 
@@ -229,7 +229,7 @@ def main() -> None:
     for env_id in task_list:
         env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
-            dataset="test",
+            dataset="val",
             action_space=args.action_space,
             max_steps=args.max_steps,
         )
