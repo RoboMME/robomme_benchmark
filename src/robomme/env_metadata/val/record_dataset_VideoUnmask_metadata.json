@@ -1,305 +1,65 @@
 {
   "env_id": "VideoUnmask",
-  "record_count": 50,
+  "record_count": 10,
   "records": [
     {
       "task": "VideoUnmask",
       "episode": 0,
-      "seed": 1060000,
+      "seed": 2100000,
       "difficulty": "easy"
     },
     {
       "task": "VideoUnmask",
       "episode": 1,
-      "seed": 1060100,
-      "difficulty": "easy"
+      "seed": 2100100,
+      "difficulty": "medium"
     },
     {
       "task": "VideoUnmask",
       "episode": 2,
-      "seed": 1060200,
-      "difficulty": "medium"
+      "seed": 2100200,
+      "difficulty": "hard"
     },
     {
       "task": "VideoUnmask",
       "episode": 3,
-      "seed": 1060300,
-      "difficulty": "hard"
+      "seed": 2100300,
+      "difficulty": "easy"
     },
     {
       "task": "VideoUnmask",
       "episode": 4,
-      "seed": 1060400,
-      "difficulty": "easy"
+      "seed": 2100400,
+      "difficulty": "medium"
     },
     {
       "task": "VideoUnmask",
       "episode": 5,
-      "seed": 1060500,
-      "difficulty": "easy"
+      "seed": 2100500,
+      "difficulty": "hard"
     },
     {
       "task": "VideoUnmask",
       "episode": 6,
-      "seed": 1060600,
-      "difficulty": "medium"
+      "seed": 2100600,
+      "difficulty": "easy"
     },
     {
       "task": "VideoUnmask",
       "episode": 7,
-      "seed": 1060700,
-      "difficulty": "hard"
+      "seed": 2100700,
+      "difficulty": "medium"
     },
     {
       "task": "VideoUnmask",
       "episode": 8,
-      "seed": 1060800,
-      "difficulty": "easy"
+      "seed": 2100801,
+      "difficulty": "hard"
     },
     {
       "task": "VideoUnmask",
       "episode": 9,
-      "seed": 1060900,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 10,
-      "seed": 1061000,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 11,
-      "seed": 1061100,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 12,
-      "seed": 1061200,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 13,
-      "seed": 1061300,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 14,
-      "seed": 1061400,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 15,
-      "seed": 1061500,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 16,
-      "seed": 1061600,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 17,
-      "seed": 1061700,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 18,
-      "seed": 1061800,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 19,
-      "seed": 1061900,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 20,
-      "seed": 1062000,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 21,
-      "seed": 1062100,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 22,
-      "seed": 1062200,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 23,
-      "seed": 1062300,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 24,
-      "seed": 1062400,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 25,
-      "seed": 1062500,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 26,
-      "seed": 1062600,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 27,
-      "seed": 1062700,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 28,
-      "seed": 1062800,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 29,
-      "seed": 1062900,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 30,
-      "seed": 1063000,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 31,
-      "seed": 1063100,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 32,
-      "seed": 1063200,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 33,
-      "seed": 1063300,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 34,
-      "seed": 1063400,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 35,
-      "seed": 1063500,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 36,
-      "seed": 1063600,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 37,
-      "seed": 1063700,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 38,
-      "seed": 1063800,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 39,
-      "seed": 1063900,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 40,
-      "seed": 1064000,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 41,
-      "seed": 1064100,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 42,
-      "seed": 1064200,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 43,
-      "seed": 1064300,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 44,
-      "seed": 1064400,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 45,
-      "seed": 1064500,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 46,
-      "seed": 1064600,
-      "difficulty": "medium"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 47,
-      "seed": 1064700,
-      "difficulty": "hard"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 48,
-      "seed": 1064800,
-      "difficulty": "easy"
-    },
-    {
-      "task": "VideoUnmask",
-      "episode": 49,
-      "seed": 1064900,
+      "seed": 2100900,
       "difficulty": "easy"
     }
   ]

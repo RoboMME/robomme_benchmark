@@ -1,305 +1,65 @@
 {
   "env_id": "PickXtimes",
-  "record_count": 50,
+  "record_count": 10,
   "records": [
     {
       "task": "PickXtimes",
       "episode": 0,
-      "seed": 1010000,
+      "seed": 1600000,
       "difficulty": "easy"
     },
     {
       "task": "PickXtimes",
       "episode": 1,
-      "seed": 1010100,
-      "difficulty": "easy"
+      "seed": 1600100,
+      "difficulty": "medium"
     },
     {
       "task": "PickXtimes",
       "episode": 2,
-      "seed": 1010200,
-      "difficulty": "medium"
+      "seed": 1600200,
+      "difficulty": "hard"
     },
     {
       "task": "PickXtimes",
       "episode": 3,
-      "seed": 1010300,
-      "difficulty": "hard"
+      "seed": 1600300,
+      "difficulty": "easy"
     },
     {
       "task": "PickXtimes",
       "episode": 4,
-      "seed": 1010400,
-      "difficulty": "easy"
+      "seed": 1600400,
+      "difficulty": "medium"
     },
     {
       "task": "PickXtimes",
       "episode": 5,
-      "seed": 1010501,
-      "difficulty": "easy"
+      "seed": 1600500,
+      "difficulty": "hard"
     },
     {
       "task": "PickXtimes",
       "episode": 6,
-      "seed": 1010600,
-      "difficulty": "medium"
+      "seed": 1600600,
+      "difficulty": "easy"
     },
     {
       "task": "PickXtimes",
       "episode": 7,
-      "seed": 1010700,
-      "difficulty": "hard"
+      "seed": 1600700,
+      "difficulty": "medium"
     },
     {
       "task": "PickXtimes",
       "episode": 8,
-      "seed": 1010800,
-      "difficulty": "easy"
+      "seed": 1600800,
+      "difficulty": "hard"
     },
     {
       "task": "PickXtimes",
       "episode": 9,
-      "seed": 1010900,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 10,
-      "seed": 1011000,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 11,
-      "seed": 1011100,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 12,
-      "seed": 1011200,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 13,
-      "seed": 1011300,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 14,
-      "seed": 1011400,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 15,
-      "seed": 1011500,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 16,
-      "seed": 1011600,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 17,
-      "seed": 1011700,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 18,
-      "seed": 1011800,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 19,
-      "seed": 1011900,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 20,
-      "seed": 1012000,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 21,
-      "seed": 1012100,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 22,
-      "seed": 1012200,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 23,
-      "seed": 1012300,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 24,
-      "seed": 1012400,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 25,
-      "seed": 1012500,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 26,
-      "seed": 1012600,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 27,
-      "seed": 1012700,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 28,
-      "seed": 1012800,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 29,
-      "seed": 1012900,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 30,
-      "seed": 1013000,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 31,
-      "seed": 1013100,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 32,
-      "seed": 1013200,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 33,
-      "seed": 1013300,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 34,
-      "seed": 1013400,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 35,
-      "seed": 1013500,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 36,
-      "seed": 1013600,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 37,
-      "seed": 1013700,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 38,
-      "seed": 1013800,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 39,
-      "seed": 1013900,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 40,
-      "seed": 1014000,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 41,
-      "seed": 1014100,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 42,
-      "seed": 1014200,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 43,
-      "seed": 1014300,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 44,
-      "seed": 1014400,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 45,
-      "seed": 1014500,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 46,
-      "seed": 1014600,
-      "difficulty": "medium"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 47,
-      "seed": 1014700,
-      "difficulty": "hard"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 48,
-      "seed": 1014800,
-      "difficulty": "easy"
-    },
-    {
-      "task": "PickXtimes",
-      "episode": 49,
-      "seed": 1014900,
+      "seed": 1600900,
       "difficulty": "easy"
     }
   ]

@@ -1,305 +1,65 @@
 {
   "env_id": "MoveCube",
-  "record_count": 50,
+  "record_count": 10,
   "records": [
     {
       "task": "MoveCube",
       "episode": 0,
-      "seed": 1140000,
+      "seed": 2900001,
       "difficulty": "easy"
     },
     {
       "task": "MoveCube",
       "episode": 1,
-      "seed": 1140100,
-      "difficulty": "easy"
+      "seed": 2900100,
+      "difficulty": "medium"
     },
     {
       "task": "MoveCube",
       "episode": 2,
-      "seed": 1140200,
-      "difficulty": "medium"
+      "seed": 2900200,
+      "difficulty": "hard"
     },
     {
       "task": "MoveCube",
       "episode": 3,
-      "seed": 1140300,
-      "difficulty": "hard"
+      "seed": 2900300,
+      "difficulty": "easy"
     },
     {
       "task": "MoveCube",
       "episode": 4,
-      "seed": 1140400,
-      "difficulty": "easy"
+      "seed": 2900400,
+      "difficulty": "medium"
     },
     {
       "task": "MoveCube",
       "episode": 5,
-      "seed": 1140501,
-      "difficulty": "easy"
+      "seed": 2900500,
+      "difficulty": "hard"
     },
     {
       "task": "MoveCube",
       "episode": 6,
-      "seed": 1140600,
-      "difficulty": "medium"
+      "seed": 2900600,
+      "difficulty": "easy"
     },
     {
       "task": "MoveCube",
       "episode": 7,
-      "seed": 1140700,
-      "difficulty": "hard"
+      "seed": 2900700,
+      "difficulty": "medium"
     },
     {
       "task": "MoveCube",
       "episode": 8,
-      "seed": 1140800,
-      "difficulty": "easy"
+      "seed": 2900800,
+      "difficulty": "hard"
     },
     {
       "task": "MoveCube",
       "episode": 9,
-      "seed": 1140900,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 10,
-      "seed": 1141000,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 11,
-      "seed": 1141101,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 12,
-      "seed": 1141200,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 13,
-      "seed": 1141300,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 14,
-      "seed": 1141400,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 15,
-      "seed": 1141500,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 16,
-      "seed": 1141600,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 17,
-      "seed": 1141700,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 18,
-      "seed": 1141800,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 19,
-      "seed": 1141900,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 20,
-      "seed": 1142000,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 21,
-      "seed": 1142100,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 22,
-      "seed": 1142200,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 23,
-      "seed": 1142300,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 24,
-      "seed": 1142400,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 25,
-      "seed": 1142500,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 26,
-      "seed": 1142600,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 27,
-      "seed": 1142700,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 28,
-      "seed": 1142800,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 29,
-      "seed": 1142900,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 30,
-      "seed": 1143000,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 31,
-      "seed": 1143100,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 32,
-      "seed": 1143200,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 33,
-      "seed": 1143300,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 34,
-      "seed": 1143400,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 35,
-      "seed": 1143500,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 36,
-      "seed": 1143600,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 37,
-      "seed": 1143700,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 38,
-      "seed": 1143802,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 39,
-      "seed": 1143900,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 40,
-      "seed": 1144000,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 41,
-      "seed": 1144101,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 42,
-      "seed": 1144200,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 43,
-      "seed": 1144300,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 44,
-      "seed": 1144400,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 45,
-      "seed": 1144500,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 46,
-      "seed": 1144600,
-      "difficulty": "medium"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 47,
-      "seed": 1144700,
-      "difficulty": "hard"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 48,
-      "seed": 1144800,
-      "difficulty": "easy"
-    },
-    {
-      "task": "MoveCube",
-      "episode": 49,
-      "seed": 1144901,
+      "seed": 2900900,
       "difficulty": "easy"
     }
   ]
