@@ -86,6 +86,11 @@ class DemonstrationWrapper(gym.Wrapper):
         # **kwargs for compatibility with old calls (e.g. save_video=..., action_space=...), no longer used
         # Max steps without demonstration: truncate episode if demonstration task not executed exceeding this
         self.max_steps_without_demonstration = max_steps_without_demonstration
+        # Total step cap (demo + policy combined). Derived from max_steps_without_demonstration
+        # to give an internal-only fallback when task progression stalls and the non-demo
+        # counter cannot advance. When reached, _step_batch sets truncated.
+        self.max_total_steps = max_steps_without_demonstration + 1500
+        self.total_steps = 0
         self.gui_render = gui_render
         self.include_maniskill_obs = include_maniskill_obs
         self.include_front_depth = include_front_depth
@@ -151,6 +156,8 @@ class DemonstrationWrapper(gym.Wrapper):
         self._failed_match_save_count = 0
         # Reset non-demonstration step counter to avoid cross-episode accumulation
         self.steps_without_demonstration = 0
+        # Reset total step counter (demo + policy combined) to avoid cross-episode accumulation
+        self.total_steps = 0
         # Start each episode with clean cache to avoid cross-episode pollution:
         # Do not allow "previous frame pose" from last game to affect current game's first frame unwrapping result.
         self._prev_ee_quat_wxyz = None
@@ -641,6 +648,11 @@ class DemonstrationWrapper(gym.Wrapper):
         filled_text, failed_match = self._compute_segmentation_and_fill_subgoal(obs)
         current_subgoal_segment = getattr(self.unwrapped, 'current_subgoal_segment', None)
         self.current_subgoal_segment_filled = filled_text if filled_text is not None else current_subgoal_segment
+
+        # ---------- Total step count (demo + policy combined): Truncate if exceeding limit ----------
+        self.total_steps += 1
+        if self.total_steps >= self.max_total_steps:
+            truncated = torch.tensor([True])
 
         # ---------- Non-demonstration step count: Truncate if exceeding limit ----------
         if self.current_task_demonstration == False:
