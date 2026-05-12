@@ -88,6 +88,49 @@ def _read_subgoal_online(env) -> Tuple[str, str]:
     return simple, grounded_str
 
 
+def _wrap_text_to_width(
+    text: str,
+    max_pixel_width: int,
+    font: int,
+    scale: float,
+    thickness: int,
+) -> List[str]:
+    """Greedy word-wrap a single line into multiple lines that each fit `max_pixel_width`.
+
+    Words longer than the available width are hard-split character-by-character
+    so they still fit (otherwise a single very long word would silently overflow).
+    """
+    if not text:
+        return [""]
+    words = text.split(" ")
+    lines: List[str] = []
+    cur = ""
+    for w in words:
+        candidate = w if not cur else cur + " " + w
+        (tw, _), _ = cv2.getTextSize(candidate, font, scale, thickness)
+        if tw <= max_pixel_width or not cur:
+            cur = candidate
+        else:
+            lines.append(cur)
+            cur = w
+        # If the single word alone is wider than the available width, hard-split it.
+        (cur_w, _), _ = cv2.getTextSize(cur, font, scale, thickness)
+        if cur_w > max_pixel_width:
+            piece = ""
+            for ch in cur:
+                trial = piece + ch
+                (trial_w, _), _ = cv2.getTextSize(trial, font, scale, thickness)
+                if trial_w > max_pixel_width and piece:
+                    lines.append(piece)
+                    piece = ch
+                else:
+                    piece = trial
+            cur = piece
+    if cur:
+        lines.append(cur)
+    return lines
+
+
 def _overlay_subgoal_online(frame: np.ndarray, simple: str, grounded: str) -> np.ndarray:
     """Draw the online-subgoal text rows at the top-left of `frame` (mutates in-place).
 
@@ -96,20 +139,33 @@ def _overlay_subgoal_online(frame: np.ndarray, simple: str, grounded: str) -> np
     draw on the simpler `front | wrist` replay frame instead of the dual-stream
     composite — the *content* (simple_subgoal_online, grounded_subgoal_online)
     matches the recorded HDF5 fields one-to-one.
+
+    Long lines are word-wrapped to fit the frame width so the text never falls
+    off the right edge (the replay frame is only ~384px wide and the subgoal
+    strings can easily exceed that).
     """
-    lines = [
-        "ONLINE:",
-        f"info.simple_subgoal_online: {simple}",
-        f"info.grounded_subgoal_online: {grounded}",
-    ]
     font = cv2.FONT_HERSHEY_SIMPLEX
-    scale = 0.5
+    scale = 0.45
     thickness = 1
     text_color = (0, 255, 0)
     bg_color = (0, 0, 0)
-    line_height = 18
-    x_left, y_top = 10, 22
-    for i, line in enumerate(lines):
+    line_height = 16
+    x_left, y_top = 10, 20
+
+    frame_w = frame.shape[1]
+    # Leave a small margin on both sides so the bg rectangle does not touch the border.
+    max_pixel_width = max(50, frame_w - 2 * x_left)
+
+    raw_lines = [
+        "ONLINE:",
+        f"simple_subgoal_online: {simple}",
+        f"grounded_subgoal_online: {grounded}",
+    ]
+    wrapped: List[str] = []
+    for raw in raw_lines:
+        wrapped.extend(_wrap_text_to_width(raw, max_pixel_width, font, scale, thickness))
+
+    for i, line in enumerate(wrapped):
         (tw, th), _ = cv2.getTextSize(line, font, scale, thickness)
         py = y_top + i * line_height
         cv2.rectangle(
