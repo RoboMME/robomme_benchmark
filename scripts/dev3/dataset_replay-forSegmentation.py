@@ -55,6 +55,54 @@ def _to_numpy(t) -> np.ndarray:
     return t.cpu().numpy() if isinstance(t, torch.Tensor) else np.asarray(t)
 
 
+def _per_frame_online_subgoal_from_demo(
+    env, expected_n: int,
+) -> Optional[List[Tuple[str, str]]]:
+    """Pull the per-frame online subgoal pair captured during the demo phase.
+
+    `DemonstrationWrapper.reset()` (DemonstrationWrapper.py:151-190) accumulates
+    a dense step batch covering the entire demo trajectory and stashes the
+    pre-flattening batch on `self.demonstration_data` before flattening info
+    for the public return. The batch's `info["simple_subgoal_online"]` /
+    `info["grounded_subgoal_online"]` are columnar lists with one entry per
+    rendered frame (one-to-one with `obs["front_rgb_list"]`).
+
+    These columnar fields are populated by `_augment_obs_and_info`
+    (DemonstrationWrapper.py:267-349) via `getattr(self, 'current_task_name',
+    ...)`. Through gym.Wrapper `__getattr__` forwarding this resolves to
+    `unwrapped.current_task_name` — the env-side per-step subgoal. In demo
+    phase, planner and online subgoals stay tightly in sync (the env's
+    `allow_subgoal_change_this_timestep` toggles True on every
+    `solve_complete_eval`), so this is the right per-frame signal to use for
+    the demo segment of the replay video.
+
+    Returns a list of length `expected_n` (one (simple, grounded) per frame),
+    or None if `demonstration_data` is unavailable or lengths mismatch.
+    """
+    demo_data = getattr(env, "demonstration_data", None)
+    if demo_data is None:
+        return None
+    try:
+        info_batch = demo_data[4]
+    except (TypeError, IndexError):
+        return None
+    if not isinstance(info_batch, dict):
+        return None
+    simple_list = info_batch.get("simple_subgoal_online")
+    grounded_list = info_batch.get("grounded_subgoal_online")
+    if not isinstance(simple_list, list) or not isinstance(grounded_list, list):
+        return None
+    if len(simple_list) != expected_n or len(grounded_list) != expected_n:
+        return None
+    return [
+        (
+            str(simple_list[i]) if simple_list[i] is not None else "None",
+            str(grounded_list[i]) if grounded_list[i] is not None else "None",
+        )
+        for i in range(expected_n)
+    ]
+
+
 def _read_subgoal_online(env) -> Tuple[str, str]:
     """Read the *online* subgoal pair from `env.unwrapped`, matching RecordWrapper.step().
 
@@ -201,14 +249,30 @@ def _extract_frames(
     obs: dict,
     is_video_demo_fn=None,
     subgoal_overlay: Optional[Tuple[str, str]] = None,
+    subgoal_overlay_per_frame: Optional[List[Tuple[str, str]]] = None,
 ) -> list[np.ndarray]:
+    """Extract per-frame composite RGB from a (batched) obs dict.
+
+    Overlay precedence: when `subgoal_overlay_per_frame` is provided and its
+    length matches the number of frames, each frame gets its own (simple,
+    grounded) pair; otherwise `subgoal_overlay` (single pair) is used for every
+    frame. This is needed because demo-phase obs returned by
+    DemonstrationWrapper.reset() contains many frames spanning multiple
+    subgoals, while step-phase obs only contains one frame per call.
+    """
     n = len(obs["front_rgb_list"])
+    use_per_frame = (
+        subgoal_overlay_per_frame is not None
+        and len(subgoal_overlay_per_frame) == n
+    )
     return [
         _frame_from_obs(
             obs["front_rgb_list"][i],
             obs["wrist_rgb_list"][i],
             is_video_demo=(is_video_demo_fn(i) if is_video_demo_fn else False),
-            subgoal_overlay=subgoal_overlay,
+            subgoal_overlay=(
+                subgoal_overlay_per_frame[i] if use_per_frame else subgoal_overlay
+            ),
         )
         for i in range(n)
     ]
@@ -400,14 +464,19 @@ def process_episode(
 
     env = _make_env(task_id, seed, difficulty, action_space_type)
     obs, _ = env.reset()
-    # reset 后立刻读 online subgoal —— sequential_task_check 在 reset/首个 evaluate
-    # 中也会刷新 current_task_name_online / current_subgoal_segment_online,
-    # 此处的读取与 RecordWrapper.step() 同一时点的读取语义一致。
-    subgoal_overlay = _read_subgoal_online(env)
+    # reset 阶段的 obs["front_rgb_list"] 是 demo phase 的多帧批次(可达 700+ 帧),
+    # 每一帧对应不同时刻的 subgoal。直接使用 _read_subgoal_online 只能拿到 reset
+    # 结束瞬间的单值,叠加到所有 demo 帧上会让"每帧都一样"。这里改读
+    # env.demonstration_data 中尚未被 _flatten_info_batch 截断的 per-frame online
+    # 列表(由 DemonstrationWrapper._augment_obs_and_info 在 demo 期间逐帧写入)。
+    reset_n = len(obs["front_rgb_list"])
+    per_frame_overlay = _per_frame_online_subgoal_from_demo(env, reset_n)
+    fallback_overlay = _read_subgoal_online(env)
     frames = _extract_frames(
         obs,
-        is_video_demo_fn=lambda i, n=len(obs["front_rgb_list"]): i < n - 1,
-        subgoal_overlay=subgoal_overlay,
+        is_video_demo_fn=lambda i, n=reset_n: i < n - 1,
+        subgoal_overlay=fallback_overlay,
+        subgoal_overlay_per_frame=per_frame_overlay,
     )
 
     outcome = "unknown"

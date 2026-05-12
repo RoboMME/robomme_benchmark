@@ -1102,7 +1102,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--episode-number",
         type=int,
-        default=10,
+        default=200,
         metavar="N",
         help=(
             "How many consecutive episodes to run starting from index 0: "
@@ -1113,7 +1113,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--difficulty",
         type=parse_difficulty_ratio,
-        default=[1, 1, 1],
+        default=[1, 2, 2],
         help=(
             "Episode difficulty ratio in easy:medium:hard order, such as "
             "'2:1:1' or '211'. Parsed into a list like [2, 1, 1]. "
@@ -1140,7 +1140,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=30,
+        default=20,
         help=(
             "Maximum number of worker processes used to parallelize episodes within "
             "the same env_id. Default: auto=episode count (no CPU cap)."
