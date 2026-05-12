@@ -1,0 +1,306 @@
+{
+  "env_id": "PickHighlight",
+  "record_count": 50,
+  "records": [
+    {
+      "task": "PickHighlight",
+      "episode": 0,
+      "seed": 2700000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 1,
+      "seed": 2700500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 2,
+      "seed": 2701001,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 3,
+      "seed": 2701500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 4,
+      "seed": 2702000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 5,
+      "seed": 2702500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 6,
+      "seed": 2703001,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 7,
+      "seed": 2703500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 8,
+      "seed": 2704000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 9,
+      "seed": 2704501,
+      "difficulty": "easy"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 10,
+      "seed": 2700100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 11,
+      "seed": 2700200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 12,
+      "seed": 2700600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 13,
+      "seed": 2701104,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 14,
+      "seed": 2701200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 15,
+      "seed": 2701601,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 16,
+      "seed": 2701700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 17,
+      "seed": 2702105,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 18,
+      "seed": 2702202,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 19,
+      "seed": 2702701,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 20,
+      "seed": 2703100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 21,
+      "seed": 2703201,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 22,
+      "seed": 2703603,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 23,
+      "seed": 2703700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 24,
+      "seed": 2704102,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 25,
+      "seed": 2704200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 26,
+      "seed": 2704600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 27,
+      "seed": 2705100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 28,
+      "seed": 2705202,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 29,
+      "seed": 2705602,
+      "difficulty": "medium"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 30,
+      "seed": 2700302,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 31,
+      "seed": 2700400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 32,
+      "seed": 2700800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 33,
+      "seed": 2701300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 34,
+      "seed": 2701800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 35,
+      "seed": 2701901,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 36,
+      "seed": 2702300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 37,
+      "seed": 2702400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 38,
+      "seed": 2702802,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 39,
+      "seed": 2702900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 40,
+      "seed": 2703300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 41,
+      "seed": 2703402,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 42,
+      "seed": 2703800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 43,
+      "seed": 2703900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 44,
+      "seed": 2704400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 45,
+      "seed": 2704800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 46,
+      "seed": 2704901,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 47,
+      "seed": 2705800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 48,
+      "seed": 2705900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "PickHighlight",
+      "episode": 49,
+      "seed": 2706400,
+      "difficulty": "hard"
+    }
+  ]
+}

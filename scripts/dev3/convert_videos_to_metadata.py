@@ -16,13 +16,16 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+DIFFICULTY_QUOTA = {"easy": 10, "medium": 20, "hard": 20}
+
 FILENAME_RE = re.compile(
     r"^(?P<task>[^_]+)_ep(?P<episode>\d+)_seed(?P<seed>\d+)"
     r"_(?:FailRecover\w+_)?(?P<difficulty>easy|medium|hard)_"
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_VIDEOS_DIR = REPO_ROOT / "runs/replay_videos/videos-success"
+#DEFAULT_VIDEOS_DIR = REPO_ROOT / "runs/replay_videos/videos-success"
+DEFAULT_VIDEOS_DIR="/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/videos-success/selected"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "runs/replay_videos/heldout_metadata"
 
 
@@ -69,26 +72,70 @@ def parse_video_files(videos_dir: Path) -> dict[str, list[dict]]:
     return task_records
 
 
-def build_metadata(task: str, raw_records: list[dict]) -> dict:
-    """Sort by original_episode, renumber 0‥N-1, return val-format dict."""
-    sorted_records = sorted(raw_records, key=lambda r: r["original_episode"])
+def build_metadata(task: str, raw_records: list[dict]) -> tuple[dict, list[dict]]:
+    """Per-difficulty sort + truncate, then assign global episode indices.
+
+    Each difficulty group is sorted by original_episode independently.
+    Episodes are truncated to DIFFICULTY_QUOTA before merging.
+    Final episode indices are 0..N-1 across easy→medium→hard order.
+
+    Returns (metadata, mapping) where mapping is a list of
+    {"new_episode", "original_episode", "seed", "difficulty"} rows in the
+    same order as metadata["records"], for printing the new→original
+    episode correspondence.
+    """
+    by_difficulty: dict[str, list[dict]] = defaultdict(list)
+    for r in raw_records:
+        by_difficulty[r["difficulty"]].append(r)
 
     records = []
-    for new_ep, r in enumerate(sorted_records):
-        records.append(
-            {
-                "task": task,
-                "episode": new_ep,
-                "seed": r["seed"],
-                "difficulty": r["difficulty"],
-            }
-        )
+    mapping: list[dict] = []
+    for difficulty in ("easy", "medium", "hard"):
+        quota = DIFFICULTY_QUOTA[difficulty]
+        group = sorted(by_difficulty.get(difficulty, []), key=lambda r: r["original_episode"])
+        if len(group) < quota:
+            print(
+                f"[WARN] {task}/{difficulty}: only {len(group)} episodes available (quota {quota})",
+                file=sys.stderr,
+            )
+        for r in group[:quota]:
+            new_ep = len(records)
+            records.append(
+                {
+                    "task": task,
+                    "episode": new_ep,
+                    "seed": r["seed"],
+                    "difficulty": r["difficulty"],
+                }
+            )
+            mapping.append(
+                {
+                    "new_episode": new_ep,
+                    "original_episode": r["original_episode"],
+                    "seed": r["seed"],
+                    "difficulty": r["difficulty"],
+                }
+            )
 
-    return {
+    metadata = {
         "env_id": task,
         "record_count": len(records),
         "records": records,
     }
+    return metadata, mapping
+
+
+def print_mapping(task: str, mapping: list[dict]) -> None:
+    """Print the new_episode ← original_episode correspondence as a table."""
+    header = f"  {'new_ep':>6}  {'orig_ep':>7}  {'seed':>10}  difficulty"
+    print(f"  --- {task}: new_episode ← video filename ep ---")
+    print(header)
+    print(f"  {'-' * 6}  {'-' * 7}  {'-' * 10}  {'-' * 10}")
+    for row in mapping:
+        print(
+            f"  {row['new_episode']:>6}  {row['original_episode']:>7}  "
+            f"{row['seed']:>10}  {row['difficulty']}"
+        )
 
 
 def main():
@@ -105,18 +152,16 @@ def main():
 
     for task in sorted(task_records):
         raw = task_records[task]
-        metadata = build_metadata(task, raw)
+        metadata, mapping = build_metadata(task, raw)
 
         out_path = args.output_dir / f"record_dataset_{task}_metadata.json"
         out_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
 
-        orig_eps = sorted(r["original_episode"] for r in raw)
-        new_eps = list(range(len(raw)))
-        gap = orig_eps != new_eps
-        gap_note = f"  (gaps filled: {orig_eps} → {new_eps})" if gap else ""
-        print(f"[OK] {task}: {len(raw)} episodes → {out_path.name}{gap_note}")
+        print(f"[OK] {task}: {len(mapping)} episodes → {out_path.name}")
+        print_mapping(task, mapping)
+        print()
 
-    print(f"\nWrote {len(task_records)} metadata file(s) to {args.output_dir}")
+    print(f"Wrote {len(task_records)} metadata file(s) to {args.output_dir}")
 
 
 if __name__ == "__main__":

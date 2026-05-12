@@ -1,0 +1,306 @@
+{
+  "env_id": "MoveCube",
+  "record_count": 50,
+  "records": [
+    {
+      "task": "MoveCube",
+      "episode": 0,
+      "seed": 2900001,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 1,
+      "seed": 2900500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 2,
+      "seed": 2901000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 3,
+      "seed": 2901500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 4,
+      "seed": 2902500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 5,
+      "seed": 2903000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 6,
+      "seed": 2903500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 7,
+      "seed": 2904000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 8,
+      "seed": 2904500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 9,
+      "seed": 2905000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 10,
+      "seed": 2900100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 11,
+      "seed": 2900200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 12,
+      "seed": 2900600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 13,
+      "seed": 2900700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 14,
+      "seed": 2901100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 15,
+      "seed": 2901200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 16,
+      "seed": 2901600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 17,
+      "seed": 2901700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 18,
+      "seed": 2902100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 19,
+      "seed": 2902200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 20,
+      "seed": 2902600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 21,
+      "seed": 2902701,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 22,
+      "seed": 2903100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 23,
+      "seed": 2903200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 24,
+      "seed": 2903600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 25,
+      "seed": 2904100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 26,
+      "seed": 2904200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 27,
+      "seed": 2904600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 28,
+      "seed": 2904700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 29,
+      "seed": 2905200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 30,
+      "seed": 2900300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 31,
+      "seed": 2900400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 32,
+      "seed": 2900800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 33,
+      "seed": 2900900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 34,
+      "seed": 2901300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 35,
+      "seed": 2901400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 36,
+      "seed": 2901800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 37,
+      "seed": 2901900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 38,
+      "seed": 2902300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 39,
+      "seed": 2902400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 40,
+      "seed": 2902800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 41,
+      "seed": 2902900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 42,
+      "seed": 2903300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 43,
+      "seed": 2903400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 44,
+      "seed": 2903800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 45,
+      "seed": 2903900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 46,
+      "seed": 2904400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 47,
+      "seed": 2904800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 48,
+      "seed": 2904900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "MoveCube",
+      "episode": 49,
+      "seed": 2905400,
+      "difficulty": "hard"
+    }
+  ]
+}

@@ -1,0 +1,306 @@
+{
+  "env_id": "VideoPlaceButton",
+  "record_count": 50,
+  "records": [
+    {
+      "task": "VideoPlaceButton",
+      "episode": 0,
+      "seed": 2500000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 1,
+      "seed": 2500500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 2,
+      "seed": 2501000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 3,
+      "seed": 2501500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 4,
+      "seed": 2502000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 5,
+      "seed": 2502500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 6,
+      "seed": 2503000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 7,
+      "seed": 2503500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 8,
+      "seed": 2504000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 9,
+      "seed": 2504500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 10,
+      "seed": 2500100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 11,
+      "seed": 2500200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 12,
+      "seed": 2500701,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 13,
+      "seed": 2501100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 14,
+      "seed": 2501200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 15,
+      "seed": 2501602,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 16,
+      "seed": 2502100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 17,
+      "seed": 2502200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 18,
+      "seed": 2502600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 19,
+      "seed": 2502700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 20,
+      "seed": 2503700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 21,
+      "seed": 2504100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 22,
+      "seed": 2504200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 23,
+      "seed": 2504700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 24,
+      "seed": 2505100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 25,
+      "seed": 2506600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 26,
+      "seed": 2507200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 27,
+      "seed": 2507600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 28,
+      "seed": 2508100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 29,
+      "seed": 2508200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 30,
+      "seed": 2500300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 31,
+      "seed": 2500801,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 32,
+      "seed": 2501400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 33,
+      "seed": 2502300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 34,
+      "seed": 2502400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 35,
+      "seed": 2502900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 36,
+      "seed": 2503300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 37,
+      "seed": 2503900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 38,
+      "seed": 2504300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 39,
+      "seed": 2504400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 40,
+      "seed": 2504800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 41,
+      "seed": 2504900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 42,
+      "seed": 2505800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 43,
+      "seed": 2505900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 44,
+      "seed": 2506300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 45,
+      "seed": 2506800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 46,
+      "seed": 2506900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 47,
+      "seed": 2507300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 48,
+      "seed": 2507400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoPlaceButton",
+      "episode": 49,
+      "seed": 2508300,
+      "difficulty": "hard"
+    }
+  ]
+}

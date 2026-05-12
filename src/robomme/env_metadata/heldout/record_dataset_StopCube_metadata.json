@@ -1,0 +1,306 @@
+{
+  "env_id": "StopCube",
+  "record_count": 50,
+  "records": [
+    {
+      "task": "StopCube",
+      "episode": 0,
+      "seed": 1700000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 1,
+      "seed": 1700500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 2,
+      "seed": 1701000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 3,
+      "seed": 1701500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 4,
+      "seed": 1702000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 5,
+      "seed": 1702500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 6,
+      "seed": 1703000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 7,
+      "seed": 1703501,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 8,
+      "seed": 1704000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 9,
+      "seed": 1704500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "StopCube",
+      "episode": 10,
+      "seed": 1700100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 11,
+      "seed": 1700200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 12,
+      "seed": 1700600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 13,
+      "seed": 1700700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 14,
+      "seed": 1701100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 15,
+      "seed": 1701200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 16,
+      "seed": 1701600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 17,
+      "seed": 1701700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 18,
+      "seed": 1702100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 19,
+      "seed": 1702200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 20,
+      "seed": 1702700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 21,
+      "seed": 1703100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 22,
+      "seed": 1703600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 23,
+      "seed": 1703700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 24,
+      "seed": 1704100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 25,
+      "seed": 1704200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 26,
+      "seed": 1704600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 27,
+      "seed": 1704700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 28,
+      "seed": 1705100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 29,
+      "seed": 1705200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "StopCube",
+      "episode": 30,
+      "seed": 1700300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 31,
+      "seed": 1700800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 32,
+      "seed": 1700900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 33,
+      "seed": 1701300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 34,
+      "seed": 1701400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 35,
+      "seed": 1701800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 36,
+      "seed": 1701900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 37,
+      "seed": 1702301,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 38,
+      "seed": 1702400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 39,
+      "seed": 1702801,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 40,
+      "seed": 1702900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 41,
+      "seed": 1703400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 42,
+      "seed": 1703800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 43,
+      "seed": 1703900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 44,
+      "seed": 1704300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 45,
+      "seed": 1704400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 46,
+      "seed": 1704800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 47,
+      "seed": 1704900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 48,
+      "seed": 1705300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "StopCube",
+      "episode": 49,
+      "seed": 1705800,
+      "difficulty": "hard"
+    }
+  ]
+}

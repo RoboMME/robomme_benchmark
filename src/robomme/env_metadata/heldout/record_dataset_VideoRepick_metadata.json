@@ -1,0 +1,306 @@
+{
+  "env_id": "VideoRepick",
+  "record_count": 50,
+  "records": [
+    {
+      "task": "VideoRepick",
+      "episode": 0,
+      "seed": 2400000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 1,
+      "seed": 2400500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 2,
+      "seed": 2401000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 3,
+      "seed": 2402000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 4,
+      "seed": 2402500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 5,
+      "seed": 2403000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 6,
+      "seed": 2403500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 7,
+      "seed": 2404000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 8,
+      "seed": 2405500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 9,
+      "seed": 2406000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 10,
+      "seed": 2400100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 11,
+      "seed": 2400200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 12,
+      "seed": 2400600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 13,
+      "seed": 2400701,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 14,
+      "seed": 2401100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 15,
+      "seed": 2401200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 16,
+      "seed": 2401600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 17,
+      "seed": 2401700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 18,
+      "seed": 2402100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 19,
+      "seed": 2402200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 20,
+      "seed": 2402700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 21,
+      "seed": 2403100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 22,
+      "seed": 2403600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 23,
+      "seed": 2404100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 24,
+      "seed": 2404200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 25,
+      "seed": 2404600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 26,
+      "seed": 2404700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 27,
+      "seed": 2405100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 28,
+      "seed": 2405600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 29,
+      "seed": 2405700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 30,
+      "seed": 2400300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 31,
+      "seed": 2400400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 32,
+      "seed": 2400800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 33,
+      "seed": 2400900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 34,
+      "seed": 2401300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 35,
+      "seed": 2401400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 36,
+      "seed": 2401900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 37,
+      "seed": 2402900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 38,
+      "seed": 2403400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 39,
+      "seed": 2403800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 40,
+      "seed": 2403900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 41,
+      "seed": 2404300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 42,
+      "seed": 2404400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 43,
+      "seed": 2404800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 44,
+      "seed": 2404900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 45,
+      "seed": 2405300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 46,
+      "seed": 2405400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 47,
+      "seed": 2405901,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 48,
+      "seed": 2406300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoRepick",
+      "episode": 49,
+      "seed": 2406401,
+      "difficulty": "hard"
+    }
+  ]
+}

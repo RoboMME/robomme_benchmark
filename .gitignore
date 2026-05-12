@@ -221,5 +221,9 @@ tmp/
 # Distribution inspect videos (large MP4 files)
 distribution_inspect_0509/videos-success/
 
+# Held-out seed success replay videos
+videos-success/
+videos-success.tar.gz
+
 # Challenge evaluation results (videos, metrics, local runs)
 challenge_results/

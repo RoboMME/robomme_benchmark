@@ -1,0 +1,306 @@
+{
+  "env_id": "SwingXtimes",
+  "record_count": 50,
+  "records": [
+    {
+      "task": "SwingXtimes",
+      "episode": 0,
+      "seed": 1800000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 1,
+      "seed": 1800500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 2,
+      "seed": 1801000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 3,
+      "seed": 1801500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 4,
+      "seed": 1802000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 5,
+      "seed": 1803000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 6,
+      "seed": 1803500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 7,
+      "seed": 1804000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 8,
+      "seed": 1804500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 9,
+      "seed": 1805000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 10,
+      "seed": 1800100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 11,
+      "seed": 1800200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 12,
+      "seed": 1800700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 13,
+      "seed": 1801100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 14,
+      "seed": 1801200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 15,
+      "seed": 1801600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 16,
+      "seed": 1801700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 17,
+      "seed": 1802100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 18,
+      "seed": 1802600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 19,
+      "seed": 1802700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 20,
+      "seed": 1803700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 21,
+      "seed": 1804100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 22,
+      "seed": 1804200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 23,
+      "seed": 1804600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 24,
+      "seed": 1804700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 25,
+      "seed": 1805100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 26,
+      "seed": 1805200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 27,
+      "seed": 1805700,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 28,
+      "seed": 1806100,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 29,
+      "seed": 1806200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 30,
+      "seed": 1800300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 31,
+      "seed": 1800800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 32,
+      "seed": 1801400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 33,
+      "seed": 1801800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 34,
+      "seed": 1801900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 35,
+      "seed": 1802300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 36,
+      "seed": 1802900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 37,
+      "seed": 1803400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 38,
+      "seed": 1803800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 39,
+      "seed": 1804300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 40,
+      "seed": 1804400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 41,
+      "seed": 1804800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 42,
+      "seed": 1804900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 43,
+      "seed": 1805300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 44,
+      "seed": 1806300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 45,
+      "seed": 1806400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 46,
+      "seed": 1806800,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 47,
+      "seed": 1807300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 48,
+      "seed": 1807400,
+      "difficulty": "hard"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 49,
+      "seed": 1807900,
+      "difficulty": "hard"
+    }
+  ]
+}
