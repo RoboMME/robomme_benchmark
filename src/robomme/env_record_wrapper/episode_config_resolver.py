@@ -120,9 +120,6 @@ class BenchmarkEnvBuilder:
         )
         self.render_mode = "human" if gui_render else "rgb_array"
         self.max_steps_without_demonstration = max_steps+2
-        # Hard-coded total step cap (demo + policy combined) enforced inside DemonstrationWrapper.
-        # When reached, _step_batch sets truncated -> info["status"]="timeout".
-        self.max_total_steps = 4096
 
         metadata_path = self._resolve_metadata_path()
         self.metadata_index = load_episode_metadata(metadata_path)
@@ -227,7 +224,6 @@ class BenchmarkEnvBuilder:
             include_available_multi_choices=include_available_multi_choices,
             include_front_camera_intrinsic=include_front_camera_intrinsic_effective,
             include_wrist_camera_intrinsic=include_wrist_camera_intrinsic,
-            max_total_steps=self.max_total_steps,
         )
         if self.action_space == "joint_angle":
             pass

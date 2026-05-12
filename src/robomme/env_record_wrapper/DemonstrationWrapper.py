@@ -82,13 +82,14 @@ class DemonstrationWrapper(gym.Wrapper):
                  include_available_multi_choices=False,
                  include_front_camera_intrinsic=False,
                  include_wrist_camera_intrinsic=False,
-                 max_total_steps=None,
                  **kwargs):
         # **kwargs for compatibility with old calls (e.g. save_video=..., action_space=...), no longer used
         # Max steps without demonstration: truncate episode if demonstration task not executed exceeding this
         self.max_steps_without_demonstration = max_steps_without_demonstration
-        # Total step cap (demo + policy combined). None disables. When reached, _step_batch sets truncated.
-        self.max_total_steps = max_total_steps
+        # Total step cap (demo + policy combined). Derived from max_steps_without_demonstration
+        # to give an internal-only fallback when task progression stalls and the non-demo
+        # counter cannot advance. When reached, _step_batch sets truncated.
+        self.max_total_steps = max_steps_without_demonstration + 1500
         self.total_steps = 0
         self.gui_render = gui_render
         self.include_maniskill_obs = include_maniskill_obs
@@ -650,7 +651,7 @@ class DemonstrationWrapper(gym.Wrapper):
 
         # ---------- Total step count (demo + policy combined): Truncate if exceeding limit ----------
         self.total_steps += 1
-        if self.max_total_steps is not None and self.total_steps >= self.max_total_steps:
+        if self.total_steps >= self.max_total_steps:
             truncated = torch.tensor([True])
 
         # ---------- Non-demonstration step count: Truncate if exceeding limit ----------
