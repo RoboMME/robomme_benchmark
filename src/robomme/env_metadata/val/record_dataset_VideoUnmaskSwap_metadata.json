@@ -1,0 +1,306 @@
+{
+  "env_id": "VideoUnmaskSwap",
+  "record_count": 50,
+  "records": [
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 0,
+      "seed": 1050000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 1,
+      "seed": 1050100,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 2,
+      "seed": 1050200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 3,
+      "seed": 1050300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 4,
+      "seed": 1050400,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 5,
+      "seed": 1050501,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 6,
+      "seed": 1050600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 7,
+      "seed": 1050700,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 8,
+      "seed": 1050800,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 9,
+      "seed": 1050900,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 10,
+      "seed": 1051000,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 11,
+      "seed": 1051100,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 12,
+      "seed": 1051200,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 13,
+      "seed": 1051300,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 14,
+      "seed": 1051400,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 15,
+      "seed": 1051500,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 16,
+      "seed": 1051600,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 17,
+      "seed": 1051700,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 18,
+      "seed": 1051800,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 19,
+      "seed": 1051900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 20,
+      "seed": 1052000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 21,
+      "seed": 1052100,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 22,
+      "seed": 1052200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 23,
+      "seed": 1052300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 24,
+      "seed": 1052400,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 25,
+      "seed": 1052500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 26,
+      "seed": 1052600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 27,
+      "seed": 1052700,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 28,
+      "seed": 1052800,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 29,
+      "seed": 1052900,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 30,
+      "seed": 1053000,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 31,
+      "seed": 1053100,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 32,
+      "seed": 1053200,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 33,
+      "seed": 1053300,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 34,
+      "seed": 1053400,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 35,
+      "seed": 1053500,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 36,
+      "seed": 1053600,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 37,
+      "seed": 1053700,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 38,
+      "seed": 1053800,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 39,
+      "seed": 1053900,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 40,
+      "seed": 1054000,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 41,
+      "seed": 1054100,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 42,
+      "seed": 1054200,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 43,
+      "seed": 1054300,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 44,
+      "seed": 1054400,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 45,
+      "seed": 1054500,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 46,
+      "seed": 1054600,
+      "difficulty": "medium"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 47,
+      "seed": 1054700,
+      "difficulty": "hard"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 48,
+      "seed": 1054800,
+      "difficulty": "easy"
+    },
+    {
+      "task": "VideoUnmaskSwap",
+      "episode": 49,
+      "seed": 1054900,
+      "difficulty": "easy"
+    }
+  ]
+}
