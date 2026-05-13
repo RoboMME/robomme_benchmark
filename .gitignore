@@ -223,6 +223,7 @@ distribution_inspect_0509/videos-success/
 
 # Held-out seed success replay videos
 videos-success/
+videos-success-copy/
 videos-success.tar.gz
 
 # Challenge evaluation results (videos, metrics, local runs)
