@@ -210,3 +210,7 @@ __marimo__/
 .agent/
 .cursor/
 .agents/
+
+# Replay videos
+runs/replay_videos/
+*.mp4
