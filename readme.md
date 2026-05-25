@@ -7,6 +7,7 @@
 
 ## 📢 Announcements
 
+[05/2026] 🎉 RoboMME has been selected for ICML 2026 Oral presentation (Top 0.7%)!   
 [04/2026] 🎉 RoboMME has been accepted to ICML 2026 as a Spotlight (Top 2.2%)!  
 [03/2026] 🚀 RoboMME Challenge is live at CVPR 2026! 🤖 Check our [website](https://robomme.github.io/challenge.html) and the [`challenge_interface`](challenge_interface) directory for all the details. Let’s build stronger memory-augmented robotic generalists together! 💪  
 [03/2026] We added Docker support for installation.  
