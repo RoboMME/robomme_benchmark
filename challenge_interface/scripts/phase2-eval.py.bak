@@ -14,7 +14,6 @@ import cv2
 import numpy as np
 import argparse
 from robomme.env_record_wrapper import BenchmarkEnvBuilder
-from robomme.robomme_env.utils.SceneGenerationError import SceneGenerationError
 from challenge_interface.client import PolicyClient
 from challenge_interface.client_http import PolicyHTTPClient
 
@@ -253,30 +252,15 @@ def main() -> None:
             progress["updated_at"] = time.time()
             _save_json_atomic(progress_path, progress)
 
-            try:
-                outcome, video_frames, task_goal = run_episode(
-                    client,
-                    env_builder,
-                    episode_idx,
-                    env_id,
-                    use_depth=args.use_depth,
-                    use_camera_params=args.use_camera_params,
-                    action_space=args.action_space,
-                )
-            except SceneGenerationError as exc:
-                # Benchmark scene generation failed deterministically for this
-                # episode's seed (region too crowded / constraints too tight).
-                # Record as a distinct outcome and continue so the eval finishes.
-                print(f"[SCENE_ERROR] {env_id} episode {episode_idx}: {exc}")
-                completed_for_task[ep_key] = {
-                    "outcome": "scene_error",
-                    "video_path": "",
-                    "error": str(exc),
-                }
-                progress["current"]["outcome"] = "scene_error"
-                progress["updated_at"] = time.time()
-                _save_json_atomic(progress_path, progress)
-                continue
+            outcome, video_frames, task_goal = run_episode(
+                client,
+                env_builder,
+                episode_idx,
+                env_id,
+                use_depth=args.use_depth,
+                use_camera_params=args.use_camera_params,
+                action_space=args.action_space,
+            )
 
             video_path = os.path.join(
                 video_output_dir,

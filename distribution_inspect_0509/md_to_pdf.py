@@ -11,7 +11,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from PIL import Image as PILImage
 
-BASE_DIR = "/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/distribution_inspect_0509"
+BASE_DIR = "/data/hongzefu/robomme_benchmark-heldOutSeed/distribution_inspect_0509"
 MD_FILE  = os.path.join(BASE_DIR, "illustrate.md")
 OUT_FILE = os.path.join(BASE_DIR, "illustrate.pdf")
 

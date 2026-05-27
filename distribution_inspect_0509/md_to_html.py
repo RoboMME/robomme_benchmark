@@ -4,7 +4,7 @@ Images are downsampled to MAX_PX wide before base64-embedding to keep file size 
 import re, os, base64, io
 from PIL import Image as PILImage
 
-BASE_DIR = "/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/distribution_inspect_0509"
+BASE_DIR = "/data/hongzefu/robomme_benchmark-heldOutSeed/distribution_inspect_0509"
 MD_FILE  = os.path.join(BASE_DIR, "illustrate.md")
 OUT_HTML = os.path.join(BASE_DIR, "illustrate.html")
 

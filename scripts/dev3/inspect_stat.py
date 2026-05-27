@@ -49,7 +49,7 @@ import permanance_inspect as permanance_inspect_module
 import reference_inspect as reference_inspect_module
 import imitation_inspect as imitation_inspect_module
 
-DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
+DEFAULT_BASE_DIR = Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos")
 DEFAULT_MAX_PER_DIFFICULTY = 1000
 
 # ---------------------------------------------------------------------------

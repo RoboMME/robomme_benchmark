@@ -25,7 +25,7 @@ FILENAME_RE = re.compile(
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 #DEFAULT_VIDEOS_DIR = REPO_ROOT / "runs/replay_videos/videos-success"
-DEFAULT_VIDEOS_DIR="/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/videos-success/selected"
+DEFAULT_VIDEOS_DIR="/data/hongzefu/robomme_benchmark-heldOutSeed/videos-success/selected"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "runs/replay_videos/heldout_metadata"
 
 

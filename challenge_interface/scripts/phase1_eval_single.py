@@ -1,8 +1,8 @@
-"""Single env x single episode evaluator (val split).
+"""Single env x single episode evaluator (heldout split).
 
 Wrapper around `challenge_interface.scripts.phase1_eval` for the
-Claude-driven "Val Seed Model Evaluate Pipeline" (see CLAUDE.md). Defaults to
-VideoUnmaskSwap ep 0; a full 16-env smoke is phase1_eval.py instead.
+Claude-driven "Heldout Seed Model Evaluate Pipeline (Phase 2)" (see CLAUDE.md).
+Defaults to VideoUnmaskSwap ep 0; a full 16-env smoke is phase2-eval.py instead.
 
 The non-demo step cap lives in DemonstrationWrapper and is controlled via
 `--max_steps` (only policy-phase env.step calls are counted; the reset-time
@@ -35,12 +35,12 @@ from challenge_interface.scripts.phase1_eval import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Evaluate a single (env, episode) pair on the val split."
+        description="Evaluate a single (env, episode) pair on the heldout split."
     )
     parser.add_argument("--env", type=str, default="VideoUnmaskSwap",
                         help="env_id (default: %(default)s).")
     parser.add_argument("--episode", type=int, default=0,
-                        help="Episode index in the val metadata (default: %(default)s).")
+                        help="Episode index in the heldout metadata (default: %(default)s).")
     parser.add_argument("--transport", type=str, choices=("websocket", "http"),
                         default="websocket")
     parser.add_argument("--host", type=str, default="localhost")
@@ -184,7 +184,7 @@ def main() -> None:
 
     env_builder = BenchmarkEnvBuilder(
         env_id=args.env,
-        dataset="val",
+        dataset="heldout",
         action_space=args.action_space,
         max_steps=args.max_steps,
     )

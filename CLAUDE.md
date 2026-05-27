@@ -162,7 +162,7 @@ from robomme.env_record_wrapper import BenchmarkEnvBuilder
 
 builder = BenchmarkEnvBuilder(
     env_id="PickXtimes",          # task name
-    dataset="test",                # "train" | "val" | "test"
+    dataset="test",                # "train" | "val" | "test" | "heldout"
     action_space="joint_angle",    # "joint_angle" | "ee_pose" | "waypoint" | "multi_choice"
     gui_render=False,
 )
@@ -185,7 +185,7 @@ obs, reward, terminated, truncated, info = env.step(action)
 | Reference  | Object memory     | PickHighlight, VideoRepick, VideoPlaceButton, VideoPlaceOrder|
 | Imitation  | Procedural memory | MoveCube, InsertPeg, PatternLock, RouteStick                |
 
-Dataset splits: `train` (100 ep/task), `val` (50 ep/task, fixed seeds), `test` (50 ep/task, held-out).
+Dataset splits: `train` (100 ep/task), `val` (50 ep/task, fixed seeds), `test` (50 ep/task, held-out), `heldout` (50 ep/task, Phase 2 evaluate split).
 
 ---
 
@@ -208,8 +208,8 @@ doc 内含：4 个 suite 模块对外契约、import 禁区、`visible_objects.j
 HDF5 setup 字段约束、xy / distribution 渲染分工、改动落点决策矩阵、端到端 e2e 验证规约
 （rollout × 受影响 env × 全难度 → inspect_stat byte-diff）。
 
-**与下方 "Val Seed 模型 Evaluate Pipeline" 严格分离**：dev3 是 seed 挑选阶段（生成 + 巡检），
-evaluate 是 seed 验证阶段（部署模型 + phase1_eval），两边不互相 import / 不下沉对方逻辑。
+**与下方 "Heldout Seed 模型 Evaluate Pipeline（Phase 2）" 严格分离**：dev3 是 seed 挑选阶段（生成 + 巡检），
+evaluate 是 seed 验证阶段（部署模型 + phase2-eval），两边不互相 import / 不下沉对方逻辑。
 
 
 ---
@@ -229,18 +229,18 @@ uv run python -m challenge_interface.scripts.phase1_eval --port 8001
 Participants implement `Policy.infer()` and `Policy.reset()` in `challenge_interface/policy.py`.
 
 > 本章节是面向 challenge 参赛者的通用说明。**Claude 在本仓库内执行 evaluate / 部署模型类任务时，
-> 必须使用下方 "Val Seed 模型 Evaluate Pipeline" 章节的约束流程，与上面的 seed 挑选 pipeline
+> 必须使用下方 "Heldout Seed 模型 Evaluate Pipeline（Phase 2）" 章节的约束流程，与上面的 seed 挑选 pipeline
 > （数据生成管线 + Dataset Inspection）保持严格分离。**
 
 ---
 
-## Val Seed 模型 Evaluate Pipeline — Claude 自动化执行规范
+## Heldout Seed 模型 Evaluate Pipeline（Phase 2）— Claude 自动化执行规范
 
 本节是 **Claude 在 `cvpr2026Challenge-heldOutSeed-4-5/4` 分支自动执行 challenge_interface 评测**
 的规范。**与上面"数据生成管线"（rollout 阶段挑 seed）与"Dataset Inspection"（inspect_stat 阶段挑
 seed）严格分离 —— 两条 pipeline 不互相 import、不互相下沉逻辑，混用即视为退化。**
 
-读到此节即表示 Claude 接到了 "evaluate 模型 / 验证 val seed / 部署 modul / 跑一下
+读到此节即表示 Claude 接到了 "evaluate 模型 / 验证 heldout seed / 跑 phase 2 / 部署 modul / 跑一下
 perceptual-framesamp" 这类任务。严格按本节约束执行。
 
 ### 强制约束（不可绕过）
@@ -251,8 +251,9 @@ perceptual-framesamp" 这类任务。严格按本节约束执行。
   16 个，必须让用户回答 "你确认要 16 个 env 都跑 ep 0 吗？（默认只跑 VideoUnmaskSwap ep 0）"。
 - **永远不跑 16 task × 50 ep（800 episodes）或 16 task × 100 ep（1600 episodes）**。用户硬约束。
   若用户主动要求全量：给出命令清单让他自己在 tmux/screen 跑，**Claude 不替执行**（见末尾段落）。
-- **不要再改 `challenge_interface/scripts/phase1_eval.py` 的 dataset 硬编码**：L210 + L232 已固定
-  为 `"val"`（本分支约定）。既不要恢复成 `"test"`，也不要加 `--dataset` CLI 参数。
+- **不要再改 evaluate 脚本的 dataset 硬编码**：`phase2-eval.py` / `phase1_eval.py` 的 L210 + L232
+  与 `phase1_eval_single.py` 的 L187 都已固定为 `"heldout"`（Phase 2 约定）。既不要改回 `"val"` /
+  `"test"`，也不要加 `--dataset` CLI 参数。
 - **GPU 单卡共享**：deploy + sim 同 GPU 0（模型 ~12 GB Orbax 权重 + ManiSkill Vulkan sim ~10 GB，
   46 GB 卡刚好）。若 OOM 回退 `SAPIEN_RENDER_DEVICE=cpu MUJOCO_GL=osmesa`，**不**主动切多卡。
 
@@ -261,11 +262,11 @@ perceptual-framesamp" 这类任务。严格按本节约束执行。
 | 项 | 值 |
 |---|---|
 | Server 仓库 | `/data/hongzefu/robomme_policy_learning` |
-| Client 仓库 | 本仓库 |
+| Client 仓库 | 本仓库 = `/data/hongzefu/robomme_benchmark-heldOutSeed` |
 | Checkpoint | `run/ckpt/perceptual-framesamp-modul/79999`（policy_learning 内相对路径） |
 | Transport | `websocket` |
 | Port | `8001` |
-| Dataset split | `val`（`phase1_eval.py` 与 `phase1_eval_single.py` 都已固定） |
+| Dataset split | `heldout`（`phase2-eval.py` / `phase1_eval.py` / `phase1_eval_single.py` 都已固定） |
 | GPU | `CUDA_VISIBLE_DEVICES=0` |
 | Default env / episode | `VideoUnmaskSwap` / `0` |
 
@@ -290,22 +291,22 @@ until ss -lntp 2>/dev/null | grep -q ":8001\b"; do sleep 3; done
 **默认 1 × 1（无需用户确认，直接跑）**：
 
 ```bash
-cd /data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed
+cd /data/hongzefu/robomme_benchmark-heldOutSeed
 CUDA_VISIBLE_DEVICES=0 uv run python -m challenge_interface.scripts.phase1_eval_single \
   --env VideoUnmaskSwap --episode 0 \
   --transport websocket --host localhost --port 8001 \
   --team_id single_modul_VideoUnmaskSwap_ep0
 ```
 
-`phase1_eval_single.py` 是本流程专属 wrapper，复用 `phase1_eval.py:run_episode()` 跑单
-env × 单 episode，输出到 `challenge_results/<team_id>/videos/`。**不要再修改 `phase1_eval.py`
-去支持单 env 过滤** —— 那条路径属于 "16 × 1 冒烟"。
+`phase1_eval_single.py` 是本流程专属 wrapper（dataset 已固定 `heldout`），复用 `phase1_eval.py`
+的输入辅助函数跑单 env × 单 episode，输出到 `challenge_results/<team_id>/videos/`。**不要去改
+`phase2-eval.py` 支持单 env 过滤** —— 那条路径属于 "16 × 1 冒烟"，单 env 就用本 wrapper。
 
 **扩到 16 × 1（必须先 AskUserQuestion，否则不要跑）**：
 
 ```bash
-cd /data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed
-CUDA_VISIBLE_DEVICES=0 uv run python -m challenge_interface.scripts.phase1_eval \
+cd /data/hongzefu/robomme_benchmark-heldOutSeed
+CUDA_VISIBLE_DEVICES=0 uv run python -m challenge_interface.scripts.phase2-eval \
   --transport websocket --host localhost --port 8001 \
   --num_episodes 1 --action_space joint_angle \
   --team_id smoke16_modul
@@ -336,14 +337,14 @@ pkill -9 -P $(cat /tmp/deploy_modul_79999.pid) 2>/dev/null
 ```bash
 # (1) 启 server（同 Step 1，team_id 后缀建议改 _full）
 # (2) 全量 client
-CUDA_VISIBLE_DEVICES=0 uv run python -m challenge_interface.scripts.phase1_eval \
+CUDA_VISIBLE_DEVICES=0 uv run python -m challenge_interface.scripts.phase2-eval \
   --transport websocket --host localhost --port 8001 \
   --num_episodes 50 --action_space joint_angle \
-  --team_id val_modul_79999_full
+  --team_id heldout_modul_79999_full
 # (3) 关 server（同 Step 3）
 ```
 
-`phase1_eval.py` 支持 `progress.json` 断点续跑（基于 `_config_fingerprint`），中途 Ctrl-C 重跑同
+`phase2-eval.py` 支持 `progress.json` 断点续跑（基于 `_config_fingerprint`），中途 Ctrl-C 重跑同
 命令即可。**Claude 不替用户跑这条命令**。
 
 ---

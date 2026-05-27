@@ -35,7 +35,7 @@ COUNTING_ENV_IDS: frozenset[str] = frozenset(
 )
 
 
-_DEFAULT_BASE = Path("/data/hongzefu/robomme_benchmark_cvpr2026-heldoutSeed/runs/replay_videos")
+_DEFAULT_BASE = Path("/data/hongzefu/robomme_benchmark-heldOutSeed/runs/replay_videos")
 DEFAULT_SEGMENTATION_DIR = _DEFAULT_BASE / "reset_segmentation_pngs"
 DEFAULT_OUTPUT_DIR = _DEFAULT_BASE / "inspect-stat" / "xy"
 
