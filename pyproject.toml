@@ -6,6 +6,7 @@ readme = "readme.md"
 requires-python = ">=3.11"
 dependencies = [
     "mani-skill",
+    "mplib>=0.2.1",
     "opencv-python>=4.11.0.86",
     "setuptools==80.9.0",
     "torch==2.9.1",
