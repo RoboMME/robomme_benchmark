@@ -3,10 +3,10 @@
 The installed ManiSkill motion-planning code was written against mplib 0.1.x,
 which expects numpy arrays for poses and accepts ``use_point_cloud`` in planning
 calls.  mplib 0.2.x changes ``Planner.set_base_pose`` to expect an
-``mplib.pymp.Pose`` object and removes ``use_point_cloud`` from
-``plan_screw`` / ``plan_qpos_to_pose``.
+``mplib.pymp.Pose`` object, removes ``use_point_cloud`` from ``plan_screw``,
+and renames ``plan_qpos_to_pose`` to ``plan_pose``.
 
-This module monkey-patches ``mplib.Planner`` at import time so that legacy
+This module monkey-patches ``mplib.Planner`` at import time so legacy
 callers work against either version.  It is a no-op on 0.1.x because the wrapped
 functions still accept the legacy signatures.
 """
@@ -20,6 +20,12 @@ import numpy as np
 
 
 _GLOBAL_PATCH_INSTALLED = False
+
+# Legacy RRT* kwargs that 0.1.x accepted but 0.2.x's ``plan_pose`` does not.
+# ``rrt_range`` and ``planning_time`` are accepted by 0.2.x and are left to the
+# signature-based filter; ``planner_name`` and ``use_point_cloud`` are always
+# dropped on 0.2.x.
+_DROPPED_RRT_KWARGS = {"planner_name", "use_point_cloud"}
 
 
 def _mplib_pose_type():
@@ -106,16 +112,30 @@ def _call_plan_screw_compat(planner, goal_pose, current_qpos, _original=None, **
     return getattr(planner, "plan_screw")(goal_pose, current_qpos, **filtered)
 
 
-def _call_plan_qpos_to_pose_compat(planner, goal_pose, current_qpos, _original=None, **kwargs):
-    """Call planner.plan_qpos_to_pose with kwargs filtered to the signature."""
-    fn = _original if _original is not None else getattr(type(planner), "plan_qpos_to_pose")
+def _call_plan_pose_compat(
+    planner,
+    goal_pose,
+    current_qpos,
+    _original: Callable | None = None,
+    _alias_name: str = "plan_pose",
+    **kwargs,
+):
+    """Call ``plan_pose`` (0.2.x) or ``plan_qpos_to_pose`` (0.1.x).
+
+    Converts the goal pose to ``mplib.pymp.Pose`` when required and drops
+    legacy RRT* kwargs that no longer exist in 0.2.x.
+    """
+    fn = _original if _original is not None else getattr(type(planner), _alias_name)
     goal_pose = _to_mplib_pose(goal_pose)
+
+    # Always drop kwargs that are definitely gone in 0.2.x; the signature-based
+    # filter then keeps only what the concrete implementation accepts
+    # (e.g. ``rrt_range`` and ``planning_time`` are kept for ``plan_pose``).
+    kwargs = {k: v for k, v in kwargs.items() if k not in _DROPPED_RRT_KWARGS}
     filtered, dropped = filter_kwargs_for_callable(fn, kwargs)
     if dropped:
-        print(f"[mplib-compat] plan_qpos_to_pose dropped unsupported kwargs: {dropped}")
-    if _original is not None:
-        return _original(planner, goal_pose, current_qpos, **filtered)
-    return getattr(planner, "plan_qpos_to_pose")(goal_pose, current_qpos, **filtered)
+        print(f"[mplib-compat] {_alias_name} dropped unsupported kwargs: {dropped}")
+    return fn(planner, goal_pose, current_qpos, **filtered)
 
 
 def install_global_mplib_compat() -> dict[str, Any]:
@@ -132,6 +152,7 @@ def install_global_mplib_compat() -> dict[str, Any]:
     import mplib
 
     patched = {}
+    version_family = _detect_version_family()
 
     orig_set_base_pose = mplib.Planner.set_base_pose
 
@@ -149,12 +170,34 @@ def install_global_mplib_compat() -> dict[str, Any]:
     mplib.Planner.plan_screw = wrapped_plan_screw
     patched["plan_screw"] = True
 
-    if hasattr(mplib.Planner, "plan_qpos_to_pose"):
+    if version_family == "0.2.x" and hasattr(mplib.Planner, "plan_pose"):
+        # 0.2.x renamed plan_qpos_to_pose -> plan_pose.  Wrap plan_pose so
+        # legacy callers that pass numpy arrays or obsolete kwargs still work,
+        # and add a plan_qpos_to_pose alias for code written against 0.1.x.
+        orig_plan_pose = mplib.Planner.plan_pose
+
+        def wrapped_plan_pose(self, goal_pose, current_qpos, **kwargs):
+            return _call_plan_pose_compat(
+                self, goal_pose, current_qpos, _original=orig_plan_pose, _alias_name="plan_pose", **kwargs
+            )
+
+        mplib.Planner.plan_pose = wrapped_plan_pose
+        patched["plan_pose"] = True
+
+        mplib.Planner.plan_qpos_to_pose = wrapped_plan_pose
+        patched["plan_qpos_to_pose_alias"] = True
+    elif hasattr(mplib.Planner, "plan_qpos_to_pose"):
+        # 0.1.x: wrap the native method for kwargs/ pose conversion safety.
         orig_plan_qpos_to_pose = mplib.Planner.plan_qpos_to_pose
 
         def wrapped_plan_qpos_to_pose(self, goal_pose, current_qpos, **kwargs):
-            return _call_plan_qpos_to_pose_compat(
-                self, goal_pose, current_qpos, _original=orig_plan_qpos_to_pose, **kwargs
+            return _call_plan_pose_compat(
+                self,
+                goal_pose,
+                current_qpos,
+                _original=orig_plan_qpos_to_pose,
+                _alias_name="plan_qpos_to_pose",
+                **kwargs,
             )
 
         mplib.Planner.plan_qpos_to_pose = wrapped_plan_qpos_to_pose

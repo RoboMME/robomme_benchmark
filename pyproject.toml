@@ -41,3 +41,6 @@ markers = [
     "dataset: tests that generate/use temporary datasets",
     "lightweight: tests that do not require generated dataset",
 ]
+
+[tool.uv]
+override-dependencies = ["mplib>=0.2.1"]
