@@ -103,6 +103,27 @@ env = builder.make_env_for_episode(
 
 obs, info = env.reset()
 ```
+### World coordinate frame & conventions
+
+The `ee_pose` / `waypoint` actions and the `eef_state_list` observation all use the same **world** coordinate frame. It is right-handed: `+x` points forward (from the robot toward the workspace/objects), `+y` to the robot's left, `+z` up. Gravity is `(0, 0, -9.81)`. The table-top surface is the `z = 0` plane (floor/ground at `z = -0.92`), and the world origin `(0, 0, 0)` is the table-top center where task objects spawn.
+
+```
+                        +z (up)
+                         ^
+                         |
+   robot base            |          world origin (0, 0, 0)
+   panda_link0           |          = table-top center (z = 0)
+   (-0.615, 0, 0)        |
+        [R] =============O=====================>  +x  (forward: base -> objects)
+                        /
+                       /             table top is the z = 0 plane
+                      v              (floor / ground at z = -0.92)
+                    +y (robot's left;   -y = robot's right)
+```
+
+The robotic arm (Panda) root/base link `panda_link0` is fixed at world **`(-0.615, 0, 0)`** with identity orientation. Because of this offset, end-effector world positions are shifted by `-0.615` in `x` relative to the base (e.g. at reset the TCP is at world `x = -0.06`, i.e. about `0.55 m` in front of the base).
+
+`eef_state_list` — end-effector (`panda_hand_tcp`) pose **in the world frame**, `[x, y, z, roll, pitch, yaw]` (meters / radians). The RPY are **extrinsic XYZ Euler angles** and are **unwrapped for temporal continuity across frames (so they can exceed ±π)**, not bounded principal values.
 
 ### `info` dict
 
