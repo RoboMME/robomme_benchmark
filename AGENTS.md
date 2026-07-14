@@ -113,8 +113,9 @@
 | 第三阶段：生成与一致性审查 | 完成（按用户修订的同 seed/离线完成口径） | 复用正式 16×9 共 144 条；metadata 原 seed attempt 1/1 均生成成功。新离线审计确认双方最终严格布尔完成率均为 144/144，`joint_strict_equal=false`，最大绝对差 `5.661269342205344e-9`；详细结论见 `scripts/reports/DATASET_COMPARISON_16x9.md` | 不得声称字节级、非 joint 全内容、数值容差或行为一致；若未来要求官方逐位值，需取得官方生成机数值运行时 |
 | `dataset-gen` 目录整理与产物清理 | 完成 | 已将 5 个 branch-specific 生成/验证文件及报告归并到 `scripts/data-generation/`，新增中文 README；根目录 `AGENTS.md` 保留；最终只保留指定 dataset、回放、16×9 报告和 reference 日志 | 已完成路径修正、独立契约验证、默认 16×9 对比、worktree 注销、缓存与中间产物清理；本轮不重新生成 16×100
 | 独立 No-Patch 验证/比较/报告拆分 | 完成（中央 reports） | validator、comparator、report writer 已拆分；所有新 JSON/Markdown 报告统一写入 `scripts/data-generation-v2-noPatch/reports/` | 完整 16×9 中央复核通过：双方完成 144/144、73,907 vectors、591,256 elements、最大差 `5.661269342205344e-09` |
+| 独立 No-Patch README 文档 | 完成（简版） | README 仅保留完整 16×9 生成、validator/comparator/report writer 调用逻辑、参数与最终产物 | 后续 CLI 或报告路径变更时同步更新简版说明 |
+| 独立 No-Patch 报告调试环境快照 | 完成 | schema 3 已写入完整硬件/软件/允许环境/全量依赖快照；轻量 mock 成功与失败路径均通过；中央 16×9 报告已刷新 | 后续生成或只读复核会在每次写报告前自动刷新该快照 |
 
-| 独立 No-Patch README 文档 | 完成 | 已新增同目录中文 README，覆盖生成、独立验证/比较、只读复核、产物、报告 schema 与 16×9 验收结果 | 后续改动 CLI、产物或验收口径时同步更新 README |
 ## 追加式执行日志
 
 ### 2026-07-13 — `/init`
@@ -500,3 +501,48 @@
 - 结果与证据：README 说明输出目录约束、原始 seed/difficulty、0–2 z/3–5 xy recovery、一次尝试、HDF5/metadata 产物、独立合约验证、joint_action 逐元素比较、只读完整复核、中央报告字段与最新覆盖语义；记录当前完整 16×9 的 144/144、73,907 vectors、591,256 elements 和 `5.661269342205344e-09`。
 - 差异或阻塞：无；新 README 使用 22 个成对代码围栏并通过空白符检查。旧 `scripts/data-generation/` 的已有删除状态未在本轮改动。
 - 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/README.md`。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch README：开始精简
+
+- 状态：进行中。
+- 目标：按用户要求将 README 精简为完整 16×9 生成、生成器对 validator/comparator/report writer 三个模块的调用逻辑、参数和最终产物；不描述产物内部格式。
+- 执行命令：已重读 `AGENTS.md` 和当前 README；本轮仅文档改写，不需要运行新的 Python 命令。
+- 输入与来源：当前四个 No-Patch 脚本、中央 reports 约定及已验证的 16×9 结果。
+- 输出路径：更新 `scripts/data-generation-v2-noPatch/README.md`。
+- 差异或阻塞：无；“三个”按生成器调用的 validator、comparator、report writer 三个独立模块解释。
+- 修改文件：`AGENTS.md`；待重写 README。
+- 下一步：替换为简短的 16×9 使用说明并检查 Markdown 格式。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch README：精简完成
+
+- 状态：完成。
+- 目标：将过长 README 收缩为用户指定的完整 16×9 生成、三个模块调用逻辑、参数和最终产物。
+- 执行命令：本轮仅重写 Markdown；未运行新的 Python 命令。已检查 10 个代码围栏成对闭合，且 README 与已跟踪文档的空白符检查无报错。
+- 输入与来源：当前 `generate_dataset.py`、validator、comparator、report writer 及已验证的中央报告路径。
+- 输出路径：更新 `scripts/data-generation-v2-noPatch/README.md`。
+- 结果与证据：README 从 284 行收缩为 94 行，移除了 HDF5/metadata 内部格式、报告 schema、smoke、排错与冗长验收说明；保留完整命令、同进程三个调用、参数表、已有输出复核命令、最终 HDF5/metadata 文件名及中央 JSON/Markdown 报告路径。
+- 差异或阻塞：无；“三个”明确指 validator、comparator 与 report writer。
+- 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/README.md`。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch 报告调试环境快照：开始
+
+- 状态：进行中。
+- 目标：在每次中央 No-Patch JSON/Markdown 报告写入前采集完整硬件、软件、受限运行环境和全量依赖快照；保持生成、复核和验收逻辑不变。
+- 执行命令：已重读 `AGENTS.md`、当前 report writer、中央 schema 2 报告及轻量测试约定；已用 `nvidia-smi --help-query-gpu` 和完整 `--query-gpu` 实测本机支持 UUID、序列号、PCI、VBIOS、功耗、时钟、链路和风扇字段。本轮尚未执行 Python 命令。
+- 输入与来源：当前 `scripts/data-generation-v2-noPatch/write_generation_report.py`、中央 `reports/`、既有 `artifacts/generated/no-patch-full-16x9/`、当前项目的 `uv.lock`。
+- 输出路径：待刷新 `scripts/data-generation-v2-noPatch/reports/no_patch_generation_report.json` 与 `.md`；待新增 `tests/lightweight/test_no_patch_report_debug_environment.py`。
+- 差异或阻塞：无；仅采集明确允许的运行变量和 Slurm 分配变量，不采集进程列表、完整环境变量或其他作业信息。
+- 修改文件：`AGENTS.md`；待修改 writer、测试和中央报告。
+- 下一步：实现 best-effort 快照、Markdown 调试环境章节和失败路径测试；所有 Python 验证前先确认 `uv`、`pyproject.toml` 和 `uv.lock`。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch 报告调试环境快照：完成
+
+- 状态：完成。
+- 目标：为每次中央报告写入增加完整、最佳努力的调试环境 provenance，同时保持生成、复核、HDF5 和验收逻辑不变。
+- 执行命令：已先确认 `command -v uv`、根 `pyproject.toml` 与 `uv.lock`；使用 `uv run --locked --extra dev python -m pytest -q tests/lightweight/test_no_patch_report_debug_environment.py`（2 passed）和 `uv run --locked python -m py_compile`；随后以 `uv run --locked scripts/data-generation-v2-noPatch/write_generation_report.py --output-dir artifacts/generated/no-patch-full-16x9 --env all --episodes 9 --workers 9 --gpus 0,1 --prior-report artifacts/generated/no-patch-full-16x9/no_patch_generation_report.json --max-abs-diff 1e-8` 完成只读复核。
+- 输入与来源：当前 writer、当前锁定 uv 环境、既有 `artifacts/generated/no-patch-full-16x9/`、严格 train metadata 与只读官方 HDF5。
+- 输出路径：已刷新 `scripts/data-generation-v2-noPatch/reports/no_patch_generation_report.json` 与 `.md`；新增 `tests/lightweight/test_no_patch_report_debug_environment.py`。
+- 结果与证据：JSON 顶层 schema 为 3，`debug_environment` 保存完整 `lscpu --json`、CPU affinity、内存/存储、2 张 GPU 的 UUID/序列号/PCI/VBIOS/功耗/时钟/链路/动态遥测、CPython/uv/git/Torch/CUDA/cuDNN、受限变量及 111 个按名称排序的 distributions；Markdown 展示完整 GPU 字段和核心依赖摘要。完整复核仍为官方/生成 144/144、73,907 vectors、591,256 elements、最大差 `5.661269342205344e-09`、0 comparison error、验收通过。
+- 差异或阻塞：无；未修改 `uv.lock`、HDF5、metadata 或旧 `scripts/data-generation/`，并确认新代码无旧目录引用。
+- 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/write_generation_report.py`、`tests/lightweight/test_no_patch_report_debug_environment.py`、中央 JSON/Markdown 报告。
+- 下一步：后续生成或已有输出复核会自动取得新快照；中央 reports 保持最新一次报告语义。

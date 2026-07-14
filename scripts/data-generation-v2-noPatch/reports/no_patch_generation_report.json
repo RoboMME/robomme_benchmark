@@ -1,8 +1,8 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "passed",
-  "generated_at_utc": "2026-07-14T13:28:54.521494+00:00",
-  "current_head": "7a4362d9f8891649631cc7ef01c4935af684f942",
+  "generated_at_utc": "2026-07-14T14:50:59.526651+00:00",
+  "current_head": "68557e9a2ce25caae375637bd00b5d5f80ac20c4",
   "uv_lock_sha256": "983de83f7b22c98b96c3c25a39958b4f5920e3232cfaa209c89542ef5639ac03",
   "parameters": {
     "output_dir": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9",
@@ -4932,6 +4932,851 @@
       "official_final_completed": 144,
       "max_allowed_abs_diff": 1e-08,
       "max_abs_diff": 5.661269342205344e-09
+    }
+  },
+  "debug_environment": {
+    "schema_version": 1,
+    "captured_at_utc": "2026-07-14T14:51:53.119783+00:00",
+    "errors": {},
+    "host": {
+      "errors": {},
+      "hostname": "sled-vail",
+      "machine": "x86_64",
+      "architecture": "64bit",
+      "processor": "x86_64"
+    },
+    "operating_system": {
+      "errors": {},
+      "libc": {
+        "errors": {},
+        "library": "glibc",
+        "version": "2.39"
+      },
+      "system": "Linux",
+      "release": "6.8.0-1018-nvidia-lowlatency",
+      "kernel": "6.8.0-1018-nvidia-lowlatency",
+      "version": "#20.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Nov  8 00:59:20 UTC 2024",
+      "platform": "Linux-6.8.0-1018-nvidia-lowlatency-x86_64-with-glibc2.39"
+    },
+    "cpu": {
+      "os_cpu_count": 32,
+      "affinity_cpu_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "affinity_cpu_count": 32,
+      "lscpu": {
+        "raw": {
+          "lscpu": [
+            {
+              "field": "Architecture:",
+              "data": "x86_64"
+            },
+            {
+              "field": "CPU op-mode(s):",
+              "data": "32-bit, 64-bit"
+            },
+            {
+              "field": "Address sizes:",
+              "data": "52 bits physical, 57 bits virtual"
+            },
+            {
+              "field": "Byte Order:",
+              "data": "Little Endian"
+            },
+            {
+              "field": "CPU(s):",
+              "data": "32"
+            },
+            {
+              "field": "On-line CPU(s) list:",
+              "data": "0-31"
+            },
+            {
+              "field": "Vendor ID:",
+              "data": "AuthenticAMD"
+            },
+            {
+              "field": "Model name:",
+              "data": "AMD EPYC 9334 32-Core Processor"
+            },
+            {
+              "field": "CPU family:",
+              "data": "25"
+            },
+            {
+              "field": "Model:",
+              "data": "17"
+            },
+            {
+              "field": "Thread(s) per core:",
+              "data": "1"
+            },
+            {
+              "field": "Core(s) per socket:",
+              "data": "32"
+            },
+            {
+              "field": "Socket(s):",
+              "data": "1"
+            },
+            {
+              "field": "Stepping:",
+              "data": "1"
+            },
+            {
+              "field": "Frequency boost:",
+              "data": "enabled"
+            },
+            {
+              "field": "CPU(s) scaling MHz:",
+              "data": "52%"
+            },
+            {
+              "field": "CPU max MHz:",
+              "data": "3910.2529"
+            },
+            {
+              "field": "CPU min MHz:",
+              "data": "1500.0000"
+            },
+            {
+              "field": "BogoMIPS:",
+              "data": "5391.59"
+            },
+            {
+              "field": "Flags:",
+              "data": "fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good amd_lbr_v2 nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 pcid sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba perfmon_v2 ibrs ibpb stibp ibrs_enhanced vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local user_shstk avx512_bf16 clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin cppc arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif x2avic v_spec_ctrl vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq la57 rdpid overflow_recov succor smca fsrm flush_l1d debug_swap"
+            },
+            {
+              "field": "L1d cache:",
+              "data": "1 MiB (32 instances)"
+            },
+            {
+              "field": "L1i cache:",
+              "data": "1 MiB (32 instances)"
+            },
+            {
+              "field": "L2 cache:",
+              "data": "32 MiB (32 instances)"
+            },
+            {
+              "field": "L3 cache:",
+              "data": "128 MiB (4 instances)"
+            },
+            {
+              "field": "NUMA node(s):",
+              "data": "1"
+            },
+            {
+              "field": "NUMA node0 CPU(s):",
+              "data": "0-31"
+            },
+            {
+              "field": "Vulnerability Gather data sampling:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability Itlb multihit:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability L1tf:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability Mds:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability Meltdown:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability Mmio stale data:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability Reg file data sampling:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability Retbleed:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability Spec rstack overflow:",
+              "data": "Mitigation; Safe RET"
+            },
+            {
+              "field": "Vulnerability Spec store bypass:",
+              "data": "Mitigation; Speculative Store Bypass disabled via prctl"
+            },
+            {
+              "field": "Vulnerability Spectre v1:",
+              "data": "Mitigation; usercopy/swapgs barriers and __user pointer sanitization"
+            },
+            {
+              "field": "Vulnerability Spectre v2:",
+              "data": "Mitigation; Enhanced / Automatic IBRS; IBPB conditional; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected"
+            },
+            {
+              "field": "Vulnerability Srbds:",
+              "data": "Not affected"
+            },
+            {
+              "field": "Vulnerability Tsx async abort:",
+              "data": "Not affected"
+            }
+          ]
+        },
+        "error": null
+      },
+      "errors": {}
+    },
+    "memory": {
+      "total_bytes": 405257068544,
+      "errors": {}
+    },
+    "storage": {
+      "path": "/data/hongzefu/robomme_benchmark-restore-DataGen",
+      "total_bytes": 15240752955392,
+      "used_bytes": 10102317232128,
+      "free_bytes": 4370269446144,
+      "errors": {}
+    },
+    "gpu": {
+      "nvidia_smi": {
+        "available": true,
+        "version": "570.211.01",
+        "cuda_version": "12.8",
+        "error": null,
+        "query_error": null,
+        "row_errors": []
+      },
+      "devices": [
+        {
+          "index": "0",
+          "uuid": "GPU-590b693c-56db-a2b6-c4e3-5e20108f92d7",
+          "serial": "1713224014062",
+          "name": "NVIDIA RTX 6000 Ada Generation",
+          "pci_bus_id": "00000000:01:00.0",
+          "pci_device_id": "0x26B110DE",
+          "pci_sub_device_id": "0x16A110DE",
+          "driver_version": "570.211.01",
+          "vbios_version": "95.02.59.00.09",
+          "compute_capability": "8.9",
+          "memory_total_mib": "46068",
+          "memory_used_mib": "1664",
+          "memory_free_mib": "43802",
+          "power_limit_w": "300.00",
+          "power_draw_w": "141.18",
+          "temperature_c": "48",
+          "utilization_gpu_percent": "99",
+          "utilization_memory_percent": "0",
+          "pstate": "P2",
+          "graphics_clock_mhz": "2715",
+          "memory_clock_mhz": "9501",
+          "max_graphics_clock_mhz": "3105",
+          "max_memory_clock_mhz": "10001",
+          "pcie_link_gen_current": "4",
+          "pcie_link_gen_max": "4",
+          "pcie_link_width_current": "16",
+          "pcie_link_width_max": "16",
+          "persistence_mode": "Disabled",
+          "addressing_mode": null,
+          "fan_speed_percent": "30"
+        },
+        {
+          "index": "1",
+          "uuid": "GPU-c58b7cba-c0e5-971b-e77a-0dd73bf26a9e",
+          "serial": "1713224013719",
+          "name": "NVIDIA RTX 6000 Ada Generation",
+          "pci_bus_id": "00000000:02:00.0",
+          "pci_device_id": "0x26B110DE",
+          "pci_sub_device_id": "0x16A110DE",
+          "driver_version": "570.211.01",
+          "vbios_version": "95.02.59.00.09",
+          "compute_capability": "8.9",
+          "memory_total_mib": "46068",
+          "memory_used_mib": "6",
+          "memory_free_mib": "45461",
+          "power_limit_w": "300.00",
+          "power_draw_w": "28.02",
+          "temperature_c": "32",
+          "utilization_gpu_percent": "0",
+          "utilization_memory_percent": "0",
+          "pstate": "P8",
+          "graphics_clock_mhz": "210",
+          "memory_clock_mhz": "405",
+          "max_graphics_clock_mhz": "3105",
+          "max_memory_clock_mhz": "10001",
+          "pcie_link_gen_current": "1",
+          "pcie_link_gen_max": "4",
+          "pcie_link_width_current": "16",
+          "pcie_link_width_max": "16",
+          "persistence_mode": "Disabled",
+          "addressing_mode": null,
+          "fan_speed_percent": "30"
+        }
+      ],
+      "torch": {
+        "module_available": true,
+        "version": "2.9.1+cu128",
+        "compiled_cuda_version": "12.8",
+        "cudnn_version": 91002,
+        "cuda_available": true,
+        "visible_device_count": 2,
+        "visible_devices": [
+          {
+            "index": 0,
+            "errors": {},
+            "name": "NVIDIA RTX 6000 Ada Generation",
+            "compute_capability": "8.9",
+            "total_memory_bytes": 47673769984
+          },
+          {
+            "index": 1,
+            "errors": {},
+            "name": "NVIDIA RTX 6000 Ada Generation",
+            "compute_capability": "8.9",
+            "total_memory_bytes": 47673769984
+          }
+        ],
+        "errors": {}
+      }
+    },
+    "python": {
+      "implementation": "CPython",
+      "version": "3.11.14 (main, Feb  3 2026, 22:51:56) [Clang 21.1.4 ]",
+      "version_info": [
+        3,
+        11,
+        14
+      ],
+      "abi_flags": "",
+      "soabi": "cpython-311-x86_64-linux-gnu",
+      "cache_tag": "cpython-311",
+      "compiler": "Clang 21.1.4 ",
+      "build": [
+        "main",
+        "Feb  3 2026 22:51:56"
+      ],
+      "executable": "/data/hongzefu/robomme_benchmark-restore-DataGen/.venv/bin/python3",
+      "prefix": "/data/hongzefu/robomme_benchmark-restore-DataGen/.venv",
+      "base_prefix": "/home/hongzefu/.local/share/uv/python/cpython-3.11.14-linux-x86_64-gnu",
+      "virtual_environment": "/data/hongzefu/robomme_benchmark-restore-DataGen/.venv",
+      "errors": {}
+    },
+    "tools": {
+      "uv": {
+        "path": "/home/hongzefu/.local/bin/uv",
+        "version": "uv 0.10.2",
+        "error": null
+      },
+      "git": {
+        "path": "/usr/bin/git",
+        "version": "git version 2.43.0",
+        "error": null
+      }
+    },
+    "runtime_environment": {
+      "CUDA_VISIBLE_DEVICES": null,
+      "OMP_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null,
+      "CUDA_HOME": null,
+      "PYTHONPATH": null
+    },
+    "scheduler_environment": {
+      "SLURM_JOB_ID": null,
+      "SLURM_JOB_GPUS": null,
+      "SLURM_GPUS_ON_NODE": null,
+      "SLURM_CPUS_PER_TASK": null,
+      "SLURM_CPUS_ON_NODE": null,
+      "SLURM_MEM_PER_NODE": null,
+      "SLURM_MEM_PER_CPU": null,
+      "SLURM_NNODES": null,
+      "SLURM_NODELIST": null
+    },
+    "packages": {
+      "distribution_count": 111,
+      "distributions": [
+        {
+          "name": "absl-py",
+          "version": "2.4.0"
+        },
+        {
+          "name": "annotated-doc",
+          "version": "0.0.4"
+        },
+        {
+          "name": "anyio",
+          "version": "4.12.1"
+        },
+        {
+          "name": "arm_pytorch_utilities",
+          "version": "0.4.3"
+        },
+        {
+          "name": "asttokens",
+          "version": "3.0.1"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.1.4"
+        },
+        {
+          "name": "charset-normalizer",
+          "version": "3.4.4"
+        },
+        {
+          "name": "click",
+          "version": "8.3.1"
+        },
+        {
+          "name": "cloudpickle",
+          "version": "3.1.2"
+        },
+        {
+          "name": "contourpy",
+          "version": "1.3.3"
+        },
+        {
+          "name": "cycler",
+          "version": "0.12.1"
+        },
+        {
+          "name": "dacite",
+          "version": "1.9.2"
+        },
+        {
+          "name": "decorator",
+          "version": "5.2.1"
+        },
+        {
+          "name": "docstring_parser",
+          "version": "0.17.0"
+        },
+        {
+          "name": "executing",
+          "version": "2.2.1"
+        },
+        {
+          "name": "Farama-Notifications",
+          "version": "0.0.4"
+        },
+        {
+          "name": "fast_kinematics",
+          "version": "0.2.2"
+        },
+        {
+          "name": "filelock",
+          "version": "3.21.2"
+        },
+        {
+          "name": "fonttools",
+          "version": "4.61.1"
+        },
+        {
+          "name": "fsspec",
+          "version": "2026.2.0"
+        },
+        {
+          "name": "gitdb",
+          "version": "4.0.12"
+        },
+        {
+          "name": "GitPython",
+          "version": "3.1.46"
+        },
+        {
+          "name": "gymnasium",
+          "version": "0.29.1"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0"
+        },
+        {
+          "name": "h5py",
+          "version": "3.15.1"
+        },
+        {
+          "name": "hf-xet",
+          "version": "1.2.0"
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9"
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1"
+        },
+        {
+          "name": "huggingface_hub",
+          "version": "1.4.1"
+        },
+        {
+          "name": "idna",
+          "version": "3.11"
+        },
+        {
+          "name": "ImageIO",
+          "version": "2.37.2"
+        },
+        {
+          "name": "imageio-ffmpeg",
+          "version": "0.6.0"
+        },
+        {
+          "name": "iniconfig",
+          "version": "2.3.0"
+        },
+        {
+          "name": "ipython",
+          "version": "9.10.0"
+        },
+        {
+          "name": "ipython_pygments_lexers",
+          "version": "1.1.1"
+        },
+        {
+          "name": "jedi",
+          "version": "0.19.2"
+        },
+        {
+          "name": "Jinja2",
+          "version": "3.1.6"
+        },
+        {
+          "name": "kiwisolver",
+          "version": "1.4.9"
+        },
+        {
+          "name": "lxml",
+          "version": "6.0.2"
+        },
+        {
+          "name": "mani_skill",
+          "version": "3.0.0b21"
+        },
+        {
+          "name": "markdown-it-py",
+          "version": "4.0.0"
+        },
+        {
+          "name": "MarkupSafe",
+          "version": "3.0.3"
+        },
+        {
+          "name": "matplotlib",
+          "version": "3.10.8"
+        },
+        {
+          "name": "matplotlib-inline",
+          "version": "0.2.1"
+        },
+        {
+          "name": "mdurl",
+          "version": "0.1.2"
+        },
+        {
+          "name": "mplib",
+          "version": "0.1.1"
+        },
+        {
+          "name": "mpmath",
+          "version": "1.3.0"
+        },
+        {
+          "name": "networkx",
+          "version": "3.6.1"
+        },
+        {
+          "name": "numpy",
+          "version": "1.26.4"
+        },
+        {
+          "name": "nvidia-cublas-cu12",
+          "version": "12.8.4.1"
+        },
+        {
+          "name": "nvidia-cuda-cupti-cu12",
+          "version": "12.8.90"
+        },
+        {
+          "name": "nvidia-cuda-nvrtc-cu12",
+          "version": "12.8.93"
+        },
+        {
+          "name": "nvidia-cuda-runtime-cu12",
+          "version": "12.8.90"
+        },
+        {
+          "name": "nvidia-cudnn-cu12",
+          "version": "9.10.2.21"
+        },
+        {
+          "name": "nvidia-cufft-cu12",
+          "version": "11.3.3.83"
+        },
+        {
+          "name": "nvidia-cufile-cu12",
+          "version": "1.13.1.3"
+        },
+        {
+          "name": "nvidia-curand-cu12",
+          "version": "10.3.9.90"
+        },
+        {
+          "name": "nvidia-cusolver-cu12",
+          "version": "11.7.3.90"
+        },
+        {
+          "name": "nvidia-cusparse-cu12",
+          "version": "12.5.8.93"
+        },
+        {
+          "name": "nvidia-cusparselt-cu12",
+          "version": "0.7.1"
+        },
+        {
+          "name": "nvidia-ml-py",
+          "version": "13.590.48"
+        },
+        {
+          "name": "nvidia-nccl-cu12",
+          "version": "2.27.5"
+        },
+        {
+          "name": "nvidia-nvjitlink-cu12",
+          "version": "12.8.93"
+        },
+        {
+          "name": "nvidia-nvshmem-cu12",
+          "version": "3.3.20"
+        },
+        {
+          "name": "nvidia-nvtx-cu12",
+          "version": "12.8.90"
+        },
+        {
+          "name": "opencv-python",
+          "version": "4.11.0.86"
+        },
+        {
+          "name": "packaging",
+          "version": "26.0"
+        },
+        {
+          "name": "parso",
+          "version": "0.8.6"
+        },
+        {
+          "name": "pexpect",
+          "version": "4.9.0"
+        },
+        {
+          "name": "pillow",
+          "version": "12.1.1"
+        },
+        {
+          "name": "pluggy",
+          "version": "1.6.0"
+        },
+        {
+          "name": "prompt_toolkit",
+          "version": "3.0.52"
+        },
+        {
+          "name": "psutil",
+          "version": "7.2.2"
+        },
+        {
+          "name": "ptyprocess",
+          "version": "0.7.0"
+        },
+        {
+          "name": "pure_eval",
+          "version": "0.2.3"
+        },
+        {
+          "name": "Pygments",
+          "version": "2.19.2"
+        },
+        {
+          "name": "pynvml",
+          "version": "13.0.1"
+        },
+        {
+          "name": "pyparsing",
+          "version": "3.3.2"
+        },
+        {
+          "name": "pyperclip",
+          "version": "1.11.0"
+        },
+        {
+          "name": "pytest",
+          "version": "9.0.2"
+        },
+        {
+          "name": "python-dateutil",
+          "version": "2.9.0.post0"
+        },
+        {
+          "name": "pytorch-kinematics",
+          "version": "0.7.5"
+        },
+        {
+          "name": "pytorch-seed",
+          "version": "0.2.0"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3"
+        },
+        {
+          "name": "requests",
+          "version": "2.32.5"
+        },
+        {
+          "name": "rich",
+          "version": "14.3.2"
+        },
+        {
+          "name": "robomme",
+          "version": "0.1.0"
+        },
+        {
+          "name": "sapien",
+          "version": "3.0.2"
+        },
+        {
+          "name": "scipy",
+          "version": "1.17.0"
+        },
+        {
+          "name": "setuptools",
+          "version": "80.9.0"
+        },
+        {
+          "name": "shellingham",
+          "version": "1.5.4"
+        },
+        {
+          "name": "six",
+          "version": "1.17.0"
+        },
+        {
+          "name": "smmap",
+          "version": "5.0.2"
+        },
+        {
+          "name": "stack-data",
+          "version": "0.6.3"
+        },
+        {
+          "name": "sympy",
+          "version": "1.14.0"
+        },
+        {
+          "name": "tabulate",
+          "version": "0.9.0"
+        },
+        {
+          "name": "toppra",
+          "version": "0.6.3"
+        },
+        {
+          "name": "torch",
+          "version": "2.9.1"
+        },
+        {
+          "name": "torchvision",
+          "version": "0.24.1"
+        },
+        {
+          "name": "tqdm",
+          "version": "4.67.3"
+        },
+        {
+          "name": "traitlets",
+          "version": "5.14.3"
+        },
+        {
+          "name": "transforms3d",
+          "version": "0.4.2"
+        },
+        {
+          "name": "trimesh",
+          "version": "4.11.2"
+        },
+        {
+          "name": "triton",
+          "version": "3.5.1"
+        },
+        {
+          "name": "typeguard",
+          "version": "4.4.4"
+        },
+        {
+          "name": "typer",
+          "version": "0.23.1"
+        },
+        {
+          "name": "typer-slim",
+          "version": "0.23.1"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.15.0"
+        },
+        {
+          "name": "tyro",
+          "version": "1.0.6"
+        },
+        {
+          "name": "urllib3",
+          "version": "2.6.3"
+        },
+        {
+          "name": "wcwidth",
+          "version": "0.6.0"
+        }
+      ],
+      "errors": {}
     }
   },
   "report_paths": {
