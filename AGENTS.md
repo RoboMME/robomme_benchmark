@@ -404,3 +404,28 @@
 - 最终检查：保留/删除白名单、单主 worktree、无 `__pycache__` 和 `git diff --check` 均通过。
 - 修改文件：根 `AGENTS.md` 与 `scripts/data-generation/` 下的整理后工具和 README；未修改 main 原有 `scripts/dataset_replay.py`、`evaluation.py` 等基础脚本。
 - 后续：如需完整 16×100 重新生成，直接按 `scripts/data-generation/README.md` 执行；当前整理任务无未完成步骤。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch 数据生成：开始实施
+
+- 状态：进行中。
+- 目标：仅新增 `scripts/data-generation-v2-noPatch/generate_dataset.py`，直接基于当前 `src/robomme` 完成 train metadata 原 seed 的 16×9 数据生成、临时 HDF5 合并、内置验证和 `action/joint_action` 逐元素比较；不读取、导入、调用或复制旧 `scripts/data-generation/`，不使用历史 commit、worktree、patch 或独立 uv 环境。
+- 执行命令：已确认 `command -v uv` 为 `/home/hongzefu/.local/bin/uv`，根 `pyproject.toml`/`uv.lock` 存在；`git diff --no-index -- uv.lock <(git show main:uv.lock)` 无输出且退出码 0。后续 Python 命令只会使用 `uv run --locked`。
+- 输入与来源：当前分支 `dataset-gen@9071b418f6aba3285e282620bef62359bd14288f` 的 `src/robomme`、`src/robomme/env_metadata/train/` 和只读 `data/robomme_data_h5/`。
+- 输出路径：待以全新仓库内目录传给新脚本；脚本会在该目录写入合并 HDF5、metadata JSON、JSON/Markdown 验证报告。
+- 结果与证据：已完成当前 wrapper、planner、环境注册、metadata schema 和 reference HDF5 调用链的只读核对；尚未运行生成或 smoke。
+- 差异或阻塞：无；生成实现和 fresh 1×1×1 smoke 尚待完成。
+- 修改文件：`AGENTS.md`；待新增的唯一执行脚本为 `scripts/data-generation-v2-noPatch/generate_dataset.py`。
+
+- 下一步：完成独立脚本，先运行 `--help`/语法检查，再用 BinFill episode 0 执行单 worker 单 GPU smoke 和内置比较。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch 数据生成：16×9 验收完成
+
+- 状态：完成。
+- 目标：以当前分支和当前 uv 锁定环境完成独立 No-Patch 生成、合并、验证和官方 joint_action 对比。
+- 执行命令：uv run --locked scripts/data-generation-v2-noPatch/generate_dataset.py --output-dir artifacts/generated/no-patch-smoke-binfll-v2 --env BinFill --episodes 1 --workers 1 --gpus 0；随后以 all、episodes 9、workers 9、gpus 0,1 写入 artifacts/generated/no-patch-full-16x9；两次均退出码 0。所有 Python 命令前均确认 command -v uv 与根 pyproject.toml/uv.lock。
+- 输入与来源：当前 dataset-gen HEAD 9071b418f6aba3285e282620bef62359bd14288f、src/robomme/env_metadata/train、只读 data/robomme_data_h5；未读取、导入、调用或复制旧生成目录，未使用历史 commit、worktree、patch 或独立 uv 环境。
+- 输出路径：完整输出 artifacts/generated/no-patch-full-16x9，含 16 个合并 HDF5、16 个 metadata JSON、no_patch_generation_report.json 和 no_patch_generation_report.md；worker 临时目录已清理，最终目录约 46 GB。
+- 结果与证据：BinFill smoke 为 1/1 完成、550 个 joint 向量、最大差 2.2408256619612515e-18。完整 scope 为固定 16 环境 episode 0-8：生成与官方均 16 文件、144 episode、73,907 个连续 joint 向量、591,256 个元素、最终严格 bool is_completed 均 144/144、验证错误均为 0；逐元素最大绝对差 5.661269342205344e-9，小于 1e-8。
+- 差异或阻塞：首次 smoke 将合法 setup 元数据组误视为 timestep，已在新脚本的连续 timestep 解析中显式排除 setup 后用全新目录重跑通过。最终 joint 严格不等元素为 16,380，报告仅按本次验收阈值判定通过。
+- 修改文件：AGENTS.md 与新增 scripts/data-generation-v2-noPatch/generate_dataset.py；未修改 src/robomme、uv.lock、pyproject.toml、参考数据或旧生成目录。
+- 下一步：如需重新运行，输出目录必须是仓库内不存在或空目录；默认 all 与 episodes 9 即复现完整 16×9 验收。
