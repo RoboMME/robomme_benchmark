@@ -210,3 +210,9 @@ __marimo__/
 .agent/
 .cursor/
 .agents/
+
+# RoboMME reference datasets, generated artifacts, and local tool caches
+data/
+artifacts/
+runs/replay_videos/
+.cache/
