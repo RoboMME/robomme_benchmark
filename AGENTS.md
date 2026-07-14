@@ -114,6 +114,7 @@
 | `dataset-gen` 目录整理与产物清理 | 完成 | 已将 5 个 branch-specific 生成/验证文件及报告归并到 `scripts/data-generation/`，新增中文 README；根目录 `AGENTS.md` 保留；最终只保留指定 dataset、回放、16×9 报告和 reference 日志 | 已完成路径修正、独立契约验证、默认 16×9 对比、worktree 注销、缓存与中间产物清理；本轮不重新生成 16×100
 | 独立 No-Patch 验证/比较/报告拆分 | 完成（中央 reports） | validator、comparator、report writer 已拆分；所有新 JSON/Markdown 报告统一写入 `scripts/data-generation-v2-noPatch/reports/` | 完整 16×9 中央复核通过：双方完成 144/144、73,907 vectors、591,256 elements、最大差 `5.661269342205344e-09` |
 
+| 独立 No-Patch README 文档 | 完成 | 已新增同目录中文 README，覆盖生成、独立验证/比较、只读复核、产物、报告 schema 与 16×9 验收结果 | 后续改动 CLI、产物或验收口径时同步更新 README |
 ## 追加式执行日志
 
 ### 2026-07-13 — `/init`
@@ -477,3 +478,25 @@
 - 差异或阻塞：无；新固定文件名表示中央目录仅保留最新一次生成或复核的报告。历史输出目录中的旧报告副本未修改。
 - 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/write_generation_report.py`、`scripts/data-generation-v2-noPatch/generate_dataset.py`，以及中央 reports 中的新 JSON/Markdown。
 - 下一步：后续生成和只读复核会通过同一 writer 自动覆盖中央目录中的最新完整报告；`uv.lock` 仍与 `main` 完全一致。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch README：开始编写
+
+- 状态：进行中。
+- 目标：为 `scripts/data-generation-v2-noPatch/` 新增中文 README，说明独立生成、验证/对比、完整报告、参数、产物与验收口径。
+- 执行命令：已重读 `AGENTS.md`，正在从当前四个脚本与中央 reports 的实际实现提取 CLI 和报告 schema；后续 Python 帮助检查将先确认 `uv`、`pyproject.toml` 与 `uv.lock`。
+- 输入与来源：当前 No-Patch 脚本、严格 train metadata、只读官方 HDF5、既有完整 16×9 生成输出及中央 JSON/Markdown 报告。
+- 输出路径：待新增 `scripts/data-generation-v2-noPatch/README.md`。
+- 差异或阻塞：无；README 将明确中央 reports 只保留最新一次生成或复核的报告，历史 artifact 副本不再是新 writer 的输出目标。
+- 修改文件：`AGENTS.md`；待新增同目录 README。
+- 下一步：核对四个 CLI 的 `--help`、公共函数的实际校验范围、报告字段和完整复核数值，然后写入并验证文档。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch README：完成
+
+- 状态：完成。
+- 目标：为 No-Patch 目录提供可直接执行的生成、验证、比较、复核和产物说明。
+- 执行命令：已先确认 `command -v uv`、根 `pyproject.toml` 与 `uv.lock`，再以 `uv run --locked` 运行四个 CLI 的 `--help`，均退出码 0；同时复核当前脚本实现、中央完整报告与新 smoke 产物布局。
+- 输入与来源：当前四个 No-Patch 脚本、严格 train metadata、只读官方 HDF5、中央 `reports/` 与既有完整 16×9 产物。
+- 输出路径：新增 `scripts/data-generation-v2-noPatch/README.md`。
+- 结果与证据：README 说明输出目录约束、原始 seed/difficulty、0–2 z/3–5 xy recovery、一次尝试、HDF5/metadata 产物、独立合约验证、joint_action 逐元素比较、只读完整复核、中央报告字段与最新覆盖语义；记录当前完整 16×9 的 144/144、73,907 vectors、591,256 elements 和 `5.661269342205344e-09`。
+- 差异或阻塞：无；新 README 使用 22 个成对代码围栏并通过空白符检查。旧 `scripts/data-generation/` 的已有删除状态未在本轮改动。
+- 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/README.md`。
