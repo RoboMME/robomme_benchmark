@@ -13,7 +13,3 @@ build
 sample_run_videos
 saved_videos
 test_videos
-data/
-artifacts/
-runs/replay_videos/
-.cache/

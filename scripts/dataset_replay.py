@@ -3,12 +3,9 @@ Replay episodes from HDF5 datasets and save rollout videos.
 Loads recorded actions from record_dataset_<Task>.h5, steps the environment
 """
 
-import contextlib
 import os
-import multiprocessing as mp
-import queue
-import time
-import traceback
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import json
 from pathlib import Path
 from typing import Any, Dict, Literal, Union
@@ -26,9 +23,6 @@ REPLAY_VIDEO_DIR = "runs/replay_videos"
 VIDEO_FPS = 30
 VIDEO_BORDER_COLOR = (255, 0, 0)
 VIDEO_BORDER_THICKNESS = 10
-GPU_DEVICE_IDS = (0, 1)
-SPAWN_START_TIMEOUT_SECONDS = 300
-TASK_TIMEOUT_SECONDS = 14_400
 
 TaskID = Literal[
     "BinFill",
@@ -205,8 +199,8 @@ def process_episode(
     episode_idx: int,
     task_id: str,
     action_space_type: ActionSpaceType,
-) -> dict[str, Any]:
-    """Replay one episode and return an auditable result for its task worker."""
+) -> None:
+    """Replay one episode from HDF5 data, record frames, and save a video."""
     episode_data = env_data[f"episode_{episode_idx}"]
     task_goal = episode_data["setup"]["task_goal"][()][0].decode()
     action_sequence = _build_action_sequence(episode_data, action_space_type)
@@ -228,17 +222,16 @@ def process_episode(
     )
 
     outcome = "unknown"
-    step_error: str | None = None
     for seq_idx, action in enumerate(action_sequence):
-        obs, _, terminated, truncated, info = env.step(action)
-        frames.extend(_extract_frames(obs))
+        try:
+            obs, _, terminated, truncated, info = env.step(action)
+            frames.extend(_extract_frames(obs))
+        except Exception as e:
+            print(f"Error at seq_idx {seq_idx}: {e}")
+            break
 
         if GUI_RENDER:
             env.render()
-        if info.get("status") == "error":
-            step_error = str(info.get("error_message", "environment returned status=error"))
-            print(f"Error at seq_idx {seq_idx}: {step_error}")
-            break
         if terminated or truncated:
             outcome = info.get("status", "unknown")
             print(
@@ -247,258 +240,27 @@ def process_episode(
             break
 
     env.close()
-    video_path = _save_video(
-        frames, task_id, episode_idx, task_goal, outcome, action_space_type
-    )
-    print(f"Saved video to {video_path}\n")
-    return {
-        "episode_idx": episode_idx,
-        "outcome": outcome,
-        "step_error": step_error,
-        "video_path": str(video_path),
-    }
-
-
-def _replay_task(
-    task_id: str,
-    h5_data_dir: str,
-    action_space_type: ActionSpaceType,
-    replay_number: int,
-) -> dict[str, Any]:
-    """Open one task HDF5 file inside its owning child process and replay it."""
-    file_path = Path(h5_data_dir) / f"record_dataset_{task_id}.h5"
-    if not file_path.is_file():
-        raise FileNotFoundError(f"Missing HDF5 file for {task_id}: {file_path}")
-
-    with h5py.File(file_path, "r") as data:
-        episode_indices = _get_episode_indices(data)[:replay_number]
-        episodes = [
-            process_episode(data, episode_idx, task_id, action_space_type)
-            for episode_idx in episode_indices
-        ]
-
-    return {
-        "task_id": task_id,
-        "h5_path": str(file_path),
-        "episodes_requested": replay_number,
-        "episodes_replayed": len(episodes),
-        "episodes": episodes,
-    }
-
-
-def _task_worker(
-    task_id: str,
-    gpu_device: int,
-    h5_data_dir: str,
-    action_space_type: ActionSpaceType,
-    replay_number: int,
-    replay_log_dir: str,
-    ready_queue,
-    release_event,
-    result_queue,
-) -> None:
-    """Wait at the parent barrier, then run exactly one task and report its result."""
-    log_path = Path(replay_log_dir) / f"{task_id}.log"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    result: dict[str, Any]
-
-    with log_path.open("w", encoding="utf-8") as log_file:
-        with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-            try:
-                print(f"task_id={task_id} assigned_gpu={gpu_device}")
-                ready_queue.put({"task_id": task_id, "gpu_device": gpu_device})
-                if not release_event.wait(SPAWN_START_TIMEOUT_SECONDS):
-                    raise TimeoutError("parent did not release the spawn barrier")
-                task_result = _replay_task(
-                    task_id, h5_data_dir, action_space_type, replay_number
-                )
-                result = {
-                    "task_id": task_id,
-                    "gpu_device": gpu_device,
-                    "status": "ok",
-                    "log_path": str(log_path),
-                    **task_result,
-                }
-            except BaseException as exc:
-                traceback.print_exc()
-                result = {
-                    "task_id": task_id,
-                    "gpu_device": gpu_device,
-                    "status": "error",
-                    "error": f"{type(exc).__name__}: {exc}",
-                    "log_path": str(log_path),
-                }
-
-    result_queue.put(result)
-
-
-def _stop_processes(processes: list[mp.Process]) -> None:
-    for process in processes:
-        if process.is_alive():
-            process.terminate()
-    for process in processes:
-        process.join()
-
-
-def _write_replay_summary(replay_log_dir: Path, summary: dict[str, Any]) -> Path:
-    summary_path = replay_log_dir / "replay_summary.json"
-    summary_path.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
-    return summary_path
-
-
-def _run_parallel_replay(
-    task_ids: list[str],
-    h5_data_dir: str,
-    action_space_type: ActionSpaceType,
-    replay_number: int,
-    replay_log_dir: str,
-) -> None:
-    """Spawn one synchronized process per task and fail if any task is incomplete."""
-    if len(task_ids) != 16:
-        raise RuntimeError(f"Expected exactly 16 RoboMME tasks, found {len(task_ids)}")
-
-    log_dir = Path(replay_log_dir)
-    log_dir.mkdir(parents=True, exist_ok=True)
-    ctx = mp.get_context("spawn")
-    ready_queue = ctx.Queue()
-    result_queue = ctx.Queue()
-    release_event = ctx.Event()
-    processes: list[mp.Process] = []
-    assignments = {
-        task_id: GPU_DEVICE_IDS[index % len(GPU_DEVICE_IDS)]
-        for index, task_id in enumerate(task_ids)
-    }
-
-    had_visible_devices = "CUDA_VISIBLE_DEVICES" in os.environ
-    previous_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
-    try:
-        for task_id in task_ids:
-            gpu_device = assignments[task_id]
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_device)
-            process = ctx.Process(
-                target=_task_worker,
-                name=f"replay-{task_id}",
-                args=(
-                    task_id,
-                    gpu_device,
-                    h5_data_dir,
-                    action_space_type,
-                    replay_number,
-                    str(log_dir),
-                    ready_queue,
-                    release_event,
-                    result_queue,
-                ),
-            )
-            process.start()
-            processes.append(process)
-    finally:
-        if had_visible_devices:
-            os.environ["CUDA_VISIBLE_DEVICES"] = previous_visible_devices or ""
-        else:
-            os.environ.pop("CUDA_VISIBLE_DEVICES", None)
-
-    ready_tasks: set[str] = set()
-    startup_deadline = time.monotonic() + SPAWN_START_TIMEOUT_SECONDS
-    while len(ready_tasks) < len(task_ids) and time.monotonic() < startup_deadline:
-        try:
-            ready_message = ready_queue.get(
-                timeout=max(0.1, startup_deadline - time.monotonic())
-            )
-        except queue.Empty:
-            break
-        ready_tasks.add(ready_message["task_id"])
-
-    startup_failures = [
-        f"{process.name} exited before the barrier with code {process.exitcode}"
-        for process in processes
-        if process.exitcode is not None and process.exitcode != 0
-    ]
-    missing_ready = sorted(set(task_ids) - ready_tasks)
-    if missing_ready:
-        startup_failures.append(f"workers not ready before timeout: {missing_ready}")
-    if startup_failures:
-        _stop_processes(processes)
-        summary_path = _write_replay_summary(
-            log_dir,
-            {
-                "task_ids": task_ids,
-                "gpu_assignments": assignments,
-                "ready_tasks": sorted(ready_tasks),
-                "results": [],
-                "failures": startup_failures,
-            },
-        )
-        raise RuntimeError(f"Parallel replay startup failed; summary: {summary_path}")
-
-    release_event.set()
-    completion_deadline = time.monotonic() + TASK_TIMEOUT_SECONDS
-    for process in processes:
-        process.join(timeout=max(0.0, completion_deadline - time.monotonic()))
-
-    timed_out = [process.name for process in processes if process.is_alive()]
-    if timed_out:
-        _stop_processes(processes)
-
-    results: dict[str, dict[str, Any]] = {}
-    result_deadline = time.monotonic() + 5
-    while len(results) < len(task_ids) and time.monotonic() < result_deadline:
-        try:
-            result = result_queue.get(timeout=0.1)
-        except queue.Empty:
-            continue
-        results[result["task_id"]] = result
-
-    failures = [
-        f"timed out: {process_name}" for process_name in timed_out
-    ] + [
-        f"{process.name} exited with code {process.exitcode}"
-        for process in processes
-        if process.exitcode not in (0, None)
-    ] + [
-        f"missing worker result: {task_id}"
-        for task_id in task_ids
-        if task_id not in results
-    ] + [
-        f"{task_id}: {result.get('error', 'worker returned error')}"
-        for task_id, result in results.items()
-        if result["status"] != "ok"
-    ]
-
-    summary_path = _write_replay_summary(
-        log_dir,
-        {
-            "task_ids": task_ids,
-            "gpu_assignments": assignments,
-            "ready_tasks": sorted(ready_tasks),
-            "process_exit_codes": {process.name: process.exitcode for process in processes},
-            "results": [results[task_id] for task_id in task_ids if task_id in results],
-            "failures": failures,
-        },
-    )
-    if failures:
-        raise RuntimeError(f"Parallel replay failed; summary: {summary_path}")
-
-    print(f"Parallel replay completed for 16 tasks. Summary: {summary_path}")
+    path = _save_video(frames, task_id, episode_idx, task_goal, outcome, action_space_type)
+    print(f"Saved video to {path}\n")
 
 
 def replay(
     h5_data_dir: str = "data/robomme_data_h5",
     action_space_type: ActionSpaceType = "joint_angle",
     replay_number: int = 10,
-    replay_log_dir: str = "runs/replay_logs",
 ) -> None:
-    """Synchronously start 16 task workers, balanced across GPU 0 and GPU 1."""
-    _run_parallel_replay(
-        list(BenchmarkEnvBuilder.get_task_list()),
-        h5_data_dir,
-        action_space_type,
-        replay_number,
-        replay_log_dir,
-    )
+    """Replay episodes from HDF5 dataset files and save rollout videos."""
+    for task_id in BenchmarkEnvBuilder.get_task_list():
+        file_path = Path(h5_data_dir) / f"record_dataset_{task_id}.h5"
+
+        if not file_path.exists():
+            print(f"Skipping {task_id}: file not found: {file_path}")
+            continue
+
+        with h5py.File(file_path, "r") as data:
+            episode_indices = _get_episode_indices(data)
+            for episode_idx in episode_indices[:min(replay_number, len(episode_indices))]:
+                process_episode(data, episode_idx, task_id, action_space_type)
 
 
 if __name__ == "__main__":

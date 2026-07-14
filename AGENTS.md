@@ -109,8 +109,9 @@
 | --- | --- | --- | --- |
 | `/init` 仓库初始化 | 完成 | 已确认根目录 `readme.md`、官方 dataset 链接、仓库内标准数据路径、当前 Git 状态及历史候选线索；已创建本文件 | 按第一阶段下载参考 dataset |
 | 第一阶段：下载参考 dataset | 完成 | 固定官方 revision `a5e4e25ffe8af34f64944f9533d06455ce5f8337`；16 个 HDF5、1,600 episode 的 SHA-256/HDF5 审计通过；16 任务双 GPU 回放共 160 episode、160 success 视频、无 worker 或 step 错误 | 可正式开始第二阶段：扫描 Git 历史并恢复最新可用生成脚本 |
-| 第二阶段：恢复生成脚本 | 完成 | 扫描 14 个远端 branch、0 tag、71 个关键词 commit 和 539 个历史路径；选定最新兼容 `a3842d1...`，完整候选 worktree/lock、tracked patch、恢复运行器、help、固定 seed 1×1×1 smoke 和逐叶子容差审查均通过 | 已正式进入第三阶段 |
-| 第三阶段：生成与一致性审查 | 完成（按用户修订的同 seed/行为口径） | 正式 16×9 共 144 条均以 metadata 原 seed attempt 1/1 生成成功；契约 73,907 timestep/0 error；文件/schema/metadata 精确一致；已复测的 BinFill/PatternLock seed 重跑严格一致；行为回放 144/144 success、0 step error；详细结论见 `recovery/a3842d1b77bc79e2f70cefcbab136207e7067065/STAGE3_16x9_CONSISTENCY.md` | 严格内容比较仍为 `strict_equal=false`/`accepted=false`，不得声称字节或严格内容一致；若未来要求复原官方逐位值，需获得官方生成机数值运行时 |
+| 第二阶段：恢复生成脚本 | 完成 | 扫描 14 个远端 branch、0 tag、71 个关键词 commit 和 539 个历史路径；选定最新兼容 `a3842d1...`；最终唯一入口为 `scripts/generate_dataset.sh`，固化补丁为 `scripts/generate_dataset_a3842d1.patch`；候选 worktree/lock/Python 3.11.14、help、原 seed 1×1×1 smoke 与生成后契约均通过 | 已正式进入第三阶段 |
+| 第三阶段：生成与一致性审查 | 完成（按用户修订的同 seed/离线完成口径） | 复用正式 16×9 共 144 条；metadata 原 seed attempt 1/1 均生成成功。新离线审计确认双方最终严格布尔完成率均为 144/144，`joint_strict_equal=false`，最大绝对差 `5.661269342205344e-9`；详细结论见 `scripts/reports/DATASET_COMPARISON_16x9.md` | 不得声称字节级、非 joint 全内容、数值容差或行为一致；若未来要求官方逐位值，需取得官方生成机数值运行时 |
+| `dataset-gen` 分支整理与重新提交 | 完成 | 最终相对 `origin/main@6cea359...` 仅保留 `AGENTS.md` 与 5 个整理后的 `scripts/**` 文件；root lock/project、ignore 与 replay 均和 main 字节一致；加固后的 fresh BinFill 1×1×1、Python 编译、16×9 离线审计和路径白名单通过 | 本轮只创建本地 cleanup commit，不 push；默认入口支持 16×100，但本轮未实际运行全量 |
 
 ## 追加式执行日志
 
@@ -335,3 +336,44 @@
 - 差异或阻塞：逐叶比较退出码 1，报告保持 `strict_equal=false`、`accepted=false`：1,996,551 个叶中有 5,963 个内容差异，其中 5,355 个 joint-action 叶；原窄策略允许 5,271 条、拒绝 692 条。608 个非 joint 差异只出现在 PatternLock episode 1，涉及微小 EEF/state/extrinsic 与稀疏 RGB/depth 像素；该 episode 轨迹长度、完成标志和 replay 均成功。BinFill seed 4000 与 PatternLock seed 15001/15100 的当前环境独立重跑均 attempt 1/1 成功，且与本次当前产物逐叶严格相同。轻量测试的三项失败分别是未知环境空列表语义、SwingXtimes 连字符文案和已迁移到 `FailAwareWrapper` 的旧 AST 断言；相关测试/实现均早于本次恢复工作且本次未修改，不影响 16×9 生成契约或行为回放，但不得写成轻量测试全通过。
 - 修改文件：新增 `recovery/a3842d1b77bc79e2f70cefcbab136207e7067065/STAGE3_16x9_CONSISTENCY.md`，更新本 `AGENTS.md`；正式 HDF5、metadata、视频、日志、checksum 和 JSON/JSONL 报告均在仓库内被忽略的 `artifacts/`，官方参考保持只读。
 - 下一步：第二、第三阶段在用户修订的行为/同 seed 范围内均已完成。若未来要求字节级或严格内容一致，现有证据表明需要取得官方生成机的 CPU/BLAS/仿真数值运行时；不能从本轮 144/144 成功回放反推严格内容一致。
+
+
+### 2026-07-14 America/Detroit — `dataset-gen` cleanup：开始整理最终交付树
+
+- 状态：进行中。
+- 目标：以 `origin/main@6cea3594a7d2f475e124afa3c7575a24ac0b40ea` 为最终 tree 基线，保留已有两条提交并追加一个 cleanup commit；最终仅允许 `AGENTS.md` 与 `scripts/**` 不同于 main。
+- 执行命令：已检查 `git status --short --branch`、`git rev-parse HEAD origin/main`、分支提交链、`git diff --name-status origin/main...HEAD`、根 `pyproject.toml`/`uv.lock` SHA-256，并在执行 Python 前确认 `command -v uv` 与两份 uv 管理文件。
+- 输入与来源：当前 `dataset-gen@ecf9928ef4e29ae21099b3e496e7e2c4d860728f`；固定候选 `a3842d1b77bc79e2f70cefcbab136207e7067065`；现有正式生成数据 `artifacts/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/official-train-episodes-0-8/`。
+- 输出路径：计划形成 `scripts/generate_dataset.sh`、`scripts/generate_dataset_a3842d1.patch`、`scripts/validate_generated_dataset_contract.py`、`scripts/compare_joint_actions.py`、`scripts/reports/DATASET_COMPARISON_16x9.md`；机器 JSON 仅写入仓库内 `artifacts/reports/`。
+- 结果与证据：基线 SHA 已确认；根 `pyproject.toml` 与 `uv.lock` 当前均和 main 字节一致；本轮固定只复用 16×9，不补 episode 9、不运行 16×100，joint 差异只报告且不设通过阈值。
+- 差异或阻塞：尚未完成脚本迁移、fresh 1×1×1 smoke、16×9 新报告、pytest 与最终路径级检查，因此 cleanup 不得标记为完成。
+- 修改文件：`AGENTS.md`（本条开始日志）；后续只允许整理后的 `scripts/**`。
+- 下一步：并行整理生成入口和 joint 审计工具；随后恢复 main 文件、删除旧路径并完成验证。
+
+
+### 2026-07-14 America/Detroit — `dataset-gen` cleanup：代码归并与 16×9 离线 joint 报告完成
+
+- 状态：进行中；脚本与报告已完成，fresh smoke、pytest 和提交尚未完成。
+- 目标：将恢复链归并到 `scripts/`，并按最终离线口径重新审计现有 16×9 数据。
+- 执行命令：`bash -n scripts/generate_dataset.sh`（退出码 0）；`scripts/generate_dataset.sh --help`（退出码 0，未要求 output-dir）；`sha256sum scripts/generate_dataset_a3842d1.patch`；`uv run --locked python -m py_compile scripts/compare_joint_actions.py scripts/validate_generated_dataset_contract.py`（退出码 0）；`uv run --locked scripts/compare_joint_actions.py`（修复 NumPy 元素索引 JSON 类型后最终退出码 0）。所有 Python 命令前均确认 `command -v uv` 和根 `pyproject.toml`/`uv.lock`。
+- 输入与来源：只读官方 revision `a5e4e25ffe8af34f64944f9533d06455ce5f8337`、正式生成候选 `a3842d1b77bc79e2f70cefcbab136207e7067065`、双方 episode 0–8；root lock SHA-256 `983de83f7b22c98b96c3c25a39958b4f5920e3232cfaa209c89542ef5639ac03`，candidate lock SHA-256 `af4a645421c486ca1b1f27f5e54e8043497434b4efc49d2cbbf5eaa1b79d532e`。
+- 输出路径：tracked 报告 `scripts/reports/DATASET_COMPARISON_16x9.md`；机器 JSON `artifacts/reports/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/official-train-episodes-0-8/joint_16x9/comparison.json`。
+- 结果与证据：`validation_passed=true`、`joint_scope_complete=true`、`error_count=0`；16 个文件、144 条轨迹、73,907 个 joint 路径和 591,256 个 joint 元素完成核对；官方/生成最终严格布尔 `info/is_completed` 均为 144/144。joint 严格不相等：5,355 个路径、16,380 个元素有差异，最大绝对差 `5.661269342205344e-9`、mean abs `8.029681035134313e-13`、RMSE `5.061379303136063e-11`。差异只报告，无阈值、无“容差通过”结论。
+- 差异或阻塞：首次 joint 扫描因最差元素索引保留 `numpy.int64` 而在 JSON 写出时报 TypeError、退出码 2；已最小修正为 Python `int` 并从头复跑成功。该失败未作为报告证据。新报告明确不声明字节级、非 joint 全内容、数值容差或行为回放一致。
+- 修改文件：新增 `scripts/generate_dataset.sh`、`scripts/generate_dataset_a3842d1.patch`、`scripts/compare_joint_actions.py`、`scripts/reports/DATASET_COMPARISON_16x9.md`；最小扩展 `scripts/validate_generated_dataset_contract.py` 的预期 env/episode 闭环；恢复 main 的 ignore/replay 内容并撤出旧 `recovery/`、旧运行器、通用比较器、第一阶段审计脚本和分支新增测试。
+- 下一步：在全新目录运行 BinFill 1×1×1 smoke，然后执行 main 自带 lightweight/dataset 测试与最终白名单检查。
+
+
+### 2026-07-14 04:17 EDT — `dataset-gen` cleanup：最终 smoke、测试与提交前验收完成
+
+- 状态：完成；本条与整理后的代码将由单个本地 cleanup commit 落盘，不推送远端。
+- 目标：验证唯一生成入口在隔离候选环境中可重复生成完整轨迹，刷新正式 16×9 离线报告，并确保最终 tree 除 `AGENTS.md`、`scripts/**` 外与最新 main 完全一致。
+- 执行命令：`bash -n scripts/generate_dataset.sh`、`scripts/generate_dataset.sh --help`（均退出码 0）；在故意注入 ambient `UV_*`、`GIT_*`、`PYTHONPATH` 与导出同名 `uv` shell function 的环境中运行 `scripts/generate_dataset.sh --output-dir artifacts/generated/a3842d1.../cleanup-smoke-final-v4 --env BinFill --episodes 1 --max-workers 1 --gpus 1`（退出码 0）；仓库外 output-dir 与非空 output-dir 负测均按预期退出 2；`uv run --locked python -m py_compile scripts/validate_generated_dataset_contract.py scripts/compare_joint_actions.py`（退出码 0）；`uv run --locked python scripts/compare_joint_actions.py`（退出码 0）；`uv run --locked python -m pytest tests/lightweight/`（退出码 1）；`uv run --locked python -m pytest tests/dataset/`（退出码 0）。每次 Python 命令前均确认 `command -v uv` 与根 `pyproject.toml`/`uv.lock`。
+- 输入与来源：最新 main `6cea3594a7d2f475e124afa3c7575a24ac0b40ea`；生成候选 `a3842d1b77bc79e2f70cefcbab136207e7067065`；官方 revision `a5e4e25ffe8af34f64944f9533d06455ce5f8337`；正式 16×9 episode 0–8 数据。
+- 输出路径：fresh smoke 为 `artifacts/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/cleanup-smoke-final-v4/`，契约为 `artifacts/reports/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/cleanup-smoke-final-v4/generation_contract.json`；机器 joint JSON 为 `artifacts/reports/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/official-train-episodes-0-8/joint_16x9/comparison.json`；tracked 报告为 `scripts/reports/DATASET_COMPARISON_16x9.md`；pytest 日志为 `artifacts/reports/cleanup/tests/`。
+- 结果与证据：生成入口默认 16 env × 100 episode、20 workers、GPU 1，必须显式使用候选专用仓库内新目录；固定候选 lock、uv-managed Python 3.11.14、`train/` metadata、原 seed 单次尝试和记录模式。入口还拒绝 workspace mount/submount、路径 symlink、Git replace refs、非标准 index 标志、ambient Git/uv 配置及 shell function 劫持，并在 sync 后和生成后复核完整 worktree closure。最终 BinFill smoke 使用 seed 4000、attempt 1/1，550 个连续 timestep，最终严格布尔 `is_completed=true`，契约 `passed=true`/0 error；HDF5 SHA-256 为 `19e1ccf35f9bc3dcb254596ed008d2ee9b94e35b2b369aabc58a644a01b2239c`。固化补丁 SHA-256 为 `0336aa404ce805a160986857763ad89dbe72990d3afe662084a0d08d9c20c366`，与候选完整 worktree diff 逐字一致且只修改历史生成入口。
+- 16×9 结论：`validation_passed=true`、`joint_scope_complete=true`、官方/生成离线完成率均为 144/144。73,907 个 joint 路径、591,256 个元素中，5,355 个路径和 16,380 个元素严格不等；差异元素比例 `2.7703735776042866e-2`，最大绝对差 `5.661269342205344e-9`、mean abs `8.029681035134313e-13`、RMSE `5.061379303136063e-11`。Joint 差异只报告、无容差阈值、不影响退出码 0；不据此声明字节、非 joint 全内容、容差或行为一致。
+- 测试结论：`tests/dataset/` 为 31 passed、370 warnings；`tests/lightweight/` 为 109 passed、4 failed、803 warnings。四项失败均来自恢复为 main 的既有实现/测试期望：未知 env 返回 `[]` 而测试要求 `[""]`、SwingXtimes 文案含 `back-and-forth` 连字符、`DemonstrationWrapper.step()` 没有旧测试要求的 `try/except`、main 的 `dataset_replay.py` 没有旧测试要求的 status 检查；本次按范围约束未修改 main 源码或测试。可选 ruff 检查因 unchanged lock 未提供 ruff 而退出 2，未安装依赖、未修改 lock。
+- 路径与版本验收：提交前白名单严格只有 `AGENTS.md`、`scripts/compare_joint_actions.py`、`scripts/generate_dataset.sh`、`scripts/generate_dataset_a3842d1.patch`、`scripts/reports/DATASET_COMPARISON_16x9.md`、`scripts/validate_generated_dataset_contract.py`；`pyproject.toml`、`uv.lock`、`.gitignore`、`.dockerignore` 与 `scripts/dataset_replay.py` 均和 main 字节一致，`git diff --check` 通过，Git 未跟踪 `data/`、`artifacts/`、视频或缓存。约 500 GB 本地数据仅由 `.git/info/exclude` 保护；该规则不提交且不保护 Docker context，因此当前含数据 checkout 不得直接作为 Docker build context。
+- 修改文件：最终只保留上述 6 个白名单路径；删除旧 `recovery/`、旧运行器、通用全叶比较器、第一阶段审计脚本和分支新增的 3 个 lightweight 测试；`.gitignore`、`.dockerignore` 与 `scripts/dataset_replay.py` 精确恢复 main。
+- 下一步：显式暂存白名单及必要删除，复核 cached diff/文件大小后创建本地 `Consolidate dataset generation and 16x9 joint audit` 提交；不 push，不补 episode 9，不执行 16×100。

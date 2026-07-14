@@ -856,6 +856,8 @@ def validate_generated_dataset_contract(
     metadata_root: str | Path,
     workspace_root: str | Path,
     report: str | Path,
+    expected_envs: list[str] | None = None,
+    expected_episodes: int | None = None,
 ) -> dict[str, Any]:
     """验证生成目录且仅向显式报告路径写入 JSON。"""
     workspace = _safe_workspace_root(workspace_root)
@@ -873,6 +875,14 @@ def validate_generated_dataset_contract(
         "generated_directory": str(_absolute_path(generated_dir)),
         "metadata_root": str(_absolute_path(metadata_root)),
         "report": str(report_path),
+        "expected": {
+            "environments": expected_envs,
+            "episode_indices": (
+                list(range(expected_episodes))
+                if expected_episodes is not None
+                else None
+            ),
+        },
         "counts": {
             "h5_files": 0,
             "environments": 0,
@@ -943,6 +953,36 @@ def validate_generated_dataset_contract(
             path=str(generated),
         )
 
+    if expected_envs is not None:
+        duplicate_expected_envs = sorted(
+            {
+                env_id
+                for env_id in expected_envs
+                if expected_envs.count(env_id) > 1
+            }
+        )
+        if duplicate_expected_envs:
+            _append_error(
+                errors,
+                "expected_environment_duplicate",
+                "调用方给出的预期环境存在重复值",
+                actual=duplicate_expected_envs,
+            )
+        actual_envs = {env_id for env_id, _ in h5_files}
+        expected_env_set = set(expected_envs)
+        missing_envs = sorted(expected_env_set - actual_envs)
+        extra_envs = sorted(actual_envs - expected_env_set)
+        if missing_envs or extra_envs:
+            _append_error(
+                errors,
+                "generated_environment_set_mismatch",
+                "生成 HDF5 文件集合与调用方请求不一致",
+                expected=sorted(expected_env_set),
+                actual=sorted(actual_envs),
+                missing=missing_envs,
+                extra=extra_envs,
+            )
+
     total_episodes = 0
     total_timesteps = 0
     environment_summaries: list[dict[str, Any]] = []
@@ -961,6 +1001,17 @@ def validate_generated_dataset_contract(
         episodes, setup_values, trajectory_summaries = _inspect_h5(
             h5_path, env_id=env_id, errors=errors
         )
+        if expected_episodes is not None:
+            expected_episode_indices = list(range(expected_episodes))
+            if episodes != expected_episode_indices:
+                _append_error(
+                    errors,
+                    "generated_episode_set_mismatch",
+                    "HDF5 episode 集合与调用方请求不一致",
+                    env_id=env_id,
+                    expected=expected_episode_indices,
+                    actual=episodes,
+                )
         total_episodes += len(episodes)
         environment_timesteps = sum(
             int(summary["timestep_count"])
@@ -1029,6 +1080,17 @@ def validate_generated_dataset_contract(
     return payload
 
 
+def _positive_episode_count(raw_value: str) -> int:
+    """将 CLI episode 数解析为正整数。"""
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("必须是正整数") from exc
+    if value < 1:
+        raise argparse.ArgumentTypeError("必须大于等于 1")
+    return value
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="只读验证生成 HDF5、生成 metadata 与源 metadata 的契约一致性。"
@@ -1037,6 +1099,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--metadata-root", required=True, type=Path)
     parser.add_argument("--workspace-root", required=True, type=Path)
     parser.add_argument("--report", required=True, type=Path)
+    parser.add_argument(
+        "--expected-env",
+        action="append",
+        dest="expected_envs",
+        help="调用方预期生成的环境；可重复传入。省略时保持旧的自动发现行为。",
+    )
+    parser.add_argument(
+        "--expected-episodes",
+        type=_positive_episode_count,
+        help="每个预期环境必须包含 episode_0 到 episode_(N-1)。",
+    )
     return parser.parse_args(argv)
 
 
@@ -1048,6 +1121,8 @@ def main(argv: list[str] | None = None) -> int:
             metadata_root=args.metadata_root,
             workspace_root=args.workspace_root,
             report=args.report,
+            expected_envs=args.expected_envs,
+            expected_episodes=args.expected_episodes,
         )
     except UnsafePathError as exc:
         print(f"契约验证无法安全启动：{exc}", file=sys.stderr)
