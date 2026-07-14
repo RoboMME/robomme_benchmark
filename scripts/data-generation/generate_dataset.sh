@@ -26,7 +26,7 @@ readonly -a DEFAULT_ENVS=(
 )
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
+WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd -P)"
 ARTIFACTS_ROOT="$WORKSPACE_ROOT/artifacts"
 CACHE_ROOT="$WORKSPACE_ROOT/.cache"
 WORKTREE="$ARTIFACTS_ROOT/recovery/worktrees/${CANDIDATE_COMMIT}-recovered-clean-v3"
@@ -39,7 +39,7 @@ GENERATED_BASE="$ARTIFACTS_ROOT/generated/$CANDIDATE_COMMIT"
 usage() {
     cat <<'EOF'
 用法：
-  scripts/generate_dataset.sh --output-dir <候选专用的新目录> [选项]
+  scripts/data-generation/generate_dataset.sh --output-dir <候选专用的新目录> [选项]
 
 默认完整生成：
   16 个环境 × 每环境 100 episodes，20 workers，GPU 1。
@@ -53,7 +53,7 @@ usage() {
   --help, -h              显示本帮助，不创建 worktree 或输出目录。
 
 示例（16×9 审查范围）：
-  scripts/generate_dataset.sh \
+  scripts/data-generation/generate_dataset.sh \
     --output-dir artifacts/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/new-16x9-run \
     --episodes 9 --max-workers 9 --gpus 0,1
 

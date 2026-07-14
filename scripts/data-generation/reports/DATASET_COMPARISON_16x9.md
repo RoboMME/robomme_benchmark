@@ -22,7 +22,7 @@
 ## 可复现命令
 
 ```bash
-uv run --locked scripts/compare_joint_actions.py
+uv run --locked scripts/data-generation/compare_joint_actions.py
 ```
 
 机器 JSON：`/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/reports/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/official-train-episodes-0-8/joint_16x9/comparison.json`

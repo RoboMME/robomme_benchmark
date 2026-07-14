@@ -111,7 +111,7 @@
 | 第一阶段：下载参考 dataset | 完成 | 固定官方 revision `a5e4e25ffe8af34f64944f9533d06455ce5f8337`；16 个 HDF5、1,600 episode 的 SHA-256/HDF5 审计通过；16 任务双 GPU 回放共 160 episode、160 success 视频、无 worker 或 step 错误 | 可正式开始第二阶段：扫描 Git 历史并恢复最新可用生成脚本 |
 | 第二阶段：恢复生成脚本 | 完成 | 扫描 14 个远端 branch、0 tag、71 个关键词 commit 和 539 个历史路径；选定最新兼容 `a3842d1...`；最终唯一入口为 `scripts/generate_dataset.sh`，固化补丁为 `scripts/generate_dataset_a3842d1.patch`；候选 worktree/lock/Python 3.11.14、help、原 seed 1×1×1 smoke 与生成后契约均通过 | 已正式进入第三阶段 |
 | 第三阶段：生成与一致性审查 | 完成（按用户修订的同 seed/离线完成口径） | 复用正式 16×9 共 144 条；metadata 原 seed attempt 1/1 均生成成功。新离线审计确认双方最终严格布尔完成率均为 144/144，`joint_strict_equal=false`，最大绝对差 `5.661269342205344e-9`；详细结论见 `scripts/reports/DATASET_COMPARISON_16x9.md` | 不得声称字节级、非 joint 全内容、数值容差或行为一致；若未来要求官方逐位值，需取得官方生成机数值运行时 |
-| `dataset-gen` 分支整理与重新提交 | 完成 | 最终相对 `origin/main@6cea359...` 仅保留 `AGENTS.md` 与 5 个整理后的 `scripts/**` 文件；root lock/project、ignore 与 replay 均和 main 字节一致；加固后的 fresh BinFill 1×1×1、Python 编译、16×9 离线审计和路径白名单通过 | 本轮只创建本地 cleanup commit，不 push；默认入口支持 16×100，但本轮未实际运行全量 |
+| `dataset-gen` 目录整理与产物清理 | 完成 | 已将 5 个 branch-specific 生成/验证文件及报告归并到 `scripts/data-generation/`，新增中文 README；根目录 `AGENTS.md` 保留；最终只保留指定 dataset、回放、16×9 报告和 reference 日志 | 已完成路径修正、独立契约验证、默认 16×9 对比、worktree 注销、缓存与中间产物清理；本轮不重新生成 16×100
 
 ## 追加式执行日志
 
@@ -377,3 +377,30 @@
 - 路径与版本验收：提交前白名单严格只有 `AGENTS.md`、`scripts/compare_joint_actions.py`、`scripts/generate_dataset.sh`、`scripts/generate_dataset_a3842d1.patch`、`scripts/reports/DATASET_COMPARISON_16x9.md`、`scripts/validate_generated_dataset_contract.py`；`pyproject.toml`、`uv.lock`、`.gitignore`、`.dockerignore` 与 `scripts/dataset_replay.py` 均和 main 字节一致，`git diff --check` 通过，Git 未跟踪 `data/`、`artifacts/`、视频或缓存。约 500 GB 本地数据仅由 `.git/info/exclude` 保护；该规则不提交且不保护 Docker context，因此当前含数据 checkout 不得直接作为 Docker build context。
 - 修改文件：最终只保留上述 6 个白名单路径；删除旧 `recovery/`、旧运行器、通用全叶比较器、第一阶段审计脚本和分支新增的 3 个 lightweight 测试；`.gitignore`、`.dockerignore` 与 `scripts/dataset_replay.py` 精确恢复 main。
 - 下一步：显式暂存白名单及必要删除，复核 cached diff/文件大小后创建本地 `Consolidate dataset generation and 16x9 joint audit` 提交；不 push，不补 episode 9，不执行 16×100。
+
+
+### 2026-07-14 America/Detroit — dataset-gen 目录整理与产物清理：开始实施
+
+- 状态：进行中。
+- 目标：将生成工具集中到 `scripts/data-generation/`，保留根目录 `AGENTS.md`，新增中文 README，并只保留用户指定的数据集、回放和最终 16×9 完整报告。
+- 执行命令：已完成 `git status --short --branch`、`git worktree list --porcelain`、目录大小和保留范围盘点；移动操作已完成，路径补丁和 README 正在整理。
+- 保留路径：`data/robomme_data_h5/`、`runs/replay_videos/`、`artifacts/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/official-train-episodes-0-8/`、对应 `artifacts/reports/generated/.../official-train-episodes-0-8/` 与 `artifacts/reports/reference/`。
+- 差异或阻塞：当前尚未删除中间产物，也尚未完成移动后的帮助、完整性验证和 16×9 对比复验。
+- 修改文件：5 个 dataset-gen 文件已移动到 `scripts/data-generation/`；新增 `scripts/data-generation/README.md`；根 `AGENTS.md` 保持原位置。
+- 下一步：完成路径引用检查，注销临时 Git worktree，删除明确中间目录，再执行验证和最终白名单检查。
+
+
+
+
+### 2026-07-14 America/Detroit — dataset-gen 目录整理与产物清理：完成
+
+- 状态：完成。
+- 目标：集中 dataset generation 工具、补充中文 README，并按用户白名单清理中间产物；不重新启动完整 16×100 GPU 生成。
+- 执行命令：`command -v uv`（`/home/hongzefu/.local/bin/uv`）、根 `pyproject.toml`/`uv.lock` 检查、`bash -n scripts/data-generation/generate_dataset.sh`、`scripts/data-generation/generate_dataset.sh --help` 均通过；对现有最终 16×9 运行 `uv run --locked scripts/data-generation/validate_generated_dataset_contract.py` 和 `uv run --locked scripts/data-generation/compare_joint_actions.py`，均退出码 0。
+- 整理结果：`generate_dataset.sh`、固定补丁、validator、comparator、16×9 Markdown 报告和中文 README 位于 `scripts/data-generation/`；生成器仓库根目录已改为 `SCRIPT_DIR/../..`，comparator 默认 Markdown 报告路径已改为 `scripts/data-generation/reports/DATASET_COMPARISON_16x9.md`。
+- 完整性证据：validator 报告 `artifacts/reports/generated/a3842d1b77bc79e2f70cefcbab136207e7067065/official-train-episodes-0-8/generation_contract-rerun-cleanup.json` 显示 16 env、144 episodes、73,907 timesteps、0 errors；根仓库 `src/robomme/env_metadata/train` 用于复验。
+- 对比证据：默认 JSON `artifacts/reports/generated/a3842d1b77bc79e2f70cefcbab136207e7065/official-train-episodes-0-8/joint_16x9/comparison.json` 显示 `validation_passed=true`、官方/生成完成状态均为 144/144；joint 严格不相等，5,355 个路径和 16,380 个元素存在差异，最大绝对差 `5.661269342205344e-9`，差异仅报告。
+- 清理证据：所有恢复 worktree 已先通过 `git worktree remove --force` 注销并执行 `git worktree prune`；删除旧生成、smoke、`artifacts/recovery/`、`artifacts/reports/recovery/`、`artifacts/reports/cleanup/`、`artifacts/test-tmp/`、根 `recovery/`、`.cache`、`.venv`、`.pytest_cache` 和 `__pycache__`。保留 `data/robomme_data_h5/`、`runs/replay_videos/`、最终 16×9 dataset、最终完整报告目录和 `artifacts/reports/reference/`。
+- 最终检查：保留/删除白名单、单主 worktree、无 `__pycache__` 和 `git diff --check` 均通过。
+- 修改文件：根 `AGENTS.md` 与 `scripts/data-generation/` 下的整理后工具和 README；未修改 main 原有 `scripts/dataset_replay.py`、`evaluation.py` 等基础脚本。
+- 后续：如需完整 16×100 重新生成，直接按 `scripts/data-generation/README.md` 执行；当前整理任务无未完成步骤。

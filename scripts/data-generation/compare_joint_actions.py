@@ -61,7 +61,9 @@ DEFAULT_JSON_REPORT = (
     "artifacts/reports/generated/"
     f"{CANDIDATE_COMMIT}/official-train-episodes-0-8/joint_16x9/comparison.json"
 )
-DEFAULT_MARKDOWN_REPORT = "scripts/reports/DATASET_COMPARISON_16x9.md"
+DEFAULT_MARKDOWN_REPORT = (
+    "scripts/data-generation/reports/DATASET_COMPARISON_16x9.md"
+)
 
 EPISODE_PATTERN = re.compile(r"^episode_(0|[1-9][0-9]*)$")
 TIMESTEP_PATTERN = re.compile(r"^timestep_(0|[1-9][0-9]*)$")
@@ -1302,7 +1304,7 @@ def _render_markdown(summary: dict[str, Any]) -> str:
         "## 可复现命令",
         "",
         "```bash",
-        "uv run --locked scripts/compare_joint_actions.py",
+        "uv run --locked scripts/data-generation/compare_joint_actions.py",
         "```",
         "",
         f"机器 JSON：`{summary['json_report']}`",
