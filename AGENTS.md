@@ -112,6 +112,7 @@
 | 第二阶段：恢复生成脚本 | 完成 | 扫描 14 个远端 branch、0 tag、71 个关键词 commit 和 539 个历史路径；选定最新兼容 `a3842d1...`；最终唯一入口为 `scripts/generate_dataset.sh`，固化补丁为 `scripts/generate_dataset_a3842d1.patch`；候选 worktree/lock/Python 3.11.14、help、原 seed 1×1×1 smoke 与生成后契约均通过 | 已正式进入第三阶段 |
 | 第三阶段：生成与一致性审查 | 完成（按用户修订的同 seed/离线完成口径） | 复用正式 16×9 共 144 条；metadata 原 seed attempt 1/1 均生成成功。新离线审计确认双方最终严格布尔完成率均为 144/144，`joint_strict_equal=false`，最大绝对差 `5.661269342205344e-9`；详细结论见 `scripts/reports/DATASET_COMPARISON_16x9.md` | 不得声称字节级、非 joint 全内容、数值容差或行为一致；若未来要求官方逐位值，需取得官方生成机数值运行时 |
 | `dataset-gen` 目录整理与产物清理 | 完成 | 已将 5 个 branch-specific 生成/验证文件及报告归并到 `scripts/data-generation/`，新增中文 README；根目录 `AGENTS.md` 保留；最终只保留指定 dataset、回放、16×9 报告和 reference 日志 | 已完成路径修正、独立契约验证、默认 16×9 对比、worktree 注销、缓存与中间产物清理；本轮不重新生成 16×100
+| 独立 No-Patch 验证/比较/报告拆分 | 完成（中央 reports） | validator、comparator、report writer 已拆分；所有新 JSON/Markdown 报告统一写入 `scripts/data-generation-v2-noPatch/reports/` | 完整 16×9 中央复核通过：双方完成 144/144、73,907 vectors、591,256 elements、最大差 `5.661269342205344e-09` |
 
 ## 追加式执行日志
 
@@ -429,3 +430,50 @@
 - 差异或阻塞：首次 smoke 将合法 setup 元数据组误视为 timestep，已在新脚本的连续 timestep 解析中显式排除 setup 后用全新目录重跑通过。最终 joint 严格不等元素为 16,380，报告仅按本次验收阈值判定通过。
 - 修改文件：AGENTS.md 与新增 scripts/data-generation-v2-noPatch/generate_dataset.py；未修改 src/robomme、uv.lock、pyproject.toml、参考数据或旧生成目录。
 - 下一步：如需重新运行，输出目录必须是仓库内不存在或空目录；默认 all 与 episodes 9 即复现完整 16×9 验收。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch 验证、比较与报告拆分：开始实施
+
+- 状态：进行中。
+- 目标：按用户最新授权，将 `generate_dataset.py` 中的生成后合约验证、官方 `joint_action` 比较和 JSON/Markdown 报告写入拆为同目录独立模块；生成器仍在同一进程直接调用它们，且不读取、导入、调用或复制 `scripts/data-generation/`。
+- 执行命令：已确认 `command -v uv` 为 `/home/hongzefu/.local/bin/uv`，并确认根 `pyproject.toml`/`uv.lock` 存在；后续 Python 命令仅使用 `uv run --locked`。
+- 输入与来源：当前 `dataset-gen` HEAD、`src/robomme/env_metadata/train/`、只读 `data/robomme_data_h5/` 与既有 `artifacts/generated/no-patch-full-16x9/`。
+- 输出路径：新增三个 Python 模块位于 `scripts/data-generation-v2-noPatch/`；权威 JSON/Markdown 报告将写入每个生成输出的 `reports/` 子目录。
+- 结果与证据：开始前内嵌 16×9 报告已记录官方/生成完成均为 144/144、73,907 个 joint 向量、591,256 个元素及最大绝对差 `5.661269342205344e-9`。
+- 差异或阻塞：无；本轮不重新生成完整 16×9 HDF5，只会对已有产物做只读复核并写新报告。
+- 修改文件：`AGENTS.md`；待新增三个 No-Patch 模块并重构 `generate_dataset.py`。
+- 下一步：提取共享 HDF5 合约 helper，接入独立 validator/comparator/reporter，并运行 CLI、smoke 与既有完整输出复核。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch 验证、比较与报告拆分：完成
+
+- 状态：完成。
+- 目标：将 No-Patch 生成后的 HDF5/metadata 合约审计、joint_action 逐元素比较和报告写入拆分为本目录独立模块，并让生成器同进程复用它们。
+- 执行命令：`uv run --locked python -m py_compile` 检查四个 Python 文件；四个 `--help` 入口均通过；完整 16×9 分别运行新 validator、comparator 和 reporter；最终 BinFill 1×1 使用 `uv run --locked scripts/data-generation-v2-noPatch/generate_dataset.py --output-dir artifacts/generated/no-patch-split-smoke-binfll-v2 --env BinFill --episodes 1 --workers 1 --gpus 0`，均退出码 0。额外非法环境负测按预期退出码 1，仍写出 reports。
+- 输入与来源：当前 `src/robomme`、严格 `src/robomme/env_metadata/train/` 和只读 `data/robomme_data_h5/`；未读取、导入、调用或复制旧 `scripts/data-generation/`。
+- 输出路径：完整复核报告为 `artifacts/generated/no-patch-full-16x9/reports/no_patch_generation_report.json` 和 `.md`；最终 smoke 报告位于 `artifacts/generated/no-patch-split-smoke-binfll-v2/reports/`。
+- 结果与证据：完整范围为 16 环境、episode 0–8；官方/生成最终严格 bool 完成均为 144/144，连续 timestep、setup seed/difficulty、`(8,) float64` 与有限数值合约均 0 error；比较覆盖 73,907 个向量、591,256 个元素，最大绝对差 `5.661269342205344e-9`，小于 `1e-8`。最终 smoke 最大差 `2.2408256619612515e-18`。
+- 差异或阻塞：无；`uv.lock` 与 `main` 完全一致，SHA-256 为 `983de83f7b22c98b96c3c25a39958b4f5920e3232cfaa209c89542ef5639ac03`。
+- 修改文件：`AGENTS.md`、重构的 `scripts/data-generation-v2-noPatch/generate_dataset.py`，以及新增 `validate_generated_dataset_contract.py`、`compare_joint_actions.py`、`write_generation_report.py`。
+- 下一步：重新生成时继续使用当前 `uv run --locked` 入口；已有输出可直接运行 `write_generation_report.py` 只读复核并刷新其 `reports/`。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch 报告目录：开始修订
+
+- 状态：进行中。
+- 目标：按用户要求将生成器和独立复核器生成的 JSON/Markdown 统一写入 `scripts/data-generation-v2-noPatch/reports/`，不再向每个数据输出目录写新报告。
+- 执行命令：已重新阅读 `AGENTS.md`，并将只用当前仓库的 `uv run --locked` 进行后续 Python 验证。
+- 输入与来源：现有拆分后的 report writer、既有完整 16×9 输出和只读官方 reference。
+- 输出路径：固定中央目录 `/data/hongzefu/robomme_benchmark-restore-DataGen/scripts/data-generation-v2-noPatch/reports/`。
+- 差异或阻塞：无；历史输出目录中的旧报告副本保留为既有产物，不作为后续 writer 的写入目标。
+- 修改文件：`AGENTS.md`；待更新 `write_generation_report.py` 并刷新中央完整报告。
+- 下一步：修改报告 writer、做语法检查并通过现有 16×9 输出生成中央 JSON/Markdown。
+
+### 2026-07-14 America/Detroit — 独立 No-Patch 报告目录：完成
+
+- 状态：完成。
+- 目标：将生成器和独立复核器产生的权威 JSON/Markdown 统一固定写入 `scripts/data-generation-v2-noPatch/reports/`。
+- 执行命令：已先确认 `command -v uv` 与根 `pyproject.toml`/`uv.lock`；使用 `uv run --locked python -m py_compile` 检查四个 No-Patch 脚本，再以 `uv run --locked scripts/data-generation-v2-noPatch/write_generation_report.py --output-dir artifacts/generated/no-patch-full-16x9 --env all --episodes 9 --workers 9 --gpus 0,1 --prior-report artifacts/generated/no-patch-full-16x9/no_patch_generation_report.json --max-abs-diff 1e-8` 做只读完整复核。
+- 输入与来源：既有 `artifacts/generated/no-patch-full-16x9/`、严格 train metadata 与只读 `data/robomme_data_h5/`；未重新生成 HDF5。
+- 输出路径：`scripts/data-generation-v2-noPatch/reports/no_patch_generation_report.json` 与 `.md`。
+- 结果与证据：完整 16 环境 × episode 0–8 复核通过；官方/生成最终严格 bool 完成均为 144/144，合约错误为 0，joint 比较覆盖 73,907 个向量和 591,256 个元素，比较错误为 0，最大绝对差 `5.661269342205344e-09` 小于 `1e-8`。
+- 差异或阻塞：无；新固定文件名表示中央目录仅保留最新一次生成或复核的报告。历史输出目录中的旧报告副本未修改。
+- 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/write_generation_report.py`、`scripts/data-generation-v2-noPatch/generate_dataset.py`，以及中央 reports 中的新 JSON/Markdown。
+- 下一步：后续生成和只读复核会通过同一 writer 自动覆盖中央目录中的最新完整报告；`uv.lock` 仍与 `main` 完全一致。

@@ -1,0 +1,4941 @@
+{
+  "schema_version": 2,
+  "status": "passed",
+  "generated_at_utc": "2026-07-14T13:28:54.521494+00:00",
+  "current_head": "7a4362d9f8891649631cc7ef01c4935af684f942",
+  "uv_lock_sha256": "983de83f7b22c98b96c3c25a39958b4f5920e3232cfaa209c89542ef5639ac03",
+  "parameters": {
+    "output_dir": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9",
+    "env": "all",
+    "tasks": [
+      "PickXtimes",
+      "StopCube",
+      "SwingXtimes",
+      "BinFill",
+      "VideoUnmaskSwap",
+      "VideoUnmask",
+      "ButtonUnmaskSwap",
+      "ButtonUnmask",
+      "VideoRepick",
+      "VideoPlaceButton",
+      "VideoPlaceOrder",
+      "PickHighlight",
+      "InsertPeg",
+      "MoveCube",
+      "PatternLock",
+      "RouteStick"
+    ],
+    "episodes": 9,
+    "workers": 9,
+    "gpus": [
+      "0",
+      "1"
+    ],
+    "metadata_root": "/data/hongzefu/robomme_benchmark-restore-DataGen/src/robomme/env_metadata/train",
+    "reference_root": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5",
+    "seed_attempts_per_episode": 1,
+    "save_video_for_recording": true,
+    "max_abs_diff": 1e-08
+  },
+  "report_mode": "existing_output_revalidation",
+  "prior_report": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/no_patch_generation_report.json",
+  "prior_generation_head": "9071b418f6aba3285e282620bef62359bd14288f",
+  "generation": {
+    "requested_count": 144,
+    "success_count": 144,
+    "failure_count": 0,
+    "results": [
+      {
+        "task": "BinFill",
+        "episode": 0,
+        "seed": 4000,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_0/hdf5_files/BinFill_ep0_seed4000.h5",
+        "timestep_count": 550
+      },
+      {
+        "task": "BinFill",
+        "episode": 1,
+        "seed": 4100,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_1/hdf5_files/BinFill_ep1_seed4100.h5",
+        "timestep_count": 366
+      },
+      {
+        "task": "BinFill",
+        "episode": 2,
+        "seed": 4200,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_2/hdf5_files/BinFill_ep2_seed4200.h5",
+        "timestep_count": 883
+      },
+      {
+        "task": "BinFill",
+        "episode": 3,
+        "seed": 4301,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_3/hdf5_files/BinFill_ep3_seed4301.h5",
+        "timestep_count": 940
+      },
+      {
+        "task": "BinFill",
+        "episode": 4,
+        "seed": 4401,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_4/hdf5_files/BinFill_ep4_seed4401.h5",
+        "timestep_count": 625
+      },
+      {
+        "task": "BinFill",
+        "episode": 5,
+        "seed": 4500,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_5/hdf5_files/BinFill_ep5_seed4500.h5",
+        "timestep_count": 378
+      },
+      {
+        "task": "BinFill",
+        "episode": 6,
+        "seed": 4600,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_6/hdf5_files/BinFill_ep6_seed4600.h5",
+        "timestep_count": 622
+      },
+      {
+        "task": "BinFill",
+        "episode": 7,
+        "seed": 4701,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_7/hdf5_files/BinFill_ep7_seed4701.h5",
+        "timestep_count": 785
+      },
+      {
+        "task": "BinFill",
+        "episode": 8,
+        "seed": 4800,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/BinFill_episode_8/hdf5_files/BinFill_ep8_seed4800.h5",
+        "timestep_count": 462
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 0,
+        "seed": 8000,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_0/hdf5_files/ButtonUnmask_ep0_seed8000.h5",
+        "timestep_count": 291
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 1,
+        "seed": 8100,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_1/hdf5_files/ButtonUnmask_ep1_seed8100.h5",
+        "timestep_count": 294
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 2,
+        "seed": 8200,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_2/hdf5_files/ButtonUnmask_ep2_seed8200.h5",
+        "timestep_count": 267
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 3,
+        "seed": 8300,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_3/hdf5_files/ButtonUnmask_ep3_seed8300.h5",
+        "timestep_count": 452
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 4,
+        "seed": 8400,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_4/hdf5_files/ButtonUnmask_ep4_seed8400.h5",
+        "timestep_count": 323
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 5,
+        "seed": 8501,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_5/hdf5_files/ButtonUnmask_ep5_seed8501.h5",
+        "timestep_count": 299
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 6,
+        "seed": 8600,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_6/hdf5_files/ButtonUnmask_ep6_seed8600.h5",
+        "timestep_count": 220
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 7,
+        "seed": 8700,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_7/hdf5_files/ButtonUnmask_ep7_seed8700.h5",
+        "timestep_count": 377
+      },
+      {
+        "task": "ButtonUnmask",
+        "episode": 8,
+        "seed": 8800,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmask_episode_8/hdf5_files/ButtonUnmask_ep8_seed8800.h5",
+        "timestep_count": 207
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 0,
+        "seed": 7000,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_0/hdf5_files/ButtonUnmaskSwap_ep0_seed7000.h5",
+        "timestep_count": 514
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 1,
+        "seed": 7100,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_1/hdf5_files/ButtonUnmaskSwap_ep1_seed7100.h5",
+        "timestep_count": 519
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 2,
+        "seed": 7200,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_2/hdf5_files/ButtonUnmaskSwap_ep2_seed7200.h5",
+        "timestep_count": 361
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 3,
+        "seed": 7300,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_3/hdf5_files/ButtonUnmaskSwap_ep3_seed7300.h5",
+        "timestep_count": 555
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 4,
+        "seed": 7400,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_4/hdf5_files/ButtonUnmaskSwap_ep4_seed7400.h5",
+        "timestep_count": 532
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 5,
+        "seed": 7500,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_5/hdf5_files/ButtonUnmaskSwap_ep5_seed7500.h5",
+        "timestep_count": 387
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 6,
+        "seed": 7600,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_6/hdf5_files/ButtonUnmaskSwap_ep6_seed7600.h5",
+        "timestep_count": 303
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 7,
+        "seed": 7700,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_7/hdf5_files/ButtonUnmaskSwap_ep7_seed7700.h5",
+        "timestep_count": 451
+      },
+      {
+        "task": "ButtonUnmaskSwap",
+        "episode": 8,
+        "seed": 7800,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/ButtonUnmaskSwap_episode_8/hdf5_files/ButtonUnmaskSwap_ep8_seed7800.h5",
+        "timestep_count": 470
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 0,
+        "seed": 13000,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_0/hdf5_files/InsertPeg_ep0_seed13000.h5",
+        "timestep_count": 475
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 1,
+        "seed": 13101,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_1/hdf5_files/InsertPeg_ep1_seed13101.h5",
+        "timestep_count": 568
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 2,
+        "seed": 13201,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_2/hdf5_files/InsertPeg_ep2_seed13201.h5",
+        "timestep_count": 478
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 3,
+        "seed": 13300,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_3/hdf5_files/InsertPeg_ep3_seed13300.h5",
+        "timestep_count": 434
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 4,
+        "seed": 13403,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_4/hdf5_files/InsertPeg_ep4_seed13403.h5",
+        "timestep_count": 482
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 5,
+        "seed": 13500,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_5/hdf5_files/InsertPeg_ep5_seed13500.h5",
+        "timestep_count": 492
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 6,
+        "seed": 13602,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_6/hdf5_files/InsertPeg_ep6_seed13602.h5",
+        "timestep_count": 514
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 7,
+        "seed": 13700,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_7/hdf5_files/InsertPeg_ep7_seed13700.h5",
+        "timestep_count": 486
+      },
+      {
+        "task": "InsertPeg",
+        "episode": 8,
+        "seed": 13800,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/InsertPeg_episode_8/hdf5_files/InsertPeg_ep8_seed13800.h5",
+        "timestep_count": 458
+      },
+      {
+        "task": "MoveCube",
+        "episode": 0,
+        "seed": 14000,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_0/hdf5_files/MoveCube_ep0_seed14000.h5",
+        "timestep_count": 425
+      },
+      {
+        "task": "MoveCube",
+        "episode": 1,
+        "seed": 14100,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_1/hdf5_files/MoveCube_ep1_seed14100.h5",
+        "timestep_count": 441
+      },
+      {
+        "task": "MoveCube",
+        "episode": 2,
+        "seed": 14200,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_2/hdf5_files/MoveCube_ep2_seed14200.h5",
+        "timestep_count": 478
+      },
+      {
+        "task": "MoveCube",
+        "episode": 3,
+        "seed": 14300,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_3/hdf5_files/MoveCube_ep3_seed14300.h5",
+        "timestep_count": 266
+      },
+      {
+        "task": "MoveCube",
+        "episode": 4,
+        "seed": 14400,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_4/hdf5_files/MoveCube_ep4_seed14400.h5",
+        "timestep_count": 440
+      },
+      {
+        "task": "MoveCube",
+        "episode": 5,
+        "seed": 14500,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_5/hdf5_files/MoveCube_ep5_seed14500.h5",
+        "timestep_count": 429
+      },
+      {
+        "task": "MoveCube",
+        "episode": 6,
+        "seed": 14602,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_6/hdf5_files/MoveCube_ep6_seed14602.h5",
+        "timestep_count": 443
+      },
+      {
+        "task": "MoveCube",
+        "episode": 7,
+        "seed": 14700,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_7/hdf5_files/MoveCube_ep7_seed14700.h5",
+        "timestep_count": 512
+      },
+      {
+        "task": "MoveCube",
+        "episode": 8,
+        "seed": 14800,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/MoveCube_episode_8/hdf5_files/MoveCube_ep8_seed14800.h5",
+        "timestep_count": 279
+      },
+      {
+        "task": "PatternLock",
+        "episode": 0,
+        "seed": 15001,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_0/hdf5_files/PatternLock_ep0_seed15001.h5",
+        "timestep_count": 96
+      },
+      {
+        "task": "PatternLock",
+        "episode": 1,
+        "seed": 15100,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_1/hdf5_files/PatternLock_ep1_seed15100.h5",
+        "timestep_count": 126
+      },
+      {
+        "task": "PatternLock",
+        "episode": 2,
+        "seed": 15200,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_2/hdf5_files/PatternLock_ep2_seed15200.h5",
+        "timestep_count": 260
+      },
+      {
+        "task": "PatternLock",
+        "episode": 3,
+        "seed": 15300,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_3/hdf5_files/PatternLock_ep3_seed15300.h5",
+        "timestep_count": 306
+      },
+      {
+        "task": "PatternLock",
+        "episode": 4,
+        "seed": 15400,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_4/hdf5_files/PatternLock_ep4_seed15400.h5",
+        "timestep_count": 66
+      },
+      {
+        "task": "PatternLock",
+        "episode": 5,
+        "seed": 15500,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_5/hdf5_files/PatternLock_ep5_seed15500.h5",
+        "timestep_count": 112
+      },
+      {
+        "task": "PatternLock",
+        "episode": 6,
+        "seed": 15600,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_6/hdf5_files/PatternLock_ep6_seed15600.h5",
+        "timestep_count": 164
+      },
+      {
+        "task": "PatternLock",
+        "episode": 7,
+        "seed": 15700,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_7/hdf5_files/PatternLock_ep7_seed15700.h5",
+        "timestep_count": 358
+      },
+      {
+        "task": "PatternLock",
+        "episode": 8,
+        "seed": 15800,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PatternLock_episode_8/hdf5_files/PatternLock_ep8_seed15800.h5",
+        "timestep_count": 148
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 0,
+        "seed": 12000,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_0/hdf5_files/PickHighlight_ep0_seed12000.h5",
+        "timestep_count": 308
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 1,
+        "seed": 12100,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_1/hdf5_files/PickHighlight_ep1_seed12100.h5",
+        "timestep_count": 276
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 2,
+        "seed": 12200,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_2/hdf5_files/PickHighlight_ep2_seed12200.h5",
+        "timestep_count": 435
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 3,
+        "seed": 12300,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_3/hdf5_files/PickHighlight_ep3_seed12300.h5",
+        "timestep_count": 652
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 4,
+        "seed": 12400,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_4/hdf5_files/PickHighlight_ep4_seed12400.h5",
+        "timestep_count": 320
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 5,
+        "seed": 12500,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_5/hdf5_files/PickHighlight_ep5_seed12500.h5",
+        "timestep_count": 282
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 6,
+        "seed": 12600,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_6/hdf5_files/PickHighlight_ep6_seed12600.h5",
+        "timestep_count": 387
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 7,
+        "seed": 12700,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_7/hdf5_files/PickHighlight_ep7_seed12700.h5",
+        "timestep_count": 530
+      },
+      {
+        "task": "PickHighlight",
+        "episode": 8,
+        "seed": 12800,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickHighlight_episode_8/hdf5_files/PickHighlight_ep8_seed12800.h5",
+        "timestep_count": 212
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 0,
+        "seed": 1000,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_0/hdf5_files/PickXtimes_ep0_seed1000.h5",
+        "timestep_count": 529
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 1,
+        "seed": 1101,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_1/hdf5_files/PickXtimes_ep1_seed1101.h5",
+        "timestep_count": 628
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 2,
+        "seed": 1200,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_2/hdf5_files/PickXtimes_ep2_seed1200.h5",
+        "timestep_count": 478
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 3,
+        "seed": 1300,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_3/hdf5_files/PickXtimes_ep3_seed1300.h5",
+        "timestep_count": 814
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 4,
+        "seed": 1400,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_4/hdf5_files/PickXtimes_ep4_seed1400.h5",
+        "timestep_count": 645
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 5,
+        "seed": 1500,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_5/hdf5_files/PickXtimes_ep5_seed1500.h5",
+        "timestep_count": 576
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 6,
+        "seed": 1600,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_6/hdf5_files/PickXtimes_ep6_seed1600.h5",
+        "timestep_count": 470
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 7,
+        "seed": 1700,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_7/hdf5_files/PickXtimes_ep7_seed1700.h5",
+        "timestep_count": 897
+      },
+      {
+        "task": "PickXtimes",
+        "episode": 8,
+        "seed": 1800,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/PickXtimes_episode_8/hdf5_files/PickXtimes_ep8_seed1800.h5",
+        "timestep_count": 332
+      },
+      {
+        "task": "RouteStick",
+        "episode": 0,
+        "seed": 16000,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_0/hdf5_files/RouteStick_ep0_seed16000.h5",
+        "timestep_count": 200
+      },
+      {
+        "task": "RouteStick",
+        "episode": 1,
+        "seed": 16100,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_1/hdf5_files/RouteStick_ep1_seed16100.h5",
+        "timestep_count": 200
+      },
+      {
+        "task": "RouteStick",
+        "episode": 2,
+        "seed": 16200,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_2/hdf5_files/RouteStick_ep2_seed16200.h5",
+        "timestep_count": 500
+      },
+      {
+        "task": "RouteStick",
+        "episode": 3,
+        "seed": 16300,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_3/hdf5_files/RouteStick_ep3_seed16300.h5",
+        "timestep_count": 500
+      },
+      {
+        "task": "RouteStick",
+        "episode": 4,
+        "seed": 16400,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_4/hdf5_files/RouteStick_ep4_seed16400.h5",
+        "timestep_count": 300
+      },
+      {
+        "task": "RouteStick",
+        "episode": 5,
+        "seed": 16500,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_5/hdf5_files/RouteStick_ep5_seed16500.h5",
+        "timestep_count": 300
+      },
+      {
+        "task": "RouteStick",
+        "episode": 6,
+        "seed": 16600,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_6/hdf5_files/RouteStick_ep6_seed16600.h5",
+        "timestep_count": 400
+      },
+      {
+        "task": "RouteStick",
+        "episode": 7,
+        "seed": 16700,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_7/hdf5_files/RouteStick_ep7_seed16700.h5",
+        "timestep_count": 500
+      },
+      {
+        "task": "RouteStick",
+        "episode": 8,
+        "seed": 16800,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/RouteStick_episode_8/hdf5_files/RouteStick_ep8_seed16800.h5",
+        "timestep_count": 300
+      },
+      {
+        "task": "StopCube",
+        "episode": 0,
+        "seed": 2000,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_0/hdf5_files/StopCube_ep0_seed2000.h5",
+        "timestep_count": 459
+      },
+      {
+        "task": "StopCube",
+        "episode": 1,
+        "seed": 2100,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_1/hdf5_files/StopCube_ep1_seed2100.h5",
+        "timestep_count": 186
+      },
+      {
+        "task": "StopCube",
+        "episode": 2,
+        "seed": 2200,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_2/hdf5_files/StopCube_ep2_seed2200.h5",
+        "timestep_count": 243
+      },
+      {
+        "task": "StopCube",
+        "episode": 3,
+        "seed": 2300,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_3/hdf5_files/StopCube_ep3_seed2300.h5",
+        "timestep_count": 453
+      },
+      {
+        "task": "StopCube",
+        "episode": 4,
+        "seed": 2400,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_4/hdf5_files/StopCube_ep4_seed2400.h5",
+        "timestep_count": 211
+      },
+      {
+        "task": "StopCube",
+        "episode": 5,
+        "seed": 2500,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_5/hdf5_files/StopCube_ep5_seed2500.h5",
+        "timestep_count": 131
+      },
+      {
+        "task": "StopCube",
+        "episode": 6,
+        "seed": 2600,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_6/hdf5_files/StopCube_ep6_seed2600.h5",
+        "timestep_count": 247
+      },
+      {
+        "task": "StopCube",
+        "episode": 7,
+        "seed": 2700,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_7/hdf5_files/StopCube_ep7_seed2700.h5",
+        "timestep_count": 406
+      },
+      {
+        "task": "StopCube",
+        "episode": 8,
+        "seed": 2800,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/StopCube_episode_8/hdf5_files/StopCube_ep8_seed2800.h5",
+        "timestep_count": 574
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 0,
+        "seed": 3000,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_0/hdf5_files/SwingXtimes_ep0_seed3000.h5",
+        "timestep_count": 482
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 1,
+        "seed": 3100,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_1/hdf5_files/SwingXtimes_ep1_seed3100.h5",
+        "timestep_count": 608
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 2,
+        "seed": 3200,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_2/hdf5_files/SwingXtimes_ep2_seed3200.h5",
+        "timestep_count": 396
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 3,
+        "seed": 3301,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_3/hdf5_files/SwingXtimes_ep3_seed3301.h5",
+        "timestep_count": 535
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 4,
+        "seed": 3400,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_4/hdf5_files/SwingXtimes_ep4_seed3400.h5",
+        "timestep_count": 488
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 5,
+        "seed": 3500,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_5/hdf5_files/SwingXtimes_ep5_seed3500.h5",
+        "timestep_count": 490
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 6,
+        "seed": 3600,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_6/hdf5_files/SwingXtimes_ep6_seed3600.h5",
+        "timestep_count": 392
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 7,
+        "seed": 3700,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_7/hdf5_files/SwingXtimes_ep7_seed3700.h5",
+        "timestep_count": 504
+      },
+      {
+        "task": "SwingXtimes",
+        "episode": 8,
+        "seed": 3800,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/SwingXtimes_episode_8/hdf5_files/SwingXtimes_ep8_seed3800.h5",
+        "timestep_count": 538
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 0,
+        "seed": 10000,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_0/hdf5_files/VideoPlaceButton_ep0_seed10000.h5",
+        "timestep_count": 1048
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 1,
+        "seed": 10101,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_1/hdf5_files/VideoPlaceButton_ep1_seed10101.h5",
+        "timestep_count": 1002
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 2,
+        "seed": 10202,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_2/hdf5_files/VideoPlaceButton_ep2_seed10202.h5",
+        "timestep_count": 1001
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 3,
+        "seed": 10301,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_3/hdf5_files/VideoPlaceButton_ep3_seed10301.h5",
+        "timestep_count": 1041
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 4,
+        "seed": 10402,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_4/hdf5_files/VideoPlaceButton_ep4_seed10402.h5",
+        "timestep_count": 1089
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 5,
+        "seed": 10500,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_5/hdf5_files/VideoPlaceButton_ep5_seed10500.h5",
+        "timestep_count": 1056
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 6,
+        "seed": 10600,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_6/hdf5_files/VideoPlaceButton_ep6_seed10600.h5",
+        "timestep_count": 921
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 7,
+        "seed": 10701,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_7/hdf5_files/VideoPlaceButton_ep7_seed10701.h5",
+        "timestep_count": 958
+      },
+      {
+        "task": "VideoPlaceButton",
+        "episode": 8,
+        "seed": 10800,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceButton_episode_8/hdf5_files/VideoPlaceButton_ep8_seed10800.h5",
+        "timestep_count": 1013
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 0,
+        "seed": 11003,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_0/hdf5_files/VideoPlaceOrder_ep0_seed11003.h5",
+        "timestep_count": 1200
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 1,
+        "seed": 11103,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_1/hdf5_files/VideoPlaceOrder_ep1_seed11103.h5",
+        "timestep_count": 1367
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 2,
+        "seed": 11206,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_2/hdf5_files/VideoPlaceOrder_ep2_seed11206.h5",
+        "timestep_count": 1222
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 3,
+        "seed": 11305,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_3/hdf5_files/VideoPlaceOrder_ep3_seed11305.h5",
+        "timestep_count": 1408
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 4,
+        "seed": 11401,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_4/hdf5_files/VideoPlaceOrder_ep4_seed11401.h5",
+        "timestep_count": 1411
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 5,
+        "seed": 11500,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_5/hdf5_files/VideoPlaceOrder_ep5_seed11500.h5",
+        "timestep_count": 1058
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 6,
+        "seed": 11603,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_6/hdf5_files/VideoPlaceOrder_ep6_seed11603.h5",
+        "timestep_count": 917
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 7,
+        "seed": 11705,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_7/hdf5_files/VideoPlaceOrder_ep7_seed11705.h5",
+        "timestep_count": 1131
+      },
+      {
+        "task": "VideoPlaceOrder",
+        "episode": 8,
+        "seed": 11800,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoPlaceOrder_episode_8/hdf5_files/VideoPlaceOrder_ep8_seed11800.h5",
+        "timestep_count": 1140
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 0,
+        "seed": 9000,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_0/hdf5_files/VideoRepick_ep0_seed9000.h5",
+        "timestep_count": 756
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 1,
+        "seed": 9100,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_1/hdf5_files/VideoRepick_ep1_seed9100.h5",
+        "timestep_count": 933
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 2,
+        "seed": 9200,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_2/hdf5_files/VideoRepick_ep2_seed9200.h5",
+        "timestep_count": 762
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 3,
+        "seed": 9301,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_3/hdf5_files/VideoRepick_ep3_seed9301.h5",
+        "timestep_count": 1027
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 4,
+        "seed": 9400,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_4/hdf5_files/VideoRepick_ep4_seed9400.h5",
+        "timestep_count": 607
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 5,
+        "seed": 9501,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_5/hdf5_files/VideoRepick_ep5_seed9501.h5",
+        "timestep_count": 648
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 6,
+        "seed": 9600,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_6/hdf5_files/VideoRepick_ep6_seed9600.h5",
+        "timestep_count": 581
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 7,
+        "seed": 9700,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_7/hdf5_files/VideoRepick_ep7_seed9700.h5",
+        "timestep_count": 657
+      },
+      {
+        "task": "VideoRepick",
+        "episode": 8,
+        "seed": 9800,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoRepick_episode_8/hdf5_files/VideoRepick_ep8_seed9800.h5",
+        "timestep_count": 798
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 0,
+        "seed": 6000,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_0/hdf5_files/VideoUnmask_ep0_seed6000.h5",
+        "timestep_count": 239
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 1,
+        "seed": 6100,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_1/hdf5_files/VideoUnmask_ep1_seed6100.h5",
+        "timestep_count": 225
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 2,
+        "seed": 6200,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_2/hdf5_files/VideoUnmask_ep2_seed6200.h5",
+        "timestep_count": 228
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 3,
+        "seed": 6300,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_3/hdf5_files/VideoUnmask_ep3_seed6300.h5",
+        "timestep_count": 399
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 4,
+        "seed": 6400,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_4/hdf5_files/VideoUnmask_ep4_seed6400.h5",
+        "timestep_count": 263
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 5,
+        "seed": 6500,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_5/hdf5_files/VideoUnmask_ep5_seed6500.h5",
+        "timestep_count": 252
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 6,
+        "seed": 6600,
+        "difficulty": "medium",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_6/hdf5_files/VideoUnmask_ep6_seed6600.h5",
+        "timestep_count": 173
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 7,
+        "seed": 6700,
+        "difficulty": "hard",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_7/hdf5_files/VideoUnmask_ep7_seed6700.h5",
+        "timestep_count": 338
+      },
+      {
+        "task": "VideoUnmask",
+        "episode": 8,
+        "seed": 6800,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmask_episode_8/hdf5_files/VideoUnmask_ep8_seed6800.h5",
+        "timestep_count": 165
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 0,
+        "seed": 5000,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_0/hdf5_files/VideoUnmaskSwap_ep0_seed5000.h5",
+        "timestep_count": 326
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 1,
+        "seed": 5100,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_1/hdf5_files/VideoUnmaskSwap_ep1_seed5100.h5",
+        "timestep_count": 326
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 2,
+        "seed": 5200,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": "z",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_2/hdf5_files/VideoUnmaskSwap_ep2_seed5200.h5",
+        "timestep_count": 272
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 3,
+        "seed": 5300,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_3/hdf5_files/VideoUnmaskSwap_ep3_seed5300.h5",
+        "timestep_count": 586
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 4,
+        "seed": 5400,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_4/hdf5_files/VideoUnmaskSwap_ep4_seed5400.h5",
+        "timestep_count": 365
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 5,
+        "seed": 5500,
+        "difficulty": "easy",
+        "gpu": "1",
+        "recovery_mode": "xy",
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_5/hdf5_files/VideoUnmaskSwap_ep5_seed5500.h5",
+        "timestep_count": 446
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 6,
+        "seed": 5600,
+        "difficulty": "medium",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_6/hdf5_files/VideoUnmaskSwap_ep6_seed5600.h5",
+        "timestep_count": 278
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 7,
+        "seed": 5700,
+        "difficulty": "hard",
+        "gpu": "1",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_7/hdf5_files/VideoUnmaskSwap_ep7_seed5700.h5",
+        "timestep_count": 421
+      },
+      {
+        "task": "VideoUnmaskSwap",
+        "episode": 8,
+        "seed": 5800,
+        "difficulty": "easy",
+        "gpu": "0",
+        "recovery_mode": null,
+        "attempt_count": 1,
+        "ok": true,
+        "raw_h5_path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/.workers/VideoUnmaskSwap_episode_8/hdf5_files/VideoUnmaskSwap_ep8_seed5800.h5",
+        "timestep_count": 370
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "scope": {
+      "tasks": [
+        "PickXtimes",
+        "StopCube",
+        "SwingXtimes",
+        "BinFill",
+        "VideoUnmaskSwap",
+        "VideoUnmask",
+        "ButtonUnmaskSwap",
+        "ButtonUnmask",
+        "VideoRepick",
+        "VideoPlaceButton",
+        "VideoPlaceOrder",
+        "PickHighlight",
+        "InsertPeg",
+        "MoveCube",
+        "PatternLock",
+        "RouteStick"
+      ],
+      "episode_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "expected_episode_count": 144,
+      "full_16x9": true
+    },
+    "metadata": {
+      "error_count": 0,
+      "audits": [
+        {
+          "task": "PickXtimes",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_PickXtimes_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "StopCube",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_StopCube_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "SwingXtimes",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_SwingXtimes_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "BinFill",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_BinFill_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoUnmaskSwap_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "VideoUnmask",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoUnmask_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_ButtonUnmaskSwap_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "ButtonUnmask",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_ButtonUnmask_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "VideoRepick",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoRepick_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "VideoPlaceButton",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoPlaceButton_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "VideoPlaceOrder",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoPlaceOrder_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "PickHighlight",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_PickHighlight_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "InsertPeg",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_InsertPeg_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "MoveCube",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_MoveCube_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "PatternLock",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_PatternLock_metadata.json",
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "task": "RouteStick",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_RouteStick_metadata.json",
+          "error_count": 0,
+          "errors": []
+        }
+      ]
+    },
+    "generated": {
+      "file_count": 16,
+      "episode_count": 144,
+      "completed_count": 144,
+      "joint_vector_count": 73907,
+      "joint_element_count": 591256,
+      "error_count": 0,
+      "audits": [
+        {
+          "label": "generated",
+          "task": "PickXtimes",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_PickXtimes.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 529,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 628,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 478,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 814,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 645,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 576,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 470,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 897,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 332,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 5369,
+          "joint_element_count": 42952,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "StopCube",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_StopCube.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 459,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 186,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 243,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 453,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 211,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 131,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 247,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 406,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 574,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 2910,
+          "joint_element_count": 23280,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "SwingXtimes",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_SwingXtimes.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 482,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 608,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 396,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 535,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 488,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 490,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 392,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 504,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 538,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 4433,
+          "joint_element_count": 35464,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "BinFill",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_BinFill.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 550,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 366,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 883,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 940,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 625,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 378,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 622,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 785,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 462,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 5611,
+          "joint_element_count": 44888,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "VideoUnmaskSwap",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoUnmaskSwap.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 326,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 326,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 272,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 586,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 365,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 446,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 278,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 421,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 370,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 3390,
+          "joint_element_count": 27120,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "VideoUnmask",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoUnmask.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 239,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 225,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 228,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 399,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 263,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 252,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 173,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 338,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 165,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 2282,
+          "joint_element_count": 18256,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "ButtonUnmaskSwap",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_ButtonUnmaskSwap.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 514,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 519,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 361,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 555,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 532,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 387,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 303,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 451,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 470,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 4092,
+          "joint_element_count": 32736,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "ButtonUnmask",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_ButtonUnmask.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 291,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 294,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 267,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 452,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 323,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 299,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 220,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 377,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 207,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 2730,
+          "joint_element_count": 21840,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "VideoRepick",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoRepick.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 756,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 933,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 762,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 1027,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 607,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 648,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 581,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 657,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 798,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 6769,
+          "joint_element_count": 54152,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "VideoPlaceButton",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoPlaceButton.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 1048,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 1002,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 1001,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 1041,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 1089,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 1056,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 921,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 958,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 1013,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 9129,
+          "joint_element_count": 73032,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "VideoPlaceOrder",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_VideoPlaceOrder.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 1200,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 1367,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 1222,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 1408,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 1411,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 1058,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 917,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 1131,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 1140,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 10854,
+          "joint_element_count": 86832,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "PickHighlight",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_PickHighlight.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 308,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 276,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 435,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 652,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 320,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 282,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 387,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 530,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 212,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 3402,
+          "joint_element_count": 27216,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "InsertPeg",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_InsertPeg.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 475,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 568,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 478,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 434,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 482,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 492,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 514,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 486,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 458,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 4387,
+          "joint_element_count": 35096,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "MoveCube",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_MoveCube.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 425,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 441,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 478,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 266,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 440,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 429,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 443,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 512,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 279,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 3713,
+          "joint_element_count": 29704,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "PatternLock",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_PatternLock.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 96,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 126,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 260,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 306,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 66,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 112,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 164,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 358,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 148,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 1636,
+          "joint_element_count": 13088,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "generated",
+          "task": "RouteStick",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/artifacts/generated/no-patch-full-16x9/record_dataset_RouteStick.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 200,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 200,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 500,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 500,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 300,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 300,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 400,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 500,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 300,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 3200,
+          "joint_element_count": 25600,
+          "error_count": 0,
+          "errors": []
+        }
+      ]
+    },
+    "official": {
+      "file_count": 16,
+      "episode_count": 144,
+      "completed_count": 144,
+      "joint_vector_count": 73907,
+      "joint_element_count": 591256,
+      "error_count": 0,
+      "audits": [
+        {
+          "label": "official",
+          "task": "PickXtimes",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_PickXtimes.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 529,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 628,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 478,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 814,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 645,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 576,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 470,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 897,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 332,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 5369,
+          "joint_element_count": 42952,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "StopCube",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_StopCube.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 459,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 186,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 243,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 453,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 211,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 131,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 247,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 406,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 574,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 2910,
+          "joint_element_count": 23280,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "SwingXtimes",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_SwingXtimes.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 482,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 608,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 396,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 535,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 488,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 490,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 392,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 504,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 538,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 4433,
+          "joint_element_count": 35464,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "BinFill",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_BinFill.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 550,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 366,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 883,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 940,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 625,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 378,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 622,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 785,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 462,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 5611,
+          "joint_element_count": 44888,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "VideoUnmaskSwap",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_VideoUnmaskSwap.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 326,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 326,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 272,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 586,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 365,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 446,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 278,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 421,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 370,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 3390,
+          "joint_element_count": 27120,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "VideoUnmask",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_VideoUnmask.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 239,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 225,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 228,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 399,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 263,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 252,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 173,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 338,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 165,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 2282,
+          "joint_element_count": 18256,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "ButtonUnmaskSwap",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_ButtonUnmaskSwap.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 514,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 519,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 361,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 555,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 532,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 387,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 303,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 451,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 470,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 4092,
+          "joint_element_count": 32736,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "ButtonUnmask",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_ButtonUnmask.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 291,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 294,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 267,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 452,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 323,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 299,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 220,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 377,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 207,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 2730,
+          "joint_element_count": 21840,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "VideoRepick",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_VideoRepick.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 756,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 933,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 762,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 1027,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 607,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 648,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 581,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 657,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 798,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 6769,
+          "joint_element_count": 54152,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "VideoPlaceButton",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_VideoPlaceButton.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 1048,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 1002,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 1001,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 1041,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 1089,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 1056,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 921,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 958,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 1013,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 9129,
+          "joint_element_count": 73032,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "VideoPlaceOrder",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_VideoPlaceOrder.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 1200,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 1367,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 1222,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 1408,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 1411,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 1058,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 917,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 1131,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 1140,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 10854,
+          "joint_element_count": 86832,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "PickHighlight",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_PickHighlight.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 308,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 276,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 435,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 652,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 320,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 282,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 387,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 530,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 212,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 3402,
+          "joint_element_count": 27216,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "InsertPeg",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_InsertPeg.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 475,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 568,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 478,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 434,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 482,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 492,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 514,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 486,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 458,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 4387,
+          "joint_element_count": 35096,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "MoveCube",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_MoveCube.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 425,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 441,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 478,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 266,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 440,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 429,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 443,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 512,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 279,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 3713,
+          "joint_element_count": 29704,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "PatternLock",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_PatternLock.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 96,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 126,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 260,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 306,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 66,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 112,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 164,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 358,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 148,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 1636,
+          "joint_element_count": 13088,
+          "error_count": 0,
+          "errors": []
+        },
+        {
+          "label": "official",
+          "task": "RouteStick",
+          "path": "/data/hongzefu/robomme_benchmark-restore-DataGen/data/robomme_data_h5/record_dataset_RouteStick.h5",
+          "episodes": [
+            {
+              "episode": 0,
+              "timestep_count": 200,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 1,
+              "timestep_count": 200,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 2,
+              "timestep_count": 500,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 3,
+              "timestep_count": 500,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 4,
+              "timestep_count": 300,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 5,
+              "timestep_count": 300,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 6,
+              "timestep_count": 400,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 7,
+              "timestep_count": 500,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            },
+            {
+              "episode": 8,
+              "timestep_count": 300,
+              "final_is_completed": true,
+              "joint_shape": [
+                8
+              ],
+              "joint_dtype": "float64"
+            }
+          ],
+          "completed_count": 9,
+          "joint_vector_count": 3200,
+          "joint_element_count": 25600,
+          "error_count": 0,
+          "errors": []
+        }
+      ]
+    },
+    "joint_action_comparison": {
+      "joint_vector_count": 73907,
+      "joint_element_count": 591256,
+      "different_element_count": 16380,
+      "max_abs_diff": 5.661269342205344e-09,
+      "max_abs_diff_location": {
+        "task": "PatternLock",
+        "episode": 1,
+        "timestep": 121,
+        "element_index": 6,
+        "reference_value": 0.7855640085949516,
+        "generated_value": 0.7855640029336822
+      },
+      "max_allowed_abs_diff": 1e-08,
+      "error_count": 0,
+      "errors": [],
+      "within_max_abs_diff": true,
+      "passed": true
+    },
+    "acceptance": {
+      "expected_final_completed": 144,
+      "generated_final_completed": 144,
+      "official_final_completed": 144,
+      "max_allowed_abs_diff": 1e-08,
+      "max_abs_diff": 5.661269342205344e-09
+    }
+  },
+  "report_paths": {
+    "json": "/data/hongzefu/robomme_benchmark-restore-DataGen/scripts/data-generation-v2-noPatch/reports/no_patch_generation_report.json",
+    "markdown": "/data/hongzefu/robomme_benchmark-restore-DataGen/scripts/data-generation-v2-noPatch/reports/no_patch_generation_report.md"
+  }
+}
