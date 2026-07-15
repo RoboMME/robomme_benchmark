@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""独立 No-Patch RoboMME 数据生成入口。"""
+"""Standalone No-Patch RoboMME dataset generation entry point."""
 
 from __future__ import annotations
 
@@ -47,11 +47,11 @@ STICK_TASKS = frozenset(("PatternLock", "RouteStick"))
 
 
 class DatasetGenerationError(RuntimeError):
-    """生成、合并或生成后验收未满足 No-Patch 契约。"""
+    """Generation, merge, or post-generation acceptance does not satisfy the No-Patch contract."""
 
 
 class PlannerExhausted(RuntimeError):
-    """本地 planner 的 screw 与 RRTStar 重试均已耗尽。"""
+    """Local planner screw and RRTStar retries are exhausted."""
 
 
 @dataclass(frozen=True)
@@ -85,17 +85,17 @@ def _ensure_layout() -> None:
     required = (REPO_ROOT / "uv.lock", SRC_ROOT, METADATA_ROOT, REFERENCE_ROOT)
     missing = [str(path) for path in required if not path.exists()]
     if missing:
-        raise DatasetGenerationError("缺少必需路径: " + ", ".join(missing))
+        raise DatasetGenerationError("Missing required paths: " + ", ".join(missing))
 
 
 def _prepare_output(value: str | Path) -> Path:
     requested = Path(value).expanduser()
     if requested.is_symlink():
-        raise DatasetGenerationError(f"输出目录不能是符号链接: {requested}")
+        raise DatasetGenerationError(f"Output directory must not be a symbolic link: {requested}")
     parent = requested.parent
     while parent != parent.parent:
         if parent.exists() and parent.is_symlink():
-            raise DatasetGenerationError(f"输出路径包含符号链接父目录: {parent}")
+            raise DatasetGenerationError(f"Output path contains a symbolic-link parent directory: {parent}")
         if parent == REPO_ROOT:
             break
         parent = parent.parent
@@ -103,12 +103,12 @@ def _prepare_output(value: str | Path) -> Path:
     repo = REPO_ROOT.resolve()
     reference = REFERENCE_ROOT.resolve()
     if output == repo or not _inside(output, repo):
-        raise DatasetGenerationError(f"输出目录必须位于仓库内: {output}")
+        raise DatasetGenerationError(f"Output directory must be inside the repository: {output}")
     if _inside(output, reference):
-        raise DatasetGenerationError(f"输出目录不能位于参考数据内: {output}")
+        raise DatasetGenerationError(f"Output directory must not be inside the reference data: {output}")
     if output.exists():
         if not output.is_dir() or any(output.iterdir()):
-            raise DatasetGenerationError(f"输出目录必须不存在或为空: {output}")
+            raise DatasetGenerationError(f"Output directory must not exist or must be empty: {output}")
     else:
         output.mkdir(parents=True, exist_ok=False)
     return output
@@ -118,18 +118,18 @@ def _parse_gpus(value: str | Sequence[str | int]) -> tuple[str, ...]:
     raw = value.split(",") if isinstance(value, str) else value
     gpus = tuple(str(item).strip() for item in raw if str(item).strip())
     if not gpus or any(re.fullmatch(r"\d+", item) is None for item in gpus):
-        raise DatasetGenerationError("GPU 必须为逗号分隔的非负整数")
+        raise DatasetGenerationError("GPUs must be comma-separated non-negative integers")
     return gpus
 
 
 def _runtime_bool(value: Any, torch_module: Any) -> bool:
     if isinstance(value, torch_module.Tensor):
         if value.numel() != 1:
-            raise DatasetGenerationError("evaluate 返回了非标量 Tensor")
+            raise DatasetGenerationError("evaluate returned a non-scalar Tensor")
         return bool(value.detach().cpu().item())
     if isinstance(value, np.ndarray):
         if value.size != 1:
-            raise DatasetGenerationError("evaluate 返回了非标量 ndarray")
+            raise DatasetGenerationError("evaluate returned a non-scalar ndarray")
         return bool(value.item())
     return bool(value)
 
@@ -143,7 +143,7 @@ def _planner_classes(
     stick_base: type,
     screw_error: type[BaseException],
 ) -> tuple[type, type]:
-    """以本地子类实现 screw 三次后 RRTStar 三次的无 monkeypatch 回退。"""
+    """Implement a no-monkeypatch fallback in a local subclass: three screw attempts followed by three RRTStar attempts."""
 
     class ScrewThenRRT:
         def move_to_pose_with_screw(self, *args: Any, **kwargs: Any) -> Any:
@@ -165,7 +165,7 @@ def _planner_classes(
                 if not _is_failure(result):
                     return result
             suffix = f": {last_error}" if last_error is not None else ""
-            raise PlannerExhausted("screw 3 次与 RRTStar 3 次均失败" + suffix)
+            raise PlannerExhausted("All three screw and three RRTStar attempts failed" + suffix)
 
     class NoPatchArm(ScrewThenRRT, arm_base):
         pass
@@ -179,39 +179,39 @@ def _planner_classes(
 def _execute_tasks(record_env: Any, planner: Any, torch_module: Any, job: EpisodeJob) -> None:
     task_list = list(getattr(record_env.unwrapped, "task_list", []) or [])
     if not task_list:
-        raise DatasetGenerationError(f"{job.task}/episode_{job.episode}: task_list 为空")
+        raise DatasetGenerationError(f"{job.task}/episode_{job.episode}: task_list is empty")
     for entry in task_list:
         solve = entry.get("solve") if isinstance(entry, Mapping) else None
         if not callable(solve):
-            raise DatasetGenerationError(f"{job.task}/episode_{job.episode}: task 没有 solve")
+            raise DatasetGenerationError(f"{job.task}/episode_{job.episode}: task has no solve method")
         record_env.unwrapped.evaluate(solve_complete_eval=True)
         result = solve(record_env, planner)
         if _is_failure(result):
             raise PlannerExhausted(
-                f"{job.task}/episode_{job.episode}: solve 返回 -1"
+                f"{job.task}/episode_{job.episode}: solve returned -1"
             )
         evaluation = record_env.unwrapped.evaluate(solve_complete_eval=True)
         if _runtime_bool(evaluation.get("fail", False), torch_module):
             raise DatasetGenerationError(
-                f"{job.task}/episode_{job.episode}: 环境报告 fail"
+                f"{job.task}/episode_{job.episode}: environment reported failure"
             )
         if _runtime_bool(evaluation.get("success", False), torch_module):
             return
     evaluation = record_env.unwrapped.evaluate(solve_complete_eval=True)
     if not _runtime_bool(evaluation.get("success", False), torch_module):
         raise DatasetGenerationError(
-            f"{job.task}/episode_{job.episode}: 完整 task_list 后未成功"
+            f"{job.task}/episode_{job.episode}: did not succeed after the complete task_list"
         )
 
 
 def _raw_summary(path: Path, job: EpisodeJob) -> dict[str, Any]:
-    """在 worker 成功后立即用共享 contract helper 检查 raw 轨迹 terminal。"""
+    """Immediately check the raw trajectory terminal state with the shared contract helper after a worker succeeds."""
     if not path.is_file():
-        raise DatasetGenerationError(f"缺少 raw HDF5: {path}")
+        raise DatasetGenerationError(f"Missing raw HDF5: {path}")
     name = f"episode_{job.episode}"
     with h5py.File(path, "r") as handle:
         if name not in handle or not isinstance(handle[name], h5py.Group):
-            raise DatasetGenerationError(f"{path}: 缺少 {name}")
+            raise DatasetGenerationError(f"{path}: missing {name}")
         timesteps, done, errors = inspect_episode_terminal(
             handle[name],
             f"{path}/{name}",
@@ -219,7 +219,7 @@ def _raw_summary(path: Path, job: EpisodeJob) -> dict[str, Any]:
         if errors:
             raise DatasetGenerationError("; ".join(errors))
         if done is not True:
-            raise DatasetGenerationError(f"{path}/{name}: 最终 is_completed 不是 true")
+            raise DatasetGenerationError(f"{path}/{name}: final is_completed is not true")
     return {"raw_h5_path": str(path), "timestep_count": len(timesteps)}
 
 
@@ -235,7 +235,7 @@ def _worker(job: EpisodeJob) -> dict[str, Any]:
     try:
         source_root = Path(job.repo_root) / "src"
         if not source_root.is_dir():
-            raise DatasetGenerationError(f"src 不存在: {source_root}")
+            raise DatasetGenerationError(f"src does not exist: {source_root}")
         sys.path.insert(0, str(source_root))
         import gymnasium as gym
         import torch
@@ -348,7 +348,7 @@ def _merge(output: Path, task: str, results: Sequence[Mapping[str, Any]]) -> Pat
                 name = f"episode_{episode}"
                 with h5py.File(str(result["raw_h5_path"]), "r") as raw:
                     if name not in raw:
-                        raise DatasetGenerationError(f"{raw.filename}: 缺少 {name}")
+                        raise DatasetGenerationError(f"{raw.filename}: missing {name}")
                     raw.copy(raw[name], merged, name=name)
         temporary.replace(target)
     except Exception:
@@ -376,7 +376,7 @@ def generate_dataset(
     workers: int = 1,
     gpus: str | Sequence[str | int] = "0",
 ) -> dict[str, Any]:
-    """生成、合并并在同一进程执行拆分后的合约验证与数值比较。"""
+    """Generate, merge, and run the split contract validation and numerical comparison in the same process."""
     _ensure_layout()
     output = _prepare_output(output_dir)
     temporary = output / ".workers"
@@ -399,9 +399,9 @@ def generate_dataset(
     }
     try:
         if not 1 <= episodes <= MAX_EPISODES:
-            raise DatasetGenerationError(f"episodes 必须在 1..{MAX_EPISODES}")
+            raise DatasetGenerationError(f"episodes must be in 1..{MAX_EPISODES}")
         if workers < 1:
-            raise DatasetGenerationError("workers 必须大于 0")
+            raise DatasetGenerationError("workers must be greater than 0")
         report = new_generation_report(report["parameters"])
         tasks = parse_tasks(env)
         gpu_ids = _parse_gpus(gpus)
@@ -468,7 +468,7 @@ def generate_dataset(
                 f"{item.get('error_type')} {item.get('error')}"
                 for item in failures
             )
-            raise DatasetGenerationError(f"单次原 seed 生成失败: {details}")
+            raise DatasetGenerationError(f"Single-attempt original-seed generation failed: {details}")
         for task in tasks:
             task_results = [item for item in results if item["task"] == task]
             _merge(output, task, task_results)
@@ -488,7 +488,7 @@ def generate_dataset(
         )
         report["status"] = "passed" if report["validation"]["passed"] else "failed"
         if not report["validation"]["passed"]:
-            raise DatasetGenerationError("生成后验证或 joint_action 比较未达到验收条件")
+            raise DatasetGenerationError("Post-generation validation or joint_action comparison did not meet acceptance criteria")
         write_generation_report(output, report)
         return report
     except Exception as exc:
@@ -506,7 +506,7 @@ def generate_dataset(
             write_generation_report(output, report)
         except Exception as report_error:
             raise DatasetGenerationError(
-                f"{exc}; 同时无法写报告: {report_error}"
+                f"{exc}; additionally failed to write the report: {report_error}"
             ) from exc
         if isinstance(exc, DatasetGenerationError):
             raise
@@ -516,17 +516,17 @@ def generate_dataset(
 
 
 def _args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="独立 No-Patch RoboMME 数据生成与验证；最新完整报告固定写入 scripts/data-generation-v2-noPatch/reports/")
-    parser.add_argument("--output-dir", required=True, help="仓库内不存在或为空的输出目录")
-    parser.add_argument("--env", "--environment", default="all", help="all 或逗号分隔环境名")
+    parser = argparse.ArgumentParser(description="Standalone No-Patch RoboMME dataset generation and validation; the latest complete report is always written to scripts/data-generation-v2-noPatch/reports/")
+    parser.add_argument("--output-dir", required=True, help="Output directory inside the repository that does not exist or is empty")
+    parser.add_argument("--env", "--environment", default="all", help="all or comma-separated environment names")
     parser.add_argument(
         "--episodes",
         type=int,
         default=MAX_EPISODES,
-        help="每环境从 episode 0 开始的数量",
+        help="Number of episodes per environment starting at episode 0",
     )
     parser.add_argument("--workers", "--max-workers", dest="workers", type=int, default=1)
-    parser.add_argument("--gpus", "--gpu", dest="gpus", default="0", help="例如 0 或 0,1")
+    parser.add_argument("--gpus", "--gpu", dest="gpus", default="0", help="for example, 0 or 0,1")
     return parser.parse_args(argv)
 
 

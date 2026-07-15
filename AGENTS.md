@@ -113,7 +113,7 @@
 | 第三阶段：生成与一致性审查 | 完成（按用户修订的同 seed/离线完成口径） | 复用正式 16×9 共 144 条；metadata 原 seed attempt 1/1 均生成成功。新离线审计确认双方最终严格布尔完成率均为 144/144，`joint_strict_equal=false`，最大绝对差 `5.661269342205344e-9`；详细结论见 `scripts/reports/DATASET_COMPARISON_16x9.md` | 不得声称字节级、非 joint 全内容、数值容差或行为一致；若未来要求官方逐位值，需取得官方生成机数值运行时 |
 | `dataset-gen` 目录整理与产物清理 | 完成 | 已将 5 个 branch-specific 生成/验证文件及报告归并到 `scripts/data-generation/`，新增中文 README；根目录 `AGENTS.md` 保留；最终只保留指定 dataset、回放、16×9 报告和 reference 日志 | 已完成路径修正、独立契约验证、默认 16×9 对比、worktree 注销、缓存与中间产物清理；本轮不重新生成 16×100
 | 独立 No-Patch 验证/比较/报告拆分 | 完成（中央 reports） | validator、comparator、report writer 已拆分；所有新 JSON/Markdown 报告统一写入 `scripts/data-generation-v2-noPatch/reports/` | 完整 16×9 中央复核通过：双方完成 144/144、73,907 vectors、591,256 elements、最大差 `5.661269342205344e-09` |
-| 独立 No-Patch README 文档 | 完成（简版） | README 仅保留完整 16×9 生成、validator/comparator/report writer 调用逻辑、参数与最终产物 | 后续 CLI 或报告路径变更时同步更新简版说明 |
+| 独立 No-Patch README 文档 | 完成（全目录英文化） | README、四个 Python 入口、中央 Markdown 报告及相应轻量测试均已改为英文；JSON schema、CLI flag、路径和数值结果未变 | 后续生成或只读复核仍由英文 report writer 写入中央 reports |
 | 独立 No-Patch 报告调试环境快照 | 完成 | schema 3 已写入完整硬件/软件/允许环境/全量依赖快照；轻量 mock 成功与失败路径均通过；中央 16×9 报告已刷新 | 后续生成或只读复核会在每次写报告前自动刷新该快照 |
 
 ## 追加式执行日志
@@ -546,3 +546,27 @@
 - 差异或阻塞：无；未修改 `uv.lock`、HDF5、metadata 或旧 `scripts/data-generation/`，并确认新代码无旧目录引用。
 - 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/write_generation_report.py`、`tests/lightweight/test_no_patch_report_debug_environment.py`、中央 JSON/Markdown 报告。
 - 下一步：后续生成或已有输出复核会自动取得新快照；中央 reports 保持最新一次报告语义。
+
+### 2026-07-14 23:19 EDT — 独立 No-Patch 目录全量英文化：开始实施
+
+- 状态：进行中。
+- 目标：将 `scripts/data-generation-v2-noPatch/` 的 README、四个 Python 模块中的人类可读文本，以及中央 Markdown 报告统一改为英文；不改变生成、验证、比较、JSON schema、CLI flag、路径或数值结果。
+- 执行命令：已重读 `AGENTS.md`，检查 `git status --short --branch`、`git diff --check` 与相关 diff；开始时工作树无未提交改动。后续 Python 验证仅在确认 `command -v uv`、`pyproject.toml` 与 `uv.lock` 后使用 `uv run --locked` 执行。
+- 输入与来源：当前 `scripts/data-generation-v2-noPatch/` 的 README、四个 Python 模块、中央 JSON/Markdown 报告及既有轻量测试。
+- 输出路径：更新同目录 README、Python 模块和 `reports/no_patch_generation_report.md`；仅为测试断言更新 `tests/lightweight/test_no_patch_report_debug_environment.py`。
+- 结果与证据：开始前中央 JSON 不含中文；既有报告调试环境轻量测试 2/2 通过。
+- 差异或阻塞：内置 `apply_patch` 因受限沙箱的 `bwrap` loopback 权限错误无法读取文件；后续仅以 Git 统一 diff 或纯 `render_markdown(现有 JSON)` 完成受限文本写入。未运行数据生成、HDF5 复核或会刷新硬件/软件快照的 report writer CLI。
+- 修改文件：`AGENTS.md`；其余目标文件待更新。
+- 下一步：翻译静态文本，令已跟踪 Markdown 与纯 `render_markdown(现有 JSON)` 输出一致，并完成语法、帮助文本和轻量回归验证。
+
+### 2026-07-14 23:40 EDT — 独立 No-Patch 目录全量英文化：完成
+
+- 状态：完成。
+- 目标：完成 `scripts/data-generation-v2-noPatch/` 的 README、四个 Python 模块、中央 Markdown 报告和相应测试的英文统一，同时保持算法、JSON schema、CLI flag、路径和数值结果不变。
+- 执行命令：`command -v uv`、`test -f pyproject.toml`、`test -f uv.lock`（退出码 0）；`uv run --locked python -m py_compile scripts/data-generation-v2-noPatch/*.py`（退出码 0）；`uv run --locked python -m pytest tests/lightweight/test_no_patch_report_debug_environment.py`（退出码 0，3 passed）；四个入口分别执行 `uv run --locked <script> --help`（均退出码 0，输出均无中文）；`if rg -n --pcre2 '\p{Han}|[，。；、（）]' scripts/data-generation-v2-noPatch; then exit 1; fi`（退出码 0）；`git diff --check`（退出码 0）。
+- 输入与来源：当前 No-Patch README、生成器、validator、comparator、report writer、中央 `no_patch_generation_report.json` 与既有报告调试环境轻量测试。
+- 输出路径：更新 `scripts/data-generation-v2-noPatch/README.md`、四个 Python 模块和 `scripts/data-generation-v2-noPatch/reports/no_patch_generation_report.md`；测试仍为 `tests/lightweight/test_no_patch_report_debug_environment.py`。
+- 结果与证据：目标目录的 `.py`、`.md`、`.json` 均无中文或中文标点；成功和探测失败路径生成的 Markdown 均由测试断言为无中文；已跟踪 Markdown 与 `render_markdown(现有 JSON)` 严格相等。报告 Markdown 仅由该纯渲染函数重建，中央 JSON、HDF5、metadata、随机种子、比较阈值、数值结果和环境快照均未修改。
+- 差异或阻塞：无功能或数据差异。内置 `apply_patch` 的沙箱限制已通过非破坏性 Git diff 补丁和纯 Markdown 渲染绕过；未采用直接覆盖式 shell 写入。
+- 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/{README.md,generate_dataset.py,validate_generated_dataset_contract.py,compare_joint_actions.py,write_generation_report.py,reports/no_patch_generation_report.md}`、`tests/lightweight/test_no_patch_report_debug_environment.py`。
+- 下一步：后续生成或只读复核会自动使用英文 report writer 写入中央 reports；若新增人类可读文本，轻量测试会阻止中文回归。

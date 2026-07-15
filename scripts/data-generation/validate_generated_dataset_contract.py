@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""独立验证 No-Patch 生成数据的 HDF5 与 metadata 合约。"""
+"""Standalone validation of the HDF5 and metadata contract for No-Patch generated data."""
 
 from __future__ import annotations
 
@@ -42,11 +42,11 @@ TIMESTEP_RE = re.compile(r"^timestep_(\d+)$")
 
 
 class DatasetContractError(RuntimeError):
-    """生成数据、reference 数据或 train metadata 未满足固定合约。"""
+    """Generated data, reference data, or train metadata violates the fixed contract."""
 
 
 def add_error(section: dict[str, Any], message: str) -> None:
-    """累计有限数量的可读错误，避免损坏数据制造无界报告。"""
+    """Accumulate a bounded number of readable errors to prevent corrupt data from producing an unbounded report."""
     section["error_count"] = int(section.get("error_count", 0)) + 1
     errors = section.setdefault("errors", [])
     if len(errors) < MAX_ERRORS:
@@ -55,7 +55,7 @@ def add_error(section: dict[str, Any], message: str) -> None:
 
 def _integer(value: Any, field: str, path: Path) -> int:
     if isinstance(value, bool) or not isinstance(value, (int, np.integer)):
-        raise DatasetContractError(f"{path}: {field} 必须是整数，得到 {value!r}")
+        raise DatasetContractError(f"{path}: {field} must be an integer; got {value!r}")
     return int(value)
 
 
@@ -63,16 +63,16 @@ def read_train_metadata(
     metadata_root: str | Path = METADATA_ROOT,
     tasks: Sequence[str] = ALL_TASKS,
 ) -> dict[str, dict[int, dict[str, Any]]]:
-    """严格读取当前 branch 的 train metadata，不提供静默降级。"""
+    """Strictly load train metadata from the current branch without silent fallback."""
     root = Path(metadata_root).expanduser().resolve()
     ordered_tasks = tuple(tasks)
     if not ordered_tasks or len(ordered_tasks) != len(set(ordered_tasks)):
-        raise DatasetContractError("metadata 任务集合不能为空且不能重复")
+        raise DatasetContractError("metadata task set must be non-empty and unique")
     expected_files = {f"record_dataset_{task}_metadata.json" for task in ordered_tasks}
     actual_files = {path.name for path in root.glob("record_dataset_*_metadata.json")}
     if actual_files != expected_files:
         raise DatasetContractError(
-            "train metadata 文件集合不匹配固定任务范围: "
+            "train metadata file set does not match the fixed task scope: "
             f"missing={sorted(expected_files - actual_files)}, "
             f"extra={sorted(actual_files - expected_files)}"
         )
@@ -83,32 +83,32 @@ def read_train_metadata(
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            raise DatasetContractError(f"无法读取 {path}: {exc}") from exc
+            raise DatasetContractError(f"unable to read {path}: {exc}") from exc
         if not isinstance(payload, Mapping) or payload.get("env_id") != task:
-            raise DatasetContractError(f"{path}: env_id 不匹配")
+            raise DatasetContractError(f"{path}: env_id mismatch")
         records = payload.get("records")
         if not isinstance(records, list):
-            raise DatasetContractError(f"{path}: records 必须是 list")
+            raise DatasetContractError(f"{path}: records must be a list")
         if _integer(payload.get("record_count"), "record_count", path) != len(records):
-            raise DatasetContractError(f"{path}: record_count 不等于 records 长度")
+            raise DatasetContractError(f"{path}: record_count does not equal the length of records")
         if len(records) != 100:
-            raise DatasetContractError(f"{path}: records 必须严格为 100 条")
+            raise DatasetContractError(f"{path}: records must contain exactly 100 entries")
 
         indexed: dict[int, dict[str, Any]] = {}
         for record in records:
             if not isinstance(record, Mapping):
-                raise DatasetContractError(f"{path}: record 必须是 object")
+                raise DatasetContractError(f"{path}: record must be an object")
             if any(key not in record for key in ("task", "episode", "seed", "difficulty")):
-                raise DatasetContractError(f"{path}: record 缺少 task/episode/seed/difficulty")
+                raise DatasetContractError(f"{path}: record is missing task/episode/seed/difficulty")
             if record["task"] != task:
-                raise DatasetContractError(f"{path}: record task 不匹配")
+                raise DatasetContractError(f"{path}: record task mismatch")
             episode = _integer(record["episode"], "episode", path)
             seed = _integer(record["seed"], "seed", path)
             difficulty = record["difficulty"]
             if not isinstance(difficulty, str) or not difficulty:
-                raise DatasetContractError(f"{path}: difficulty 必须为非空字符串")
+                raise DatasetContractError(f"{path}: difficulty must be a non-empty string")
             if episode in indexed:
-                raise DatasetContractError(f"{path}: episode {episode} 重复")
+                raise DatasetContractError(f"{path}: episode {episode} is duplicated")
             indexed[episode] = {
                 "task": task,
                 "episode": episode,
@@ -116,21 +116,21 @@ def read_train_metadata(
                 "difficulty": difficulty,
             }
         if set(indexed) != set(range(100)):
-            raise DatasetContractError(f"{path}: episode 集合必须严格为 0..99")
+            raise DatasetContractError(f"{path}: episode set must exactly be 0..99")
         all_records[task] = indexed
     return all_records
 
 
 def parse_tasks(value: str) -> list[str]:
-    """将 all 或逗号分隔任务名解析为固定顺序的任务列表。"""
+    """Parse all or comma-separated task names into the task list in canonical order."""
     if value.strip().lower() == "all":
         return list(ALL_TASKS)
     names = [item.strip() for item in value.split(",") if item.strip()]
     if not names or len(names) != len(set(names)):
-        raise DatasetContractError("--env 不能为空且不能重复")
+        raise DatasetContractError("--env must be non-empty and unique")
     unknown = sorted(set(names) - set(ALL_TASKS))
     if unknown:
-        raise DatasetContractError("未知环境: " + ", ".join(unknown))
+        raise DatasetContractError("unknown environment: " + ", ".join(unknown))
     return [task for task in ALL_TASKS if task in names]
 
 
@@ -139,19 +139,19 @@ def episode_groups(
     label: str,
     section: dict[str, Any],
 ) -> dict[int, h5py.Group]:
-    """返回合法 episode group，并将根层异常对象记录为合约错误。"""
+    """Return valid episode groups and record unexpected root objects as contract errors."""
     groups: dict[int, h5py.Group] = {}
     for name in handle.keys():
         match = EPISODE_RE.fullmatch(name)
         if match is None or not isinstance(handle[name], h5py.Group):
-            add_error(section, f"{label}: 非法根对象 {name!r}")
+            add_error(section, f"{label}: invalid root object {name!r}")
             continue
         groups[int(match.group(1))] = handle[name]
     return groups
 
 
 def timestep_indices(group: h5py.Group, source: str) -> tuple[list[int], list[str]]:
-    """按数值解析并严格验证连续 timestep，合法 setup group 不计为 timestep。"""
+    """Parse numeric timestep names and strictly validate contiguity; valid setup groups do not count as timesteps."""
     errors: list[str] = []
     indices: list[int] = []
     for name in group.keys():
@@ -159,14 +159,14 @@ def timestep_indices(group: h5py.Group, source: str) -> tuple[list[int], list[st
             continue
         match = TIMESTEP_RE.fullmatch(name)
         if match is None or not isinstance(group[name], h5py.Group):
-            errors.append(f"{source}: 非法 timestep {name!r}")
+            errors.append(f"{source}: invalid timestep {name!r}")
         else:
             indices.append(int(match.group(1)))
     indices.sort()
     if not indices:
-        errors.append(f"{source}: 没有 timestep")
+        errors.append(f"{source}: no timesteps")
     elif indices != list(range(len(indices))):
-        errors.append(f"{source}: timestep 必须从 0 连续，实际 {indices[:12]}")
+        errors.append(f"{source}: timesteps must be contiguous from 0; got {indices[:12]}")
     return indices, errors
 
 
@@ -174,32 +174,32 @@ def inspect_episode_terminal(
     group: h5py.Group,
     source: str,
 ) -> tuple[list[int], bool | None, list[str]]:
-    """读取最后一个数值 timestep 的严格 bool 标量 info/is_completed。"""
+    """Read the strict boolean scalar info/is_completed from the final numeric timestep."""
     indices, errors = timestep_indices(group, source)
     if errors:
         return indices, None, errors
     try:
         dataset = group[f"timestep_{indices[-1]}"]["info"]["is_completed"]
     except KeyError:
-        return indices, None, [f"{source}: 最终 timestep 缺少 info/is_completed"]
+        return indices, None, [f"{source}: final timestep is missing info/is_completed"]
     if (
         not isinstance(dataset, h5py.Dataset)
         or dataset.shape != ()
         or np.dtype(dataset.dtype) != np.dtype(bool)
     ):
-        return indices, None, [f"{source}: info/is_completed 必须为 bool 标量"]
+        return indices, None, [f"{source}: info/is_completed must be a bool scalar"]
     value = dataset[()]
     if not isinstance(value, (bool, np.bool_)):
-        return indices, None, [f"{source}: info/is_completed 不是 bool"]
+        return indices, None, [f"{source}: info/is_completed is not a bool"]
     return indices, bool(value), []
 
 
 def _text(dataset: h5py.Dataset, source: str) -> str:
     if dataset.shape != ():
-        raise DatasetContractError(f"{source}: 字符串必须是标量")
+        raise DatasetContractError(f"{source}: string must be a scalar")
     value = dataset.asstr()[()]
     if not isinstance(value, str):
-        raise DatasetContractError(f"{source}: 不是字符串")
+        raise DatasetContractError(f"{source}: is not a string")
     return value
 
 
@@ -220,24 +220,24 @@ def _audit_episode(
     }
     setup = group.get("setup")
     if not isinstance(setup, h5py.Group):
-        add_error(section, f"{label}: 缺少 setup")
+        add_error(section, f"{label}: missing setup")
     else:
         seed = setup.get("seed")
         difficulty = setup.get("difficulty")
         if not isinstance(seed, h5py.Dataset) or seed.shape != ():
-            add_error(section, f"{label}: 缺少或错误的 setup/seed")
+            add_error(section, f"{label}: missing or invalid setup/seed")
         else:
             try:
                 if int(seed[()]) != int(record["seed"]):
-                    add_error(section, f"{label}: setup/seed 不匹配")
+                    add_error(section, f"{label}: setup/seed mismatch")
             except (TypeError, ValueError, OverflowError):
-                add_error(section, f"{label}: setup/seed 不是可比较整数")
+                add_error(section, f"{label}: setup/seed is not a comparable integer")
         if not isinstance(difficulty, h5py.Dataset):
-            add_error(section, f"{label}: 缺少 setup/difficulty")
+            add_error(section, f"{label}: missing setup/difficulty")
         else:
             try:
                 if _text(difficulty, f"{label}: setup/difficulty") != record["difficulty"]:
-                    add_error(section, f"{label}: setup/difficulty 不匹配")
+                    add_error(section, f"{label}: setup/difficulty mismatch")
             except DatasetContractError as exc:
                 add_error(section, str(exc))
 
@@ -254,19 +254,19 @@ def _audit_episode(
         try:
             joint = group[f"timestep_{timestep}"]["action"]["joint_action"]
         except KeyError:
-            add_error(section, f"{label}: timestep_{timestep} 缺少 action/joint_action")
+            add_error(section, f"{label}: timestep_{timestep} missing action/joint_action")
             continue
         if not isinstance(joint, h5py.Dataset):
-            add_error(section, f"{label}: joint_action 必须是 dataset")
+            add_error(section, f"{label}: joint_action must be a dataset")
             continue
         signature = (tuple(joint.shape), str(joint.dtype))
         signatures.add(signature)
         if tuple(joint.shape) != (8,) or np.dtype(joint.dtype) != np.dtype(np.float64):
-            add_error(section, f"{label}: joint_action 必须为 (8,) float64")
+            add_error(section, f"{label}: joint_action must be (8,) float64")
             continue
         values = np.asarray(joint[()])
         if not np.all(np.isfinite(values)):
-            add_error(section, f"{label}: joint_action 包含非有限值")
+            add_error(section, f"{label}: joint_action contains non-finite values")
             continue
         section["joint_vector_count"] += 1
         section["joint_element_count"] += int(values.size)
@@ -274,7 +274,7 @@ def _audit_episode(
         shape, dtype = next(iter(signatures))
         detail["joint_shape"], detail["joint_dtype"] = list(shape), dtype
     elif signatures:
-        add_error(section, f"{label}: joint_action shape/dtype 不一致")
+        add_error(section, f"{label}: joint_action shape/dtype mismatch")
     return detail
 
 
@@ -298,7 +298,7 @@ def _audit_file(
         "errors": [],
     }
     if not path.is_file():
-        add_error(section, f"{label}/{task}: HDF5 不存在")
+        add_error(section, f"{label}/{task}: HDF5 does not exist")
         return section
     try:
         with h5py.File(path, "r") as handle:
@@ -306,9 +306,9 @@ def _audit_file(
             expected = set(episodes)
             actual = set(groups)
             if not expected.issubset(actual):
-                add_error(section, f"{label}/{task}: 缺少 episode {sorted(expected - actual)}")
+                add_error(section, f"{label}/{task}: missing episodes {sorted(expected - actual)}")
             if exact_episodes and actual != expected:
-                add_error(section, f"{label}/{task}: episode 集合不严格匹配")
+                add_error(section, f"{label}/{task}: episode set does not exactly match")
             for episode in episodes:
                 if episode not in groups:
                     continue
@@ -324,7 +324,7 @@ def _audit_file(
                 if detail["final_is_completed"] is True:
                     section["completed_count"] += 1
     except OSError as exc:
-        add_error(section, f"{label}/{task}: 无法读取 HDF5: {exc}")
+        add_error(section, f"{label}/{task}: unable to read HDF5: {exc}")
     return section
 
 
@@ -342,14 +342,14 @@ def _audit_metadata(
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        add_error(section, f"{task}: metadata 无法读取: {exc}")
+        add_error(section, f"{task}: metadata could not be read: {exc}")
         return section
     if not isinstance(payload, Mapping) or payload.get("env_id") != task:
-        add_error(section, f"{task}: metadata env_id 不匹配")
+        add_error(section, f"{task}: metadata env_id mismatch")
     if payload.get("record_count") != len(records):
-        add_error(section, f"{task}: metadata record_count 不匹配")
+        add_error(section, f"{task}: metadata record_count mismatch")
     if payload.get("records") != list(records):
-        add_error(section, f"{task}: metadata records 与 train metadata 不一致")
+        add_error(section, f"{task}: metadata records do not match train metadata")
     return section
 
 
@@ -371,27 +371,27 @@ def validate_generated_dataset_contract(
     reference_root: str | Path = REFERENCE_ROOT,
     metadata_root: str | Path = METADATA_ROOT,
 ) -> dict[str, Any]:
-    """验证生成输出和官方 reference 在请求范围内的完整 HDF5 合约。"""
+    """Validate the complete HDF5 contract for generated output and official reference data within the requested scope."""
     output = Path(generated_root).expanduser().resolve()
     reference = Path(reference_root).expanduser().resolve()
     ordered_tasks = list(tasks)
     episode_indices = list(episodes)
     if not ordered_tasks or len(ordered_tasks) != len(set(ordered_tasks)):
-        raise DatasetContractError("验证任务不能为空且不能重复")
+        raise DatasetContractError("validation tasks must be non-empty and unique")
     if any(task not in ALL_TASKS for task in ordered_tasks):
-        raise DatasetContractError("验证任务包含未知环境")
+        raise DatasetContractError("validation tasks contain unknown environments")
     if not episode_indices or episode_indices != list(range(len(episode_indices))):
-        raise DatasetContractError("验证 episode 必须严格为从 0 开始的连续范围")
+        raise DatasetContractError("validation episodes must be a contiguous range starting at 0")
     if records_by_task is None:
         records_by_task = read_train_metadata(metadata_root)
 
     generated, official, metadata = [], [], []
     for task in ordered_tasks:
         if task not in records_by_task:
-            raise DatasetContractError(f"缺少 {task} 的 train metadata")
+            raise DatasetContractError(f"missing train metadata for {task}")
         records_for_task = records_by_task[task]
         if any(episode not in records_for_task for episode in episode_indices):
-            raise DatasetContractError(f"{task}: train metadata 缺少请求 episode")
+            raise DatasetContractError(f"{task}: train metadata is missing requested episodes")
         records = [records_for_task[episode] for episode in episode_indices]
         metadata.append(
             _audit_metadata(
@@ -456,12 +456,12 @@ def validate_generated_dataset_contract(
 
 
 def _args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="验证 No-Patch 生成数据合约")
-    parser.add_argument("--output-dir", required=True, help="已有生成数据输出目录")
-    parser.add_argument("--env", "--environment", default="all", help="all 或逗号分隔环境名")
-    parser.add_argument("--episodes", type=int, default=MAX_EPISODES, help="每环境验证 0 开始的 episode 数")
-    parser.add_argument("--metadata-root", default=str(METADATA_ROOT), help="当前 train metadata 目录")
-    parser.add_argument("--reference-root", default=str(REFERENCE_ROOT), help="官方 HDF5 目录")
+    parser = argparse.ArgumentParser(description="Validate the No-Patch generated-data contract")
+    parser.add_argument("--output-dir", required=True, help="Existing generated-data output directory")
+    parser.add_argument("--env", "--environment", default="all", help="all or comma-separated environment names")
+    parser.add_argument("--episodes", type=int, default=MAX_EPISODES, help="Number of episodes to validate per environment starting at episode 0")
+    parser.add_argument("--metadata-root", default=str(METADATA_ROOT), help="Current train metadata directory")
+    parser.add_argument("--reference-root", default=str(REFERENCE_ROOT), help="Official HDF5 directory")
     return parser.parse_args(argv)
 
 
@@ -469,7 +469,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _args(argv)
     try:
         if not 1 <= args.episodes <= MAX_EPISODES:
-            raise DatasetContractError(f"--episodes 必须在 1..{MAX_EPISODES}")
+            raise DatasetContractError(f"--episodes must be in 1..{MAX_EPISODES}")
         result = validate_generated_dataset_contract(
             args.output_dir,
             parse_tasks(args.env),

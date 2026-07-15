@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""组装并写出 No-Patch 生成、验证与 joint_action 比较报告。"""
+"""Assemble and write the No-Patch generation, validation, and joint_action comparison report."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ REPORTS_ROOT = SCRIPT_DIR / "reports"
 
 
 class ReportGenerationError(RuntimeError):
-    """报告输入或写入过程不满足 No-Patch 报告契约。"""
+    """Report input or writing does not satisfy the No-Patch report contract."""
 
 
 def _sha256(path: Path) -> str:
@@ -63,17 +63,17 @@ def _head() -> str:
 
 
 def write_text_atomic(path: Path, value: str) -> None:
-    """使用同目录临时文件原子替换，避免中断时留下半份报告。"""
+    """Atomically replace with a temporary file in the same directory to avoid leaving a partial report after an interruption."""
     temporary = path.with_name(f".{path.name}.tmp")
     temporary.write_text(value, encoding="utf-8")
     temporary.replace(path)
 
 
 def new_generation_report(parameters: Mapping[str, Any]) -> dict[str, Any]:
-    """创建由生成器或只读复核共用的报告基础 provenance。"""
+    """Create the base report provenance shared by the generator and read-only revalidation."""
     lock_path = REPO_ROOT / "uv.lock"
     if not lock_path.is_file():
-        raise ReportGenerationError(f"缺少 uv.lock: {lock_path}")
+        raise ReportGenerationError(f"Missing uv.lock: {lock_path}")
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
         "status": "running",
@@ -94,7 +94,7 @@ def build_validation_report(
     metadata_root: str | Path = METADATA_ROOT,
     max_abs_diff: float = MAX_ABS_DIFF,
 ) -> dict[str, Any]:
-    """以同一 scope 组合独立 contract 与 joint_action 比较结果。"""
+    """Combine independent contract and joint_action comparison results for the same scope."""
     contract = validate_generated_dataset_contract(
         output_dir,
         tasks,
@@ -132,11 +132,11 @@ def _mapping(value: Any) -> Mapping[str, Any]:
 
 
 def _value(value: Any) -> str:
-    return "未知" if value is None else str(value)
+    return "Unknown" if value is None else str(value)
 
 
 def _collect_errors(report: Mapping[str, Any], limit: int = 12) -> list[str]:
-    """从结构化报告提取少量错误摘要，JSON 仍保留完整错误列表。"""
+    """Extract a small error summary from the structured report; JSON retains the complete error list."""
     messages: list[str] = []
     validation = _mapping(report.get("validation"))
     metadata = _mapping(validation.get("metadata"))
@@ -157,7 +157,7 @@ def _collect_errors(report: Mapping[str, Any], limit: int = 12) -> list[str]:
 
 
 def render_markdown(report: Mapping[str, Any]) -> str:
-    """渲染人类可读的完整摘要，逐轨迹细节保留在 JSON。"""
+    """Render a human-readable complete summary; per-trajectory details remain in JSON."""
     validation = _mapping(report.get("validation"))
     scope = _mapping(validation.get("scope"))
     acceptance = _mapping(validation.get("acceptance"))
@@ -169,19 +169,19 @@ def render_markdown(report: Mapping[str, Any]) -> str:
     parameters = _mapping(report.get("parameters"))
     debug_environment = _mapping(report.get("debug_environment"))
     lines = [
-        "# No-Patch 数据生成报告",
+        "# No-Patch Dataset Generation Report",
         "",
-        "## 运行来源",
+        "## Run Provenance",
         "",
-        f"- 状态：{report.get('status')}",
-        f"- 当前 HEAD：{report.get('current_head')}",
-        f"- uv.lock SHA-256：{report.get('uv_lock_sha256')}",
-        f"- 报告时间（UTC）：{report.get('generated_at_utc')}",
-        f"- 报告模式：{report.get('report_mode', 'generation')}",
+        f"- Status: {report.get('status')}",
+        f"- Current HEAD: {report.get('current_head')}",
+        f"- uv.lock SHA-256: {report.get('uv_lock_sha256')}",
+        f"- Report time (UTC): {report.get('generated_at_utc')}",
+        f"- Report mode: {report.get('report_mode', 'generation')}",
         "",
     ]
     lines.extend(_render_debug_environment(debug_environment))
-    lines.extend(("", "## 参数", ""))
+    lines.extend(("", "## Parameters", ""))
     lines.extend(
         f"    {line}"
         for line in json.dumps(parameters, ensure_ascii=False, indent=2).splitlines()
@@ -189,53 +189,53 @@ def render_markdown(report: Mapping[str, Any]) -> str:
     lines.extend(
         (
             "",
-            "## 范围",
+            "## Scope",
             "",
-            f"- 任务数：{len(scope.get('tasks', []))}",
-            f"- episode：{scope.get('episode_indices', [])}",
-            f"- 期望轨迹数：{scope.get('expected_episode_count', 0)}",
-            f"- 完整 16×9：{scope.get('full_16x9', False)}",
+            f"- Task count: {len(scope.get('tasks', []))}",
+            f"- Episodes: {scope.get('episode_indices', [])}",
+            f"- Expected trajectory count: {scope.get('expected_episode_count', 0)}",
+            f"- Complete 16x9: {scope.get('full_16x9', False)}",
             "",
-            "## 生成与合约",
+            "## Generation and Contract",
             "",
-            f"- worker 成功数：{_value(generation.get('success_count'))}",
-            f"- worker 失败数：{_value(generation.get('failure_count'))}",
-            f"- metadata 错误数：{metadata.get('error_count', 0)}",
-            f"- 生成 HDF5 错误数：{generated.get('error_count', 0)}",
-            f"- 官方 HDF5 错误数：{official.get('error_count', 0)}",
-            f"- 官方最终完成：{acceptance.get('official_final_completed', 0)}/{acceptance.get('expected_final_completed', 0)}",
-            f"- 生成最终完成：{acceptance.get('generated_final_completed', 0)}/{acceptance.get('expected_final_completed', 0)}",
+            f"- Successful workers: {_value(generation.get('success_count'))}",
+            f"- Failed workers: {_value(generation.get('failure_count'))}",
+            f"- Metadata errors: {metadata.get('error_count', 0)}",
+            f"- Generated HDF5 errors: {generated.get('error_count', 0)}",
+            f"- Official HDF5 errors: {official.get('error_count', 0)}",
+            f"- Official final completions: {acceptance.get('official_final_completed', 0)}/{acceptance.get('expected_final_completed', 0)}",
+            f"- Generated final completions: {acceptance.get('generated_final_completed', 0)}/{acceptance.get('expected_final_completed', 0)}",
             "",
-            "## joint_action 逐元素比较",
+            "## Element-wise joint_action Comparison",
             "",
-            f"- 向量数：{comparison.get('joint_vector_count', 0)}",
-            f"- 元素数：{comparison.get('joint_element_count', 0)}",
-            f"- 不同元素数：{comparison.get('different_element_count', 0)}",
-            f"- 比较错误数：{comparison.get('error_count', 0)}",
-            f"- 最大绝对差：{comparison.get('max_abs_diff')}",
-            f"- 最大差位置：{comparison.get('max_abs_diff_location')}",
-            f"- 最大允许绝对差：{acceptance.get('max_allowed_abs_diff')}",
-            f"- 容差内：{comparison.get('within_max_abs_diff', False)}",
+            f"- Vectors: {comparison.get('joint_vector_count', 0)}",
+            f"- Elements: {comparison.get('joint_element_count', 0)}",
+            f"- Different elements: {comparison.get('different_element_count', 0)}",
+            f"- Comparison errors: {comparison.get('error_count', 0)}",
+            f"- Maximum absolute difference: {comparison.get('max_abs_diff')}",
+            f"- Maximum-difference location: {comparison.get('max_abs_diff_location')}",
+            f"- Maximum allowed absolute difference: {acceptance.get('max_allowed_abs_diff')}",
+            f"- Within tolerance: {comparison.get('within_max_abs_diff', False)}",
             "",
-            "## 结论",
+            "## Conclusion",
             "",
-            f"- 完整验收通过：{validation.get('passed', False)}",
+            f"- Full acceptance passed: {validation.get('passed', False)}",
         )
     )
     errors = _collect_errors(report)
     if errors:
-        lines.extend(("", "## 错误摘要", ""))
+        lines.extend(("", "## Error Summary", ""))
         lines.extend(f"- {message}" for message in errors)
-        lines.append("- 完整错误与逐轨迹审计请查看同目录 JSON。")
+        lines.append("- See the co-located JSON for complete errors and the per-trajectory audit.")
     report_paths = _mapping(report.get("report_paths"))
     if report_paths:
         lines.extend(
             (
                 "",
-                "## 产物",
+                "## Artifacts",
                 "",
-                f"- JSON：{report_paths.get('json')}",
-                f"- Markdown：{report_paths.get('markdown')}",
+                f"- JSON: {report_paths.get('json')}",
+                f"- Markdown: {report_paths.get('markdown')}",
             )
         )
     return "\n".join(lines) + "\n"
@@ -245,10 +245,10 @@ def write_generation_report(
     output_dir: str | Path,
     report: dict[str, Any],
 ) -> dict[str, str]:
-    """将统一 JSON/Markdown 写入脚本目录下固定的 reports/。"""
+    """Write the unified JSON/Markdown to the fixed reports/ directory under the script directory."""
     output = Path(output_dir).expanduser().resolve()
     if not output.is_dir():
-        raise ReportGenerationError(f"输出目录不存在: {output}")
+        raise ReportGenerationError(f"Output directory does not exist: {output}")
     report_dir = REPORTS_ROOT
     report_dir.mkdir(parents=True, exist_ok=True)
     json_path = report_dir / "no_patch_generation_report.json"
@@ -269,9 +269,9 @@ def _load_prior_report(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise ReportGenerationError(f"无法读取 prior report {path}: {exc}") from exc
+        raise ReportGenerationError(f"Unable to read prior report {path}: {exc}") from exc
     if not isinstance(payload, Mapping):
-        raise ReportGenerationError(f"prior report 必须是 JSON object: {path}")
+        raise ReportGenerationError(f"prior report must be a JSON object: {path}")
     return dict(payload)
 
 
@@ -289,7 +289,7 @@ def build_revalidation_report(
     metadata_root: str | Path = METADATA_ROOT,
     max_abs_diff: float = MAX_ABS_DIFF,
 ) -> dict[str, Any]:
-    """重审已有输出；不会调用 gym、生成 worker 或修改 HDF5/metadata。"""
+    """Revalidate existing output without calling gym, starting generation workers, or modifying HDF5/metadata."""
     output = Path(output_dir).expanduser().resolve()
     prior_parameters = _mapping(prior_report.get("parameters")) if prior_report else {}
     parameters = dict(prior_parameters)
@@ -433,7 +433,7 @@ def _exception_text(error: Exception) -> str:
 
 
 def _probe(section: dict[str, Any], field: str, callback: Any) -> None:
-    """单字段最佳努力采集；失败只在该字段记录错误。"""
+    """Collect a single field on a best-effort basis; failures are recorded only for that field."""
     try:
         section[field] = callback()
     except Exception as exc:
@@ -442,7 +442,7 @@ def _probe(section: dict[str, Any], field: str, callback: Any) -> None:
 
 
 def _run_command(command: Sequence[str]) -> tuple[str | None, str | None]:
-    """运行有限白名单命令，返回 stdout 或可序列化错误。"""
+    """Run an allowlisted command and return stdout or a serializable error."""
     try:
         result = subprocess.run(
             list(command),
@@ -531,7 +531,7 @@ def _collect_cpu_environment() -> dict[str, Any]:
     try:
         raw = json.loads(stdout or "")
         if not isinstance(raw, Mapping):
-            raise TypeError("lscpu --json 输出不是 object")
+            raise TypeError("lscpu --json output is not an object")
         cpu["lscpu"]["raw"] = dict(raw)
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
         cpu["lscpu"]["error"] = _exception_text(exc)
@@ -651,7 +651,7 @@ def _collect_gpu_environment() -> dict[str, Any]:
     for row_index, row in enumerate(csv.reader((stdout or "").splitlines())):
         if len(row) != len(GPU_QUERY_FIELDS):
             nvidia_smi["row_errors"].append(
-                f"row {row_index}: 期望 {len(GPU_QUERY_FIELDS)} 列，得到 {len(row)} 列"
+                f"row {row_index}: expected {len(GPU_QUERY_FIELDS)} columns; got {len(row)} columns"
             )
             continue
         device = {
@@ -701,7 +701,7 @@ def _collect_tool(name: str) -> dict[str, Any]:
     path = shutil.which(name)
     snapshot: dict[str, Any] = {"path": path, "version": None, "error": None}
     if path is None:
-        snapshot["error"] = f"{name} 不在 PATH 中"
+        snapshot["error"] = f"{name} is not on PATH"
         return snapshot
     stdout, error = _run_command((name, "--version"))
     if error is not None:
@@ -747,7 +747,7 @@ def _allowlisted_environment(keys: Sequence[str]) -> dict[str, str | None]:
 
 
 def collect_debug_environment() -> dict[str, Any]:
-    """采集有限白名单调试 provenance；任何单项探测失败都不会中断报告。"""
+    """Collect allowlisted debug provenance; an individual probe failure never interrupts the report."""
     snapshot: dict[str, Any] = {
         "schema_version": DEBUG_ENVIRONMENT_SCHEMA_VERSION,
         "captured_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -788,7 +788,7 @@ def _fallback_debug_environment(error: Exception) -> dict[str, Any]:
     }
 
 
-def _markdown_value(value: Any, missing: str = "未设置") -> str:
+def _markdown_value(value: Any, missing: str = "Not set") -> str:
     if value is None:
         return missing
     if isinstance(value, (list, tuple)):
@@ -830,14 +830,14 @@ def _error_items(prefix: str, value: Any) -> list[str]:
         return items
     if isinstance(value, list):
         return [
-            f"{prefix}: {_markdown_value(item, '未知错误')}" for item in value
+            f"{prefix}: {_markdown_value(item, 'Unknown error')}" for item in value
         ]
-    return [f"{prefix}: {_markdown_value(value, '未知错误')}"]
+    return [f"{prefix}: {_markdown_value(value, 'Unknown error')}"]
 
 
 def _debug_probe_errors(debug_environment: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
-    errors.extend(_error_items("总采集", debug_environment.get("errors", {})))
+    errors.extend(_error_items("overall collection", debug_environment.get("errors", {})))
     for section_name in (
         "host",
         "operating_system",
@@ -869,10 +869,10 @@ def _debug_probe_errors(debug_environment: Mapping[str, Any]) -> list[str]:
 
 
 def _render_debug_environment(debug_environment: Mapping[str, Any]) -> list[str]:
-    """在 Markdown 中显示完整硬件字段与核心软件摘要。"""
-    lines = ["## 调试环境", ""]
+    """Display complete hardware fields and a core software summary in Markdown."""
+    lines = ["## Debug Environment", ""]
     if not debug_environment:
-        lines.extend(("- 未能获得调试环境快照。",))
+        lines.extend(("- No debug environment snapshot was available.",))
         return lines
 
     host = _mapping(debug_environment.get("host"))
@@ -892,66 +892,66 @@ def _render_debug_environment(debug_environment: Mapping[str, Any]) -> list[str]
 
     lines.extend(
         (
-            f"- 快照时间（UTC）：{_markdown_value(debug_environment.get('captured_at_utc'))}",
-            f"- 主机：{_markdown_value(host.get('hostname'))}",
-            f"- OS：{_markdown_value(operating_system.get('system'))} "
+            f"- Snapshot time (UTC): {_markdown_value(debug_environment.get('captured_at_utc'))}",
+            f"- Host: {_markdown_value(host.get('hostname'))}",
+            f"- OS: {_markdown_value(operating_system.get('system'))} "
             f"{_markdown_value(operating_system.get('release'))}",
-            f"- 内核：{_markdown_value(operating_system.get('kernel'))}",
-            f"- 架构：{_markdown_value(host.get('architecture'))}；"
-            f"机器：{_markdown_value(host.get('machine'))}",
-            f"- libc：{_markdown_value(libc.get('library'))} "
+            f"- Kernel: {_markdown_value(operating_system.get('kernel'))}",
+            f"- Architecture: {_markdown_value(host.get('architecture'))}; "
+            f"Machine: {_markdown_value(host.get('machine'))}",
+            f"- libc: {_markdown_value(libc.get('library'))} "
             f"{_markdown_value(libc.get('version'))}",
             "",
-            "### CPU、内存与存储",
+            "### CPU, Memory, and Storage",
             "",
-            "| 项目 | 值 |",
+            "| Item | Value |",
             "| --- | --- |",
-            f"| OS CPU 数 | {_markdown_value(cpu.get('os_cpu_count'))} |",
-            f"| CPU affinity 数 | {_markdown_value(cpu.get('affinity_cpu_count'))} |",
+            f"| OS CPU count | {_markdown_value(cpu.get('os_cpu_count'))} |",
+            f"| CPU affinity count | {_markdown_value(cpu.get('affinity_cpu_count'))} |",
             f"| CPU affinity IDs | {_markdown_value(cpu.get('affinity_cpu_ids'))} |",
-            f"| CPU 型号 | {_markdown_value(_lscpu_value(cpu, 'Model name'))} |",
+            f"| CPU model | {_markdown_value(_lscpu_value(cpu, 'Model name'))} |",
             f"| CPU sockets | {_markdown_value(_lscpu_value(cpu, 'Socket(s)'))} |",
-            f"| 每核线程数 | {_markdown_value(_lscpu_value(cpu, 'Thread(s) per core'))} |",
-            f"| 总内存 | {_human_bytes(memory.get('total_bytes'))} |",
-            f"| 仓库文件系统 | {_markdown_value(storage.get('path'))} |",
-            f"| 文件系统总容量 | {_human_bytes(storage.get('total_bytes'))} |",
-            f"| 文件系统已用 | {_human_bytes(storage.get('used_bytes'))} |",
-            f"| 文件系统可用 | {_human_bytes(storage.get('free_bytes'))} |",
-            "- 完整 lscpu --json 原始字段保存在 JSON 的 "
-            "debug_environment.cpu.lscpu.raw。",
+            f"| Threads per core | {_markdown_value(_lscpu_value(cpu, 'Thread(s) per core'))} |",
+            f"| Total memory | {_human_bytes(memory.get('total_bytes'))} |",
+            f"| Repository filesystem | {_markdown_value(storage.get('path'))} |",
+            f"| Filesystem capacity | {_human_bytes(storage.get('total_bytes'))} |",
+            f"| Filesystem used | {_human_bytes(storage.get('used_bytes'))} |",
+            f"| Filesystem available | {_human_bytes(storage.get('free_bytes'))} |",
+            "- The complete lscpu --json raw fields are available in JSON at "
+            "debug_environment.cpu.lscpu.raw.",
             "",
-            "### GPU（nvidia-smi）",
+            "### GPU (nvidia-smi)",
             "",
-            f"- nvidia-smi 可用：{_markdown_value(nvidia_smi.get('available'))}",
-            f"- nvidia-smi 版本：{_markdown_value(nvidia_smi.get('version'))}",
-            f"- nvidia-smi CUDA 版本：{_markdown_value(nvidia_smi.get('cuda_version'))}",
+            f"- nvidia-smi available: {_markdown_value(nvidia_smi.get('available'))}",
+            f"- nvidia-smi version: {_markdown_value(nvidia_smi.get('version'))}",
+            f"- nvidia-smi CUDA version: {_markdown_value(nvidia_smi.get('cuda_version'))}",
         )
     )
     devices = gpu.get("devices", [])
     if isinstance(devices, list) and devices:
-        lines.extend(("", "| GPU | 类型 | 字段 | 值 |", "| --- | --- | --- | --- |"))
+        lines.extend(("", "| GPU | Category | Field | Value |", "| --- | --- | --- | --- |"))
         for device in devices:
             if not isinstance(device, Mapping):
                 continue
             index = _markdown_value(device.get("index"))
             for _, field in GPU_QUERY_FIELDS:
-                category = "静态" if field in GPU_STATIC_FIELDS else "动态"
+                category = "Static" if field in GPU_STATIC_FIELDS else "Dynamic"
                 lines.append(
                     f"| {index} | {category} | {field} | "
                     f"{_markdown_value(device.get(field))} |"
                 )
     else:
-        lines.extend(("", "- 未获得可见 GPU 的 nvidia-smi 查询行。"))
+        lines.extend(("", "- No nvidia-smi query rows were obtained for visible GPUs."))
 
     lines.extend(
         (
             "",
-            "### Python、工具与运行时",
+            "### Python, Tools, and Runtime",
             "",
-            "| 项目 | 值 |",
+            "| Item | Value |",
             "| --- | --- |",
             f"| Python implementation | {_markdown_value(python_environment.get('implementation'))} |",
-            f"| Python 完整版本 | {_markdown_value(python_environment.get('version'))} |",
+            f"| Full Python version | {_markdown_value(python_environment.get('version'))} |",
             f"| Python ABI / cache tag | {_markdown_value(python_environment.get('soabi'))} / "
             f"{_markdown_value(python_environment.get('cache_tag'))} |",
             f"| Python executable | {_markdown_value(python_environment.get('executable'))} |",
@@ -961,15 +961,15 @@ def _render_debug_environment(debug_environment: Mapping[str, Any]) -> list[str]
             f"| uv | {_markdown_value(uv.get('version'))} ({_markdown_value(uv.get('path'))}) |",
             f"| git | {_markdown_value(git.get('version'))} ({_markdown_value(git.get('path'))}) |",
             f"| Torch | {_markdown_value(torch.get('version'))} |",
-            f"| Torch 编译 CUDA | {_markdown_value(torch.get('compiled_cuda_version'))} |",
+            f"| Torch compiled CUDA | {_markdown_value(torch.get('compiled_cuda_version'))} |",
             f"| cuDNN | {_markdown_value(torch.get('cudnn_version'))} |",
-            f"| Torch CUDA 可用 / 可见数 | {_markdown_value(torch.get('cuda_available'))} / "
+            f"| Torch CUDA available / visible count | {_markdown_value(torch.get('cuda_available'))} / "
             f"{_markdown_value(torch.get('visible_device_count'))} |",
         )
     )
     visible_devices = torch.get("visible_devices", [])
     if isinstance(visible_devices, list) and visible_devices:
-        lines.extend(("", "| Torch CUDA index | 名称 | 算力 | 总显存 |", "| --- | --- | --- | --- |"))
+        lines.extend(("", "| Torch CUDA index | Name | Compute capability | Total memory |", "| --- | --- | --- | --- |"))
         for device in visible_devices:
             if isinstance(device, Mapping):
                 lines.append(
@@ -979,10 +979,10 @@ def _render_debug_environment(debug_environment: Mapping[str, Any]) -> list[str]
                     f"{_human_bytes(device.get('total_memory_bytes'))} |"
                 )
 
-    lines.extend(("", "### 受限运行环境", "", "| 类别 | 变量 | 值 |", "| --- | --- | --- |"))
+    lines.extend(("", "### Restricted Runtime Environment", "", "| Category | Variable | Value |", "| --- | --- | --- |"))
     for category, values in (
-        ("运行", _mapping(debug_environment.get("runtime_environment"))),
-        ("Slurm 分配", _mapping(debug_environment.get("scheduler_environment"))),
+        ("Runtime", _mapping(debug_environment.get("runtime_environment"))),
+        ("Slurm allocation", _mapping(debug_environment.get("scheduler_environment"))),
     ):
         for key, value in values.items():
             lines.append(f"| {category} | {key} | {_markdown_value(value)} |")
@@ -1002,13 +1002,13 @@ def _render_debug_environment(debug_environment: Mapping[str, Any]) -> list[str]
     lines.extend(
         (
             "",
-            "### 依赖",
+            "### Dependencies",
             "",
-            f"- 全部依赖版本数：{_markdown_value(packages.get('distribution_count'), '0')}。",
-            "- 完整依赖清单位于同一 JSON 的 "
-            "debug_environment.packages.distributions。",
+            f"- Total distributions: {_markdown_value(packages.get('distribution_count'), '0')}.",
+            "- The complete distribution list is available in the same JSON at "
+            "debug_environment.packages.distributions.",
             "",
-            "| 核心依赖 | 版本 |",
+            "| Core dependency | Version |",
             "| --- | --- |",
         )
     )
@@ -1017,21 +1017,21 @@ def _render_debug_environment(debug_environment: Mapping[str, Any]) -> list[str]
 
     probe_errors = _debug_probe_errors(debug_environment)
     if probe_errors:
-        lines.extend(("", "### 探测错误", ""))
+        lines.extend(("", "### Probe Errors", ""))
         lines.extend(f"- {message}" for message in probe_errors[:30])
     return lines
 
 
 def _args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="复核已有 No-Patch 输出，并将最新完整报告固定写入 scripts/data-generation-v2-noPatch/reports/")
-    parser.add_argument("--output-dir", required=True, help="已有生成数据输出目录")
-    parser.add_argument("--env", "--environment", default="all", help="all 或逗号分隔环境名")
-    parser.add_argument("--episodes", type=int, default=MAX_EPISODES, help="每环境复核 0 开始的 episode 数")
-    parser.add_argument("--workers", type=int, help="可选：写入报告参数")
-    parser.add_argument("--gpus", help="可选：写入报告参数，例如 0,1")
-    parser.add_argument("--prior-report", help="可选：保留此前生成报告中的 generation provenance")
-    parser.add_argument("--metadata-root", default=str(METADATA_ROOT), help="当前 train metadata 目录")
-    parser.add_argument("--reference-root", default=str(REFERENCE_ROOT), help="官方 HDF5 目录")
+    parser = argparse.ArgumentParser(description="Revalidate existing No-Patch output and write the latest complete report to scripts/data-generation-v2-noPatch/reports/")
+    parser.add_argument("--output-dir", required=True, help="Existing generated-data output directory")
+    parser.add_argument("--env", "--environment", default="all", help="all or comma-separated environment names")
+    parser.add_argument("--episodes", type=int, default=MAX_EPISODES, help="Number of episodes to revalidate per environment starting at episode 0")
+    parser.add_argument("--workers", type=int, help="Optional: record in report parameters")
+    parser.add_argument("--gpus", help="Optional: record in report parameters, for example 0,1")
+    parser.add_argument("--prior-report", help="Optional: retain generation provenance from a prior generation report")
+    parser.add_argument("--metadata-root", default=str(METADATA_ROOT), help="Current train metadata directory")
+    parser.add_argument("--reference-root", default=str(REFERENCE_ROOT), help="Official HDF5 directory")
     parser.add_argument("--max-abs-diff", type=float, default=MAX_ABS_DIFF)
     return parser.parse_args(argv)
 
@@ -1044,7 +1044,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     report: dict[str, Any] | None = None
     try:
         if not 1 <= args.episodes <= MAX_EPISODES:
-            raise ReportGenerationError(f"--episodes 必须在 1..{MAX_EPISODES}")
+            raise ReportGenerationError(f"--episodes must be in 1..{MAX_EPISODES}")
         tasks = parse_tasks(args.env)
         episodes = list(range(args.episodes))
         prior_path = (
@@ -1096,7 +1096,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 json.dumps(
                     {
                         "status": "failed",
-                        "error": f"{exc}; 同时无法写报告: {report_error}",
+                        "error": f"{exc}; additionally failed to write the report: {report_error}",
                     },
                     ensure_ascii=False,
                 )

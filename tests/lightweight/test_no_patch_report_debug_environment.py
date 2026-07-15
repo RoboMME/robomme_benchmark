@@ -1,8 +1,9 @@
-"""No-Patch 报告调试环境快照的轻量单元测试。"""
+"""Lightweight unit tests for No-Patch report debug-environment snapshots."""
 
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,6 +13,10 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import write_generation_report as writer
+
+
+CJK_TEXT_RE = re.compile(r"[\u4e00-\u9fff，。；、（）]")
+TARGET_TEXT_SUFFIXES = frozenset({".py", ".md", ".json"})
 
 
 class _FakeCuda:
@@ -151,12 +156,13 @@ def test_snapshot_schema_markdown_and_full_package_list(monkeypatch, tmp_path) -
     ]
 
     markdown = Path(paths["markdown"]).read_text(encoding="utf-8")
-    assert "## 调试环境" in markdown
-    assert markdown.index("## 调试环境") < markdown.index("## 参数")
-    assert "### GPU（nvidia-smi）" in markdown
+    assert "## Debug Environment" in markdown
+    assert markdown.index("## Debug Environment") < markdown.index("## Parameters")
+    assert "### GPU (nvidia-smi)" in markdown
     assert "fan_speed_percent" in markdown
-    assert "### Python、工具与运行时" in markdown
-    assert "全部依赖版本数：4" in markdown
+    assert "### Python, Tools, and Runtime" in markdown
+    assert "Total distributions: 4" in markdown
+    assert CJK_TEXT_RE.search(markdown) is None
     assert "| mani-skill | 3.0 |" in markdown
 
 
@@ -195,6 +201,24 @@ def test_failed_gpu_torch_and_package_probes_still_write_report(monkeypatch, tmp
     assert "distributions" in snapshot["packages"]["errors"]
 
     markdown = Path(paths["markdown"]).read_text(encoding="utf-8")
-    assert "### 探测错误" in markdown
+    assert "### Probe Errors" in markdown
     assert "nvidia-smi" in markdown
     assert "Torch/import" in markdown
+    assert CJK_TEXT_RE.search(markdown) is None
+
+
+def test_target_text_is_english_and_report_matches_renderer() -> None:
+    text_paths = sorted(
+        path
+        for path in SCRIPT_DIR.rglob("*")
+        if path.is_file() and path.suffix in TARGET_TEXT_SUFFIXES
+    )
+    assert text_paths
+    for path in text_paths:
+        text = path.read_text(encoding="utf-8")
+        assert CJK_TEXT_RE.search(text) is None, path
+
+    report_json = SCRIPT_DIR / "reports" / "no_patch_generation_report.json"
+    report_markdown = SCRIPT_DIR / "reports" / "no_patch_generation_report.md"
+    payload = json.loads(report_json.read_text(encoding="utf-8"))
+    assert report_markdown.read_text(encoding="utf-8") == writer.render_markdown(payload)

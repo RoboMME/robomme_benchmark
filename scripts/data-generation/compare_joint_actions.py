@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""独立逐元素比较 No-Patch 生成数据与官方 joint_action。"""
+"""Standalone element-wise comparison of No-Patch generated data and official joint_action."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from validate_generated_dataset_contract import (
 
 
 class JointActionComparisonError(RuntimeError):
-    """joint_action 比较参数不满足明确契约。"""
+    """joint_action comparison parameters do not satisfy the explicit contract."""
 
 
 def compare_joint_actions(
@@ -34,17 +34,17 @@ def compare_joint_actions(
     episodes: Sequence[int],
     max_abs_diff: float = 1e-8,
 ) -> dict[str, Any]:
-    """逐元素比较请求范围的 action/joint_action，并保留最大差位置。"""
+    """Compare action/joint_action element by element within the requested scope and retain the maximum-difference location."""
     output = Path(generated_root).expanduser().resolve()
     reference_root_path = Path(reference_root).expanduser().resolve()
     ordered_tasks = list(tasks)
     episode_indices = list(episodes)
     if not ordered_tasks or len(ordered_tasks) != len(set(ordered_tasks)):
-        raise JointActionComparisonError("比较任务不能为空且不能重复")
+        raise JointActionComparisonError("comparison tasks must be non-empty and unique")
     if not episode_indices or episode_indices != list(range(len(episode_indices))):
-        raise JointActionComparisonError("比较 episode 必须严格为从 0 开始的连续范围")
+        raise JointActionComparisonError("comparison episodes must be a contiguous range starting at 0")
     if not np.isfinite(max_abs_diff) or max_abs_diff < 0:
-        raise JointActionComparisonError("max_abs_diff 必须是非负有限数值")
+        raise JointActionComparisonError("max_abs_diff must be a non-negative finite value")
 
     section: dict[str, Any] = {
         "joint_vector_count": 0,
@@ -60,7 +60,7 @@ def compare_joint_actions(
         reference_path = reference_root_path / f"record_dataset_{task}.h5"
         generated_path = output / f"record_dataset_{task}.h5"
         if not reference_path.is_file() or not generated_path.is_file():
-            add_error(section, f"{task}: 比较文件不存在")
+            add_error(section, f"{task}: comparison file does not exist")
             continue
         try:
             with h5py.File(reference_path, "r") as reference, h5py.File(
@@ -75,7 +75,7 @@ def compare_joint_actions(
                     if left is None or right is None:
                         add_error(
                             section,
-                            f"{task}/episode_{episode}: 缺少 reference 或 generated",
+                            f"{task}/episode_{episode}: missing reference or generated",
                         )
                         continue
                     left_steps, left_errors = timestep_indices(
@@ -90,7 +90,7 @@ def compare_joint_actions(
                         add_error(section, error)
                     if left_errors or right_errors or left_steps != right_steps:
                         if not left_errors and not right_errors:
-                            add_error(section, f"{task}/episode_{episode}: timestep 集合不一致")
+                            add_error(section, f"{task}/episode_{episode}: timestep sets do not match")
                         continue
                     for timestep in left_steps:
                         location = f"{task}/episode_{episode}/timestep_{timestep}"
@@ -102,26 +102,26 @@ def compare_joint_actions(
                                 "joint_action"
                             ]
                         except KeyError:
-                            add_error(section, f"{location}: 缺少 action/joint_action")
+                            add_error(section, f"{location}: missing action/joint_action")
                             continue
                         if (
                             not isinstance(reference_joint, h5py.Dataset)
                             or not isinstance(generated_joint, h5py.Dataset)
                         ):
-                            add_error(section, f"{location}: joint_action 不是 dataset")
+                            add_error(section, f"{location}: joint_action is not a dataset")
                             continue
                         if (
                             tuple(reference_joint.shape) != tuple(generated_joint.shape)
                             or np.dtype(reference_joint.dtype)
                             != np.dtype(generated_joint.dtype)
                         ):
-                            add_error(section, f"{location}: joint_action shape/dtype 不一致")
+                            add_error(section, f"{location}: joint_action shape/dtype mismatch")
                             continue
                         if (
                             tuple(reference_joint.shape) != (8,)
                             or np.dtype(reference_joint.dtype) != np.dtype(np.float64)
                         ):
-                            add_error(section, f"{location}: joint_action 不是 (8,) float64")
+                            add_error(section, f"{location}: joint_action is not (8,) float64")
                             continue
                         reference_values = np.asarray(reference_joint[()])
                         generated_values = np.asarray(generated_joint[()])
@@ -129,7 +129,7 @@ def compare_joint_actions(
                             np.all(np.isfinite(reference_values))
                             and np.all(np.isfinite(generated_values))
                         ):
-                            add_error(section, f"{location}: joint_action 包含非有限值")
+                            add_error(section, f"{location}: joint_action contains non-finite values")
                             continue
                         delta = np.abs(
                             reference_values.astype(np.float64)
@@ -154,10 +154,10 @@ def compare_joint_actions(
                                 "generated_value": float(generated_values.reshape(-1)[index]),
                             }
         except OSError as exc:
-            add_error(section, f"{task}: 比较 HDF5 读取失败: {exc}")
+            add_error(section, f"{task}: failed to read comparison HDF5: {exc}")
 
     if section["joint_element_count"] == 0:
-        add_error(section, "没有比较任何 joint_action 元素")
+        add_error(section, "no joint_action elements were compared")
     section["within_max_abs_diff"] = bool(
         section["max_abs_diff"] is not None
         and section["max_abs_diff"] <= float(max_abs_diff)
@@ -169,14 +169,14 @@ def compare_joint_actions(
 
 
 def _args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="逐元素比较 No-Patch joint_action")
-    parser.add_argument("--output-dir", required=True, help="已有生成数据输出目录")
-    parser.add_argument("--env", "--environment", default="all", help="all 或逗号分隔环境名")
-    parser.add_argument("--episodes", type=int, default=MAX_EPISODES, help="每环境比较 0 开始的 episode 数")
+    parser = argparse.ArgumentParser(description="Element-wise comparison of No-Patch joint_action")
+    parser.add_argument("--output-dir", required=True, help="Existing generated-data output directory")
+    parser.add_argument("--env", "--environment", default="all", help="all or comma-separated environment names")
+    parser.add_argument("--episodes", type=int, default=MAX_EPISODES, help="Number of episodes to compare per environment starting at episode 0")
     parser.add_argument(
         "--reference-root",
         default=str(REFERENCE_ROOT),
-        help="官方 HDF5 目录",
+        help="Official HDF5 directory",
     )
     parser.add_argument("--max-abs-diff", type=float, default=1e-8)
     return parser.parse_args(argv)
@@ -187,7 +187,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if not 1 <= args.episodes <= MAX_EPISODES:
             raise JointActionComparisonError(
-                f"--episodes 必须在 1..{MAX_EPISODES}"
+                f"--episodes must be in 1..{MAX_EPISODES}"
             )
         result = compare_joint_actions(
             args.output_dir,
