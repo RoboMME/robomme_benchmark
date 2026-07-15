@@ -35,7 +35,7 @@ ALL_TASKS = (
     "PatternLock",
     "RouteStick",
 )
-MAX_EPISODES = 9
+MAX_EPISODES = 100
 MAX_ERRORS = 200
 EPISODE_RE = re.compile(r"^episode_(\d+)$")
 TIMESTEP_RE = re.compile(r"^timestep_(\d+)$")
@@ -429,7 +429,7 @@ def validate_generated_dataset_contract(
         "tasks": ordered_tasks,
         "episode_indices": episode_indices,
         "expected_episode_count": expected,
-        "full_16x9": (
+        "full_16x100": (
             ordered_tasks == list(ALL_TASKS)
             and episode_indices == list(range(MAX_EPISODES))
         ),

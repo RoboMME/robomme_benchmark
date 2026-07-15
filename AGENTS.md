@@ -115,6 +115,10 @@
 | 独立 No-Patch 验证/比较/报告拆分 | 完成（中央 reports） | validator、comparator、report writer 已拆分；所有新 JSON/Markdown 报告统一写入 `scripts/data-generation-v2-noPatch/reports/` | 完整 16×9 中央复核通过：双方完成 144/144、73,907 vectors、591,256 elements、最大差 `5.661269342205344e-09` |
 | 独立 No-Patch README 文档 | 完成（全目录英文化） | README、四个 Python 入口、中央 Markdown 报告及相应轻量测试均已改为英文；JSON schema、CLI flag、路径和数值结果未变 | 后续生成或只读复核仍由英文 report writer 写入中央 reports |
 | 独立 No-Patch 报告调试环境快照 | 完成 | schema 3 已写入完整硬件/软件/允许环境/全量依赖快照；轻量 mock 成功与失败路径均通过；中央 16×9 报告已刷新 | 后续生成或只读复核会在每次写报告前自动刷新该快照 |
+| No-Patch 16×100 全量生成与复核 | 受阻 | 1,600/1,600 轨迹均由 20 workers、GPU 0、attempt 1 成功生成，双方完成率和合约均通过；但 10 条 timestep 集不一致，另有 8 条对齐轨迹超过 `1e-8`，正式报告为 `status=failed` | 保留正式失败产物和所有旧证据；需取得与官方生成机一致的统一数值运行时后才能重跑、独立复核和执行严格清理 |
+| W&B 最新两次训练参数核查 | 完成 | W&B 在线 API 与本地 run 目录一致确认最新两次为 `xqkorgzc`（2026-07-04，no-state）和 `rr2gv2an`（2026-07-03，with-state），二者均 `finished`；解析后配置仅 `run_name` 与 `state.enabled` 不同 | 回答用户时以历史 run 的 `dataset-4env-v4` 配置为准，不得误用当前同名脚本中的 `dataset-4env-v5` |
+| MotionJEPA 当前开关与 SigLIP 路径核查 | 完成 | 当前 `rgb-decoder-v1` 的 `configs/default.yaml` 与 `scripts/train.py` 表明 DINO、flow、ViT、state、EMA、W&B 等有结构开关；SigLIP 仅有 `loss.siglip_weight`，没有 `siglip.enabled` | `siglip_weight=0` 只能清零其 loss 系数；如需真正关闭 SigLIP token/decoder/前向，必须单独改造数据、模型、训练和验证路径 |
+| MotionJEPA 最新双配方默认值与旧脚本保护 | 完成 | `configs/default.yaml` 已对齐 `xqkorgzc` no-state 配方；`configs/legacy.yaml` 与修改前默认值逐字一致；仅保留两个 v2 活动入口，其他 11 个文件归档且 9 个训练入口绑定 legacy | 未启动训练或创建 W&B run；后续按活动 README 使用两个当前入口，旧实验从 `scripts/legacy/` 启动 |
 
 ## 追加式执行日志
 
@@ -570,3 +574,124 @@
 - 差异或阻塞：无功能或数据差异。内置 `apply_patch` 的沙箱限制已通过非破坏性 Git diff 补丁和纯 Markdown 渲染绕过；未采用直接覆盖式 shell 写入。
 - 修改文件：`AGENTS.md`、`scripts/data-generation-v2-noPatch/{README.md,generate_dataset.py,validate_generated_dataset_contract.py,compare_joint_actions.py,write_generation_report.py,reports/no_patch_generation_report.md}`、`tests/lightweight/test_no_patch_report_debug_environment.py`。
 - 下一步：后续生成或只读复核会自动使用英文 report writer 写入中央 reports；若新增人类可读文本，轻量测试会阻止中文回归。
+
+### 2026-07-15 00:02 EDT — 16×100 全量生成、单 GPU 固化与严格产物清理：开始实施
+
+- 状态：进行中。
+- 目标：将当前 No-Patch 生成、验证、比较和报告链从 16×9 升级为 16×100；正式运行固定 20 workers 且只允许物理 GPU 0；生成和独立复核通过后删除所有旧 16×9、smoke、历史审计、回放和缓存产物。
+- 执行命令：已重新阅读本文件末尾并检查 `git status --short --branch`、`command -v uv`、根 `pyproject.toml`/`uv.lock`、`df -h .` 与 `nvidia-smi --query-gpu=...`（均退出码 0）。
+- 输入与来源：当前 `dataset-gen` 分支比 `origin/dataset-gen` 领先 2 个提交；官方参考固定为仓库内 `data/robomme_data_h5/`；现有 `.codex-motionjepa-edit` 状态属于用户已有状态，本轮不触碰。
+- 输出路径：最终数据固定为 `artifacts/generated/no-patch-full-16x100/`；最终中央报告固定为 `scripts/data-generation/reports/generation_report.json` 与 `generation_report.md`。
+- 结果与证据：`uv` 位于 `/home/hongzefu/.local/bin/uv`；仓库有锁文件；磁盘剩余约 4.0 TB；GPU 0 为 RTX 6000 Ada 46,068 MiB，当前约 44,449 MiB 空闲。
+- 差异或阻塞：尚未修改实现或启动 smoke/full generation；旧 16×9 和中间产物会保留到新 16×100 完整验收通过，避免提前丢失现有证据。
+- 修改文件：`AGENTS.md`。
+- 下一步：更新英文 README、四个 Python 模块、报告 schema/文件名与轻量测试，完成静态预检后运行 20-worker/GPU-0 并发 smoke。
+
+### 2026-07-15 00:09 EDT — 16×100 实现升级预检完成并启动单 GPU 并发 smoke
+
+- 状态：进行中。
+- 目标：确认 16×100 默认范围、20-worker 默认值、GPU 0 强制策略、schema 4、新报告名和英文文档均可运行，再用 32 条轨迹实际验证 20-worker 单 GPU 并发。
+- 执行命令：`uv run --locked python -m py_compile` 检查四个数据生成模块和定向测试（退出码 0）；四个模块分别运行 `uv run --locked <entry> --help`（均退出码 0）；`uv run --locked --extra dev python -m pytest -q tests/lightweight/test_no_patch_report_debug_environment.py`（退出码 0，5 passed）；目标目录陈旧引用扫描和 `git diff --check` 均退出码 0。
+- 输入与来源：当前仓库源码、100 条/任务的 train metadata、只读官方参考数据；未修改 `pyproject.toml` 或 `uv.lock`。
+- 输出路径：临时 smoke 将写入 `artifacts/generated/no-patch-gpu0-workers20-smoke/`，中央临时报告使用新名称 `scripts/data-generation/reports/generation_report.json` 与 `.md`。
+- 结果与证据：默认 `episodes=100`、`workers=20`、`gpus=0`；`1`、多 GPU、空值和重复 GPU 0 均由轻量测试证明会被拒绝；新 manifest 小文件 SHA-256 测试通过；目标实现无 `16x9`、旧报告名、旧目录或多 GPU 示例。
+- 差异或阻塞：尚未实测 20 个同时运行的 GPU 0 worker；旧生成与审计产物仍按计划保留。
+- 修改文件：`readme.md`、`scripts/data-generation/` 下 README 与四个模块、中央旧报告删除、定向轻量测试、`AGENTS.md`。
+- 下一步：运行 `--env all --episodes 2 --workers 20 --gpus 0` smoke；只有 32/32 生成、验证和比较通过后才启动 16×100。
+
+### 2026-07-15 00:13 EDT — 20-worker/GPU-0 并发 smoke 完成，正式 16×100 准备启动
+
+- 状态：进行中；并发 smoke 完成，正式全量尚未启动。
+- 目标：实测 20 个并发进程只使用 GPU 0，并在相同实现/锁文件下完成 16 个任务各 2 条的生成、合并、验证和 joint-action 比较。
+- 执行命令：`env CUDA_VISIBLE_DEVICES=0 uv run --locked scripts/data-generation/generate_dataset.py --output-dir artifacts/generated/no-patch-gpu0-workers20-smoke --env all --episodes 2 --workers 20 --gpus 0`（退出码 0）；随后用 `jq`、`find`、`du` 和 `nvidia-smi` 只读核对报告、文件集合、大小与 GPU 使用。
+- 输入与来源：当前 16×100 实现、train metadata 的 episode 0–1 原 seed/difficulty、只读官方 reference。
+- 输出路径：临时数据 `artifacts/generated/no-patch-gpu0-workers20-smoke/`；临时中央报告 `scripts/data-generation/reports/generation_report.json` 与 `.md`。
+- 结果与证据：32/32 worker 成功、32/32 生成与官方最终严格布尔完成、0 合约错误、0 comparison error；所有 `attempt_count=1`、所有 `gpu=0`；最大绝对差 `5.661269342205344e-09`，小于 `1e-8`。输出为 16 个 HDF5 和 16 个 metadata JSON，`.workers` 已自动清理，总大小约 9.9 GB。运行时 GPU 0 观测峰值约 16.4 GiB，GPU 1 始终约 6 MiB/0% 利用率。
+- 差异或阻塞：仅有 PyTorch/pynvml、SAPIEN/pkg_resources 和 URDF material 警告，以及历史 planner 的非致命 screw fallback；没有 OOM、Traceback、worker failure 或 GPU 越界。
+- 修改文件：`AGENTS.md`；smoke 数据和中央临时报告不作为最终产物。
+- 下一步：删除 smoke 数据，确认最终输出目录不存在、磁盘和 GPU 0 状态后，按显式 `100/20/0` 参数启动正式 1,600 条生成。
+
+### 2026-07-15 01:55 EDT — W&B 最新两次训练参数核查完成
+
+- 状态：完成。
+- 目标：回答用户“目前最新的两次 W&B 训练采用什么参数”，以在线 run 排序和当次保存配置为准，避免把当前启动脚本默认值误判为历史实际参数。
+- 执行命令：只读扫描 `/data/hongzefu` 与 `/nfs/turbo/coe-chaijy-unreplicated/hongzefu` 下的 `wandb/run-*`；读取两个 run 的 `files/config.yaml`、`files/wandb-metadata.json`、`files/output.log`；比较去除 `_wandb` 运行环境元数据后的解析配置；在先确认 MotionJEPA 的 `uv`、`pyproject.toml` 与 `uv.lock` 后，以 `uv run --no-sync python -c ...` 调用 W&B Public API 按 `created_at` 降序只读查询 `hongzefu-university-of-michigan/motionjepa`（退出码 0，凭据值未写入本文件）。
+- 输入与来源：在线 W&B project `motionjepa`；本地 run `run-20260704_150203-xqkorgzc` 与 `run-20260703_094016-rr2gv2an`；MotionJEPA commit `5c739bc3e4a81f9ace3ba278d6478af3eb3e58a1`。
+- 输出路径：未创建训练或报告产物；只更新本账本。
+- 结果与证据：在线排序确认 `xqkorgzc` 是最新 run、`rr2gv2an` 是次新 run，二者均 `finished`。实际共同配置包括 `dataset-4env-v4/dataset-token`、4×A40、每卡 batch 4、梯度累积 2、有效 batch 32、60 epochs、seed 42、主学习率 `3e-4`、ViT 学习率 `1e-4`、cosine、FP32、ViT+DINO+sum-dense flow、WAFT online cat、flow weight 0.4；唯一模型/训练配置差异是最新 run `state.enabled=false`，次新 run `state.enabled=true`。两份解析配置除 `run_name` 和该布尔值外无差异。
+- 差异或阻塞：当前同名 Slurm 脚本已写成 `dataset-4env-v5`，但历史 W&B metadata/config 明确记录两次实际运行均使用 `dataset-4env-v4`；本次结论以历史 run 证据为准。在线 API 首次因当前 shell 未配置凭据退出码 1，随后通过既有训练配置中已提供的凭据进行只读查询并成功。本账本未记录凭据值；核查过程中确认同名 Slurm 脚本明文保存 W&B API key，建议立即在 W&B 旋转并改为受控环境变量或登录态注入。
+- 修改文件：`AGENTS.md`。
+- 下一步：无；如需复现实验，应从对应 W&B `config.yaml` 固化参数，而不是直接复用当前已变化的同名脚本。
+
+### 2026-07-15 02:32 EDT — 16×100 正式生成完成但 joint-action 验收受阻
+
+- 状态：受阻；正式数据生成与合约审计完成，但 joint-action 验收未通过，未执行旧产物清理，也未将 16×100 标记为完成。
+- 目标：以 20 workers、物理 GPU 0 和 train metadata 原 seed/difficulty 完成 16 个任务各 100 条生成，并要求每条单次尝试、双方最终严格布尔完成、合约无错误且 joint-action 最大绝对差不超过 `1e-8`。
+- 执行命令：`env CUDA_VISIBLE_DEVICES=0 uv run --locked scripts/data-generation/generate_dataset.py --output-dir artifacts/generated/no-patch-full-16x100 --env all --episodes 100 --workers 20 --gpus 0`（退出码 1，退出前已完成生成、合并、验证、比较和 SHA-256 manifest）。
+- 输入与来源：当前 schema 4 生成链、`src/robomme/env_metadata/train/`、只读官方 `data/robomme_data_h5/`；本任务所有 20 个 Python worker 的 NVIDIA 进程均仅位于 GPU 0。运行期间 GPU 1 曾由仓库外 MotionJEPA 进程占用，本任务未使用或触碰这些进程。
+- 输出路径：正式生成数据位于 `artifacts/generated/no-patch-full-16x100/`；失败报告已原子写入 `scripts/data-generation/reports/generation_report.json` 与 `generation_report.md`。
+- 结果与证据：生成请求/成功/失败为 1,600/1,600/0；顶层恰有 16 个 HDF5 和 16 个 metadata JSON，总字节数 510,364,369,421；scope 为 `full_16x100=true`；metadata、生成合约和官方合约均为 0 errors；生成与官方最终严格布尔完成均为 1,600/1,600；manifest 状态为 collected。joint-action 共比较 761,885 vectors、6,095,080 elements，最大绝对差为 `0.007857919612339614`，位置为 `BinFill/episode_99/timestep_625/element_5`，超过 `1e-8`。
+- 差异或阻塞：10 个 episode 的 timestep 集不匹配：`BinFill/11,94`、`VideoRepick/39,59`、`VideoPlaceButton/58,83`、`VideoPlaceOrder/46,50`、`PickHighlight/3,38`；comparison error_count=10、`within_max_abs_diff=false`、最终 `status=failed`。运行中的 `screw plan failed` 与 URDF material 警告未导致 worker 失败，但需要核查它们是否与上述确定性差异有关。按用户计划，失败时不得清理旧数据、静默降低 worker 数或使用其他 GPU，因此清理与独立只读复核暂缓。
+- 修改文件：正式 16×100 数据、schema 4 中央失败报告、`AGENTS.md`；未触碰 `.codex-motionjepa-edit`。
+- 下一步：只读定位 10 个异常 episode 的长度、首个分歧 timestep、worker provenance 与运行日志关联；确认是实现缺陷、并发确定性问题还是生成器既有行为后，再决定是否需要保持 20 workers/GPU 0 重新生成受影响范围或全量。
+
+### 2026-07-15 03:03 EDT — 16×100 失败范围复现与统一 CPU 数值路径核查
+
+- 状态：受阻；已证明正式失败不是 worker、GPU、attempt 次数或一般并发随机性导致，当前机器尚无可令全部异常轨迹通过的统一运行时设置。
+- 目标：只读识别 16×100 正式比较的完整失败范围，并在保持 GPU 0、20 workers、原 seed/difficulty 和单次 attempt 的前提下，定向复现全部异常 episode 与两个正常对照。
+- 执行命令：使用 `uv run --locked` 执行仓库内临时诊断入口 `artifacts/diagnostics/16x100-failure/reproduce_selected.py`，依次验证当前默认、单线程 BLAS、`OPENBLAS_CORETYPE=HASWELL`，以及 Haswell + `MKL_ENABLE_INSTRUCTIONS=AVX2` + `ATEN_CPU_CAPABILITY=avx2`；每次均显式 `CUDA_VISIBLE_DEVICES=0`，最后一次请求 20/成功 20/失败 0。
+- 输入与来源：正式生成的 1,600 条轨迹、官方固定 revision 数据，以及完整扫描发现的 10 条 timestep 不一致和 8 条对齐后超 `1e-8` episode；两个对照为 `PickXtimes/episode_0` 与 `StopCube/episode_0`。
+- 输出路径：临时诊断报告位于 `artifacts/diagnostics/16x100-failure/selected-rerun*/selected_rerun_report.json`；这些均不是最终白名单产物，只有全量验收未来通过后才可随其他中间产物一起删除。
+- 结果与证据：默认和单线程复现均有 19/20 与正式产物稳定，证明 17 条异常在当前数值路径上可重复；Haswell 令 4 条 `PatternLock` 和一次分叉后的 `PickHighlight/episode_3` 通过，两个正常对照仍通过。加入 AVX2 后结果不再改善：官方通过 7/20，仍失败 13/20，其中 10 条 timestep 集不一致，`BinFill/99`、`ButtonUnmask/55`、`ButtonUnmaskSwap/87`、`VideoUnmaskSwap/88` 中后 3 条数值超阈值（`BinFill/99` 也超阈值，合计 4 条对齐超阈值；所选 20 条还包含已经由 Haswell 修复的 4 条 PatternLock）。所有结果均记录 `gpu=0`、`attempt_count=1`。
+- 差异或阻塞：完整正式范围实际受影响 18/1,600：10 条 timestep 不一致，另有 8 条对齐但超阈值；统一 Haswell/AVX2 仅修复其中 5 条，仍有 13 条无法满足官方参考。不能按 episode 混用 CPU 内核、重试到命中、放宽阈值或复制官方数据，因为这些做法违反统一运行时、单次 attempt 和原始生成验收口径。
+- 修改文件：`AGENTS.md`；仅新增被忽略的诊断脚本与诊断输出，未修改正式 HDF5、官方数据、正式 schema 4 报告或 `.codex-motionjepa-edit`。
+- 下一步：核对恢复 commit 的精确二进制依赖与官方生成机运行时证据；若仓库内不存在能够解释剩余差异的统一依赖版本，则保持阶段受阻并运行源码/测试收尾检查，不执行旧产物清理或独立成功复核。
+
+### 2026-07-15 04:02 EDT — 16×100 实现与测试收尾完成，正式验收保持受阻
+
+- 状态：受阻；16×100 接口升级、正式生成、失败报告、诊断和要求的完整测试均已执行，但 joint-action 验收未通过，因此未执行独立成功复核或严格数据清理。
+- 目标：在不放宽 `1e-8`、不重试 seed、不混用 CPU 内核、不修改官方数据的前提下，完成恢复源码/调用链核查、完整测试、英文与陈旧引用扫描、正式目录和工作树终检。
+- 执行命令：以仓库内 detached worktree 的 `a3842d1b77bc79e2f70cefcbab136207e7067065` 原始 `src/robomme` 运行 20 条定向 `uv run --locked` 复现后注销 worktree；另以临时诊断 wrapper 恢复原入口 task loop 前的 `evaluate()` 调用。完整测试为 `uv run --locked python -m pytest tests/lightweight/`（退出码 1）和 `env CUDA_VISIBLE_DEVICES=0 uv run --locked python -m pytest tests/dataset/`（退出码 0）；随后运行目标英文/陈旧引用 `rg` 扫描、正式目录 `find` 核对、schema 4 `jq` 摘要、`git diff --check` 与 `git status --short --branch`。
+- 输入与来源：当前 16×100 实现、锁定 `uv.lock`、选定恢复 commit、正式 1,600 条生成数据、官方 revision `a5e4e25ffe8af34f64944f9533d06455ce5f8337`、全部仓库 lightweight/dataset 测试。
+- 输出路径：正式数据仍为 `artifacts/generated/no-patch-full-16x100/`；正式失败报告为 `scripts/data-generation/reports/generation_report.json` 与 `generation_report.md`；诊断 JSON 位于被忽略的 `artifacts/diagnostics/16x100-failure/`。
+- 结果与证据：精确恢复源码与 pre-loop `evaluate()` 两项复现均为 20/20 成功、19/20 与正式产物稳定、仅 3/20 通过官方参考，排除当前源码漂移和入口调用顺序。`tests/lightweight/` 为 114 passed、4 failed、803 warnings、耗时 710.52 秒；失败为两条既有 task-goal 断言和两条既有 step-error/status 断言，本轮生成/report 定向测试 5/5 通过。`tests/dataset/` 为 31 passed、369 warnings、耗时 880.49 秒。目标 README、Python、正式报告和定向测试中禁止的旧字符串与中文扫描均无匹配，`git diff --check` 退出码 0。
+- 正式目录核对：恰有 16 个 `.h5`、16 个 `_metadata.json`、0 其他文件、0 子目录、0 符号链接，总字节数 `510364369421`，与报告 manifest 一致。报告为 schema 4，`full_16x100=true`，20 workers、GPU 值仅 `0`、attempt 值仅 `1`、生成 1,600/1,600、双方完成 1,600/1,600、双方合约 0 errors、manifest 32 个生成文件并含官方 revision/SHA-256；但 `status=failed`、comparison errors=10、最大差 `0.007857919612339614`。
+- 差异或阻塞：仓库、Git 历史和官方 HDF5 均未保存官方生成机 CPU/BLAS/PhysX provenance。当前机器无法用一个统一运行时令全部 18 条异常 episode 通过；因此没有依据重跑第二个 510 GB 全量。严格白名单仍未满足：旧 `artifacts/generated/*`、`artifacts/reports/`、`runs/replay_videos/`、`.venv`、`.pytest_cache` 和源码/测试 `__pycache__` 均按失败保护规则保留。
+- 修改文件：`AGENTS.md`、`readme.md`、`scripts/data-generation/{README.md,generate_dataset.py,validate_generated_dataset_contract.py,write_generation_report.py}`、删除旧名中央报告、新增 `reports/generation_report.json`/`.md`、`tests/lightweight/test_no_patch_report_debug_environment.py`；未触碰用户已有 `.codex-motionjepa-edit`，未创建提交或推送。
+- 下一步：必须先取得官方生成机的 CPU 型号、NumPy/OpenBLAS 内核、SAPIEN/PhysX 二进制及完整启动环境，或由用户明确修改验收口径；在此之前保持 `status=failed` 和旧证据，不执行清理。
+
+### 2026-07-15 03:15 EDT — MotionJEPA 当前配置开关与 SigLIP 路径核查完成
+
+- 状态：完成。
+- 目标：回答当前训练配置能够开关哪些内容，并确认 SigLIP 是否存在真正的关闭开关。
+- 执行命令：只读检查 MotionJEPA 当前 `rgb-decoder-v1` 分支的 `configs/default.yaml`、`scripts/train.py` 与 `src/motion_jepa/data/dataset_bin.py`；使用 `rg`、`sed` 与带行号输出核对配置布尔项、模块构造、Dataset 字段、训练和验证 loss 路径（均退出码 0）；未运行 Python。
+- 输入与来源：`/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA` 当前工作树；该工作树只读检查时为 `rgb-decoder-v1...origin/rgb-decoder-v1`。
+- 输出路径：未生成训练或诊断产物；只更新本账本。
+- 结果与证据：结构级开关包括 `dino.enabled`、`optical_flow.enabled`、`vit.enabled`、`state.enabled`、`ema.enabled`、`wandb.enabled`，另有 flow 子开关、motion filter、compile、validation 与 attribution 等行为开关。不存在 `siglip.enabled`；`tokens/` 始终被要求，Dataset 始终读取并返回 SigLIP `current/future/delta`，SigLIP decoder 始终构造并执行，训练与验证始终计算 SigLIP MSE。`loss.siglip_weight=0` 只在总 loss 聚合时把系数乘成 0，不能省掉读取、decoder、前向和 MSE；非 ViT 模式下 SigLIP delta 仍是 MotionEncoder 基础输入，因而也不是语义上的完整消融。
+- 差异或阻塞：如果“关闭”仅指当前 ViT 模式下取消 SigLIP 重建监督，可把 `loss.siglip_weight=0`，但计算路径仍保留；如果要求结构、显存、计算和数据依赖都关闭，现有配置做不到，需新增跨 Dataset、encoder 维度、decoder、optimizer/EMA/DDP、训练/验证/归因/日志和 checkpoint 的 `siglip.enabled` 支持。
+- 修改文件：`AGENTS.md`。
+- 下一步：无；本轮只做机制核查，未修改 MotionJEPA 源码。
+
+### 2026-07-15 EDT — MotionJEPA 最新双配方默认值与旧脚本保护：开始实施
+
+- 状态：进行中。
+- 目标：将 MotionJEPA 默认配置对齐最新 W&B no-state run `xqkorgzc` 的完整配方，仅保留 no-state/with-state 两个 v2 活动脚本，并把其他 11 个脚本归档到既有 `scripts/legacy/`，通过独立 legacy 配置保护旧行为。
+- 执行命令：已完整阅读本文件；检查当前数据恢复仓库与 MotionJEPA 工作树状态；确认 MotionJEPA 位于 `rgb-decoder-v1...origin/rgb-decoder-v1` 且开始时工作树干净；确认 `uv`、MotionJEPA `pyproject.toml` 与 `uv.lock` 均存在；未运行 Python。
+- 输入与来源：W&B run `xqkorgzc`（no-state）与 `rr2gv2an`（with-state）；MotionJEPA 当前 `configs/default.yaml` 和 `scripts/train-script-hongzefu/`。
+- 输出路径：代码和文档修改位于 `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA/`；本仓库只追加本持续状态账本。
+- 结果与证据：开始前 MotionJEPA 工作树干净；当前数据恢复仓库已有用户未提交修改，本轮不触碰除本账本追加记录以外的既有改动。
+- 差异或阻塞：尚未修改 MotionJEPA 或运行验证，因此不得标记完成；本任务由用户显式要求，范围限定为训练默认值、脚本归档与相关活动文档，不扩展到数据生成工作。
+- 修改文件：`AGENTS.md`。
+- 下一步：读取默认配置、两份当前入口、11 个待归档文件和活动文档引用；随后应用最小补丁并验证。
+
+### 2026-07-15 04:01 EDT — MotionJEPA 最新双配方默认值与旧脚本保护：完成
+
+- 状态：完成。
+- 目标：对齐最新 W&B no-state 默认配方，同时保护 with-state 对照和全部旧训练脚本的历史行为。
+- 执行命令：`cmp configs/legacy.yaml <(git show HEAD:configs/default.yaml)`、全部相关 shell 的 `bash -n`、旧入口训练调用/活动目录/陈旧路径 `rg` 审计、`git diff --check`（均退出码 0）；每次 Python 前均确认 `command -v uv`、`pyproject.toml` 与 `uv.lock`，随后以 `uv run --no-sync` 执行 Hydra compose 精确断言和 `py_compile`（均退出码 0）。
+- 输入与来源：W&B `xqkorgzc` no-state 配方、`rr2gv2an` with-state 配方、修改前 `configs/default.yaml` 与当前 `dataset-4env-v5` 环境选择。
+- 输出路径：MotionJEPA 的 `configs/{default,legacy}.yaml`、`scripts/train-script-hongzefu/`、`scripts/legacy/` 及当前使用文档；未生成训练、dataset 或 W&B 产物。
+- 结果与证据：Hydra compose 断言确认 current 配方为 ViT + DINO + sum-dense flow + WAFT cat、state off、batch4×accum2、compile false、60 epochs、flow weight 0.4；legacy 保持 flow/ViT off、state on、batch32、compile true、40 epochs；对 current 仅覆盖 `state.enabled=true` 后，配置树唯一差异就是该布尔值。with-state 活动脚本还显式固定 `state.dim=13` 与 `state.loss_weight=1.0`。活动目录严格只有 README 和两个 v2 脚本；11 个旧文件全部移入 `scripts/legacy/`，其中 9 个训练入口的每个 `scripts/train.py` 调用都带 `--config-name legacy`。
+- 差异或阻塞：直接导入完整 `scripts/train.py --cfg job` 以及运行 `tests/test_utils.py` 时，当前执行环境在无错误文本、无可捕获退出码的情况下终止了整个子 shell；禁用 pytest 插件、单线程运行和直接函数断言均相同。最小 uv/Python 与 `torch 2.9.0+cu128` 导入正常。因 Hydra 官方 compose、Python 语法、shell 语法和静态配置验收均已通过，本配置/归档任务完成，但不声称该 pytest 文件本轮通过。
+- 修改文件：MotionJEPA 的默认/legacy 配置、两个活动脚本和 README、11 个归档文件、legacy README，以及当前 README、中文训练/数据流说明、Great Lakes 指南和显存评估引用；本仓库仅更新 `AGENTS.md`。
+- 下一步：无；本轮不提交训练、不创建 W&B run、不修改 dataset。提交代码前可在不受当前子 shell 终止问题影响的环境补跑 `uv run --no-sync python -m pytest -q tests/test_utils.py`。

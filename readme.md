@@ -103,14 +103,19 @@ The train split has 100 episodes. The val/test splits each have 50 episodes. All
 The environment input/output format is described in [doc/env_format.md](doc/env_format.md).
 
 > Currently, environment spawning is set up only for imitation learning. We are working on extending it to support more general parallel environments for reinforcement learning in the future.
-<!-- 
+
 ### 🔧 Data Generation
 
-You can also re-generate your own HDF5 data via parallel processing using
-@hongze
+The repository includes a complete 16-task × 100-episode HDF5 generation and validation workflow. It uses 20 workers and is locked to physical GPU 0. See [scripts/data-generation/README.md](scripts/data-generation/README.md) for the full workflow and artifact contract.
+
 ```bash
-uv run scripts/dev/xxxx
-``` -->
+env CUDA_VISIBLE_DEVICES=0 uv run --locked scripts/data-generation/generate_dataset.py \
+  --output-dir artifacts/generated/no-patch-full-16x100 \
+  --env all \
+  --episodes 100 \
+  --workers 20 \
+  --gpus 0
+```
 
 
 ## 🎓 Model Training

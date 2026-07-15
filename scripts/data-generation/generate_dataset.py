@@ -7,7 +7,6 @@ import argparse
 import json
 import multiprocessing as mp
 import os
-import re
 import shutil
 import sys
 import traceback
@@ -44,6 +43,8 @@ from write_generation_report import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = REPO_ROOT / "src"
 STICK_TASKS = frozenset(("PatternLock", "RouteStick"))
+DEFAULT_WORKERS = 20
+GPU_ID = "0"
 
 
 class DatasetGenerationError(RuntimeError):
@@ -117,8 +118,8 @@ def _prepare_output(value: str | Path) -> Path:
 def _parse_gpus(value: str | Sequence[str | int]) -> tuple[str, ...]:
     raw = value.split(",") if isinstance(value, str) else value
     gpus = tuple(str(item).strip() for item in raw if str(item).strip())
-    if not gpus or any(re.fullmatch(r"\d+", item) is None for item in gpus):
-        raise DatasetGenerationError("GPUs must be comma-separated non-negative integers")
+    if gpus != (GPU_ID,):
+        raise DatasetGenerationError("--gpus must be exactly 0; generation is locked to physical GPU 0")
     return gpus
 
 
@@ -373,8 +374,8 @@ def generate_dataset(
     output_dir: str | Path,
     env: str = "all",
     episodes: int = MAX_EPISODES,
-    workers: int = 1,
-    gpus: str | Sequence[str | int] = "0",
+    workers: int = DEFAULT_WORKERS,
+    gpus: str | Sequence[str | int] = GPU_ID,
 ) -> dict[str, Any]:
     """Generate, merge, and run the split contract validation and numerical comparison in the same process."""
     _ensure_layout()
@@ -405,6 +406,7 @@ def generate_dataset(
         report = new_generation_report(report["parameters"])
         tasks = parse_tasks(env)
         gpu_ids = _parse_gpus(gpus)
+        os.environ["CUDA_VISIBLE_DEVICES"] = GPU_ID
         records_by_task = read_train_metadata()
         episode_indices = list(range(episodes))
         report["parameters"].update(
@@ -516,7 +518,7 @@ def generate_dataset(
 
 
 def _args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Standalone No-Patch RoboMME dataset generation and validation; the latest complete report is always written to scripts/data-generation-v2-noPatch/reports/")
+    parser = argparse.ArgumentParser(description="Standalone No-Patch RoboMME dataset generation and validation; the latest complete report is always written to scripts/data-generation/reports/generation_report.json and generation_report.md")
     parser.add_argument("--output-dir", required=True, help="Output directory inside the repository that does not exist or is empty")
     parser.add_argument("--env", "--environment", default="all", help="all or comma-separated environment names")
     parser.add_argument(
@@ -525,8 +527,8 @@ def _args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=MAX_EPISODES,
         help="Number of episodes per environment starting at episode 0",
     )
-    parser.add_argument("--workers", "--max-workers", dest="workers", type=int, default=1)
-    parser.add_argument("--gpus", "--gpu", dest="gpus", default="0", help="for example, 0 or 0,1")
+    parser.add_argument("--workers", "--max-workers", dest="workers", type=int, default=DEFAULT_WORKERS)
+    parser.add_argument("--gpus", "--gpu", dest="gpus", default=GPU_ID, help="must be 0; generation is locked to physical GPU 0")
     return parser.parse_args(argv)
 
 

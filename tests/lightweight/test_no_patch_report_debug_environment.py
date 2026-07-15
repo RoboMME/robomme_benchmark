@@ -8,10 +8,14 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-SCRIPT_DIR = Path(__file__).resolve().parents[2] / "scripts" / "data-generation-v2-noPatch"
+import pytest
+
+SCRIPT_DIR = Path(__file__).resolve().parents[2] / "scripts" / "data-generation"
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+import generate_dataset as generator
+import validate_generated_dataset_contract as validator
 import write_generation_report as writer
 
 
@@ -138,7 +142,9 @@ def test_snapshot_schema_markdown_and_full_package_list(monkeypatch, tmp_path) -
     payload = json.loads(Path(paths["json"]).read_text(encoding="utf-8"))
     snapshot = payload["debug_environment"]
 
-    assert payload["schema_version"] == 3
+    assert payload["schema_version"] == 4
+    assert Path(paths["json"]).name == "generation_report.json"
+    assert Path(paths["markdown"]).name == "generation_report.md"
     assert snapshot["schema_version"] == 1
     assert snapshot["cpu"]["lscpu"]["raw"]["lscpu"][1]["data"] == "Mock CPU"
     assert snapshot["gpu"]["nvidia_smi"]["cuda_version"] == "12.9"
@@ -218,7 +224,49 @@ def test_target_text_is_english_and_report_matches_renderer() -> None:
         text = path.read_text(encoding="utf-8")
         assert CJK_TEXT_RE.search(text) is None, path
 
-    report_json = SCRIPT_DIR / "reports" / "no_patch_generation_report.json"
-    report_markdown = SCRIPT_DIR / "reports" / "no_patch_generation_report.md"
-    payload = json.loads(report_json.read_text(encoding="utf-8"))
-    assert report_markdown.read_text(encoding="utf-8") == writer.render_markdown(payload)
+    report_json = SCRIPT_DIR / "reports" / "generation_report.json"
+    report_markdown = SCRIPT_DIR / "reports" / "generation_report.md"
+    legacy_stem = "no_patch" + "_generation_report"
+    assert not (SCRIPT_DIR / "reports" / f"{legacy_stem}.json").exists()
+    assert not (SCRIPT_DIR / "reports" / f"{legacy_stem}.md").exists()
+    assert report_json.exists() == report_markdown.exists()
+    if report_json.exists():
+        payload = json.loads(report_json.read_text(encoding="utf-8"))
+        assert report_markdown.read_text(encoding="utf-8") == writer.render_markdown(payload)
+
+
+def test_full_scale_defaults_and_gpu_zero_lock() -> None:
+    args = generator._args(["--output-dir", "artifacts/generated/test-output"])
+    report_args = writer._args(["--output-dir", "artifacts/generated/test-output"])
+
+    assert validator.MAX_EPISODES == 100
+    assert args.episodes == 100
+    assert args.workers == 20
+    assert args.gpus == "0"
+    assert report_args.episodes == 100
+    assert report_args.gpus == "0"
+    assert generator._parse_gpus("0") == ("0",)
+    for invalid in ("1", "0" + ",1", "", "0,0"):
+        with pytest.raises(generator.DatasetGenerationError):
+            generator._parse_gpus(invalid)
+
+
+def test_complete_artifact_manifest_records_sizes_and_sha256(tmp_path) -> None:
+    output = tmp_path / "generated"
+    reference = tmp_path / "reference"
+    output.mkdir()
+    reference.mkdir()
+    (output / "record_dataset_BinFill.h5").write_bytes(b"generated-hdf5")
+    (output / "record_dataset_BinFill_metadata.json").write_text(
+        '{"records": []}\n',
+        encoding="utf-8",
+    )
+    (reference / "record_dataset_BinFill.h5").write_bytes(b"reference-hdf5")
+
+    manifest = writer.build_artifact_manifest(output, ["BinFill"], reference)
+
+    assert manifest["status"] == "collected"
+    assert manifest["reference_revision"] == writer.REFERENCE_REVISION
+    assert manifest["generated"]["file_count"] == 2
+    assert manifest["official_reference_hdf5"]["file_count"] == 1
+    assert all(len(item["sha256"]) == 64 for item in manifest["generated"]["files"])

@@ -1,27 +1,27 @@
 # RoboMME No-Patch Dataset Generation
 
-This README covers only how to run the complete 16 × 9 generation, the three independent modules called by the generator, the main parameters, and the locations of the final artifacts.
+This directory contains the complete 16-task × 100-episode RoboMME dataset generation and validation workflow. A complete run produces 1,600 trajectories, uses the original train-metadata seed and difficulty once per trajectory, runs 20 workers, and is locked to physical GPU 0.
 
-## Complete 16 × 9 Generation
+## Complete 16 × 100 Generation
 
-Run this from the repository root. The output directory must be inside the repository and must not exist or must be empty before the run.
+Run the following command from the repository root. The output directory must be inside this repository and must not exist or must be empty.
 
 ~~~bash
 cd /data/hongzefu/robomme_benchmark-restore-DataGen
 
-uv run --locked scripts/data-generation-v2-noPatch/generate_dataset.py \
-  --output-dir artifacts/generated/no-patch-full-16x9-<run-id> \
+env CUDA_VISIBLE_DEVICES=0 uv run --locked scripts/data-generation/generate_dataset.py \
+  --output-dir artifacts/generated/no-patch-full-16x100 \
   --env all \
-  --episodes 9 \
-  --workers 9 \
-  --gpus 0,1
+  --episodes 100 \
+  --workers 20 \
+  --gpus 0
 ~~~
 
-This generates episode_0 through episode_8 for each of the fixed 16 environments, for a total of 144 trajectories. Replace <run-id> with a new name to avoid reusing an existing output directory.
+The complete run generates `episode_0` through `episode_99` for each of the fixed 16 environments. `--gpus` must be exactly `0`; any other GPU or multi-GPU value is rejected.
 
-## Three Post-Generation Calls
+## Post-Generation Calls
 
-generate_dataset.py generates and merges the data. After each task's HDF5 and metadata are written, it directly calls the following three independent modules in the same Python process:
+`generate_dataset.py` generates and merges the data, then calls three independent modules in the same Python process:
 
 ~~~text
 generate_dataset.py
@@ -33,62 +33,57 @@ generate_dataset.py
         └── write_generation_report(...)
 ~~~
 
-1. The validator checks the fixed contract for generated data, current train metadata, and official reference data.
-2. The comparator compares generated action/joint_action values element by element with data/robomme_data_h5. The default maximum absolute-difference threshold is 1e-8.
-3. The writer summarizes the preceding results and writes JSON and Markdown reports.
+1. The validator checks the generated HDF5 and metadata contract against the current train metadata and official reference data.
+2. The comparator checks every generated `action/joint_action` element against `data/robomme_data_h5`; the maximum allowed absolute difference is `1e-8`.
+3. The writer records generation provenance, validation results, the runtime environment, final file sizes, and SHA-256 manifests in JSON and Markdown.
 
-All three are in-process function calls and do not call the legacy scripts/data-generation/ directory. If generation or post-generation auditing fails, the writer still writes a failure report whenever the output directory exists.
+The generator removes its `.workers` directory after completion or failure. A failed generation or audit still writes a failure report when the output directory exists.
 
 ## Parameters
 
-The complete 16 × 9 command uses the following parameters:
-
-| Parameter | Value for this complete run | Meaning |
+| Parameter | Complete-run value | Meaning |
 | --- | --- | --- |
-| --output-dir | artifacts/generated/no-patch-full-16x9-<run-id> | Generated-data directory; it must be inside the repository and must not exist or must be empty. |
-| --env | all | All 16 fixed environments. |
-| --episodes | 9 | Generate episode_0 through episode_8 for every environment. |
-| --workers | 9 | Run at most nine generation workers concurrently. |
-| --gpus | 0,1 | Assign workers to GPU 0 and GPU 1 in round-robin order. |
+| `--output-dir` | `artifacts/generated/no-patch-full-16x100` | Repository-local generated-data directory; it must not exist or must be empty. |
+| `--env` | `all` | Generate all 16 fixed environments. |
+| `--episodes` | `100` | Generate episode 0 through episode 99 for every environment. |
+| `--workers` | `20` | Run at most 20 generation workers concurrently. |
+| `--gpus` | `0` | Use physical GPU 0 only; all other values are rejected. |
 
-The generator always uses the original seed and difficulty from the current train metadata and attempts each episode only once.
+`--env`, `--episodes`, and `--workers` remain configurable for debugging and smoke tests. The default and authoritative complete scope is 16 × 100.
 
-## Recompare an Existing Complete Output
+## Revalidate an Existing Complete Output
 
-Existing data does not need to be generated again. The following command read-only revalidates an existing 16 × 9 output, reruns the validator and comparator, and refreshes the central report:
+The following command performs a read-only revalidation, preserves generation provenance from the existing report, reruns the validator and comparator, refreshes the SHA-256 manifest, and atomically replaces the central report:
 
 ~~~bash
-uv run --locked scripts/data-generation-v2-noPatch/write_generation_report.py \
-  --output-dir artifacts/generated/no-patch-full-16x9 \
+env CUDA_VISIBLE_DEVICES=0 uv run --locked scripts/data-generation/write_generation_report.py \
+  --output-dir artifacts/generated/no-patch-full-16x100 \
   --env all \
-  --episodes 9 \
-  --workers 9 \
-  --gpus 0,1 \
+  --episodes 100 \
+  --workers 20 \
+  --gpus 0 \
+  --prior-report scripts/data-generation/reports/generation_report.json \
   --max-abs-diff 1e-8
 ~~~
 
---workers and --gpus are recorded only as report parameters by this revalidation command; it does not start workers.
+`--workers` and `--gpus` are recorded as provenance by the read-only command; it does not start generation workers.
 
 ## Final Artifacts
 
-The complete run writes generated data to --output-dir:
+The complete generated-data directory contains exactly 16 HDF5 files and 16 metadata JSON files:
 
 ~~~text
-artifacts/generated/no-patch-full-16x9-<run-id>/
+artifacts/generated/no-patch-full-16x100/
 ├── record_dataset_<Task>.h5
 └── record_dataset_<Task>_metadata.json
 ~~~
 
-A complete 16 × 9 run produces 16 HDF5 files and 16 metadata JSON files. Temporary worker files are removed at the end.
-
-The authoritative comparison reports are always written to this directory, rather than to the generated-data output directory:
+The authoritative reports are written only to:
 
 ~~~text
-scripts/data-generation-v2-noPatch/reports/
-├── no_patch_generation_report.json
-└── no_patch_generation_report.md
+scripts/data-generation/reports/
+├── generation_report.json
+└── generation_report.md
 ~~~
 
-JSON retains the complete results; Markdown provides a summary. This directory retains only the latest report from a generation or revalidation run, and each new run overwrites the same JSON and Markdown files.
-
-The current complete 16 × 9 acceptance result is: official and generated final completion are both 144/144; the comparison covers 73,907 joint vectors and 591,256 elements; the maximum absolute difference is 5.661269342205344e-09, which is below 1e-8.
+The JSON report contains complete per-trajectory provenance, contract audits, the element-wise comparison, hardware and software details, and the file manifests. The Markdown report provides the corresponding English summary. Each generation or revalidation atomically replaces these two report files.
