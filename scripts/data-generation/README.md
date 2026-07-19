@@ -39,18 +39,6 @@ generate_dataset.py
 
 The generator removes its `.workers` directory after completion or failure. A failed generation or audit still writes a failure report when the output directory exists.
 
-## Parameters
-
-| Parameter | Complete-run value | Meaning |
-| --- | --- | --- |
-| `--output-dir` | `artifacts/generated/no-patch-full-16x100` | Repository-local generated-data directory; it must not exist or must be empty. |
-| `--env` | `all` | Generate all 16 fixed environments. |
-| `--episodes` | `100` | Generate episode 0 through episode 99 for every environment. |
-| `--workers` | `20` | Run at most 20 generation workers concurrently. |
-| `--gpus` | `0` | Use physical GPU 0 only; all other values are rejected. |
-
-`--env`, `--episodes`, and `--workers` remain configurable for debugging and smoke tests. The default and authoritative complete scope is 16 × 100.
-
 ## Revalidate an Existing Complete Output
 
 The following command performs a read-only revalidation, preserves generation provenance from the existing report, reruns the validator and comparator, refreshes the SHA-256 manifest, and atomically replaces the central report:

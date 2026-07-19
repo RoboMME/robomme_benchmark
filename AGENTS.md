@@ -116,9 +116,11 @@
 | 独立 No-Patch README 文档 | 完成（全目录英文化） | README、四个 Python 入口、中央 Markdown 报告及相应轻量测试均已改为英文；JSON schema、CLI flag、路径和数值结果未变 | 后续生成或只读复核仍由英文 report writer 写入中央 reports |
 | 独立 No-Patch 报告调试环境快照 | 完成 | schema 3 已写入完整硬件/软件/允许环境/全量依赖快照；轻量 mock 成功与失败路径均通过；中央 16×9 报告已刷新 | 后续生成或只读复核会在每次写报告前自动刷新该快照 |
 | No-Patch 16×100 全量生成与复核 | 受阻 | 1,600/1,600 轨迹均由 20 workers、GPU 0、attempt 1 成功生成，双方完成率和合约均通过；但 10 条 timestep 集不一致，另有 8 条对齐轨迹超过 `1e-8`，正式报告为 `status=failed` | 保留正式失败产物和所有旧证据；需取得与官方生成机一致的统一数值运行时后才能重跑、独立复核和执行严格清理 |
+| 官方与生成集前 10 episode 手动回放 | 进行中 | 已确认两边各有 16 个 HDF5，独立视频与报告目录尚不存在；GPU 0 预检时空闲 | 最小扩展官方 `scripts/dataset_replay.py`，完成单卡 16-worker 定向测试后依次回放两份 dataset |
 | W&B 最新两次训练参数核查 | 完成 | W&B 在线 API 与本地 run 目录一致确认最新两次为 `xqkorgzc`（2026-07-04，no-state）和 `rr2gv2an`（2026-07-03，with-state），二者均 `finished`；解析后配置仅 `run_name` 与 `state.enabled` 不同 | 回答用户时以历史 run 的 `dataset-4env-v4` 配置为准，不得误用当前同名脚本中的 `dataset-4env-v5` |
 | MotionJEPA 当前开关与 SigLIP 路径核查 | 完成 | 当前 `rgb-decoder-v1` 的 `configs/default.yaml` 与 `scripts/train.py` 表明 DINO、flow、ViT、state、EMA、W&B 等有结构开关；SigLIP 仅有 `loss.siglip_weight`，没有 `siglip.enabled` | `siglip_weight=0` 只能清零其 loss 系数；如需真正关闭 SigLIP token/decoder/前向，必须单独改造数据、模型、训练和验证路径 |
-| MotionJEPA 最新双配方默认值与旧脚本保护 | 完成 | `configs/default.yaml` 已对齐 `xqkorgzc` no-state 配方；`configs/legacy.yaml` 与修改前默认值逐字一致；仅保留两个 v2 活动入口，其他 11 个文件归档且 9 个训练入口绑定 legacy | 未启动训练或创建 W&B run；后续按活动 README 使用两个当前入口，旧实验从 `scripts/legacy/` 启动 |
+| MotionJEPA 最新双配方默认值与旧脚本保护 | 完成 | `configs/default.yaml` 已对齐 `xqkorgzc` no-state 配方；`configs/legacy.yaml` 与修改前默认值逐字一致；11 个旧文件归档；中英文 README 损失公式已对齐当前 SigLIP+DINO+flow+SIGReg/state 可选逻辑 | 两个活动入口仍继承未显式覆盖的 default 字段；若要求跨未来默认值变更精确复现，需新增不可变配置快照 |
+| 异常 `.codex-motionjepa-edit` gitlink 清理 | 完成 | 用户明确要求不保留备份并全部删除；物理目录已删除，父仓库索引已将 mode `160000` gitlink 记为删除 | 提交前复核已暂存删除与现有 `AGENTS.md` 未暂存修改，避免混淆提交范围 |
 
 ## 追加式执行日志
 
@@ -695,3 +697,37 @@
 - 差异或阻塞：直接导入完整 `scripts/train.py --cfg job` 以及运行 `tests/test_utils.py` 时，当前执行环境在无错误文本、无可捕获退出码的情况下终止了整个子 shell；禁用 pytest 插件、单线程运行和直接函数断言均相同。最小 uv/Python 与 `torch 2.9.0+cu128` 导入正常。因 Hydra 官方 compose、Python 语法、shell 语法和静态配置验收均已通过，本配置/归档任务完成，但不声称该 pytest 文件本轮通过。
 - 修改文件：MotionJEPA 的默认/legacy 配置、两个活动脚本和 README、11 个归档文件、legacy README，以及当前 README、中文训练/数据流说明、Great Lakes 指南和显存评估引用；本仓库仅更新 `AGENTS.md`。
 - 下一步：无；本轮不提交训练、不创建 W&B run、不修改 dataset。提交代码前可在不受当前子 shell 终止问题影响的环境补跑 `uv run --no-sync python -m pytest -q tests/test_utils.py`。
+
+### 2026-07-15 EDT — MotionJEPA README 当前损失公式修正
+
+- 状态：完成。
+- 目标：修正代码审查发现的中英文 README 默认损失公式过期问题，并解释两个活动入口未完全冻结配置的复现风险。
+- 执行命令：只读核对 MotionJEPA `scripts/train.py` 的 SigLIP、DINO、flow、SIGReg 与 state 聚合项；修改后运行 `git diff --check` 并审查精确 diff（退出码 0）；未运行训练或 Python。
+- 结果与证据：README 现明确记录当前默认损失为 `1.0*MSE_siglip + 1.0*dino_loss_scale*MSE_dino + 0.4*flow_loss_scale*MSE_flow + 0.003*SIGReg`，并说明 `state.enabled=true` 时额外加入默认权重 1.0 的 state MSE。
+- 修改文件：MotionJEPA `README.md`、`README_zh.md`；本仓库 `AGENTS.md`。
+- 差异或阻塞：未处理审查项 P2；两个正式 shell 入口仍从 `configs/default.yaml` 继承未显式覆盖字段，因此当前配方正确，但未来默认值变化会影响同一脚本的复现结果。
+- 下一步：如用户要求解决 P2，为两个正式入口新增独立不可变配置快照并显式选择该配置；本轮不修改训练逻辑。
+
+### 2026-07-17 00:39 EDT — 异常 MotionJEPA gitlink 全量删除
+
+- 状态：完成。
+- 目标：按用户明确要求，永久删除 `.codex-motionjepa-edit` 嵌套仓库的全部内容，并从父仓库移除缺少 `.gitmodules` 映射的异常 gitlink。
+- 执行命令：`git rm -f -- .codex-motionjepa-edit`（退出码 128，因缺少 submodule mapping，未删除内容）；`rm -rf -- .codex-motionjepa-edit`（退出码 0）；`git update-index --force-remove -- .codex-motionjepa-edit`（退出码 0）。
+- 输入与来源：父仓库 HEAD 中 mode `160000`、commit `dd6a5e39fdb3e670c833c3b5b6e9fdaf92caa3ac` 的 gitlink；目录内原有未提交、已暂存和未跟踪 MotionJEPA 文件均按用户要求不保留。
+- 输出路径：无保留产物或备份；`.codex-motionjepa-edit` 物理路径已删除，父仓库索引记录该路径删除。
+- 结果与证据：`test ! -e .codex-motionjepa-edit` 退出码 0；`git diff --cached --summary` 显示 `delete mode 160000 .codex-motionjepa-edit`；`git submodule status` 退出码 0 且无输出；工作树和 staged diff 检查均无空白错误。
+- 差异或阻塞：无；原目录缺少 `.gitmodules`，因此不能由普通 `git rm` 直接处理。
+- 修改文件：删除 `.codex-motionjepa-edit` gitlink；更新 `AGENTS.md` 账本。
+- 下一步：无；若需要将删除同步到远端，后续应明确提交并推送当前 `dataset-gen` 分支。
+
+### 2026-07-19 11:16 EDT — 官方与生成集 16×10 joint-angle 手动回放：开始实施
+
+- 状态：进行中。
+- 目标：使用官方 `scripts/dataset_replay.py` 在物理 GPU 0 上分别以 16 个同步 `spawn` worker 回放官方参考集和 No-Patch 16×100 生成集的全部 16 个任务、episode 0–9，并生成互不覆盖的 320 个手工核查视频。
+- 执行命令：开始前已执行 `command -v uv`、根 `pyproject.toml`/`uv.lock` 检查、两份目录 HDF5 文件计数、目标输出目录存在性检查、`git status --short --branch`、`nvidia-smi --query-gpu=...` 与 `nvidia-smi pmon -c 1`（均退出码 0）。
+- 输入与来源：官方 `data/robomme_data_h5/` 与生成集 `artifacts/generated/no-patch-full-16x100/`，两边均确认恰有 16 个 `record_dataset_<Task>.h5`。
+- 输出路径：视频计划写入 `runs/replay_videos/manual_check_16env_ep0-9/{official,generated_16x100}/joint_angle/`；日志和 JSON 汇总计划写入 `artifacts/reports/manual_check_16env_ep0-9/{official,generated_16x100}/`。
+- 结果与证据：`uv` 位于 `/home/hongzefu/.local/bin/uv`；两个目标输出根目录均尚不存在；GPU 0 为 RTX 6000 Ada 46,068 MiB，预检时使用 1,682 MiB、空闲 43,784 MiB、利用率 0%。
+- 差异或阻塞：当前官方脚本硬编码 `CUDA_VISIBLE_DEVICES=1`、串行遍历任务且所有视频共用一个目录，不能直接满足单 GPU 0、高并发和双数据集隔离要求；将只扩展调度、GPU/输出参数和审计汇总，不改 action 提取或环境回放语义。工作树已有 `.codex-motionjepa-edit` staged 删除、`AGENTS.md` 和 `scripts/data-generation/README.md` 修改，本轮保留并不触碰无关状态。
+- 修改文件：本条先更新 `AGENTS.md`；待修改 `scripts/dataset_replay.py` 并新增定向轻量测试。
+- 下一步：实现单 GPU 16-worker 并行调度和隔离输出，运行语法及定向测试，通过后执行官方集与生成集两批回放。
