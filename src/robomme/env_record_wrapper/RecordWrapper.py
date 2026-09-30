@@ -48,6 +48,12 @@ from ..robomme_env.utils.choice_action_mapping import (
 )
 
 from ..logging_utils import logger
+from ..robomme_env.utils.mplib_compat import install_global_mplib_compat
+
+# mplib 0.2.x removes ``use_point_cloud`` and requires ``mplib.pymp.Pose``
+# for ``set_base_pose`` / ``plan_screw``.  Install the compatibility patch
+# before any ``PandaArmMotionPlanningSolver`` is instantiated.
+install_global_mplib_compat()
 
 class FailsafeTimeout(RuntimeError):
     """Exception raised when Robomme failsafe terminates episode early."""
