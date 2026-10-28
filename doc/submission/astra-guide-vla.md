@@ -2,8 +2,7 @@
 
 **A Self-Evolving Harness for Memory-Dependent Manipulation**
 
-Code: `astra-guide-vla` (public link pending). Technical report and project website:
-links pending publication.
+### [Website](https://legend717.github.io/astra-guide-vla-website/) | [Paper](https://legend717.github.io/astra-guide-vla-website/report/) | [Code](https://github.com/Legend717/astra-guide-vla)
 
 ## Introduction
 
@@ -33,25 +32,25 @@ is used for outcome assessment and post-episode review.
 
 ### Table
 
-| Suite | Task | Successes / 50 | Run 1 (%) |
-|---|---|---:|---:|
-| Counting | BinFill | 48 | 96.0 |
-| Counting | PickXtimes | 50 | 100.0 |
-| Counting | SwingXtimes | 48 | 96.0 |
-| Counting | StopCube | 48 | 96.0 |
-| Permanence | VideoUnmask | 50 | 100.0 |
-| Permanence | VideoUnmaskSwap | 49 | 98.0 |
-| Permanence | ButtonUnmask | 50 | 100.0 |
-| Permanence | ButtonUnmaskSwap | 46 | 92.0 |
-| Reference | PickHighlight | 50 | 100.0 |
-| Reference | VideoRepick | 50 | 100.0 |
-| Reference | VideoPlaceButton | 49 | 98.0 |
-| Reference | VideoPlaceOrder | 45 | 90.0 |
-| Imitation | MoveCube | 50 | 100.0 |
-| Imitation | InsertPeg | 45 | 90.0 |
-| Imitation | PatternLock | 50 | 100.0 |
-| Imitation | RouteStick | 49 | 98.0 |
-| **Overall** | **16 tasks** | **777 / 800** | **97.1** |
+| Suite | Task | Successes / 50 | Run 1 (%) | Avg (%) |
+|---|---|---:|---:|---:|
+| Counting | BinFill | 48 | 96.0 | 96.0 |
+| Counting | PickXtimes | 50 | 100.0 | 100.0 |
+| Counting | SwingXtimes | 48 | 96.0 | 96.0 |
+| Counting | StopCube | 48 | 96.0 | 96.0 |
+| Permanence | VideoUnmask | 50 | 100.0 | 100.0 |
+| Permanence | VideoUnmaskSwap | 49 | 98.0 | 98.0 |
+| Permanence | ButtonUnmask | 50 | 100.0 | 100.0 |
+| Permanence | ButtonUnmaskSwap | 46 | 92.0 | 92.0 |
+| Reference | PickHighlight | 50 | 100.0 | 100.0 |
+| Reference | VideoRepick | 50 | 100.0 | 100.0 |
+| Reference | VideoPlaceButton | 49 | 98.0 | 98.0 |
+| Reference | VideoPlaceOrder | 45 | 90.0 | 90.0 |
+| Imitation | MoveCube | 50 | 100.0 | 100.0 |
+| Imitation | InsertPeg | 45 | 90.0 | 90.0 |
+| Imitation | PatternLock | 50 | 100.0 | 100.0 |
+| Imitation | RouteStick | 49 | 98.0 | 98.0 |
+| **Overall** | **16 tasks** | **777 / 800** | **97.125** | **97.125** |
 
 ### Training and evaluation details
 
@@ -66,8 +65,12 @@ is used for outcome assessment and post-episode review.
   50 episodes contribute to the score. Global advice is shared, task experience
   is separate, and the experience input stays fixed within each episode.
 - **Execution:** 20 Hz control frequency; up to the first 16 predicted actions
-  per VLA chunk. Delegation budgets range from 30 to 200 actual control steps in
-  increments of 10. Robot-state monitors can trigger earlier review.
+  per VLA chunk, with a maximum of 1,300 control steps per episode. Delegation
+  budgets range from 30 to 200 actual control steps in increments of 10.
+  Robot-state monitors can trigger earlier review.
+- **Action space:** hybrid `joint_angle` / `ee_pose` control. The VLA emits
+  absolute joint actions; bounded Astra corrections use the official
+  end-effector-pose wrapper. The evaluation does not use `multi_choice`.
 - **History:** sparse queries return up to eight uniformly sampled frames,
   including endpoints; current front and wrist views are supplied to Astra.
 - **API settings:** 80 calls per episode, 8,192 output tokens per call and a
@@ -84,11 +87,23 @@ The VLA checkpoint is available in the official
 `symbolic-grounded-subgoal/79999` with its `history_config.txt` and normalization
 assets. Astra is accessed through the API; no Astra checkpoint is distributed.
 
-The code repository will provide the harness, prompts, configuration, duration-prior
-builder, and installation/evaluation instructions. Public code and report links
-will be added before submission. Results and descriptions in this document follow
-the technical report; no new benchmark run was performed during release preparation.
+The public [code repository](https://github.com/Legend717/astra-guide-vla)
+provides the harness, prompts, configuration, duration-prior builder, and
+installation/evaluation instructions. The [project website](https://legend717.github.io/astra-guide-vla-website/)
+hosts the [online technical report](https://legend717.github.io/astra-guide-vla-website/report/).
+Results and descriptions in this document follow that report; no new benchmark
+run was performed during release preparation.
 
 ### Citations
 
-Technical report citation pending publication.
+An arXiv version is not yet available. Please cite the online technical report:
+
+```bibtex
+@misc{chen2026astraguide,
+  title        = {Can Astra Guide a VLA to Solve RoboMME? A Self-Evolving Harness for Memory-Dependent Manipulation},
+  author       = {Xingping Chen and Zihao Mo and Yimin Chen and Yu Lu and Zhanghui Kuang and Guanbin Li},
+  year         = {2026},
+  howpublished = {Online technical report},
+  url          = {https://legend717.github.io/astra-guide-vla-website/report/}
+}
+```
