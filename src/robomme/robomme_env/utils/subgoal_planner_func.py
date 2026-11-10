@@ -21,6 +21,12 @@ from mani_skill.utils.geometry.rotation_conversions import (
     quaternion_multiply,
 )
 from robomme.robomme_env.utils import *
+from .mplib_compat import install_global_mplib_compat
+
+# mplib 0.2.x removes ``use_point_cloud`` and requires ``mplib.pymp.Pose``
+# for ``set_base_pose`` / ``plan_screw``.  Install the compatibility patch
+# before any ``PandaArmMotionPlanningSolver`` is instantiated.
+install_global_mplib_compat()
 
 # Probability for deliberately triggering a failed hover before pickup.
 FAILED_HOVER_PROB = 0.03
@@ -318,15 +324,18 @@ def insert_peg(env, planner,direction,obj,insert_obj=None,cut_retreat=False):
         if target_pose is None:
             target_pose = _resolve_target_pose(offset)
 
-        # Plan path
+        # Plan path directly through the underlying mplib planner.
+        # mplib 0.2.x expects a Pose object and no longer accepts
+        # ``use_point_cloud``; the global compat shim also handles legacy
+        # callers, but we pass the new-style arguments here explicitly.
         pose_for_plan = planner._transform_pose_for_planning(target_pose)
         pose_p = np.asarray(pose_for_plan.p, dtype=np.float32).reshape(-1)
         pose_q = np.asarray(pose_for_plan.q, dtype=np.float32).reshape(-1)
+        goal_pose = sapien.Pose(p=pose_p, q=pose_q)
         result = planner.planner.plan_screw(
-            np.concatenate([pose_p, pose_q]),
+            goal_pose,
             planner.robot.get_qpos().cpu().numpy()[0],
             time_step=planner.base_env.control_timestep,
-            use_point_cloud=planner.use_point_cloud,
         )
         if result["status"] != "Success":
             return False
