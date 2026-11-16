@@ -94,6 +94,12 @@ Released RoboMME checkpoints are evaluated without OOD fine-tuning. Entries are
 successful / total episodes under the native success check; the overall row also
 shows the success rate. Each task has 20 episodes.
 
+Source code (links point to the evaluated revisions):
+
+- FrameSamp+Modul: [RoboMME/robomme_policy_learning](https://github.com/RoboMME/robomme_policy_learning/tree/ac846a9a4aec841e483b1dc5d620dfe426bde853).
+- SimpleMemVLA: [YinpeiDai/SimpleMemVLA](https://github.com/YinpeiDai/SimpleMemVLA/tree/c564c17d276d7294200122b286c21901a3bfb99f), an evaluation fork of [OpenBMB/SimpleMemVLA](https://github.com/OpenBMB/SimpleMemVLA).
+- PonderPounce: [worv-ai/PonderPounce](https://github.com/worv-ai/PonderPounce/tree/723df35762bb641e1d520e4fa9359b98644adc21).
+
 | Task | FrameSamp+Modul | SimpleMemVLA | PonderPounce |
 |---|---:|---:|---:|
 | BinFill | 0/20 | 0/20 | 0/20 |
