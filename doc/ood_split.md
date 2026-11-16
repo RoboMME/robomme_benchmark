@@ -19,10 +19,15 @@ and test splits are unchanged.
 
 ### Compared with RoboMME-Plus
 
-[RoboMME-Plus](../src/robomme_plus/README.md) is a separate benchmark that also
-changes task mechanisms, such as moving targets and additional manipulation
-methods, and provides its own training and test splits. `ood_test` instead
-studies configuration extrapolation within regular RoboMME's existing tasks.
+Use `ood_test` to test whether a model trained on regular RoboMME generalizes to
+extrapolated parameters without further training. It changes counts, sequence
+lengths and geometry while retaining the original task mechanisms and success
+criteria.
+
+Use [RoboMME-Plus](../src/robomme_plus/README.md) to evaluate robot memory across
+a broader range of demanding conditions, including moving targets, stronger
+occlusion and additional manipulation methods. Its separate training and test
+splits support both zero-shot evaluation and few-shot adaptation.
 
 ### Episode verification
 
