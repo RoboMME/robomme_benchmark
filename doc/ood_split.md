@@ -38,29 +38,34 @@ within that budget.
 
 ## Parameter changes
 
-Each `config_ood` extends the hard configuration or the task's original fixed
-settings. Unlisted parameters and success checks stay unchanged. Ranges below
-describe the configurations; the selected seeds may not cover every value.
+The changes below are relative to each task's regular hard configuration, or
+its original fixed settings. Each task inherits all other parameters. Ranges
+describe the configuration bounds; the 20 selected episodes may not cover
+every value. Task names link to their implementations.
 
-| Task | Regular hard/default setting | `ood_test` setting |
+| Task | Parameter changes (regular → OOD) | Retained settings |
 |---|---|---|
-| BinFill | Spawn 10–12 cubes; collect 3–5 | Spawn 13–18 cubes; collect 6–8 |
-| ButtonUnmask / VideoUnmask | 0.4 × 0.4 m sampling area | 0.5 × 0.5 m sampling area |
-| ButtonUnmaskSwap / VideoUnmaskSwap | 2–3 swaps | 4–8 swaps |
-| InsertPeg | 3 pegs | 4 pegs |
-| MoveCube | Original cube dimensions; 10 cm peg | Cube dimensions scaled to 80%; 8 cm peg |
-| PatternLock | 4–8 nodes on a 5 × 5 grid | 9–16 nodes on a 6 × 6 grid |
-| PickHighlight | 6 cubes, 3 highlights; 0.4 × 0.4 m area | 8–12 cubes, 4–5 highlights; 0.5 × 0.5 m area |
-| PickXtimes | 4–5 pick-and-place repetitions | 6–10 repetitions |
-| RouteStick | Route length 4–7 | Route length 8–12 |
-| StopCube | Stop count 2–5; 5 available passes | Stop count 6–10; 10 available passes |
-| SwingXtimes | 3 back-and-forth repetitions | 4–8 repetitions |
-| VideoPlaceButton / VideoPlaceOrder | 1 swap | 2–4 swaps |
-| VideoRepick | 1–3 pickup/drop cycles | 4–5 cycles |
+| [BinFill](../src/robomme/robomme_env/BinFill.py) | Spawned cubes (`spawn_cubes`): **10–12 → 13–18**; cubes to collect (`put_in_numbers`): **3–5 → 6–8**. | Three available colors; requests span 2–3 colors. |
+| [ButtonUnmask](../src/robomme/robomme_env/ButtonUnmask.py) | Sampling half-width (`region_half_size`): **0.20 → 0.25 m**. | Two pickups; bin cap remains 15. The button/cue and masking rules are unchanged. |
+| [ButtonUnmaskSwap](../src/robomme/robomme_env/ButtonUnmaskSwap.py) | Swap count (`swap_min`, `swap_max`): **2–3 → 4–8**. | Four bins, two pickups and the original 50-step swap animation. |
+| [InsertPeg](../src/robomme/robomme_env/InsertPeg.py) | Number of pegs (`pegs`): **3 → 4**. | Original peg geometry and insertion requirements. |
+| [MoveCube](../src/robomme/robomme_env/MoveCube.py) | Cube scale (`cube_scale`): **1.0 → 0.8**; tool length parameter (`peg_length`): **0.10 → 0.08 m**. | The demonstrated manipulation method and existing goal tolerances. |
+| [PatternLock](../src/robomme/robomme_env/PatternLock.py) | Grid size (`grid`): **5 × 5 → 6 × 6**; pattern length (`length`): **4–8 → 9–16 nodes**. | The original pattern-tracing mechanism and success rules. |
+| [PickHighlight](../src/robomme/robomme_env/PickHighlight.py) | Cube count (`spawn`): **6 → 8–12**; highlighted targets (`pickup`): **3 → 4–5**; sampling half-width: **0.20 → 0.25 m**. | The original highlight cues and pickup mechanism. |
+| [PickXtimes](../src/robomme/robomme_env/PickXtimes.py) | Pick-and-place repetitions (`number_min`, `number_max`): **4–5 → 6–10**. | Three colors and the original counting rule. |
+| [RouteStick](../src/robomme/robomme_env/RouteStick.py) | Route length parameter (`length`): **4–7 → 8–12**. | Backtracking remains enabled; drawing and success rules are unchanged. |
+| [StopCube](../src/robomme/robomme_env/StopCube.py) | Requested stop count (`stop_count`): **2–5 → 6–10**; available passes (`passes`): **5 → 10**. | The same motion path and button-timing rule. |
+| [SwingXtimes](../src/robomme/robomme_env/SwingXtimes.py) | Back-and-forth repetitions (`number_min`, `number_max`): **3 → 4–8**. | Three colors and the original swing/counting mechanism. |
+| [VideoPlaceButton](../src/robomme/robomme_env/VideoPlaceButton.py) | Target swaps: **1 → 2–4**, using `swap_min` and `swap_max`. | Four targets, the same workspace and the original placement goal. |
+| [VideoPlaceOrder](../src/robomme/robomme_env/VideoPlaceOrder.py) | Target swaps: **1 → 2–4**, using `swap_min` and `swap_max`. | Four targets and the original demonstrated-order query and placement goal. |
+| [VideoRepick](../src/robomme/robomme_env/VideoRepick.py) | Pickup/drop cycles (`number_min`, `number_max`): **1–3 → 4–5**. | The hard setting's 15-cube clutter and the same demonstrated target. |
+| [VideoUnmask](../src/robomme/robomme_env/VideoUnmask.py) | Sampling half-width (`region_half_size`): **0.20 → 0.25 m**. | Two pickups; bin cap remains 15. The video cue and masking rules are unchanged. |
+| [VideoUnmaskSwap](../src/robomme/robomme_env/VideoUnmaskSwap.py) | Swap count (`swap_min`, `swap_max`): **2–3 → 4–8**. | Four bins, two pickups and the original 50-step swap animation. |
 
-ButtonUnmask and VideoUnmask retain two pickups and a bin cap of 15; actual bin
-counts depend on placement. Their swap variants retain four bins and two pickups.
-VideoPlaceButton and VideoPlaceOrder retain four targets.
+Increasing the sampling half-width from 0.20 to 0.25 m expands the square
+sampling area from **0.4 × 0.4 m to 0.5 × 0.5 m**. Unmask bin counts depend on
+successful placement and need not reach the cap of 15. VideoPlace swap phases
+extend to accommodate the extra swaps while retaining their original motion.
 
 ## Usage
 
