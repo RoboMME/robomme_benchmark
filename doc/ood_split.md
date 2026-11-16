@@ -31,6 +31,32 @@ native-expert execution and end-effector-action replay. Replay screening used
 1,300 steps, so the selection is conditioned on expert replay solvability
 within that budget.
 
+## Parameter changes
+
+Each `config_ood` extends the hard configuration or the task's original fixed
+settings. Unlisted parameters and success checks stay unchanged. Ranges below
+describe the configurations; the selected seeds may not cover every value.
+
+| Task | Regular hard/default setting | `ood_test` setting |
+|---|---|---|
+| BinFill | Spawn 10–12 cubes; collect 3–5 | Spawn 13–18 cubes; collect 6–8 |
+| ButtonUnmask / VideoUnmask | 0.4 × 0.4 m sampling area | 0.5 × 0.5 m sampling area |
+| ButtonUnmaskSwap / VideoUnmaskSwap | 2–3 swaps | 4–8 swaps |
+| InsertPeg | 3 pegs | 4 pegs |
+| MoveCube | Original cube dimensions; 10 cm peg | Cube dimensions scaled to 80%; 8 cm peg |
+| PatternLock | 4–8 nodes on a 5 × 5 grid | 9–16 nodes on a 6 × 6 grid |
+| PickHighlight | 6 cubes, 3 highlights; 0.4 × 0.4 m area | 8–12 cubes, 4–5 highlights; 0.5 × 0.5 m area |
+| PickXtimes | 4–5 pick-and-place repetitions | 6–10 repetitions |
+| RouteStick | Route length 4–7 | Route length 8–12 |
+| StopCube | Stop count 2–5; 5 available passes | Stop count 6–10; 10 available passes |
+| SwingXtimes | 3 back-and-forth repetitions | 4–8 repetitions |
+| VideoPlaceButton / VideoPlaceOrder | 1 swap | 2–4 swaps |
+| VideoRepick | 1–3 pickup/drop cycles | 4–5 cycles |
+
+ButtonUnmask and VideoUnmask retain two pickups and a bin cap of 15; actual bin
+counts depend on placement. Their swap variants retain four bins and two pickups.
+VideoPlaceButton and VideoPlaceOrder retain four targets.
+
 ## Usage
 
 Choose `ood_test` through the regular RoboMME interface:
