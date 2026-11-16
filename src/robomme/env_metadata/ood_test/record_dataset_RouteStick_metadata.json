@@ -1,0 +1,227 @@
+{
+  "env_id": "RouteStick",
+  "split": "ood_test",
+  "selection": "native expert success and EE replay success",
+  "records": [
+    {
+      "task": "RouteStick",
+      "episode": 0,
+      "seed": 1435307880,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "03ca730255e049505fe499597de58cbd4e26a5e17ed046899467d1d24c9d9bae"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 1,
+      "seed": 1958876888,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "baf95834e38df4cdb81e4d72d5fa314a0a08575d73ec094ca5626d4a3bfac43d"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 2,
+      "seed": 972050493,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "6f450d5ed7e2330c5e750929dfb3eb7c037791d5b940bd4c189a964a4ef8b32e"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 3,
+      "seed": 655561791,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "6862b7d5ecef3f770e483ab8d63db5dfcd6dc04a0e2945908d59e92eaed61ec3"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 4,
+      "seed": 2133792612,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "da0f3cf8dc151f3a147c655ebd8deacf21ddd6b0e1c75b1d72d52e302435656c"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 5,
+      "seed": 475682460,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "4dc4d90bc565aa628b21b835e301a6d090a8110fa8fc45ad3e72a4017d7eecd5"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 6,
+      "seed": 2073380105,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "e093fec507c9bf2e5473ab9c6d42aa1b1a5eacf0a7db93442cc501722f2f9963"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 7,
+      "seed": 686079758,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "6660c5f09c138824bacf83daeb1153765ae330bd3f0423ebcd93de789c10f930"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 8,
+      "seed": 623143589,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "20d40bbab0c876c61dd43b222bafe1b79c8cab1a2c02b821f078434984d68cec"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 9,
+      "seed": 1959619953,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "4f2527fee147a56f21e1e6b788753ae6dd3266ae37bb8c053be663907af229c2"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 10,
+      "seed": 1638589128,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "a59447b357e7795e2da66e39bbd52ea0094839f8f5e5e947f08f9f5f08eed15f"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 11,
+      "seed": 1873438330,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "af581c57c6d9a64ea93f81634aae695eab40a4d3d20d89389ef901c1104933b3"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 12,
+      "seed": 1271384249,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "9dce2020dc4fa1aaef063ba398f8912350dfa61305dbd99023e8511b1a2f8aa2"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 13,
+      "seed": 1913673160,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "085ef678ae2aee521f339290ef9c4d2558a35398314ffd57a9a447987ac9d6f0"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 14,
+      "seed": 1950144721,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "c2e3949bfb5b1fd23f2cef3746c926a5f5d8f035f5da83b57b61893d63626a0d"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 15,
+      "seed": 1735956454,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "cc637b18ae18816aaecc3870ecdef07cdc6b08d3ec5f6113c76f0372ae8998f0"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 16,
+      "seed": 1889071375,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "a48c5f4c9b7b61d23307d2747ae3331f8a9e2ce265e12ca2f86cf4d8b0fbeeb1"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 17,
+      "seed": 1828855197,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "b9d67c82db25736d40a654087070638a47a66f8680848576c56a5d45a1c5206b"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 18,
+      "seed": 1611422294,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "3ed20faef4ace72bd4729aa84c54266feb8d4eb1a6b9b6c7be477661cc92af77"
+    },
+    {
+      "task": "RouteStick",
+      "episode": 19,
+      "seed": 1298766731,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "466da99fa0c3158f6d8fac6b322f3ba26bf9b99a38b95aa7cfa7bfde48002a8f"
+    }
+  ]
+}

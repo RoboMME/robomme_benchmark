@@ -70,6 +70,13 @@ class PickXtimes(BaseEnv):
     'number_max':5,
     }
 
+    # Extrapolate the hard setting without changing its task mechanism.
+    config_ood = {
+        **config_hard,
+        'number_min': 6,
+        'number_max': 10,
+    }
+
     config_easy = {
         'color': 1, 
     'number_min': 1,
@@ -84,6 +91,7 @@ class PickXtimes(BaseEnv):
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium

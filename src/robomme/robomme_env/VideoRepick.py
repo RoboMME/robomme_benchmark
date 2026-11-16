@@ -81,9 +81,17 @@ class VideoRepick(BaseEnv):
         "swap_max":0,
     }
 
+    # Extrapolate the hard setting without changing its task mechanism.
+    config_ood = {
+        **config_hard,
+        'number_min': 4,
+        'number_max': 5,
+    }
+
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium
@@ -139,7 +147,11 @@ class VideoRepick(BaseEnv):
         # Use seed to randomly determine number of repetitions (1-5)
         self.generator = torch.Generator()
         self.generator.manual_seed(seed)
-        self.num_repeats = torch.randint(1, 4, (1,), generator=self.generator).item()
+        config = self.configs[self.difficulty]
+        self.num_repeats = torch.randint(
+            config.get("number_min", 1), config.get("number_max", 3) + 1,
+            (1,), generator=self.generator,
+        ).item()
         logger.debug(f"Task will repeat {self.num_repeats} times (pickup-drop cycles)")
 
         self.swap_times = torch.randint(self.configs[self.difficulty]['swap_min'], self.configs[self.difficulty]['swap_max']+1, (1,), generator=self.generator).item()
@@ -199,7 +211,7 @@ class VideoRepick(BaseEnv):
                 {"color": (0, 0, 1, 1), "name": "blue"},
                 {"color": (0, 1, 0, 1), "name": "green"},
             ]
-            if self.difficulty == "hard":
+            if self.configs[self.difficulty].get("cluster", False):
                 self.spawned_cubes = []
 
                 for idx in range(5):
@@ -287,7 +299,7 @@ class VideoRepick(BaseEnv):
                 target_indices = torch.randperm(len(self.spawned_cubes), generator=self.generator)[:1].tolist()
                 self.target_cube_1 = self.spawned_cubes[target_indices[0]]
 
-                if self.difficulty != "hard":
+                if not self.configs[self.difficulty].get("cluster", False):
                     remaining_indices = [i for i in range(len(self.spawned_cubes)) if i not in target_indices]
                     if len(remaining_indices) < 2:
                         raise SceneGenerationError("Not enough cubes for swapping")

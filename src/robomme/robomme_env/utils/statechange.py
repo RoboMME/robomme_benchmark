@@ -28,6 +28,34 @@ from ...logging_utils import logger
 TARGET_GRAY = (np.array([128, 128, 128, 255]) / 255).tolist()
 
 
+def prepare_target_swap_sequence(env, generator):
+    """Extend the existing first target swap for the OOD placement tasks."""
+    config = env.configs[env.difficulty]
+    count = int(torch.randint(config["swap_min"], config["swap_max"] + 1,
+                              (1,), generator=generator).item())
+    env.target_swap_pairs = [(env.swap_target_a, env.swap_target_b)]
+    for _ in range(count - 1):
+        indices = torch.randperm(len(env.targets), generator=generator)[:2].tolist()
+        env.target_swap_pairs.append(tuple(env.targets[i] for i in indices))
+    env.swap_phase_steps = 50 * count + 10
+
+
+def swap_target_sequence(env, **kwargs):
+    """Keep the original animation and timing, repeated for each OOD pair."""
+    pairs = getattr(env, "target_swap_pairs", None)
+    if pairs is None:
+        return swap_flat_two_lane(env, **kwargs)
+    for index, (left, right) in enumerate(pairs):
+        swap_flat_two_lane(env, **{
+            **kwargs,
+            "cube_a": left,
+            "cube_b": right,
+            "start_step": kwargs["start_step"] + 50 * index,
+            "end_step": kwargs["end_step"] + 50 * index,
+            "other_cube": [t for t in env.targets if t is not left and t is not right],
+        })
+
+
 
 def _vec3_of(self, actor):
     """Get actor's (x,y,z), compatible with torch / numpy / sapien"""

@@ -12,7 +12,7 @@ from ..logging_utils import logger
 
 DATASET_ROOT = Path(__file__).resolve().parents[1] / "env_metadata"
 
-_ALLOWED_DATASETS = {"train", "test", "val"}
+_ALLOWED_DATASETS = {"train", "test", "val", "ood_test"}
 _ALLOWED_ACTION_SPACES = {"joint_angle", "ee_pose", "waypoint", "multi_choice"}
 _DEFAULT_TASK_LIST = [
     "PickXtimes",
@@ -101,7 +101,7 @@ class BenchmarkEnvBuilder:
         action_space: str = "joint_angle",
         gui_render: bool = False,
         override_metadata_path: Optional[Union[str, Path]] = None,
-        max_steps: int = 10000,
+        max_steps: Optional[int] = None,
     ):
         if dataset not in _ALLOWED_DATASETS:
             raise ValueError(f"Unsupported dataset '{dataset}'. Allowed datasets: {sorted(_ALLOWED_DATASETS)}")
@@ -119,18 +119,27 @@ class BenchmarkEnvBuilder:
             Path(override_metadata_path) if override_metadata_path is not None else None
         )
         self.render_mode = "human" if gui_render else "rgb_array"
+        if max_steps is None:
+            max_steps = 1500 if dataset == "ood_test" else 10000
         self.max_steps_without_demonstration = max_steps+2
 
         metadata_path = self._resolve_metadata_path()
         self.metadata_index = load_episode_metadata(metadata_path)
+        if dataset == "ood_test" and self.get_episode_num() == 0:
+            raise ValueError(f"No ood_test episodes for {env_id}: {metadata_path}")
 
     @classmethod
-    def get_task_list(cls) -> List[str]:
+    def get_task_list(cls, dataset: Optional[str] = None) -> List[str]:
         """
         Return list of evaluatable tasks.
-        Task list is fixed to built-in default order, not automatically discovered from metadata.
+        Keep the built-in order; OOD includes only tasks with OOD metadata.
         """
 
+        if dataset is not None and dataset not in _ALLOWED_DATASETS:
+            raise ValueError(f"Unsupported dataset '{dataset}'.")
+        if dataset == "ood_test":
+            return [task for task in _DEFAULT_TASK_LIST if
+                    (DATASET_ROOT / dataset / f"record_dataset_{task}_metadata.json").is_file()]
         return list(_DEFAULT_TASK_LIST)
 
     def _resolve_metadata_path(self) -> str:
@@ -157,6 +166,8 @@ class BenchmarkEnvBuilder:
                     logger.debug(f"[{self.env_id}] Invalid metadata seed for episode {episode}: {metadata_seed}")
             difficulty_hint = metadata.get("difficulty")
 
+        if self.dataset == "ood_test" and (seed is None or difficulty_hint != "ood"):
+            raise ValueError(f"Missing or invalid ood_test episode: {self.env_id}/{episode}")
         return seed, difficulty_hint
 
     def get_episode_num(self) -> int:

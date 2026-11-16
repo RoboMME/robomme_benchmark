@@ -1,0 +1,227 @@
+{
+  "env_id": "PatternLock",
+  "split": "ood_test",
+  "selection": "native expert success and EE replay success",
+  "records": [
+    {
+      "task": "PatternLock",
+      "episode": 0,
+      "seed": 2074208165,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "2d82c39c5e75e7e326f53e687c5630d6e2eb1739dafd9f46a1d117a9d0fd5c20"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 1,
+      "seed": 1218067840,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "973b835cd47d365abb843cffd005232fae85a6ebd5767b76ad7df4ec050b81a6"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 2,
+      "seed": 1461489256,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 2,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "be7c9e29d652c06cba89bcdc507237495270ec5150a45420574141482e383491"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 3,
+      "seed": 832717685,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "976ab723e5555702764d7ef76a2b9621fbf825f058f0d0c16f7099bae7a8ca13"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 4,
+      "seed": 2055574301,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "7c6dec0a2e1dc0565b0fbcbd7492b888eee2e2f95b757144419900a5ae0eb5bb"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 5,
+      "seed": 1381561790,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "5dbd51cdb0d56d13438ae7df2e402df47f63b61b53eb32e28a047800b49cb209"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 6,
+      "seed": 1519934299,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "ed24af529677c0a47eccd19ced3a46dba8c93b8537ebb27034ee556594deefe6"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 7,
+      "seed": 1265254637,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "16118f2454933a58f3cb220306c11b90019c1360fbf7959f63a5ffe9e5c70b2e"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 8,
+      "seed": 900585817,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "888d530c38e792e23dd2fbc80ee7b9b6141a09a31e36cc603aad522041cca51a"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 9,
+      "seed": 1017787935,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "30f42f198425915d3cc07f834d5766cd474d7ef8c9904905d3f47f8e8c4fac17"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 10,
+      "seed": 475905307,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "478b79ea807a4abefcab3322734e0a96a25724f94bcf44cf4473284138fea149"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 11,
+      "seed": 1402107263,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "cf67ca549e761585bfcfc21e97c23a19588b65dbd95972cf12d22065019978ca"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 12,
+      "seed": 1039995729,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "43e9f709be94fc8ac630479550be128e44e1915da415ae4a0213fc6b22b0b29d"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 13,
+      "seed": 1202092788,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "61e0e74632558f47f328535f948f4877783e2f0332360762f4dc0ff62d2b8193"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 14,
+      "seed": 195023111,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "a178948097c294c37c7f1567036fdef3a33b98d1e662a0536530a933e3f4851c"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 15,
+      "seed": 738295943,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "c9a32dd81f70d1208c17428ab76d802cf0adf1d0e5434434f44512e4a805e919"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 16,
+      "seed": 1535427025,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "fa26bb5ed9802cfb89cd27e94d041cdd7cbbdabadbfd41b8c8a7f5818b323ffb"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 17,
+      "seed": 1494235280,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "3e66a81f15eb4bb0164d11195399a97642d0d65190bc2a9ad20996f5851873c5"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 18,
+      "seed": 1024065165,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "3ca844ec021e1285f70b030dc1059f7934c0cec7c8c7d4767813e97ec56bb4ff"
+    },
+    {
+      "task": "PatternLock",
+      "episode": 19,
+      "seed": 1656622732,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "7e2ea8ab1fa1e5925a77726cb0d21a5771124722e1f59d6bc004f7aba1c3e7e2"
+    }
+  ]
+}

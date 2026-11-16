@@ -86,9 +86,13 @@ class VideoPlaceButton(BaseEnv):
         "targets":4
     }
 
+    # Keep four targets and the same workspace; extend only the swap sequence.
+    config_ood = {**config_hard, "swap_min": 2, "swap_max": 4}
+
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium
@@ -336,6 +340,9 @@ class VideoPlaceButton(BaseEnv):
                         f"Swap targets selected: target_{swap_idx_a} <-> target_{swap_idx_b}"
                     )
 
+            if self.difficulty == "ood":
+                prepare_target_swap_sequence(self, generator)
+
             if self.configs[self.difficulty]["additional_place"] == True:
                 self.pre_flag = torch.rand(1, generator=generator).item() < 0.5
                 self.post_flag = torch.rand(1, generator=generator).item() < 0.5
@@ -553,7 +560,7 @@ class VideoPlaceButton(BaseEnv):
             tasks.append(
                 {
                     "func": lambda: static_check(
-                        self, timestep=int(self.elapsed_steps), static_steps=60
+                        self, timestep=int(self.elapsed_steps), static_steps=getattr(self, "swap_phase_steps", 60)
                     ),
                     "name": "static",
                     "subgoal_segment": f"static",
@@ -561,7 +568,7 @@ class VideoPlaceButton(BaseEnv):
                     "demonstration": True,
                     "failure_func": None,
                     "solve": lambda env, planner: [
-                        solve_hold_obj(env, planner, static_steps=60)
+                        solve_hold_obj(env, planner, static_steps=getattr(self, "swap_phase_steps", 60))
                     ],
                 },
             )
@@ -636,6 +643,10 @@ class VideoPlaceButton(BaseEnv):
 
 
     def _initialize_episode(self, env_idx: torch.Tensor, options: dict):
+        if self.difficulty == "ood":
+            self.onto_goalsite = False
+            self.start_step = self.end_step = 99999
+            self._two_lane_swaps = {}
         with torch.device(self.device):
             b = len(env_idx)
             self.table_scene.initialize(env_idx)
@@ -715,7 +726,7 @@ class VideoPlaceButton(BaseEnv):
 
         if self.swap_target_a is not None and self.swap_target_b is not None:
             other_bins = self.swap_target_other if self.swap_target_other else None
-            swap_flat_two_lane(
+            swap_target_sequence(
                 self,
                 cube_a=self.swap_target_a,
                 cube_b=self.swap_target_b,

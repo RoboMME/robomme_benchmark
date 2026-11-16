@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 
-VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+VALID_DIFFICULTIES = {"easy", "medium", "hard", "ood"}
 
 
 def normalize_robomme_difficulty(value: Optional[str]) -> Optional[str]:

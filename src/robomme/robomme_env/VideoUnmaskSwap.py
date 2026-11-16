@@ -84,9 +84,17 @@ class VideoUnmaskSwap(BaseEnv):
         "pick_max":2
     }
 
+    # Extrapolate the hard setting without changing its task mechanism.
+    config_ood = {
+        **config_hard,
+        'swap_min': 4,
+        'swap_max': 8,
+    }
+
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium
@@ -344,6 +352,10 @@ class VideoUnmaskSwap(BaseEnv):
         self.swap_pair1_idx2=None
         self.swap_pair2_idx2=None
         self.swap_pair3_idx2=None
+        # Continue the same source-bin cycle; each partner is resolved at swap time.
+        for i in range(3, self.swap_times):
+            setattr(self, f"swap_pair{i + 1}_idx1", self.spawned_bins[swap_indices[i % len(swap_indices)]])
+            setattr(self, f"swap_pair{i + 1}_idx2", None)
         self._refresh_swap_schedule()
 
         tasks = [
@@ -535,21 +547,12 @@ class VideoUnmaskSwap(BaseEnv):
 
 
     def _refresh_swap_schedule(self):
-        if self.swap_times==1:
-                    self.swap_schedule = [
-                            (self.swap_pair1_idx1, self.swap_pair1_idx2, 64, 64 + 50),
-                        ]# Final swap order
-        elif self.swap_times==2:
-            self.swap_schedule = [
-                    (self.swap_pair1_idx1, self.swap_pair1_idx2, 64, 64 + 50),
-                    (self.swap_pair2_idx1, self.swap_pair2_idx2, 64 + 50, 64 + 50 * 2),
-                ]# Final swap order
-        elif self.swap_times==3:
-            self.swap_schedule = [
-                    (self.swap_pair1_idx1, self.swap_pair1_idx2, 64, 64 + 50),
-                    (self.swap_pair2_idx1, self.swap_pair2_idx2, 64 + 50, 64 + 50 * 2),
-                    (self.swap_pair3_idx1, self.swap_pair3_idx2, 64 + 50 * 2, 64+ 50 * 3),
-            ]
+        self.swap_schedule = [
+            (getattr(self, f"swap_pair{i + 1}_idx1"),
+             getattr(self, f"swap_pair{i + 1}_idx2"),
+             64 + 50 * i, 64 + 50 * (i + 1))
+            for i in range(self.swap_times)
+        ]
 
 
 

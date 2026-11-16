@@ -1,0 +1,227 @@
+{
+  "env_id": "StopCube",
+  "split": "ood_test",
+  "selection": "native expert success and EE replay success",
+  "records": [
+    {
+      "task": "StopCube",
+      "episode": 0,
+      "seed": 468956864,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "66d8c79d187c7ca3e675052b62da76e0cf72bfc7556914a8ca1bf654086ce49d"
+    },
+    {
+      "task": "StopCube",
+      "episode": 1,
+      "seed": 1476983174,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "62a01f5a6f40f5a787c6bf43ec070b1857908285741c14f24f9b6da13dfbee9c"
+    },
+    {
+      "task": "StopCube",
+      "episode": 2,
+      "seed": 108660794,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "8c4a15cd20a21e6c24fb84a17e57ab096e2b337ed2efa67465893fbe13a6f7ca"
+    },
+    {
+      "task": "StopCube",
+      "episode": 3,
+      "seed": 1960356235,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "398934d2ed696c7575e8b2c130eb9e88e9f9f83eb621e3aff64bb2069747f0e2"
+    },
+    {
+      "task": "StopCube",
+      "episode": 4,
+      "seed": 2065914190,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "fd483f07e722985920a405fcfde9694f7481ab178145ce597ea0b32eeb2d18f5"
+    },
+    {
+      "task": "StopCube",
+      "episode": 5,
+      "seed": 352646925,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "f77d5caba340a4e6c62b55479475a250a9cda30792fb99bfe470a0585595aee0"
+    },
+    {
+      "task": "StopCube",
+      "episode": 6,
+      "seed": 1153873071,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "c6dbfeca2df7b3ee0508ff1c5b7e40bf507cc3b49322e726b73da20d68fe7ea7"
+    },
+    {
+      "task": "StopCube",
+      "episode": 7,
+      "seed": 316718573,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "152171451e4056c4299a34f36f0b5f304a3a080eefff6343a91efb1d36d38bf2"
+    },
+    {
+      "task": "StopCube",
+      "episode": 8,
+      "seed": 815375711,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 1,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "afd46027616dfeedb43cb5e0b77be76d5072d054598d8ad2814918ab075efddd"
+    },
+    {
+      "task": "StopCube",
+      "episode": 9,
+      "seed": 769408367,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "16cdac3cba659404b27a254feac123a0bd83522a95f4307a5cd4ba19b0e14ba9"
+    },
+    {
+      "task": "StopCube",
+      "episode": 10,
+      "seed": 1860313243,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "067f35887c86f33744b69297025f844865c21837bb8fabd2096549c242b37af1"
+    },
+    {
+      "task": "StopCube",
+      "episode": 11,
+      "seed": 297342597,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "ce649f932b08d086455ca9bcbeb6eea7f31e743beb039fe61e68cd449e8790f5"
+    },
+    {
+      "task": "StopCube",
+      "episode": 12,
+      "seed": 901626342,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "ac5265526fc8d6ab113441275f43e6a5ee079a34b3ce20907e4ca906ed7a4c56"
+    },
+    {
+      "task": "StopCube",
+      "episode": 13,
+      "seed": 2121031582,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "84c83d58d26893990b7048e2fc2815fc8422236c22e11e0dcb3e4aabec0ab255"
+    },
+    {
+      "task": "StopCube",
+      "episode": 14,
+      "seed": 206666356,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "7c7233b228c2e5d1524cbe9f0a8fa20f6a9b9a5dc5cf676f530b11b891db98ca"
+    },
+    {
+      "task": "StopCube",
+      "episode": 15,
+      "seed": 46757705,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "6c285b4d0e03017bc1e6249ece3082cfad0ce5c0b7cd2ca2fcc85f8374fdfc63"
+    },
+    {
+      "task": "StopCube",
+      "episode": 16,
+      "seed": 477043086,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "1eb9fa11079a2de69cfb59c96a2dc5925ccddb29f17f96f82b71be7b4bea5930"
+    },
+    {
+      "task": "StopCube",
+      "episode": 17,
+      "seed": 408553696,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "7d10b7ae6cc20c8cde1c17a025e60d050c4b99829656fa9a27e1c9d8d4c45c13"
+    },
+    {
+      "task": "StopCube",
+      "episode": 18,
+      "seed": 1086773333,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "e1e13ecd138dcff75f0737117b451c74ba774b23b4d07cac4841784ac34a27fe"
+    },
+    {
+      "task": "StopCube",
+      "episode": 19,
+      "seed": 1709017563,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "37696bc3b4fc5ae107c19a65745dd448fe39c46e443e67ec2cd675e201eafd89"
+    }
+  ]
+}

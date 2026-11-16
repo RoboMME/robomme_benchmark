@@ -7,6 +7,7 @@
 
 ## 📢 Announcements
 
+[11/2026] We provide an `ood_test` split in the original RoboMME to evaluate OOD generalization of models trained on regular setups. See the [OOD guide](doc/ood_split.md) for details.<br>
 [10/2026] 🧗 We release [RoboMME-Plus](https://robomme.github.io/plus.html) preview version, an extended benchmark for robot memory under more demanding conditions. See the [evaluation guides](scripts/plus_eval/README.md) and the [Tasks](src/robomme_plus).<br>
 [05/2026] 🎉 RoboMME has been selected for ICML 2026 Oral presentation (Top 0.7%)!   
 [04/2026] 🎉 RoboMME has been accepted to ICML 2026 as a Spotlight (Top 2.2%)!  
@@ -51,7 +52,7 @@ Start an environment with a specified setup:
 uv run scripts/run_example.py
 ```
 
-This generates a rollout video in the `sample_run_videos` directory.
+The example uses built-in sample actions and saves a rollout video under `runs/sample_run_videos/`.
 
 We provide four action types: `joint_angle`, `ee_pose`, `waypoint`, and `multi_choice`. For example, you can predict continuous absolute actions with `joint_angle` or `ee_pose`, discrete waypoint actions with `waypoint`, or use `multi_choice` for VideoQA-style problems.
 
@@ -102,7 +103,13 @@ task_goal = info['task_goal'][0]
 ...
 obs, _, terminated, truncated, info = env.step(action) # each step
 ```
-The train split has 100 episodes. The val/test splits each have 50 episodes. All seeds are fixed for benchmarking.
+The `train`, `val` and `test` splits contain 100, 50 and 50 episodes per task, respectively. All seeds are fixed for benchmarking.
+
+To probe configuration extrapolation, set `dataset="ood_test"` in the same
+builder. This split provides **20 expert-verified episodes per task**, with a
+default limit of **1,500 execution steps**, excluding the demonstration. See the
+[OOD guide](doc/ood_split.md) for the protocol, differences from RoboMME-Plus,
+and baseline evaluation.
 
 The environment input/output format is described in [doc/env_format.md](doc/env_format.md).
 
