@@ -88,11 +88,19 @@ class BinFill(BaseEnv):
     "put_in_numbers":[3,5]
     }
 
+    # Extrapolate the hard setting without changing its task mechanism.
+    config_ood = {
+        **config_hard,
+        'spawn_cubes': [13, 18],
+        'put_in_numbers': [6, 8],
+    }
+
 
 
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium

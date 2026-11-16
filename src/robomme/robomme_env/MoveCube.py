@@ -64,6 +64,12 @@ class MoveCube(BaseEnv):
     cube_spawn_center = (0, 0)
     _clearance = 0.01
 
+    # Previously fixed parameters shared by easy, medium and hard.
+    config_hard = {'cube_scale': 1.0, 'peg_length': 0.1}
+    config_ood = {**config_hard, 'cube_scale': 0.8, 'peg_length': 0.08}
+    configs = {"easy": config_hard, "medium": config_hard,
+               "hard": config_hard, "ood": config_ood}
+
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
         self.reset_in_proecess=False
@@ -147,7 +153,8 @@ class MoveCube(BaseEnv):
 
         length_tensor = torch.rand(1, generator=self._hb_generator)
         radius_tensor = torch.rand(1, generator=self._hb_generator)
-        self.length = (0.1 + (0.05 - 0.05) * length_tensor).item()
+        self.length = (self.configs[self.difficulty]["peg_length"] + (0.05 - 0.05) * length_tensor).item()
+        self.object_cube_half_size = self.cube_half_size * self.configs[self.difficulty]["cube_scale"]
         self.radius = (0.01 + (0.005 - 0.005) * radius_tensor).item()
 
         # Create a single peg
@@ -283,7 +290,7 @@ class MoveCube(BaseEnv):
                             name_prefix="fixed_cube",
                             region_half_size=0.05,
                             generator=self._hb_generator,
-                            half_size=self.cube_half_size,
+                            half_size=self.object_cube_half_size,
                         )
         
         self.cube_init_pose=self.cube.pose
@@ -314,7 +321,7 @@ class MoveCube(BaseEnv):
                             name_prefix="fixed_cube_2",
                             region_half_size=0.05,
                             generator=self._hb_generator,
-                            half_size=self.cube_half_size,
+                            half_size=self.object_cube_half_size,
                         )
         
         self.cube_init_pose_2=self.cube_2.pose

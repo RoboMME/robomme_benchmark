@@ -64,6 +64,12 @@ class InsertPeg(BaseEnv):
     cube_spawn_center = (0, 0)
     _clearance = 0.01
 
+    # Previously fixed parameters shared by easy, medium and hard.
+    config_hard = {'pegs': 3}
+    config_ood = {**config_hard, 'pegs': 4}
+    configs = {"easy": config_hard, "medium": config_hard,
+               "hard": config_hard, "ood": config_ood}
+
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
         self.use_demonstrationwrapper=False
@@ -157,7 +163,7 @@ class InsertPeg(BaseEnv):
         self.peg_tails = []
         self._peg_initial_poses = []
 
-        offsets = [0.1,0,-0.1]  # X-axis differences for the 3 pegs
+        offsets = [0.1 - 0.1 * i for i in range(self.configs[self.difficulty]["pegs"])]
         # Sample a single pair of colors so all pegs share the same appearance per seed.
         peg_head_color = torch.rand(3, generator=self._hb_generator).tolist()
         # Use complementary tail color so head/tail are contrasting.
@@ -193,7 +199,7 @@ class InsertPeg(BaseEnv):
             self._peg_initial_poses.append(peg_initial_pose)
 
         # Randomly select one peg from the 3 pegs
-        random_peg_idx = int(torch.randint(0, 3, (1,), generator=self._hb_generator).item())
+        random_peg_idx = int(torch.randint(0, len(self.pegs), (1,), generator=self._hb_generator).item())
         random_peg_idx=0
         self.peg = self.pegs[random_peg_idx]
 

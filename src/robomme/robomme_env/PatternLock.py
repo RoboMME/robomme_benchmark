@@ -69,6 +69,13 @@ class PatternLock(BaseEnv):
         "length":[4,8]
     }
 
+    # Extrapolate the hard setting without changing its task mechanism.
+    config_ood = {
+        **config_hard,
+        'length': [9, 16],
+        'grid': 6,
+    }
+
     config_easy = {
         "grid":3,
          "length":[2,4]
@@ -81,6 +88,7 @@ class PatternLock(BaseEnv):
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium
@@ -281,6 +289,8 @@ class PatternLock(BaseEnv):
             if length_range[0] <= len(path_nodes) <= length_range[1]:
                 break
         else:
+            if self.difficulty == "ood":
+                raise RuntimeError("Could not sample a path within config_ood length bounds")
             # If we couldn't find a path < 5 after max_attempts, use the last one
             logger.debug(f"Warning: Could not find path after {max_attempts} attempts")
 

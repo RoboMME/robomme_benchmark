@@ -69,6 +69,9 @@ class VideoUnmask(BaseEnv):
     "pick":2,
     }
 
+    # Preserve the two-pickup goal; allow more distractors in a larger area.
+    config_ood = {**config_hard, "region_half_size": 0.25}
+
     config_easy = {
     'bin':3,
     "pick":1,
@@ -81,6 +84,7 @@ class VideoUnmask(BaseEnv):
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium
@@ -177,7 +181,7 @@ class VideoUnmask(BaseEnv):
                     self,
                     avoid=avoid,  # Use current avoidance list, containing all spawned objects
                     region_center=[0, 0],
-                    region_half_size=0.2,
+                    region_half_size=self.configs[self.difficulty].get("region_half_size", 0.2),
                     min_gap=self.cube_half_size*2,  # bins need larger gap, increased to 6x to avoid collision
                     name_prefix=f"bin_{i}",
                     max_trials=256,

@@ -20,7 +20,7 @@ GUI_RENDER = False
 VIDEO_FPS = 30
 VIDEO_OUTPUT_DIR = "runs/sample_run_videos"
 MAX_STEPS = 300
-EPISODE_LIMITS = {"train": 100, "test": 50, "val": 50}
+EPISODE_LIMITS = {"train": 100, "test": 50, "val": 50, "ood_test": 20}
 VIDEO_BORDER_COLOR = (255, 0, 0)
 VIDEO_BORDER_THICKNESS = 10
 TaskID = Literal[
@@ -31,7 +31,7 @@ TaskID = Literal[
     "All",
 ]
 ActionSpaceType = Literal["joint_angle", "ee_pose", "waypoint", "multi_choice"]
-DatasetType = Literal["train", "test", "val"]
+DatasetType = Literal["train", "test", "val", "ood_test"]
 
 
 def _to_numpy(t) -> np.ndarray:
@@ -67,8 +67,11 @@ def _save_video(
     episode_idx: int,
     action_space_type: str,
     task_goal: str,
+    dataset: DatasetType = "test",
 ) -> Path:
     video_dir = Path(VIDEO_OUTPUT_DIR) / action_space_type
+    if dataset == "ood_test":
+        video_dir /= dataset
     video_dir.mkdir(parents=True, exist_ok=True)
     path = video_dir / f"{task_id}_ep{episode_idx}_{task_goal}.mp4"
     imageio.mimsave(str(path), frames, fps=VIDEO_FPS)
@@ -96,20 +99,24 @@ def main(
     task_id: TaskID = "PickXtimes",
     action_space_type: ActionSpaceType = "joint_angle",
     episode_idx: int = 0,
+    max_steps: int | None = None,
 ) -> None:
     """
     Run a single benchmark episode and save the rollout as a video.
 
     Args:
         action_space_type: Type of action space to use.
-        dataset: Dataset split (train / test / val).
+        dataset: Dataset split (train / test / val / ood_test). OOD is evaluation only.
         task_id: Task identifier, or "All" to run every task.
         episode_idx: Episode index (-1 = All episodes).
+        max_steps: Control-step limit excluding the demonstration; defaults to 1500 for OOD, 300 otherwise.
     """
     task_ids = (
-        BenchmarkEnvBuilder.get_task_list() if task_id == "All" else [task_id]
+        BenchmarkEnvBuilder.get_task_list(dataset) if task_id == "All" else [task_id]
     )
     _validate_episode_index(episode_idx, dataset)
+    if max_steps is None:
+        max_steps = 1500 if dataset == "ood_test" else MAX_STEPS
 
     for tid in task_ids:
         env_builder = BenchmarkEnvBuilder(
@@ -117,7 +124,7 @@ def main(
             dataset=dataset,
             action_space=action_space_type,
             gui_render=GUI_RENDER,
-            max_steps=MAX_STEPS,
+            max_steps=max_steps,
         )
         episodes = (
             list(range(env_builder.get_episode_num()))
@@ -157,7 +164,7 @@ def main(
                     break
 
             env.close()
-            path = _save_video(frames, tid, ep, action_space_type, task_goal)
+            path = _save_video(frames, tid, ep, action_space_type, task_goal, dataset)
             print(f"Saved video: {path}\n")
 
 

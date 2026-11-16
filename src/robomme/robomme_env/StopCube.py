@@ -64,6 +64,16 @@ class StopCube(BaseEnv):
 
 
 
+    # Previously fixed parameters shared by easy, medium and hard.
+    config_hard = {'stop_count': [2, 5], 'passes': 5}
+    config_ood = {
+        **config_hard,
+        'stop_count': [6, 10],
+        'passes': 10,
+    }
+    configs = {"easy": config_hard, "medium": config_hard,
+               "hard": config_hard, "ood": config_ood}
+
     def __init__(self, *args, robot_uids="panda_wristcam", robot_init_qpos_noise=0,seed=0,Robomme_video_episode=None,Robomme_video_path=None,
                      **kwargs):
         self.use_demonstrationwrapper=False
@@ -210,7 +220,8 @@ class StopCube(BaseEnv):
             idx = torch.randint(0, len(move_interval_list), (1,), generator=generator).item()
             self.move_interval = move_interval_list[idx]
 
-            stop_time=torch.randint(2, 6, (1,), generator=generator).item()
+            count_min, count_max = self.configs[self.difficulty]["stop_count"]
+            stop_time = torch.randint(count_min, count_max + 1, (1,), generator=generator).item()
 
             self.steps_press=self.move_interval*(stop_time)-self.move_interval/2
             self.stop_time_range = (
@@ -397,8 +408,8 @@ class StopCube(BaseEnv):
         start_pos = [self.start_pos_xy[0], self.start_pos_xy[1], self.cube_half_size / 2]
         end_pos = [self.end_pos_xy[0], self.end_pos_xy[1], self.cube_half_size / 2]
 
-        # Alternate between the two waypoints so the cube makes five passes
-        for segment in range(5):
+        # Alternate between the same two waypoints for the configured count.
+        for segment in range(self.configs[self.difficulty]["passes"]):
             move_straight_line(
                 self,
                 cube=self.cube,

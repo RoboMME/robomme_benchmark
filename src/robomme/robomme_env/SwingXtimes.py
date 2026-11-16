@@ -71,6 +71,13 @@ class SwingXtimes(BaseEnv):
     'number_max':3,
     }
 
+    # Extrapolate the hard setting without changing its task mechanism.
+    config_ood = {
+        **config_hard,
+        'number_min': 4,
+        'number_max': 8,
+    }
+
     config_easy = {
         'color': 1, 
     'number_min': 1,
@@ -85,6 +92,7 @@ class SwingXtimes(BaseEnv):
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium

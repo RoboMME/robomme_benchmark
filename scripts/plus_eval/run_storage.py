@@ -12,7 +12,7 @@ import uuid
 from demonstration_sampling import CAPPED_METHODS, MAX_DEMONSTRATION_FRAMES
 from astra_image_sampling import MAX_DEMONSTRATION_IMAGES, MAX_ONE_SHOT_CONTEXT_IMAGES, image_count
 
-OPERATIONAL = {'tasks', 'episodes', 'exclude_tasks', 'output_dir', 'output_root',
+OPERATIONAL = {'tasks', 'episodes', 'cases_json', 'exclude_tasks', 'output_dir', 'output_root',
                'resume', 'retry_errors', 'rerun', 'fail_fast', 'api_pricing_json',
                'host', 'port', 'gpu', 'workers', 'vla_python', 'simplememvla_python'}
 
@@ -128,17 +128,22 @@ def compatible_metadata(directory, case, expected):
     if expected is None:
         return True
     try:
-        from robomme_plus.evaluation.metadata import replay_identity
         saved = read(Path(directory) / episode_name(case) / 'metadata.json')
+        if expected.get('benchmark') == 'robomme':
+            fields = ('benchmark', 'dataset', 'task', 'episode', 'seed', 'difficulty',
+                      'control_freq', 'max_steps', 'native_max_steps_argument')
+            return all(saved.get(k) == expected.get(k) for k in fields)
+        from robomme_plus.evaluation.metadata import replay_identity
         return replay_identity(case['task'], saved) == replay_identity(case['task'], expected)
     except (OSError, ValueError, KeyError, TypeError):
         return False
 
 
-def benchmark_sources():
+def benchmark_sources(benchmark='robomme_plus', source=None):
     root = Path(__file__).resolve().parents[2]
-    return {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in sorted((root / 'src/robomme_plus').rglob('*.py'))}
+    source = Path(source) if source is not None else root / 'src' / benchmark
+    return {str(Path('src') / benchmark / path.relative_to(source)): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(source.rglob('*.py'))}
 
 
 def check_benchmark_sources(old, new, mode):
@@ -268,7 +273,9 @@ def rebuild_task(directory):
     directory = Path(directory)
     config = read(directory / 'config.json')
     results = [r for case in config['cases'] if (r := saved_result(directory, case)) is not None]
-    report = summarize(config['cases'], results, config['method'])
+    report = summarize(config['cases'], results, config['method'],
+                       benchmark=config.get('benchmark', 'robomme_plus'),
+                       dataset=config.get('dataset', 'test'))
     state = directory / 'run_state.json'
     report['pending_replacements'] = read(state).get('pending', []) if state.exists() else []
     report['updated_utc'] = utc_now()

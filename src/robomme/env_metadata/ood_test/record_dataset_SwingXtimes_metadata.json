@@ -1,0 +1,227 @@
+{
+  "env_id": "SwingXtimes",
+  "split": "ood_test",
+  "selection": "native expert success and EE replay success",
+  "records": [
+    {
+      "task": "SwingXtimes",
+      "episode": 0,
+      "seed": 102943671,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "a52e62eb9f66be4e056ba4b75aafefccb158f81b8d0a60f2f4e4d870b5b95f24"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 1,
+      "seed": 1980494846,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "a872fc748e8efe88a322067dd190a25425bab6bc78fc647b2f60ffafba5655bb"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 2,
+      "seed": 809946236,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "d130507d25f6dc0581775371dba8076f0754af2849fbcfbcd0b45eab820cfb80"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 3,
+      "seed": 1668176277,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "c11557c8635ebb15949e85d79308b4159c8b144c152014e44206c85c43d47d43"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 4,
+      "seed": 1886161096,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "fa38bd3613e5181ec88299a2540cde2162ab86a9d5671c795d63da323b7b31eb"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 5,
+      "seed": 1624009993,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "77cff104a9c5a216f5e2911724136402cda5db7271c02743d3d3e7a0e83874c8"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 6,
+      "seed": 158787465,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "99362afb41c4059f8cd85c664d541298d831d33a923ce638f3bbb8a34fe162c2"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 7,
+      "seed": 1001924936,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "52993a4fdcee2a3ed30c817e21409d38f6b1315891b81fac9ba0587f9d66d6e0"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 8,
+      "seed": 1064828587,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "d4a94ec40a69a20f441ee2f3c29371bc5252a6d75ac4ac15f16c0c8dc3df123f"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 9,
+      "seed": 1989241808,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "ab13be8d85f249e208c63e6b07dcd3fa0474eab018fc8f0090eab02435a78947"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 10,
+      "seed": 777156910,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "13787917b10d202a925dfa904b0b36ac0ac0b5afade5b60c3b9380c0b8b40f5b"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 11,
+      "seed": 1403913077,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "5c3606b31fe2cf50d1d71f4a64a31bde5ae54783f1811313c87888646135af5a"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 12,
+      "seed": 269677328,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "fe860bbca2f35181d9a6e6fd10de27b29a7b96af87472b6402503f0d1f227f98"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 13,
+      "seed": 1770112471,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "2c6d6b808a731c4ced65d6e132d625f2183e6188e737cb79dd18ba153188e1b5"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 14,
+      "seed": 1167924233,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "19674025c905114599181480f0b8952ec18f80940b208b726ce1676ffe45e6c0"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 15,
+      "seed": 1877010920,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "50009699c30c1505232718be680c12ad6b5bff24af7b6d484b2b0a85e85e7a66"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 16,
+      "seed": 1948016526,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "9768f7f3b917b39367797da3536b0f450fde24eb4fd24a52c74ef2a8944312b4"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 17,
+      "seed": 830068808,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "892ed1711c333a6e05f0efa3e99bbc52e5f425d181378dd28983a0a382d35c0e"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 18,
+      "seed": 1789506989,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "a20f8ab802ad77c404eba96c5504ec819963c5f00e89d01dadde43eca943671b"
+    },
+    {
+      "task": "SwingXtimes",
+      "episode": 19,
+      "seed": 1431783554,
+      "difficulty": "ood",
+      "seed_scheme": "robomme-ood-expert-v1",
+      "seed_attempt": 0,
+      "expert_success": true,
+      "ee_replay_success": true,
+      "expert_h5_sha256": "0f295d7b5fc64cbe5d6ed87e1e52a6e99a1111b9e08557787358743631416810"
+    }
+  ]
+}

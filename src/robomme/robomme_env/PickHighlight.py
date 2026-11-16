@@ -69,6 +69,14 @@ class PickHighlight(BaseEnv):
         "pickup": 3
     }
 
+    # Extrapolate the hard setting without changing its task mechanism.
+    config_ood = {
+        **config_hard,
+        'spawn': [8, 12],
+        'pickup': [4, 5],
+        'region_half_size': 0.25,
+    }
+
     config_easy = {
         'spawn': 3,
         "pickup": 1
@@ -81,6 +89,7 @@ class PickHighlight(BaseEnv):
 
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium
@@ -188,6 +197,17 @@ class PickHighlight(BaseEnv):
 
         # Get number of cubes to spawn based on difficulty
         num_cubes_to_spawn = self.configs[self.difficulty]['spawn']
+        if isinstance(num_cubes_to_spawn, (list, tuple)):
+            num_cubes_to_spawn = torch.randint(
+                num_cubes_to_spawn[0], num_cubes_to_spawn[1] + 1,
+                (1,), generator=self.generator,
+            ).item()
+        self.pickup_count = self.configs[self.difficulty]['pickup']
+        if isinstance(self.pickup_count, (list, tuple)):
+            self.pickup_count = torch.randint(
+                self.pickup_count[0], self.pickup_count[1] + 1,
+                (1,), generator=self.generator,
+            ).item()
 
         # Spawn specified number of cubes, each with random color
         for cube_idx in range(num_cubes_to_spawn):
@@ -203,7 +223,7 @@ class PickHighlight(BaseEnv):
                     include_existing=False,
                     include_goal=False,
                     region_center=[-0.1, 0],
-                    region_half_size=0.2,
+                    region_half_size=self.configs[self.difficulty].get('region_half_size', 0.2),
                     half_size=self.cube_half_size,
                     min_gap=self.cube_half_size*2,
                     random_yaw=True,
@@ -221,6 +241,8 @@ class PickHighlight(BaseEnv):
                 avoid.append(cube)
 
             except RuntimeError as e:
+                if self.difficulty == "ood":
+                    raise RuntimeError("Could not spawn config_ood cube count") from e
                 logger.debug(f"Failed to spawn cube {cube_idx} ({chosen_color['name']}): {e}")
                 break
 
@@ -229,7 +251,7 @@ class PickHighlight(BaseEnv):
 
 
          # Randomly select one cube from all available cubes as the target
-        target_cube_indices = torch.randperm(len(self.all_cubes), generator=self.generator)[:self.configs[self.difficulty]['pickup']]
+        target_cube_indices = torch.randperm(len(self.all_cubes), generator=self.generator)[:self.pickup_count]
 
         self.target_cubes = [self.all_cubes[idx] for idx in target_cube_indices]
         self.target_cube_names = [self.all_cube_names[idx] for idx in target_cube_indices]
@@ -442,7 +464,7 @@ class PickHighlight(BaseEnv):
 
       
 
-        highlight_count = min(self.configs[self.difficulty]["pickup"], len(target_cubes))
+        highlight_count = min(self.pickup_count, len(target_cubes))
         for i in range(highlight_count):
             highlight_obj(
                 self,

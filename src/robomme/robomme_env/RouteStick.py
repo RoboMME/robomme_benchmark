@@ -84,8 +84,15 @@ class RouteStick(BaseEnv):
     'backtrack':True,
     }
 
+    # Extrapolate the hard setting without changing its task mechanism.
+    config_ood = {
+        **config_hard,
+        'length': [8, 12],
+    }
+
     # Combine into a dictionary
     configs = {
+        'ood': config_ood,
         'hard': config_hard,
         'easy': config_easy,
         'medium': config_medium
