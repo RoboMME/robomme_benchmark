@@ -1,4 +1,4 @@
-# RoboMME OOD test split
+# RoboMME OOD-test split
 
 ## Motivation
 
@@ -9,7 +9,7 @@ preserving the original task mechanisms, instruction templates and success check
 
 ## Split design
 
-### Compared with the regular test split
+### Compared with the regular RoboMME test split
 
 The regular test split has **50 episodes per task** across easy, medium and hard
 settings. `ood_test` has **20 episodes per task across all 16 tasks (320 total)**,
@@ -28,13 +28,6 @@ Use [RoboMME-Plus](../src/robomme_plus/README.md) to evaluate robot memory acros
 a broader range of demanding conditions, including moving targets, stronger
 occlusion and additional manipulation methods. Its separate training and test
 splits support both zero-shot evaluation and few-shot adaptation.
-
-### Episode verification
-
-Seeds exclude the original splits, and every selected episode passed both
-native-expert execution and end-effector-action replay. Replay screening used
-1,300 steps, so the selection is conditioned on expert replay solvability
-within that budget.
 
 ## Parameter changes
 
@@ -90,14 +83,16 @@ demonstration videos and cues remain part of the policy's observations.
 
 ## Baseline results
 
-Released RoboMME checkpoints are evaluated without OOD fine-tuning. Entries are
+Released fine-tuned policy checkpoints are evaluated without OOD fine-tuning. Entries are
 successful / total episodes under the native success check; the overall row also
 shows the success rate. Each task has 20 episodes.
+The results combine 1,300- and 1,500-step limits; see the
+[evaluation details](https://github.com/RoboMME/robomme_benchmark/pull/26).
 
-Source code (links point to the evaluated revisions):
+Source code:
 
 - FrameSamp+Modul: [RoboMME/robomme_policy_learning](https://github.com/RoboMME/robomme_policy_learning/tree/ac846a9a4aec841e483b1dc5d620dfe426bde853).
-- SimpleMemVLA: [YinpeiDai/SimpleMemVLA](https://github.com/YinpeiDai/SimpleMemVLA/tree/c564c17d276d7294200122b286c21901a3bfb99f), an evaluation fork of [OpenBMB/SimpleMemVLA](https://github.com/OpenBMB/SimpleMemVLA).
+- SimpleMemVLA: [OpenBMB/SimpleMemVLA](https://github.com/OpenBMB/SimpleMemVLA).
 - PonderPounce: [worv-ai/PonderPounce](https://github.com/worv-ai/PonderPounce/tree/723df35762bb641e1d520e4fa9359b98644adc21).
 
 | Task | FrameSamp+Modul | SimpleMemVLA | PonderPounce |
@@ -119,8 +114,3 @@ Source code (links point to the evaluated revisions):
 | VideoUnmask | 0/20 | 19/20 | 17/20 |
 | VideoUnmaskSwap | 3/20 | 2/20 | 6/20 |
 | **Overall** | 26/320 (8.1%) | 106/320 (33.1%) | 96/320 (30.0%) |
-
-Completed episodes retained a 1,300-step limit for SimpleMemVLA (217 episodes)
-and PonderPounce (156 episodes). All remaining episodes, including all
-FrameSamp+Modul episodes, use 1,500 steps. These are exploratory results with
-mixed step budgets.
