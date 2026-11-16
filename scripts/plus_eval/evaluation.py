@@ -352,8 +352,7 @@ async def maybe_await(value):
     return await value if inspect.isawaitable(value) else value
 
 
-def select_cases(builder_class, tasks=None, episodes=None, action_space="joint_angle", *,
-                 benchmark="robomme_plus", dataset="test", selected_cases=None):
+def select_cases(builder_class, tasks=None, episodes=None, action_space="joint_angle"):
     available = builder_class.get_task_list()
     tasks = available if tasks is None else tasks
     if not tasks or len(set(tasks)) != len(tasks) or set(tasks) - set(available):
@@ -362,24 +361,13 @@ def select_cases(builder_class, tasks=None, episodes=None, action_space="joint_a
         raise ValueError("Episode indices must be distinct and nonempty.")
     builders, cases = {}, []
     for task in tasks:
-        builder = builder_class(task, dataset=dataset, action_space=action_space, gui_render=False)
+        builder = builder_class(task, dataset="test", action_space=action_space, gui_render=False)
         builders[task] = builder
         for episode in range(builder.get_episode_num()) if episodes is None else episodes:
             if not 0 <= episode < builder.get_episode_num():
                 raise ValueError(f"{task}: episode index {episode} out of range.")
             cases.append({"task": task, "episode": episode})
-    if selected_cases is not None:
-        if not isinstance(selected_cases, list) or not selected_cases or any(
-                not isinstance(c, dict) or set(c) != {'task', 'episode'}
-                or not isinstance(c['task'], str) or type(c['episode']) is not int
-                for c in selected_cases):
-            raise ValueError('Case selection must be a nonempty list of task/episode objects')
-        keys = [(c['task'], c['episode']) for c in selected_cases]
-        available = {(c['task'], c['episode']) for c in cases}
-        if len(keys) != len(set(keys)) or not set(keys) <= available:
-            raise ValueError('Case selection contains duplicate or unavailable episodes')
-        cases = selected_cases
-    return builders, {"benchmark": benchmark, "dataset": dataset, "cases": cases}
+    return builders, {"benchmark": "robomme_plus", "dataset": "test", "cases": cases}
 
 
 def aggregate_metrics(results):
@@ -401,14 +389,14 @@ def aggregate_metrics(results):
                     "usage": {k: sum(a["usage"][k] for a in api) for k in api_usage({})}}}
 
 
-def summarize(cases, results, method=None, *, benchmark="robomme_plus", dataset="test"):
+def summarize(cases, results, method=None):
     # Disk records are authoritative; never count a replaced episode twice.
     expected = {(c['task'], c['episode']) for c in cases}
     rows = {(r['task'], r['episode']): r for r in results if (r['task'], r['episode']) in expected}
     results = list(rows.values())
     finished = [r for r in results if not r.get('interrupted')]
     counts = Counter(r["status"] for r in finished)
-    report = {"schema_version": SCHEMA_VERSION, "benchmark": benchmark, "dataset": dataset,
+    report = {"schema_version": SCHEMA_VERSION, "benchmark": "robomme_plus", "dataset": "test",
               "method": method, "requested": len(cases), "completed": len(finished),
               "pending": len(cases) - len(finished), "complete": len(cases) == len(finished),
               "interrupted": len(results) - len(finished),
@@ -457,9 +445,7 @@ class Evaluation:
         self.recorder = rec = EpisodeRecorder(directory, pricing, self.api_applicable)
         self.task, self.episode = task, episode
         self.goal = None
-        result = {"schema_version": SCHEMA_VERSION,
-                  "benchmark": getattr(self.args, 'benchmark', 'robomme_plus'),
-                  "dataset": getattr(self.args, 'dataset', 'test'),
+        result = {"schema_version": SCHEMA_VERSION, "benchmark": "robomme_plus", "dataset": "test",
                   "method": self.method, "task": task, "episode": episode, "status": "error",
                   "success": False, "steps": 0, "max_steps": builder.episode_max_steps(episode),
                   "action_space": self.action_space, "started_utc": utc_now()}
@@ -607,16 +593,7 @@ class Evaluation:
 
     async def run(self):
         refresh_secrets()
-        benchmark = getattr(self.args, 'benchmark', 'robomme_plus')
-        dataset = getattr(self.args, 'dataset', 'test')
-        if benchmark == 'robomme':
-            from regular_benchmark import builder_class
-            source = getattr(self.args, 'benchmark_source', None) or ROOT / 'src/robomme'
-            BenchmarkEnvBuilder = builder_class(source, dataset)
-        else:
-            if dataset != 'test' or getattr(self.args, 'benchmark_source', None):
-                raise ValueError('Custom benchmark source/split requires --benchmark robomme')
-            from robomme_plus.env_record_wrapper import BenchmarkEnvBuilder
+        from robomme_plus.env_record_wrapper import BenchmarkEnvBuilder
         from run_storage import run_lock, read, rebuild_batch
         directory = self.args.output_dir
         parent_batch = directory.parent / 'batch.json'
@@ -645,14 +622,8 @@ class Evaluation:
         tasks = args.tasks
         if old and tasks is None:
             tasks = list(dict.fromkeys(c['task'] for c in old['cases']))
-        benchmark = getattr(args, 'benchmark', 'robomme_plus')
-        dataset = getattr(args, 'dataset', 'test')
-        source = Path(getattr(args, 'benchmark_source', None) or ROOT / 'src' / benchmark)
-        cases_path = getattr(args, 'cases_json', None)
-        builders, document = select_cases(builder_class, tasks, args.episodes, self.action_space,
-                                          benchmark=benchmark, dataset=dataset,
-                                          selected_cases=read(cases_path) if cases_path else None)
-        if old and args.tasks is None and args.episodes is None and not cases_path:
+        builders, document = select_cases(builder_class, tasks, args.episodes, self.action_space)
+        if old and args.tasks is None and args.episodes is None:
             available = {(c['task'], c['episode']) for c in document['cases']}
             if any((c['task'], c['episode']) not in available for c in old['cases']):
                 raise ValueError('Saved episode selection is invalid for the current benchmark metadata')
@@ -665,8 +636,7 @@ class Evaluation:
         config = {"schema_version": SCHEMA_VERSION, "method": self.method, **document,
                   "arguments": vars(args), "api_pricing": pricing, "started_utc": utc_now(),
                   "video_fps": 20, "demonstration_preprocessing": configuration_for_method(self.method),
-                  "budget_rule": (f"native RoboMME max_steps={1500 if dataset == 'ood_test' else 1300}; wrapper includes two reset steps"
-                                  if benchmark == 'robomme' else "ceil(1.5 * oracle_policy_step) + 200"),
+                  "budget_rule": "ceil(1.5 * oracle_policy_step) + 200",
                   "runtime": {"python": platform.python_version(), "executable": sys.executable,
                               "platform": platform.platform(), "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES")}}
         if os.environ.get('OOD_QUEUE_MANAGED'):
@@ -677,11 +647,9 @@ class Evaluation:
         if self.method == 'embodied-astra':
             source_files.append(Path(__file__).with_name('astra_image_sampling.py'))
         source_files.extend(getattr(self, 'source_dependencies', ()))
-        if benchmark == 'robomme':
-            source_files.append(Path(__file__).with_name('regular_benchmark.py'))
         config["source_sha256"] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files}
-        config["benchmark_source_sha256"] = benchmark_sources(benchmark, source)
-        metadata = source / 'env_metadata' / dataset
+        config["benchmark_source_sha256"] = benchmark_sources()
+        metadata = ROOT / "src/robomme_plus/env_metadata/test"
         config["metadata_sha256"] = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(metadata.glob("*.json"))}
         config["episode_metadata"] = {
             f"{case['task']}_ep{case['episode']}": builders[case['task']].get_episode_metadata(case['episode'])
@@ -742,11 +710,7 @@ def common_parser(description):
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     parser.add_argument("--tasks", nargs="+", help="Default: all RoboMME-Plus test tasks.")
-    parser.add_argument('--benchmark', choices=('robomme_plus', 'robomme'), default='robomme_plus')
-    parser.add_argument('--dataset', choices=('test', 'ood_test'), default='test')
-    parser.add_argument('--benchmark-source', type=Path, help='Pinned regular RoboMME package directory')
     parser.add_argument("--episodes", nargs="+", type=int, help="Default: every available RoboMME-Plus test episode.")
-    parser.add_argument('--cases-json', type=Path, help='Exact list of {task, episode} cases to evaluate')
     parser.add_argument("--output-dir", "--run-dir", dest="output_dir", type=Path, required=True)
     parser.add_argument("--api-pricing-json", type=Path, help="Optional model rate card; absent/unmatched pricing means unknown cost.")
     parser.add_argument("--fail-fast", action="store_true", help="Stop after the first episode error; default: record it and continue sequentially.")
