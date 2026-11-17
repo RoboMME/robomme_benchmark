@@ -28,7 +28,7 @@ Use [RoboMME-Plus](../src/robomme_plus/README.md) to evaluate robot memory acros
 a broader range of demanding conditions, including moving targets, stronger
 occlusion and additional manipulation methods. Its separate training and test
 splits support both zero-shot evaluation and few-shot adaptation. The easy-level test episodes in RoboMME-plus
-is similar to `ood_test`, but the medium- and hard-level epiosdes contain more changes.
+is similar to `ood_test`, but the medium- and hard-level episodes contain more diverse changes.
 
 ## Parameter changes
 
