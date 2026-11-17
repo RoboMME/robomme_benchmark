@@ -657,6 +657,7 @@ class RobommeRecordWrapper(gym.Wrapper):
         self._current_choice_label = ""
         self._prev_task_index = -1
         result = super().reset(**kwargs)
+        self._last_obs = result[0]
         self._prev_is_video_demo = bool(
             getattr(self.unwrapped, "current_task_demonstration", False)
         )
@@ -831,13 +832,9 @@ class RobommeRecordWrapper(gym.Wrapper):
             self._clear_waypoint_caches_on_demo_end(clear_pending_waypoint=False)
         # waypoint is recorded before planner execution, so refresh cache before env.step()
         self._refresh_pending_waypoint(expected_is_demo=pre_step_is_demo)
-        obs, reward, terminated, truncated, info = super().step(action)
-
-        post_step_is_demo = bool(
-            getattr(self.unwrapped, "current_task_demonstration", False)
-        )
-        self._prev_is_video_demo = post_step_is_demo
-
+        record_data = None
+        # Pair the observation returned by reset()/the previous step with this action.
+        obs = self._last_obs
 
         # Parse raw observation: RGB, Segmentation Mask all keep data after torch->numpy, ensure direct write to HDF5
         base_camera_frame = obs['sensor_data']['base_camera']['rgb'][0].cpu().numpy()
@@ -921,10 +918,6 @@ class RobommeRecordWrapper(gym.Wrapper):
         self.vis_obj_id_list_online = segmentation_output_online["vis_obj_id_list"]
 
         current_task=self.current_task_name if hasattr(self, 'current_task_name') else "Unknown"
-        is_completed = _is_online_subgoal_completed(
-            _cur_task_index,
-            getattr(self.unwrapped, 'task_list', None),
-        )
         
         # Video recording logic: Execute only when task name is not NO RECORD and video saving enabled
         if self._video_should_record(current_task):
@@ -950,23 +943,6 @@ class RobommeRecordWrapper(gym.Wrapper):
                 front_camera_extrinsic=base_camera_extrinsic,
                 front_rgb_frame=base_camera_frame,
             )
-            combined = self._video_compose_planner_online_rows(
-                prepared,
-                subgoal_text,
-                self.current_subgoal_segment_filled,
-                subgoal_online_text,
-                self.current_subgoal_segment_online_filled,
-                choice_action_payload=choice_action_payload,
-                task_index=_cur_task_index,
-                is_completed=is_completed,
-            )
-            combined = self._video_apply_overlays(
-                combined,
-                is_demonstration,
-                language_goal,
-            )
-            self._video_append_step_frame(combined, self.no_object_flag)
-
             #print(self.current_task_name)
 
             # Buffer data instead of writing directly to HDF5 (using raw frames, no border)
@@ -1071,7 +1047,6 @@ class RobommeRecordWrapper(gym.Wrapper):
                     'simple_subgoal_online': subgoal_online_text,
                     'grounded_subgoal': self.current_subgoal_segment_filled,
                     'grounded_subgoal_online': self.current_subgoal_segment_online_filled,
-                    'is_completed': is_completed,
                     'is_video_demo': self.current_task_demonstration if hasattr(self, 'current_task_demonstration') else False,
                     'is_subgoal_boundary': choice_action_subgoal_boundary,
                 },
@@ -1081,8 +1056,39 @@ class RobommeRecordWrapper(gym.Wrapper):
                 },
             }
 
+        obs, reward, terminated, truncated, info = super().step(action)
+        # Update even during NO RECORD motions.
+        self._last_obs = obs
+        # Track the phase of the recorded action, so even a transition occurring
+        # inside env.step() clears old waypoints before the following action.
+        self._prev_is_video_demo = pre_step_is_demo
+
+        if record_data is not None:
+            # Completion describes the result of this action; all other labels
+            # and observations describe the state in which it was selected.
+            is_completed = _is_online_subgoal_completed(
+                getattr(self.unwrapped, 'current_task_index', -1),
+                getattr(self.unwrapped, 'task_list', None),
+            )
+            record_data['info']['is_completed'] = is_completed
             self.buffer.append(record_data)
 
+            combined = self._video_compose_planner_online_rows(
+                prepared,
+                record_data['info']['simple_subgoal'],
+                record_data['info']['grounded_subgoal'],
+                record_data['info']['simple_subgoal_online'],
+                record_data['info']['grounded_subgoal_online'],
+                choice_action_payload=choice_action_payload,
+                task_index=_cur_task_index,
+                is_completed=is_completed,
+            )
+            combined = self._video_apply_overlays(
+                combined,
+                is_demonstration,
+                language_goal,
+            )
+            self._video_append_step_frame(combined, self.no_object_flag)
 
         # Check if episode successful
         if terminated.any():
