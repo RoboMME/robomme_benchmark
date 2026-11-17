@@ -87,8 +87,6 @@ demonstration videos and cues remain part of the policy's observations.
 Released fine-tuned policy checkpoints are evaluated without OOD fine-tuning. Entries are
 successful / total episodes under the native success check; the overall row also
 shows the success rate. Each task has 20 episodes.
-The results combine 1,300- and 1,500-step limits; see the
-[evaluation details](https://github.com/RoboMME/robomme_benchmark/pull/26).
 
 Source code:
 
@@ -98,14 +96,14 @@ Source code:
 
 | Task | FrameSamp+Modul | SimpleMemVLA | PonderPounce |
 |---|---:|---:|---:|
-| BinFill | 0/20 | 0/20 | 0/20 |
-| ButtonUnmask | 0/20 | 19/20 | 18/20 |
+| BinFill | 0/20 | 2/20 | 0/20 |
+| ButtonUnmask | 0/20 | 20/20 | 18/20 |
 | ButtonUnmaskSwap | 1/20 | 5/20 | 2/20 |
 | InsertPeg | 0/20 | 12/20 | 0/20 |
-| MoveCube | 13/20 | 17/20 | 10/20 |
+| MoveCube | 13/20 | 19/20 | 11/20 |
 | PatternLock | 0/20 | 0/20 | 0/20 |
-| PickHighlight | 0/20 | 3/20 | 1/20 |
-| PickXtimes | 0/20 | 0/20 | 16/20 |
+| PickHighlight | 0/20 | 4/20 | 2/20 |
+| PickXtimes | 0/20 | 0/20 | 18/20 |
 | RouteStick | 0/20 | 10/20 | 1/20 |
 | StopCube | 0/20 | 0/20 | 0/20 |
 | SwingXtimes | 0/20 | 4/20 | 5/20 |
@@ -114,4 +112,4 @@ Source code:
 | VideoRepick | 0/20 | 0/20 | 7/20 |
 | VideoUnmask | 0/20 | 19/20 | 17/20 |
 | VideoUnmaskSwap | 3/20 | 2/20 | 6/20 |
-| **Overall** | 26/320 (8.1%) | 106/320 (33.1%) | 96/320 (30.0%) |
+| **Overall** | 26/320 (8.1%) | 112/320 (35.0%) | 100/320 (31.2%) |
