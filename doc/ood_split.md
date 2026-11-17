@@ -87,8 +87,6 @@ demonstration videos and cues remain part of the policy's observations.
 Released fine-tuned policy checkpoints are evaluated without OOD fine-tuning. Entries are
 successful / total episodes under the native success check; the overall row also
 shows the success rate. Each task has 20 episodes.
-The 1,500-step evaluation retains earlier successes and reruns each former
-1,300-step failure once; episodes already evaluated at 1,500 steps are unchanged.
 
 Source code:
 
