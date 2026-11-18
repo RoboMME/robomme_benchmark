@@ -18,7 +18,7 @@ from robomme_plus import BenchmarkEnvBuilder
 
 
 ROOT = Path(__file__).resolve().parents[2]
-ADAPTER = ROOT / "scripts/plus_eval/3-tier-astra"
+ADAPTER = ROOT / "scripts/plus_eval/agentic_methods/astra/three_tier"
 CHAMP = ADAPTER / "Astra-on-RoboMME/examples/champ"
 
 

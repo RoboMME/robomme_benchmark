@@ -1,7 +1,7 @@
 # Mechanism variation
 
 Thirteen tasks have **8 hard test episodes each** marked with
-`mechanism_variation` in [`env_metadata/test`](../../env_metadata/test/).
+`mechanism_variation` in [`env_metadata/test`](../../env_metadata/test).
 Seed values and task goals are unchanged. These 104 episodes do not overlap
 perceptual variations. Unmarked episodes retain their original behavior.
 

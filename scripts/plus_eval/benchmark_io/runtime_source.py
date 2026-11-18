@@ -26,11 +26,11 @@ def hashes(root):
 
 
 def assemble_method(method, destination, *, source=SOURCE):
-    outer = Path(source)/method
+    outer = Path(source)/'agentic_methods'/method
     manifest = json.loads((outer/'upstream.json').read_text())
     core = outer/manifest['core']
     if not (core/'.git').exists():
-        raise FileNotFoundError(f'Initialize submodule scripts/plus_eval/{method}/{manifest["core"]}')
+        raise FileNotFoundError(f'Initialize submodule scripts/plus_eval/agentic_methods/{method}/{manifest["core"]}')
     revision = subprocess.check_output(['git', '-C', str(core), 'rev-parse', 'HEAD'], text=True).strip()
     if revision != manifest['revision']:
         raise ValueError(f'{method} submodule does not match upstream.json')

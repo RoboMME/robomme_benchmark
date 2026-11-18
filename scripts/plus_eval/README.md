@@ -5,24 +5,28 @@ Initialize only the submodule needed by your model.
 
 | Method | Entry point | Inference |
 | --- | --- | --- |
-| [Embodied Astra](embodied-astra/README.md) | `embodied-astra/eval_plus.py` | Astra API; one simulator GPU |
-| [One-shot Astra](embodied-astra/README.md#one-shot) | `embodied-astra/eval_plus_fs.py` | Astra API + one training example |
-| [3-tier Astra](3-tier-astra/README.md) | `3-tier-astra/eval_plus.py` | Astra API + local monitor and VLA |
-| [FrameSamp+Modul](robomme_vla/README.md) | `robomme_vla/eval_plus.py` | Local VLA server |
-| [SimpleMemVLA](simplememvla/README.md) | `simplememvla/eval_plus.py` | Local model |
-| [PonderPounce](ponderpounce/README.md) | `ponderpounce/eval_plus.py` | Local Ponder and Pounce |
+| [Embodied Astra](agentic_methods/astra/embodied/README.md) | `agentic_methods/astra/embodied/eval_plus.py` | Astra API; one simulator GPU |
+| [One-shot Astra](agentic_methods/astra/embodied/README.md#one-shot) | `agentic_methods/astra/embodied/eval_plus_fs.py` | Astra API + one training example |
+| [3-tier Astra](agentic_methods/astra/three_tier/README.md) | `agentic_methods/astra/three_tier/eval_plus.py` | Astra API + local monitor and VLA |
+| [FrameSamp+Modul](non_agentic_methods/framesamp_modul/README.md) | `non_agentic_methods/framesamp_modul/eval_plus.py` | Local VLA server |
+| [SimpleMemVLA](non_agentic_methods/simplememvla/README.md) | `non_agentic_methods/simplememvla/eval_plus.py` | Local model |
+| [PonderPounce](non_agentic_methods/ponderpounce/README.md) | `non_agentic_methods/ponderpounce/eval_plus.py` | Local Ponder and Pounce |
 
-## Layout and agentic baselines
+## Layout
 
 Each method directory contains a pinned upstream Git submodule, its adapter and
 README. ASPIRE/RAX integration patches are applied only to separate runtime copies.
-Shared rollout code, `benchmark_io/`, and `results/` live outside method directories.
+`agentic_methods/` groups Astra, ASPIRE and RAX. `non_agentic_methods/` groups
+FrameSamp+Modul, SimpleMemVLA and PonderPounce. Method helpers stay beside their
+adapters; shared rollout code, `benchmark_io/`, and `results/` stay at this level.
 Large external logs/videos are linked through ignored `METHOD/runs/` directories.
+Run artifacts are excluded from Git. ASPIRE/RAX `solutions/` are tracked copies of
+frozen programs, not links to experiment directories.
 
 | Agentic method | Frozen policy rerun | Development |
 | --- | --- | --- |
-| [ASPIRE](aspire/README.md) | `aspire/eval_plus.py` | Native coordinator, workers and verifier |
-| [RAX](rax/README.md) | `rax/eval_plus.py` | Native exploration, rehearsal and submission |
+| [ASPIRE](agentic_methods/aspire/README.md) | `agentic_methods/aspire/eval_plus.py` | Native coordinator, workers and verifier |
+| [RAX](agentic_methods/rax/README.md) | `agentic_methods/rax/eval_plus.py` | Native exploration, rehearsal and submission |
 
 See the [adaptation protocol](../../doc/plus_agentic_evaluation.md),
 [shared setup](benchmark_io/README.md), and [overall results](results/README.md).

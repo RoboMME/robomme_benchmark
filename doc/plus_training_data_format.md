@@ -2,7 +2,7 @@
 
 The v2 training split contains **50 successful episodes, 57,056 frames at 20 Hz**:
 one easy, medium and hard episode for 15 tasks, and five MoveCube methods.
-One episode per non-MoveCube task has an [atomic variation](../src/robomme_plus/variation/#atomic-training-variations):
+One episode per non-MoveCube task has an [atomic variation](../src/robomme_plus/variation#atomic-training-variations):
 13 appearance changes and 2 mechanism changes. The other 35 episodes have no added variation flags.
 H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
 [LeRobot v3](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot)
@@ -30,7 +30,7 @@ stops each replay when the simulator terminates. It exits nonzero if a replay fa
 ## Seeds and episode mapping
 
 The source of training seeds is
-[`src/robomme_plus/env_metadata/train/`](../src/robomme_plus/env_metadata/train/),
+[`src/robomme_plus/env_metadata/train/`](../src/robomme_plus/env_metadata/train),
 in `record_dataset_<Task>_metadata.json`. Record `k` corresponds to H5
 `episode_<k>`; `BenchmarkEnvBuilder(task, dataset="train")` loads it.
 Dataset copies of `train_plan.json`, `train_seeds.csv` and `metadata/train/`

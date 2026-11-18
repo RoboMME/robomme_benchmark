@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-POLICY = ROOT / "scripts/plus_eval/robomme_vla/robomme_policy_learning"
+POLICY = ROOT / "scripts/plus_eval/non_agentic_methods/framesamp_modul/robomme_policy_learning"
 
 
 class FrameSampHistoryTest(unittest.TestCase):

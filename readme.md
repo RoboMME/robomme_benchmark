@@ -146,7 +146,7 @@ The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) re
 
 
 ## 🏆 Submit Your Models
-Want to add your model? Download the [dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) from Hugging Face, run evaluation using our [eval scripts](scripts/evaluation.py), then submit a PR with your results by adding `<your_model>.md` to the [submission directory](doc/submission/). We will review it and update our leaderboard.
+Want to add your model? Download the [dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) from Hugging Face, run evaluation using our [eval scripts](scripts/evaluation.py), then submit a PR with your results by adding `<your_model>.md` to the [submission directory](doc/submission). We will review it and update our leaderboard.
 
 
 ## 🔧 Troubleshooting
@@ -166,7 +166,7 @@ Alternatively, you can install RoboMME via Docker by following the [instructions
 
 **Q3: I want to participate in the RoboMME Challenge. How should I get started?** 
 
-A3: We are finalizing the submission instructions and will announce details by the end of March. In the meantime, you can get started by exploring the benchmark repository and the [MME-VLA policy learning repo](https://github.com/RoboMME/robomme_policy_learning/tree/main); the challenge will use held-out test episodes similar to the standard [test episodes](src/robomme/env_metadata/test/), but not publicly accessible during the competition.
+A3: We are finalizing the submission instructions and will announce details by the end of March. In the meantime, you can get started by exploring the benchmark repository and the [MME-VLA policy learning repo](https://github.com/RoboMME/robomme_policy_learning/tree/main); the challenge will use held-out test episodes similar to the standard [test episodes](src/robomme/env_metadata/test), but not publicly accessible during the competition.
 
 
 ## 🙏 Acknowledgements

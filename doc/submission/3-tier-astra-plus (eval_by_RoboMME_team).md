@@ -56,7 +56,7 @@ Success rates are percentages on the RoboMME-Plus V2 test split. Only simulator 
 
 ### Reproduce
 
-[Evaluation setup and commands](../../scripts/plus_eval/3-tier-astra/README.md).
+[Evaluation setup and commands](../../scripts/plus_eval/agentic_methods/astra/three_tier/README.md).
 
 ### Released Checkpoints
 

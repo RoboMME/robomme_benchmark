@@ -9,8 +9,8 @@ import json
 from pathlib import Path
 import uuid
 
-from demonstration_sampling import CAPPED_METHODS, MAX_DEMONSTRATION_FRAMES
-from astra_image_sampling import MAX_DEMONSTRATION_IMAGES, MAX_ONE_SHOT_CONTEXT_IMAGES, image_count
+from non_agentic_methods.framesamp_modul.demonstration_sampling import CAPPED_METHODS, MAX_DEMONSTRATION_FRAMES
+from agentic_methods.astra.image_sampling import MAX_DEMONSTRATION_IMAGES, MAX_ONE_SHOT_CONTEXT_IMAGES, image_count
 
 OPERATIONAL = {'tasks', 'episodes', 'exclude_tasks', 'output_dir', 'output_root',
                'resume', 'retry_errors', 'rerun', 'fail_fast', 'api_pricing_json',

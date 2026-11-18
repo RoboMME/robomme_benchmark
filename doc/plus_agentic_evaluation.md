@@ -57,7 +57,7 @@ Full evaluation media is retained for R0 and R10. R1/R3/R5 retain results and lo
 all development code, commands, transcripts and training rollouts are retained.
 
 - [Setup, queue and artifact layout](../scripts/plus_eval/benchmark_io/README.md)
-- [ASPIRE adapter and frozen solutions](../scripts/plus_eval/aspire/README.md)
-- [RAX adapter and frozen solutions](../scripts/plus_eval/rax/README.md)
+- [ASPIRE adapter and frozen solutions](../scripts/plus_eval/agentic_methods/aspire/README.md)
+- [RAX adapter and frozen solutions](../scripts/plus_eval/agentic_methods/rax/README.md)
 - [Results](robomme_plus_baseline_results.md)
 - [Final training data format](plus_training_data_format.md)

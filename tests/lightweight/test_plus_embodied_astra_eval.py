@@ -16,7 +16,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[2]
-FOLDER = ROOT / "scripts/plus_eval/embodied-astra"
+FOLDER = ROOT / "scripts/plus_eval/agentic_methods/astra/embodied"
 HARNESS = FOLDER / "embodied-astra-robomme/harness/astra_waypoint_eval_v3.py"
 
 
@@ -267,7 +267,7 @@ class EmbodiedAstraOODTest(unittest.TestCase):
 
     def test_resume_replaces_only_astra_requests_above_750_images(self):
         from run_storage import select_pending
-        from astra_image_sampling import image_count
+        from agentic_methods.astra.image_sampling import image_count
         cases = [{'task': 'MoveCube', 'episode': i} for i in range(5)]
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

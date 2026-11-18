@@ -1,0 +1,24 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 1,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "CHECKLIST.md": "0f5b281661fb7d9457fd1159cce3c61f3b7a1eded2a29a0a8f9e7bd4d055e2e2",
+    "controller.py": "24e8906e7b49e3da3e3b6b2049dbba270d4da4267dd916adc137a50390e885e8"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "CHECKLIST.md": "0f5b281661fb7d9457fd1159cce3c61f3b7a1eded2a29a0a8f9e7bd4d055e2e2",
+    "__pycache__/controller.cpython-312.pyc": "df6e82b14c356779b7897ed6f6e2ec2ef99aa0fa05de2763b90f37792087baff",
+    "controller.py": "24e8906e7b49e3da3e3b6b2049dbba270d4da4267dd916adc137a50390e885e8"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "omitted_generated_files": {
+    "__pycache__/controller.cpython-312.pyc": "df6e82b14c356779b7897ed6f6e2ec2ef99aa0fa05de2763b90f37792087baff"
+  },
+  "packaging_note": "Generated Python bytecode is omitted; original source file bytes are unchanged. source_policy_files preserves the evaluated bundle inventory."
+}

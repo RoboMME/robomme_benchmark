@@ -15,12 +15,14 @@ RELEASE=Path(__file__).resolve().parents[2]
 
 def test_published_solutions_match_all_288_evaluated_policies():
     for method in ('aspire','rax'):
-        root=RELEASE/method/'solutions'
+        root=RELEASE/'agentic_methods'/method/'solutions'
         index=json.loads((root/'index.json').read_text())
         assert len(index['entries'])==144
         for entry in index['entries']:
             manifest=solutions.verified_files(root/entry['path'])
             assert manifest['policy_files'] and manifest['status']=='frozen_policy'
+            assert all('__pycache__' not in Path(name).parts and not name.endswith(('.pyc', '.pyo'))
+                       for name in manifest['policy_files'])
             assert manifest['setting']==entry['setting'] and manifest['budget']==entry['budget']
             assert not manifest['test_feedback_to_development']
 
@@ -46,7 +48,7 @@ def test_runtime_patches_are_applied_without_changing_submodules(tmp_path):
     assert result['methods']['rax']['revision'].startswith('d49c8ad')
     assert (tmp_path/'runtime/rax/services/robomme_plus/backend.py').exists()
     assert (tmp_path/'runtime/aspire/ASPIRE/src/cap_harness/robomme_plus/adapter.py').exists()
-    original=(RELEASE/'aspire/ASPIRE/src/cap_harness/artifacts.py').read_text()
+    original=(RELEASE/'agentic_methods/aspire/ASPIRE/src/cap_harness/artifacts.py').read_text()
     patched=(tmp_path/'runtime/aspire/ASPIRE/src/cap_harness/artifacts.py').read_text()
     assert '"controller_no_progress"' not in original
     assert '"controller_no_progress"' in patched
@@ -57,6 +59,6 @@ def test_artifact_links_never_replace_existing_results(tmp_path):
     study=tmp_path/'study';source=tmp_path/'source'
     for method in ['aspire','rax']:(study/method).mkdir(parents=True)
     link(study,source);link(study,source)
-    assert (source/'rax/runs').resolve()==study/'rax'
-    (source/'rax/runs').unlink();(source/'rax/runs').mkdir()
+    assert (source/'agentic_methods/rax/runs').resolve()==study/'rax'
+    (source/'agentic_methods/rax/runs').unlink();(source/'agentic_methods/rax/runs').mkdir()
     with pytest.raises(FileExistsError):link(study,source)

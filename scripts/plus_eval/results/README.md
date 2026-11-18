@@ -3,7 +3,7 @@
 - [Result tables and interpretation](../../../doc/robomme_plus_baseline_results.md)
 - [Model baseline summaries](model_baselines.json)
 - [ASPIRE/RAX counts by setting and task](agentic_20261118.json)
-- Frozen programs: [ASPIRE](../aspire/solutions), [RAX](../rax/solutions)
+- Frozen programs: [ASPIRE](../agentic_methods/aspire/solutions), [RAX](../agentic_methods/rax/solutions)
 
 Connect an existing study without copying its videos or logs:
 
@@ -11,7 +11,7 @@ Connect an existing study without copying its videos or logs:
 PYTHONPATH=scripts/plus_eval python -m benchmark_io.artifacts --study "<RUN_ROOT>"
 ```
 
-This creates ignored `aspire/runs`, `rax/runs` and `results/agentic-runs` links.
+This creates ignored `agentic_methods/aspire/runs`, `agentic_methods/rax/runs` and `results/agentic-runs` links.
 Within each method, development logs and test rollouts live under
 `runs/SETTING/Rn/{development,evaluation}`. Use `<RESULTS_URL>` for your own hosted
 viewer. Local paths, credentials, logs and videos are not committed to the repo.

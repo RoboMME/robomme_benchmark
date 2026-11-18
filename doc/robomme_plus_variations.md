@@ -152,9 +152,9 @@ activation rules, without an added final wait.
 
 ## Sources
 
-- [Training metadata](../src/robomme_plus/env_metadata/train/)
-- [Test metadata](../src/robomme_plus/env_metadata/test/)
+- [Training metadata](../src/robomme_plus/env_metadata/train)
+- [Test metadata](../src/robomme_plus/env_metadata/test)
 - [Atomic appearance presets](../src/robomme_plus/variation/atomic.py)
-- [Appearance configuration and controls](../src/robomme_plus/variation/)
-- [Mechanism implementation and controls](../src/robomme_plus/variation/mechanism/)
+- [Appearance configuration and controls](../src/robomme_plus/variation)
+- [Mechanism implementation and controls](../src/robomme_plus/variation/mechanism)
 - [Native difficulty differences](../src/robomme_plus/README.md)

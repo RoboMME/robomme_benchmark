@@ -75,7 +75,7 @@ class Pipeline:
         if lane != 'all':
             self.state_root = self.state_root / 'lanes' / lane
         self.state_root.mkdir(parents=True, exist_ok=True)
-        code = Path(os.environ.get('ROBOMME_AGENTIC_CODE',REPO/'scripts/plus_eval'))
+        code = Path(os.environ.get('ROBOMME_AGENTIC_CODE', self.root/'runtime_source' if (self.root/'runtime_source').is_dir() else REPO/'scripts/plus_eval'))
         self.env = {**os.environ, 'PYTHONPATH': ':'.join(map(str,[self.root/'benchmark/src',
             code,code/'rax',code/'aspire/ASPIRE/src'])),
             'OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'2','PYTHONDONTWRITEBYTECODE':'1',
@@ -183,7 +183,7 @@ class Pipeline:
 
     def start_providers(self, gpus):
         root=self.root/'runtime/providers'
-        base=Path(os.environ.get('ROBOMME_ASPIRE_PROVIDER_ROOT',REPO/'scripts/plus_eval/aspire/ASPIRE'))
+        base=Path(os.environ.get('ROBOMME_ASPIRE_PROVIDER_ROOT',REPO/'scripts/plus_eval/agentic_methods/aspire/ASPIRE'))
         for gpu in (gpus or self.gpus):
             for name,offset in [('sam3',4),('graspnet',5),('pyroki',6),('curobo',8)]:
                 port=self.provider_port(gpu)+offset

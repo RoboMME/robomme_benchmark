@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-HERE = ROOT / "scripts/plus_eval/ponderpounce"
+HERE = ROOT / "scripts/plus_eval/non_agentic_methods/ponderpounce"
 sys.path[:0] = [str(HERE), str(HERE / "PonderPounce")]
 try:
     HAS_DEPS = tuple(map(int, importlib.metadata.version("transformers").split(".")[:2])) >= (5, 13)

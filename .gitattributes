@@ -1,3 +1,3 @@
 # Preserve evaluated policy bytes and valid patch context markers verbatim.
-scripts/plus_eval/*/solutions/** -whitespace
-scripts/plus_eval/*/patches/*.patch -whitespace
+scripts/plus_eval/**/solutions/** -whitespace
+scripts/plus_eval/**/patches/*.patch -whitespace

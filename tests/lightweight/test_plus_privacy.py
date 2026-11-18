@@ -112,7 +112,7 @@ class PrivacyTests(unittest.TestCase):
             self.assertNotIn('private-person', json.dumps(values))
 
     def test_astra_native_exchange_is_unchanged_but_export_is_clean(self):
-        spec = importlib.util.spec_from_file_location('privacy_astra', ROOT / 'scripts/plus_eval/3-tier-astra/eval_plus.py')
+        spec = importlib.util.spec_from_file_location('privacy_astra', ROOT / 'scripts/plus_eval/agentic_methods/astra/three_tier/eval_plus.py')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as directory:

@@ -1,7 +1,7 @@
 # Shared agentic evaluation
 
 Shared simulator I/O, budget ledger, frozen evaluation, queue and API accounting
-for [ASPIRE](../aspire/README.md) and [RAX](../rax/README.md).
+for [ASPIRE](../agentic_methods/aspire/README.md) and [RAX](../agentic_methods/rax/README.md).
 Read the [experimental protocol](../../../doc/plus_agentic_evaluation.md) for
 settings and rules. Final agent-facing prompts are in [`prompts/current`](prompts/current).
 
@@ -10,9 +10,9 @@ settings and rules. Final agent-facing prompts are in [`prompts/current`](prompt
 From the repository root, using the simulator's Python 3.11 environment:
 
 ```bash
-git submodule update --init scripts/plus_eval/aspire/ASPIRE scripts/plus_eval/rax/rax
+git submodule update --init scripts/plus_eval/agentic_methods/aspire/ASPIRE scripts/plus_eval/agentic_methods/rax/rax
 source .venv/bin/activate
-uv pip install -r scripts/plus_eval/requirements-agentic.txt
+uv pip install -r scripts/plus_eval/agentic_methods/requirements.txt
 export PYTHONPATH="$PWD/src:$PWD/scripts/plus_eval"
 export ROBOMME_AGENTIC_REPO="$PWD"
 python -m benchmark_io.runtime_source --output runs/agentic-tools
@@ -80,5 +80,5 @@ Keep `runtime/private/` and credentials out of public archives.
 
 ```bash
 PYTHONPATH="$PWD/src:$PWD/runs/agentic-tools:$PWD/runs/agentic-tools/rax:$PWD/runs/agentic-tools/aspire/ASPIRE/src" \
-  python -m pytest scripts/plus_eval/benchmark_io/tests scripts/plus_eval/aspire/tests
+  python -m pytest scripts/plus_eval/benchmark_io/tests scripts/plus_eval/agentic_methods/aspire/tests
 ```

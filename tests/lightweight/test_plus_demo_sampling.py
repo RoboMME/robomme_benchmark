@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/plus_eval"))
-from demonstration_sampling import configuration_for_method, prepare_demonstration
+from non_agentic_methods.framesamp_modul.demonstration_sampling import configuration_for_method, prepare_demonstration
 from evaluation import Evaluation
 from run_storage import select_pending
 

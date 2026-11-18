@@ -16,7 +16,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location("ponderpounce_ood", ROOT / "scripts/plus_eval/ponderpounce/eval_plus.py")
+SPEC = importlib.util.spec_from_file_location("ponderpounce_ood", ROOT / "scripts/plus_eval/non_agentic_methods/ponderpounce/eval_plus.py")
 adapter = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(adapter)
 try:

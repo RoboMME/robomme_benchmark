@@ -30,22 +30,22 @@ failures are never retried by this mechanism.
   joint and end-effector replay. The original data is preserved on each dataset's `v1` branch.
 
 Training seeds and episode settings are in
-[`env_metadata/train/record_dataset_<Task>_metadata.json`](env_metadata/train/).
-Test settings are in [`env_metadata/test/`](env_metadata/test/).
+[`env_metadata/train/record_dataset_<Task>_metadata.json`](env_metadata/train).
+Test settings are in [`env_metadata/test/`](env_metadata/test).
 Fourteen tasks mark 5 medium and 8 hard test episodes each for seeded
-[perceptual variations](variation/): lighting is added on hard and also on
+[perceptual variations](variation): lighting is added on hard and also on
 VideoUnmask medium episodes; other medium tasks use non-lighting factors.
 These 182 episodes change observations while preserving task mechanics.
 Separately, 13 tasks mark 8 hard episodes each for
-[mechanism variation](variation/mechanism/): changes to motion, interactions or
+[mechanism variation](variation/mechanism): changes to motion, interactions or
 activation rules. These 104 episodes use new expert step references and never
 overlap perceptual variations. Both variations default to enabled for marked
 episodes and have independent builder switches. Training uses separate
-[atomic profiles](variation/#atomic-training-variations), without the combined
+[atomic profiles](variation#atomic-training-variations), without the combined
 test appearance factors or sensor noise. Unmarked episodes retain their original behavior.
 Use `dataset="train"` or `dataset="test"` with `BenchmarkEnvBuilder`.
 The [data guide](../../doc/plus_training_data_format.md) describes fields and mappings.
-MoveCube's packaged [demonstration controls](assets/demonstrations/MoveCube/)
+MoveCube's packaged [demonstration controls](assets/demonstrations/MoveCube)
 are replayed through the simulator at reset to produce its conditioning video.
 
 ## Evaluation protocol
@@ -53,7 +53,7 @@ are replayed through the simulator at reset to produce its conditioning video.
 - **Fine-tuning:** Use only the released **50 training demonstrations** for
   RoboMME-Plus fine-tuning.
 - **Interactive adaptation:** RSI-style VLM agents may adapt through simulator
-  interaction using only the [50 training seeds](env_metadata/train/), mimicking
+  interaction using only the [50 training seeds](env_metadata/train), mimicking
   few-shot adaptation in the real world.
 - **No source-code access:** Agents must not inspect task implementations or
   receive reverse-engineered task rules. Use task instructions, observations and

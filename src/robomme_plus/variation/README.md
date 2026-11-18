@@ -4,7 +4,7 @@ Fourteen tasks mark 5 medium and 8 hard test episodes each with
 `perceptual_variation` in `env_metadata/test`. Existing seeds, oracle timings,
 task geometry, motion and scoring are unchanged. Unmarked episodes retain
 their original observations. Separately, 13 tasks mark 8 hard episodes each for
-[mechanism variation](mechanism/). The two selections do not overlap.
+[mechanism variation](mechanism). The two selections do not overlap.
 
 - `non_lighting` (medium): seeded natural table materials, applicable object,
   button and target colors, and low depth/calibration noise.
@@ -50,7 +50,7 @@ calibration remain exact, and other object colors retain their native settings.
 | Static colored light | VideoPlaceOrder |
 | Moving local overexposure | InsertPeg |
 
-The other two selected episodes use [atomic mechanisms](mechanism/):
+The other two selected episodes use [atomic mechanisms](mechanism):
 ButtonUnmaskSwap doubles its original container-swap speed, without a pre-mask
 shuffle; RouteStick requires longer contact holds. The remaining 35 episodes
 have no added variation flags. The metadata selects the episode and preset; the existing seed

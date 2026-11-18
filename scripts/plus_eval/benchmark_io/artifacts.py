@@ -5,7 +5,7 @@ from pathlib import Path
 
 def link(study, source):
     study=Path(study).resolve();source=Path(source).resolve()
-    for name,target in [('aspire/runs',study/'aspire'),('rax/runs',study/'rax'),('results/agentic-runs',study)]:
+    for name,target in [('agentic_methods/aspire/runs',study/'aspire'),('agentic_methods/rax/runs',study/'rax'),('results/agentic-runs',study)]:
         if not target.is_dir():raise FileNotFoundError(target)
         path=source/name;path.parent.mkdir(parents=True,exist_ok=True)
         if path.is_symlink() and path.resolve()==target:continue
@@ -16,10 +16,10 @@ def link(study, source):
 
 def link_models(rollouts, source):
     rollouts=Path(rollouts).resolve();source=Path(source).resolve()
-    mapping={'embodied-astra/runs/zero-shot':'embodied-astra',
-        'embodied-astra/runs/one-shot':'embodied-astra-fs',
-        '3-tier-astra/runs/final':'3-tier-astra','robomme_vla/runs/final':'framesamp-modul',
-        'simplememvla/runs/final':'simplememvla','ponderpounce/runs/final':'ponderpounce',
+    mapping={'agentic_methods/astra/embodied/runs/zero-shot':'embodied-astra',
+        'agentic_methods/astra/embodied/runs/one-shot':'embodied-astra-fs',
+        'agentic_methods/astra/three_tier/runs/final':'3-tier-astra','non_agentic_methods/framesamp_modul/runs/final':'framesamp-modul',
+        'non_agentic_methods/simplememvla/runs/final':'simplememvla','non_agentic_methods/ponderpounce/runs/final':'ponderpounce',
         'results/model-runs':'.'}
     for name, folder in mapping.items():
         target=(rollouts/folder).resolve()

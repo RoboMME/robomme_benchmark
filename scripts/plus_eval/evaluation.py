@@ -31,7 +31,7 @@ import traceback
 import numpy as np
 
 from privacy import RedactingWriter, refresh_secrets, safe_items, scrub, write_text
-from demonstration_sampling import configuration_for_method, prepare_demonstration
+from non_agentic_methods.framesamp_modul.demonstration_sampling import configuration_for_method, prepare_demonstration
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
@@ -667,9 +667,9 @@ class Evaluation:
             config['runtime']['queue_workers'] = int(os.environ.get('OOD_TASK_WORKERS', '1'))
         source_files = [Path(__file__), Path(__file__).with_name("privacy.py"),
                         Path(__file__).with_name('run_storage.py'),
-                        Path(__file__).with_name('demonstration_sampling.py'), Path(inspect.getfile(type(self)))]
+                        Path(inspect.getfile(prepare_demonstration)), Path(inspect.getfile(type(self)))]
         if self.method == 'embodied-astra':
-            source_files.append(Path(__file__).with_name('astra_image_sampling.py'))
+            source_files.append(Path(__file__).parent / 'agentic_methods/astra/image_sampling.py')
         source_files.extend(getattr(self, 'source_dependencies', ()))
         config["source_sha256"] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files}
         config["benchmark_source_sha256"] = benchmark_sources(self.benchmark)
