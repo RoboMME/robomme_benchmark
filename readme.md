@@ -7,9 +7,8 @@
 
 ## 📢 Announcements
 
+[11/2026] 🧗 We release [RoboMME-Plus](https://robomme.github.io/plus.html), an extended benchmark for robot memory generalization and adaptation. See the [overview](src/robomme_plus) and [evaluation guides](scripts/plus_eval/README.md).<br>
 [11/2026] We provide an `ood_test` split in the original RoboMME to evaluate OOD generalization of models trained on regular setups. See the [OOD guide](doc/ood_split.md) for details.<br>
-[11/2026] RoboMME-Plus now includes perceptual/mechanism variations and [AfD, AfI and AfD+I evaluation](doc/plus_agentic_evaluation.md), with [ASPIRE and RAX adapters](scripts/plus_eval/README.md) and [results by setting](doc/robomme_plus_baseline_results.md).<br>
-[10/2026] 🧗 We release [RoboMME-Plus](https://robomme.github.io/plus.html) preview version, an extended benchmark for robot memory under more demanding conditions. See the [evaluation guides](scripts/plus_eval/README.md) and the [Tasks](src/robomme_plus).<br>
 [05/2026] 🎉 RoboMME has been selected for ICML 2026 Oral presentation (Top 0.7%)!   
 [04/2026] 🎉 RoboMME has been accepted to ICML 2026 as a Spotlight (Top 2.2%)!  
 [03/2026] 🚀 RoboMME Challenge is live at CVPR 2026! 🤖 Check our [website](https://robomme.github.io/challenge.html) and the [`challenge_interface`](challenge_interface) directory for all the details. Let’s build stronger memory-augmented robotic generalists together! 💪  
