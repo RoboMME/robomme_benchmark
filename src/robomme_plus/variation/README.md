@@ -1,6 +1,6 @@
 # Variation implementation
 
-See the [benchmark overview](../README.md#variations) for the split and controls.
+See the [benchmark overview](../README.md#task-changes) for the variation summary.
 
 `perceptual_variation` and `mechanism_variation` in episode metadata select the
 profiles. Parameters are seeded; unmarked episodes keep their original behavior.

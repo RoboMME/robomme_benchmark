@@ -21,7 +21,7 @@ Set `OPENAI_API_KEY` in your environment, then run:
 CUDA_VISIBLE_DEVICES=0 "$SIM_PYTHON" scripts/plus_eval/agentic_methods/astra/embodied/eval_plus.py   --tasks BinFill --episodes 0 --prompt-variant lr_note   --output-dir runs/embodied-astra-smoke
 ```
 
-Omit the task/episode filters for all 800 episodes. See [shared options](../../../README.md)
+Omit the task/episode filters for all 800 episodes. See [shared options](../../../../../doc/plus_baseline_running.md)
 for resume, rerun and recorded outputs. The model defaults to `gpt-6-astra` and
 frame stride to 3. `lr_note` supplies the left/right convention used in our runs.
 

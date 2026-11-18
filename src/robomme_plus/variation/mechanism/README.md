@@ -1,6 +1,6 @@
 # Mechanism implementation
 
-See the [benchmark overview](../../README.md#variations) for the split and controls.
+See the [benchmark overview](../../README.md#task-changes) for the variation summary.
 Episode metadata selects seeded motion, interaction or activation changes.
 
 Overrides reuse task code in isolated module namespaces so they cannot modify

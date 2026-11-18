@@ -2,7 +2,7 @@
 
 The v2 training split contains **50 successful episodes, 57,056 frames at 20 Hz**:
 one easy, medium and hard episode for 15 tasks, and five MoveCube methods.
-One episode per non-MoveCube task has an [atomic variation](../src/robomme_plus/README.md#variations):
+One episode per non-MoveCube task has an [atomic variation](../src/robomme_plus/README.md#task-changes):
 13 appearance changes and 2 mechanism changes. The other 35 episodes have no added variation flags.
 H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
 [LeRobot v3](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot)

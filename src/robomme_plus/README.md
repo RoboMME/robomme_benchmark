@@ -29,24 +29,6 @@ The [data guide](../../doc/plus_training_data_format.md) describes fields and ma
 MoveCube's packaged [demonstration controls](assets/demonstrations/MoveCube)
 are replayed through the simulator at reset to produce its conditioning video.
 
-## Variations
-
-Perceptual variations change appearance or reported sensor data, such as lighting,
-materials, colors and calibration noise. Mechanism variations change motion,
-interactions or activation rules. Both are deterministic from the episode seed
-and enabled by default only for marked episodes.
-
-| Split | No added variation | Perceptual | Mechanism | Total |
-|---|---:|---:|---:|---:|
-| Train | 35 | 13 | 2 | 50 |
-| Test | 514 | 182 | 104 | 800 |
-
-Training exposes selected individual factors; testing includes held-out factors
-and combinations. The perceptual and mechanism episode selections do not overlap.
-Exact settings live in the episode metadata. For ablations, set
-`perceptual_variations=False` and/or `mechanism_variations=False` on
-`BenchmarkEnvBuilder`; report these separately from the default benchmark.
-
 ## Evaluation protocol
 
 Choose the setting before development and report each setting and budget separately.
@@ -83,6 +65,11 @@ and [results by setting](../../doc/robomme_plus_baseline_results.md).
 Triples below mean **easy / medium / hard**. Ranges describe the task code;
 the fixed seeds may not realize every endpoint. Goals count objects to retrieve.
 
+Selected episodes add either perceptual variations (appearance and sensor changes)
+or mechanism variations (motion and interaction changes). They are enabled by
+default; training exposes individual factors while testing includes held-out
+factors and combinations.
+
 | Task | RoboMME setup | RoboMME-Plus setup |
 | --- | --- | --- |
 | **BinFill** | Collect **1–5 cubes** | Collect **6–8 / 3–6 / 3–6 cubes** |
@@ -102,38 +89,21 @@ the fixed seeds may not realize every endpoint. Goals count objects to retrieve.
 | **PatternLock** | **2–8 nodes**; **3×3–5×5 grids**; **10 cm** stick | **4–5 / 6–8 / 9–12 nodes**; **5×5 grid**; **10 / 5–7 / 3.5–6 cm** execution stick |
 | **RouteStick** | **2–7 segments**; **10 cm** drawing stick | **8–13 / 4–7 / 6–8 curves**; **10 / 2.5–5 / 2.5–5 cm** execution stick |
 
-Medium/hard counting tasks add moving targets or conveyor supply. PickXtimes
-requires release on the target followed by a 5 cm upward gripper retreat.
-SwingXtimes only credits valid visits after target dodges have settled.
+Counting and reference tasks add motion, distractors and rearrangement. PickXtimes
+and VideoPlace require release and a 5 cm upward retreat. SwingXtimes credits
+visits after dodges settle; PickHighlight rejects wrong-object pickups through
+the final button press.
 
-Permanence tasks add repeated colors, denser layouts and occlusion. Swapping
-variants move containers. ButtonUnmaskSwap includes finite and continuous motion;
-both buttons must be pressed before control step 180 and before pickup in either
-mode. ButtonUnmask requires its button press before control step 90. Missing either
-task's deadline causes task failure. These limits are 9 s and 4.5 s of simulated
-time at 20 Hz; API waiting does not count. Continuous episodes allow neighborhood
-pickup pauses after the first 150 execution steps. Each episode's metadata fixes
-the motion mode and controller version.
+Permanence tasks increase occlusion and container motion. ButtonUnmask requires
+a press before step 90; ButtonUnmaskSwap requires both buttons before step 180
+and before pickup. Missing a deadline fails the task.
 
-PickHighlight rearranges clusters after simultaneous or staggered cues. Wrong-cube
-pickup detection remains active through the final button press; selected cubes
-may be put down elsewhere on the table. VideoRepick adds six shapes and moving,
-rotating objects. VideoPlace tasks swap rings during the demonstration and require
-stable placement, release and a 5 cm upward gripper retreat to finish.
+MoveCube requires the demonstrated tool and method; InsertPeg requires the
+demonstrated peg end and box side. See [MoveCube's method criteria](tasks/imitation/move_cube_support/SUCCESS_CRITERIA.md).
 
-MoveCube requires the demonstrated tool and method, allowing re-grasping of that
-tool. Incidental shaft/handle contact may last at most 0.5 s per uninterrupted
-contact. See the [method criteria](tasks/imitation/move_cube_support/SUCCESS_CRITERIA.md).
-InsertPeg requires the demonstrated peg end and box side, with narrower holes
-and shifted hole positions.
-
-PatternLock uses shorter, tilted stick mounts on medium/hard; keep the physical
-stick less than 8° from downward vertical. RouteStick keeps a straight mount,
-adds shorter sticks and moving obstacles, and permits collisions. Both allow
-450 control steps without valid drawing, within the overall execution budget.
-Both show the final activated target for two control steps (0.1 s) before ending
-the demonstration. Execution keeps its original success checks, including each
-variation's activation requirements, without an added final wait.
+PatternLock uses tilted mounts and requires the stick within 8° of downward
+vertical; RouteStick adds moving obstacles. Both allow 450 control steps without
+valid drawing, subject to the overall execution budget.
 
 ## Evaluate
 
