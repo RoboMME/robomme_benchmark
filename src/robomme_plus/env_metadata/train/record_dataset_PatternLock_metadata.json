@@ -14,7 +14,7 @@
       "suite": "imitation",
       "episode": 0,
       "control_freq": 20,
-      "oracle_wall_seconds": 31.69,
+      "oracle_wall_seconds": 16.377,
       "execution_grid_scale": 1.0
     },
     {
@@ -28,7 +28,11 @@
       "suite": "imitation",
       "episode": 1,
       "control_freq": 20,
-      "oracle_wall_seconds": 82.31
+      "oracle_wall_seconds": 37.85,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "table_steel"
+      }
     },
     {
       "task": "PatternLock",
@@ -41,7 +45,7 @@
       "suite": "imitation",
       "episode": 2,
       "control_freq": 20,
-      "oracle_wall_seconds": 127.585
+      "oracle_wall_seconds": 57.942
     }
   ]
 }

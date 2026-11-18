@@ -11,7 +11,7 @@
       "oracle_policy_step": 780,
       "suite": "permanence",
       "episode": 0,
-      "oracle_wall_seconds": 197.821,
+      "oracle_wall_seconds": 90.015,
       "control_freq": 20
     },
     {
@@ -21,8 +21,12 @@
       "oracle_policy_step": 489,
       "suite": "permanence",
       "episode": 1,
-      "oracle_wall_seconds": 174.187,
-      "control_freq": 20
+      "oracle_wall_seconds": 72.286,
+      "control_freq": 20,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "board_light_gray_containers"
+      }
     },
     {
       "task": "VideoUnmaskSwap",
@@ -31,7 +35,7 @@
       "oracle_policy_step": 503,
       "suite": "permanence",
       "episode": 2,
-      "oracle_wall_seconds": 158.296,
+      "oracle_wall_seconds": 82.021,
       "control_freq": 20
     }
   ]

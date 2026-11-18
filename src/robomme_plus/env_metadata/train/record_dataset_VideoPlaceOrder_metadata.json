@@ -11,7 +11,7 @@
       "oracle_policy_step": 225,
       "suite": "reference",
       "episode": 0,
-      "oracle_wall_seconds": 367.707,
+      "oracle_wall_seconds": 94.31,
       "control_freq": 20
     },
     {
@@ -21,7 +21,7 @@
       "oracle_policy_step": 186,
       "suite": "reference",
       "episode": 1,
-      "oracle_wall_seconds": 378.515,
+      "oracle_wall_seconds": 81.429,
       "control_freq": 20
     },
     {
@@ -31,8 +31,12 @@
       "oracle_policy_step": 230,
       "suite": "reference",
       "episode": 2,
-      "oracle_wall_seconds": 621.268,
-      "control_freq": 20
+      "oracle_wall_seconds": 155.027,
+      "control_freq": 20,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "light_static_color"
+      }
     }
   ]
 }

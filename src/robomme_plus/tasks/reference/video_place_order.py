@@ -859,5 +859,6 @@ from robomme_plus.tasks.reference.utils.place_environment import (
 @register_env(TASKS["VideoPlaceOrder"].gym_id)
 class VideoPlaceOrder(VideoPlaceMixin, _TaskScene):
     """Remember a requested cube's ordinal target through moving-ring demonstrations."""
+    PERCEPTUAL_VARIATIONS = True
 
     task_name = "VideoPlaceOrder"

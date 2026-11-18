@@ -11,8 +11,12 @@
       "oracle_policy_step": 192,
       "suite": "reference",
       "episode": 0,
-      "oracle_wall_seconds": 296.557,
-      "control_freq": 20
+      "oracle_wall_seconds": 63.227,
+      "control_freq": 20,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "ring_colors"
+      }
     },
     {
       "task": "VideoPlaceButton",
@@ -21,7 +25,7 @@
       "oracle_policy_step": 216,
       "suite": "reference",
       "episode": 1,
-      "oracle_wall_seconds": 287.394,
+      "oracle_wall_seconds": 76.18,
       "control_freq": 20
     },
     {
@@ -31,7 +35,7 @@
       "oracle_policy_step": 198,
       "suite": "reference",
       "episode": 2,
-      "oracle_wall_seconds": 474.024,
+      "oracle_wall_seconds": 128.626,
       "control_freq": 20
     }
   ]

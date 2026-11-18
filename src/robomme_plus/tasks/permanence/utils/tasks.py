@@ -44,6 +44,8 @@ PRESETS = {
 }
 
 BUTTON_SWAP_GOAL_COUNTS = {"easy": (3, 3), "medium": (3, 4), "hard": (3, 4)}
+BUTTON_UNMASK_DEADLINE_STEP = 90
+BUTTON_SWAP_DEADLINE_STEP = 180
 BUTTON_SWAP_MOTION_STOP_STEP = 480
 BUTTON_SWAP_REVEAL_STEPS = 10
 
@@ -258,8 +260,8 @@ def task_config(task, difficulty, seed):
         else 1
         if task == "ButtonUnmask"
         else 0,
-        button_deadline_steps=BUTTON_SWAP_MOTION_STOP_STEP
-        if task == "ButtonUnmaskSwap" else 480,
+        button_deadline_steps=BUTTON_UNMASK_DEADLINE_STEP
+        if task == "ButtonUnmask" else BUTTON_SWAP_DEADLINE_STEP,
         post_button_motion_steps=96,
         batch_exposure_steps=32,
         batch_gap_steps=12,
@@ -775,12 +777,16 @@ def setup(env, config):
     env._permanence_early_opening = None
     env._permanence_deadline = None
     env._permanence_board = None
-    if config["task"] == "ButtonUnmaskSwap":
+    if config["task"].startswith("Button"):
         env._permanence_deadline = ButtonDeadline(
-            [b.name for b in buttons(env)], config["reveal_steps"],
+            [b.name for b in buttons(env)],
+            config["reveal_steps"] if config["task"] == "ButtonUnmaskSwap" else 0,
             config["button_deadline_steps"], config["post_button_motion_steps"],
+            motion_stop_step=BUTTON_SWAP_MOTION_STOP_STEP
+            if config["task"] == "ButtonUnmaskSwap" else None,
             fixed_motion_stop=False,
             continuous_motion=config.get("continuous_motion", False),
+            repeat_press_allowed=config["task"] == "ButtonUnmask",
         )
     if config["task"].startswith("Button") and config["blocking"]:
         origin = env._limit_diagnostics["occluder"]["center_xyz_m"]

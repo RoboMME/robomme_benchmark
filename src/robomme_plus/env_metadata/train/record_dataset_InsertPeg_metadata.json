@@ -15,7 +15,11 @@
       "oracle_wrist_visible_grasp": true,
       "suite": "imitation",
       "episode": 0,
-      "oracle_wall_seconds": 78.942
+      "oracle_wall_seconds": 38.088,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "light_overexposure"
+      }
     },
     {
       "task": "InsertPeg",
@@ -28,7 +32,7 @@
       "oracle_wrist_visible_grasp": true,
       "suite": "imitation",
       "episode": 1,
-      "oracle_wall_seconds": 73.35
+      "oracle_wall_seconds": 35.81
     },
     {
       "task": "InsertPeg",
@@ -37,7 +41,7 @@
       "oracle_policy_step": 443,
       "suite": "imitation",
       "episode": 2,
-      "oracle_wall_seconds": 87.973,
+      "oracle_wall_seconds": 46.506,
       "control_freq": 20,
       "hole_width_m": 0.0204
     }

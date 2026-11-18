@@ -830,6 +830,7 @@ from robomme_plus.tasks.imitation.utils.environment import ImitationMixin
 class InsertPeg(ImitationMixin, _TaskScene):
     """Repeat the demonstrated peg, grasp end, and approach side on a turned stand with a moved hole."""
 
+    PERCEPTUAL_VARIATIONS = True
     task_name = "InsertPeg"
 
 

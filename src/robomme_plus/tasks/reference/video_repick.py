@@ -18,6 +18,7 @@ from robomme_plus.tasks.reference.utils.repick_controller import evaluate_tasks
 
 @register_env(TASKS["VideoRepick"].gym_id)
 class VideoRepick(TableTask):
+    PERCEPTUAL_VARIATIONS = True
     task_name = "VideoRepick"
 
     def __init__(self, *args, difficulty="hard", seed=0, **kwargs):

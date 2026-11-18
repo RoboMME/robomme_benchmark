@@ -36,13 +36,13 @@
       "suite": "permanence",
       "episode": 0,
       "control_freq": 20,
-      "oracle_wall_seconds": 67.364
+      "oracle_wall_seconds": 54.222
     },
     {
       "task": "ButtonUnmaskSwap",
       "seed": 438646560,
       "difficulty": "medium",
-      "oracle_policy_step": 721,
+      "oracle_policy_step": 754,
       "continuous_motion": false,
       "motion_workspace": {
         "bounds_xy_m": [
@@ -70,13 +70,18 @@
       "suite": "permanence",
       "episode": 1,
       "control_freq": 20,
-      "oracle_wall_seconds": 61.33
+      "oracle_wall_seconds": 68.935,
+      "base_oracle_policy_step": 721,
+      "mechanism_variation": {
+        "version": 1,
+        "atomic": "container_speed_2x"
+      }
     },
     {
       "task": "ButtonUnmaskSwap",
       "seed": 1157842054,
       "difficulty": "hard",
-      "oracle_policy_step": 1216,
+      "oracle_policy_step": 1109,
       "continuous_motion": true,
       "continuous_motion_version": 6,
       "motion_workspace": {
@@ -105,7 +110,7 @@
       "suite": "permanence",
       "episode": 2,
       "control_freq": 20,
-      "oracle_wall_seconds": 220.617
+      "oracle_wall_seconds": 215.079
     }
   ]
 }

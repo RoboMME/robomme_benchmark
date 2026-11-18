@@ -26,4 +26,5 @@ from robomme_plus.tasks.permanence.utils.environment import PermanenceTask
 
 @register_env(TASKS["ButtonUnmaskSwap"].gym_id)
 class ButtonUnmaskSwap(PermanenceTask):
+    PERCEPTUAL_VARIATIONS = True
     task_name = "ButtonUnmaskSwap"

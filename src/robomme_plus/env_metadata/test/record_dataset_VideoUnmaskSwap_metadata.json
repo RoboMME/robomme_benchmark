@@ -155,7 +155,8 @@
       "oracle_policy_step": 427,
       "suite": "permanence",
       "episode": 16,
-      "oracle_wall_seconds": 57.596
+      "oracle_wall_seconds": 57.596,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -182,7 +183,8 @@
       "oracle_policy_step": 641,
       "suite": "permanence",
       "episode": 19,
-      "oracle_wall_seconds": 63.071
+      "oracle_wall_seconds": 63.071,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -200,7 +202,8 @@
       "oracle_policy_step": 475,
       "suite": "permanence",
       "episode": 21,
-      "oracle_wall_seconds": 59.541
+      "oracle_wall_seconds": 59.541,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -209,7 +212,8 @@
       "oracle_policy_step": 596,
       "suite": "permanence",
       "episode": 22,
-      "oracle_wall_seconds": 68.626
+      "oracle_wall_seconds": 68.626,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -227,7 +231,8 @@
       "oracle_policy_step": 422,
       "suite": "permanence",
       "episode": 24,
-      "oracle_wall_seconds": 65.376
+      "oracle_wall_seconds": 65.376,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -236,7 +241,8 @@
       "oracle_policy_step": 465,
       "suite": "permanence",
       "episode": 25,
-      "oracle_wall_seconds": 57.986
+      "oracle_wall_seconds": 57.986,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -245,7 +251,8 @@
       "oracle_policy_step": 616,
       "suite": "permanence",
       "episode": 26,
-      "oracle_wall_seconds": 70.4
+      "oracle_wall_seconds": 70.4,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -269,19 +276,29 @@
       "task": "VideoUnmaskSwap",
       "seed": 913937818,
       "difficulty": "hard",
-      "oracle_policy_step": 480,
+      "oracle_policy_step": 709,
       "suite": "permanence",
       "episode": 29,
-      "oracle_wall_seconds": 66.581
+      "oracle_wall_seconds": 66.581,
+      "base_oracle_policy_step": 480,
+      "mechanism_variation": {
+        "version": 1,
+        "source_motion_task": "ButtonUnmaskSwap"
+      }
     },
     {
       "task": "VideoUnmaskSwap",
       "seed": 908889522,
       "difficulty": "hard",
-      "oracle_policy_step": 628,
+      "oracle_policy_step": 1085,
       "suite": "permanence",
       "episode": 30,
-      "oracle_wall_seconds": 77.007
+      "oracle_wall_seconds": 77.007,
+      "base_oracle_policy_step": 628,
+      "mechanism_variation": {
+        "version": 1,
+        "source_motion_task": "VideoRepick"
+      }
     },
     {
       "task": "VideoUnmaskSwap",
@@ -290,7 +307,8 @@
       "oracle_policy_step": 790,
       "suite": "permanence",
       "episode": 31,
-      "oracle_wall_seconds": 71.165
+      "oracle_wall_seconds": 71.165,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -299,7 +317,8 @@
       "oracle_policy_step": 470,
       "suite": "permanence",
       "episode": 32,
-      "oracle_wall_seconds": 58.646
+      "oracle_wall_seconds": 58.646,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -317,7 +336,8 @@
       "oracle_policy_step": 438,
       "suite": "permanence",
       "episode": 34,
-      "oracle_wall_seconds": 52.473
+      "oracle_wall_seconds": 52.473,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -326,16 +346,22 @@
       "oracle_policy_step": 774,
       "suite": "permanence",
       "episode": 35,
-      "oracle_wall_seconds": 65.372
+      "oracle_wall_seconds": 65.372,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmaskSwap",
       "seed": 43427950,
       "difficulty": "hard",
-      "oracle_policy_step": 485,
+      "oracle_policy_step": 755,
       "suite": "permanence",
       "episode": 36,
-      "oracle_wall_seconds": 67.043
+      "oracle_wall_seconds": 67.043,
+      "base_oracle_policy_step": 485,
+      "mechanism_variation": {
+        "version": 1,
+        "source_motion_task": "VideoRepick"
+      }
     },
     {
       "task": "VideoUnmaskSwap",
@@ -350,10 +376,15 @@
       "task": "VideoUnmaskSwap",
       "seed": 228626656,
       "difficulty": "hard",
-      "oracle_policy_step": 452,
+      "oracle_policy_step": 781,
       "suite": "permanence",
       "episode": 38,
-      "oracle_wall_seconds": 61.841
+      "oracle_wall_seconds": 61.841,
+      "base_oracle_policy_step": 452,
+      "mechanism_variation": {
+        "version": 1,
+        "source_motion_task": "VideoRepick"
+      }
     },
     {
       "task": "VideoUnmaskSwap",
@@ -371,7 +402,8 @@
       "oracle_policy_step": 820,
       "suite": "permanence",
       "episode": 40,
-      "oracle_wall_seconds": 78.245
+      "oracle_wall_seconds": 78.245,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -380,7 +412,8 @@
       "oracle_policy_step": 616,
       "suite": "permanence",
       "episode": 41,
-      "oracle_wall_seconds": 66.786
+      "oracle_wall_seconds": 66.786,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmaskSwap",
@@ -395,28 +428,43 @@
       "task": "VideoUnmaskSwap",
       "seed": 510081281,
       "difficulty": "hard",
-      "oracle_policy_step": 625,
+      "oracle_policy_step": 1135,
       "suite": "permanence",
       "episode": 43,
-      "oracle_wall_seconds": 77.553
+      "oracle_wall_seconds": 77.553,
+      "base_oracle_policy_step": 625,
+      "mechanism_variation": {
+        "version": 1,
+        "source_motion_task": "VideoRepick"
+      }
     },
     {
       "task": "VideoUnmaskSwap",
       "seed": 385900388,
       "difficulty": "hard",
-      "oracle_policy_step": 444,
+      "oracle_policy_step": 830,
       "suite": "permanence",
       "episode": 44,
-      "oracle_wall_seconds": 64.688
+      "oracle_wall_seconds": 64.688,
+      "base_oracle_policy_step": 444,
+      "mechanism_variation": {
+        "version": 1,
+        "source_motion_task": "ButtonUnmaskSwap"
+      }
     },
     {
       "task": "VideoUnmaskSwap",
       "seed": 87448792,
       "difficulty": "hard",
-      "oracle_policy_step": 733,
+      "oracle_policy_step": 1268,
       "suite": "permanence",
       "episode": 45,
-      "oracle_wall_seconds": 77.566
+      "oracle_wall_seconds": 77.566,
+      "base_oracle_policy_step": 733,
+      "mechanism_variation": {
+        "version": 1,
+        "source_motion_task": "ButtonUnmaskSwap"
+      }
     },
     {
       "task": "VideoUnmaskSwap",
@@ -431,10 +479,15 @@
       "task": "VideoUnmaskSwap",
       "seed": 882622941,
       "difficulty": "hard",
-      "oracle_policy_step": 776,
+      "oracle_policy_step": 1255,
       "suite": "permanence",
       "episode": 47,
-      "oracle_wall_seconds": 73.169
+      "oracle_wall_seconds": 73.169,
+      "base_oracle_policy_step": 776,
+      "mechanism_variation": {
+        "version": 1,
+        "source_motion_task": "ButtonUnmaskSwap"
+      }
     },
     {
       "task": "VideoUnmaskSwap",

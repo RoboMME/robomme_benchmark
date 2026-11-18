@@ -78,13 +78,13 @@ class ContinuousMotionTest(unittest.TestCase):
         self.assertGreaterEqual(len(completed_passages(history, meta)), 5)
         stream.close()
 
-    def test_buttons_unlock_without_stopping_or_a_fixed_deadline(self):
+    def test_buttons_unlock_before_deadline_without_stopping_motion(self):
         d = ButtonDeadline(('left', 'right'), 10, 480, continuous_motion=True)
-        self.assertFalse(d.observe(600, {'left': .01}, True, tcp_position=[0, 0, .03]))
-        self.assertFalse(d.observe(700, {'right': .01}, True, tcp_position=[0, .2, .03]))
+        self.assertFalse(d.observe(100, {'left': .01}, True, tcp_position=[0, 0, .03]))
+        self.assertFalse(d.observe(200, {'right': .01}, True, tcp_position=[0, .2, .03]))
         self.assertEqual(set(d.presses), {'left', 'right'})
         self.assertIsNone(d.motion_stop)
-        self.assertIsNone(d.snapshot()['deadline_control_step'])
+        self.assertEqual(d.snapshot()['deadline_control_step'], 480)
         self.assertFalse(d.observe(1500, {}, True, tcp_position=[0, 0, .2]))
 
     def test_pickup_bypass_is_temporary_and_preserves_swept_clearance(self):

@@ -762,6 +762,7 @@ from robomme_plus.tasks.reference.utils.highlight_levels import (
 
 @register_env(TASKS["PickHighlight"].gym_id)
 class PickHighlight(_TaskScene):
+    PERCEPTUAL_VARIATIONS = True
     task_name = "PickHighlight"
 
     def language_goal(self):

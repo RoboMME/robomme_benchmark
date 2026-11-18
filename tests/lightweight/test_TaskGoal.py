@@ -58,11 +58,11 @@ def _call(env_id, mock_self):
     return result
 
 
-def test_unknown_env_returns_single_goal_when_equal():
-    """Unknown env_id goes to the default empty-string branch; when two goals are equal it returns a single-element list."""
+def test_unknown_env_returns_no_goal():
+    """Unsupported environment identifiers do not fabricate a task goal."""
     s = _make_self()
     result = _call("UnknownEnv", s)
-    assert result == [""]
+    assert result == []
 
 
 def test_movecube_still_returns_two_goals():
@@ -156,7 +156,7 @@ def test_swingxtimes_multiple():
     """Branch behavior test case."""
     s = _make_self(unwrapped_attrs=dict(num_repeats=5, target_color_name="red"))
     result = _call("SwingXtimes", s)
-    assert "repeating this back and forth motion five times" in result[0]
+    assert "repeating this back-and-forth motion five times" in result[0]
     assert "right-to-left swing motion five times" in result[1]
 
 

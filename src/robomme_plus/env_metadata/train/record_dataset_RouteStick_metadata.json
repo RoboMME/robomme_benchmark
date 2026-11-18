@@ -8,10 +8,10 @@
       "task": "RouteStick",
       "seed": 1882199712,
       "difficulty": "easy",
-      "oracle_policy_step": 563,
+      "oracle_policy_step": 704,
       "suite": "imitation",
       "episode": 0,
-      "oracle_wall_seconds": 115.68,
+      "oracle_wall_seconds": 95.139,
       "control_freq": 20,
       "execution_route_layout": {
         "version": 3,
@@ -24,6 +24,11 @@
         "yaw_deg": 0.0,
         "board_collision": true,
         "board_contact_fails": false
+      },
+      "base_oracle_policy_step": 563,
+      "mechanism_variation": {
+        "version": 1,
+        "atomic": "longer_activation"
       }
     },
     {
@@ -46,7 +51,7 @@
       "suite": "imitation",
       "episode": 1,
       "control_freq": 20,
-      "oracle_wall_seconds": 116.434
+      "oracle_wall_seconds": 83.855
     },
     {
       "task": "RouteStick",
@@ -85,7 +90,7 @@
       "suite": "imitation",
       "episode": 2,
       "control_freq": 20,
-      "oracle_wall_seconds": 145.486
+      "oracle_wall_seconds": 120.925
     }
   ]
 }

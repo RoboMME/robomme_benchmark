@@ -115,6 +115,8 @@ class MultiStepDemonstrationWrapper(gym.Wrapper):
     def step(self, action):
         """Execute waypoint step and return last-step signals for reward/terminated/truncated."""
         action = np.asarray(action, dtype=np.float64).flatten()
+        if not np.isfinite(action).all():
+            raise ValueError("Waypoint action values must be finite")
         if action.size < 7:
             raise ValueError(f"action must have at least 7 elements, got {action.size}")
         waypoint_p = action[:3]

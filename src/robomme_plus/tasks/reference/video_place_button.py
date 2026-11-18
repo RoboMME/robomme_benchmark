@@ -909,5 +909,6 @@ from robomme_plus.tasks.reference.utils.place_environment import (
 @register_env(TASKS["VideoPlaceButton"].gym_id)
 class VideoPlaceButton(VideoPlaceMixin, _TaskScene):
     """Remember a requested cube's target relative to the demonstrated button press."""
+    PERCEPTUAL_VARIATIONS = True
 
     task_name = "VideoPlaceButton"

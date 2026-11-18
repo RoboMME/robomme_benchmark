@@ -11,7 +11,7 @@
       "oracle_policy_step": 642,
       "suite": "counting",
       "episode": 0,
-      "oracle_wall_seconds": 139.136,
+      "oracle_wall_seconds": 27.962,
       "control_freq": 20
     },
     {
@@ -21,8 +21,12 @@
       "oracle_policy_step": 852,
       "suite": "counting",
       "episode": 1,
-      "oracle_wall_seconds": 157.133,
-      "control_freq": 20
+      "oracle_wall_seconds": 51.22,
+      "control_freq": 20,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "light_disco"
+      }
     },
     {
       "task": "SwingXtimes",
@@ -31,7 +35,7 @@
       "oracle_policy_step": 1037,
       "suite": "counting",
       "episode": 2,
-      "oracle_wall_seconds": 201.323,
+      "oracle_wall_seconds": 51.859,
       "control_freq": 20
     }
   ]

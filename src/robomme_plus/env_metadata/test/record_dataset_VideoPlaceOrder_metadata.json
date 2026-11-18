@@ -101,7 +101,8 @@
       "oracle_policy_step": 192,
       "suite": "reference",
       "episode": 10,
-      "oracle_wall_seconds": 57.49
+      "oracle_wall_seconds": 57.49,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoPlaceOrder",
@@ -119,7 +120,8 @@
       "oracle_policy_step": 195,
       "suite": "reference",
       "episode": 12,
-      "oracle_wall_seconds": 48.54
+      "oracle_wall_seconds": 48.54,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoPlaceOrder",
@@ -164,7 +166,8 @@
       "oracle_policy_step": 181,
       "suite": "reference",
       "episode": 17,
-      "oracle_wall_seconds": 65.262
+      "oracle_wall_seconds": 65.262,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoPlaceOrder",
@@ -191,7 +194,8 @@
       "oracle_policy_step": 201,
       "suite": "reference",
       "episode": 20,
-      "oracle_wall_seconds": 59.051
+      "oracle_wall_seconds": 59.051,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoPlaceOrder",
@@ -218,7 +222,8 @@
       "oracle_policy_step": 184,
       "suite": "reference",
       "episode": 23,
-      "oracle_wall_seconds": 61.004
+      "oracle_wall_seconds": 61.004,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoPlaceOrder",
@@ -245,7 +250,8 @@
       "oracle_policy_step": 183,
       "suite": "reference",
       "episode": 26,
-      "oracle_wall_seconds": 139.947
+      "oracle_wall_seconds": 139.947,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoPlaceOrder",
@@ -254,16 +260,21 @@
       "oracle_policy_step": 194,
       "suite": "reference",
       "episode": 27,
-      "oracle_wall_seconds": 127.646
+      "oracle_wall_seconds": 127.646,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoPlaceOrder",
       "seed": 482393269,
       "difficulty": "hard",
-      "oracle_policy_step": 191,
+      "oracle_policy_step": 216,
       "suite": "reference",
       "episode": 28,
-      "oracle_wall_seconds": 98.875
+      "oracle_wall_seconds": 98.875,
+      "base_oracle_policy_step": 191,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoPlaceOrder",
@@ -272,16 +283,21 @@
       "oracle_policy_step": 174,
       "suite": "reference",
       "episode": 29,
-      "oracle_wall_seconds": 144.425
+      "oracle_wall_seconds": 144.425,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoPlaceOrder",
       "seed": 465676464,
       "difficulty": "hard",
-      "oracle_policy_step": 154,
+      "oracle_policy_step": 198,
       "suite": "reference",
       "episode": 30,
-      "oracle_wall_seconds": 102.526
+      "oracle_wall_seconds": 102.526,
+      "base_oracle_policy_step": 154,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoPlaceOrder",
@@ -308,7 +324,8 @@
       "oracle_policy_step": 184,
       "suite": "reference",
       "episode": 33,
-      "oracle_wall_seconds": 104.656
+      "oracle_wall_seconds": 104.656,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoPlaceOrder",
@@ -317,7 +334,8 @@
       "oracle_policy_step": 184,
       "suite": "reference",
       "episode": 34,
-      "oracle_wall_seconds": 120.73
+      "oracle_wall_seconds": 120.73,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoPlaceOrder",
@@ -335,7 +353,8 @@
       "oracle_policy_step": 172,
       "suite": "reference",
       "episode": 36,
-      "oracle_wall_seconds": 117.967
+      "oracle_wall_seconds": 117.967,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoPlaceOrder",
@@ -344,16 +363,21 @@
       "oracle_policy_step": 180,
       "suite": "reference",
       "episode": 37,
-      "oracle_wall_seconds": 113.113
+      "oracle_wall_seconds": 113.113,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoPlaceOrder",
       "seed": 1022478002,
       "difficulty": "hard",
-      "oracle_policy_step": 186,
+      "oracle_policy_step": 225,
       "suite": "reference",
       "episode": 38,
-      "oracle_wall_seconds": 87.662
+      "oracle_wall_seconds": 87.662,
+      "base_oracle_policy_step": 186,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoPlaceOrder",
@@ -371,7 +395,8 @@
       "oracle_policy_step": 186,
       "suite": "reference",
       "episode": 40,
-      "oracle_wall_seconds": 84.316
+      "oracle_wall_seconds": 84.316,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoPlaceOrder",
@@ -386,19 +411,27 @@
       "task": "VideoPlaceOrder",
       "seed": 1013505235,
       "difficulty": "hard",
-      "oracle_policy_step": 174,
+      "oracle_policy_step": 203,
       "suite": "reference",
       "episode": 42,
-      "oracle_wall_seconds": 90.668
+      "oracle_wall_seconds": 90.668,
+      "base_oracle_policy_step": 174,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoPlaceOrder",
       "seed": 431925025,
       "difficulty": "hard",
-      "oracle_policy_step": 203,
+      "oracle_policy_step": 232,
       "suite": "reference",
       "episode": 43,
-      "oracle_wall_seconds": 135.44
+      "oracle_wall_seconds": 135.44,
+      "base_oracle_policy_step": 203,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoPlaceOrder",
@@ -413,10 +446,14 @@
       "task": "VideoPlaceOrder",
       "seed": 976637760,
       "difficulty": "hard",
-      "oracle_policy_step": 191,
+      "oracle_policy_step": 198,
       "suite": "reference",
       "episode": 45,
-      "oracle_wall_seconds": 99.205
+      "oracle_wall_seconds": 99.205,
+      "base_oracle_policy_step": 191,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoPlaceOrder",
@@ -440,19 +477,27 @@
       "task": "VideoPlaceOrder",
       "seed": 694875967,
       "difficulty": "hard",
-      "oracle_policy_step": 166,
+      "oracle_policy_step": 200,
       "suite": "reference",
       "episode": 48,
-      "oracle_wall_seconds": 78.648
+      "oracle_wall_seconds": 78.648,
+      "base_oracle_policy_step": 166,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoPlaceOrder",
       "seed": 223231721,
       "difficulty": "hard",
-      "oracle_policy_step": 187,
+      "oracle_policy_step": 221,
       "suite": "reference",
       "episode": 49,
-      "oracle_wall_seconds": 67.421
+      "oracle_wall_seconds": 67.421,
+      "base_oracle_policy_step": 187,
+      "mechanism_variation": {
+        "version": 1
+      }
     }
   ]
 }

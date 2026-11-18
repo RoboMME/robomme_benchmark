@@ -167,7 +167,8 @@
       "suite": "reference",
       "episode": 10,
       "control_freq": 20,
-      "oracle_wall_seconds": 39.035
+      "oracle_wall_seconds": 39.035,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickHighlight",
@@ -227,7 +228,8 @@
       "suite": "reference",
       "episode": 14,
       "control_freq": 20,
-      "oracle_wall_seconds": 36.368
+      "oracle_wall_seconds": 36.368,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickHighlight",
@@ -317,7 +319,8 @@
       "suite": "reference",
       "episode": 20,
       "control_freq": 20,
-      "oracle_wall_seconds": 50.626
+      "oracle_wall_seconds": 50.626,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickHighlight",
@@ -332,7 +335,8 @@
       "suite": "reference",
       "episode": 21,
       "control_freq": 20,
-      "oracle_wall_seconds": 34.028
+      "oracle_wall_seconds": 34.028,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickHighlight",
@@ -362,7 +366,8 @@
       "suite": "reference",
       "episode": 23,
       "control_freq": 20,
-      "oracle_wall_seconds": 28.327
+      "oracle_wall_seconds": 28.327,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickHighlight",
@@ -437,7 +442,8 @@
       "suite": "reference",
       "episode": 28,
       "control_freq": 20,
-      "oracle_wall_seconds": 63.802
+      "oracle_wall_seconds": 63.802,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickHighlight",
@@ -452,7 +458,8 @@
       "suite": "reference",
       "episode": 29,
       "control_freq": 20,
-      "oracle_wall_seconds": 60.835
+      "oracle_wall_seconds": 60.835,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickHighlight",
@@ -497,7 +504,8 @@
       "suite": "reference",
       "episode": 32,
       "control_freq": 20,
-      "oracle_wall_seconds": 102.705
+      "oracle_wall_seconds": 102.705,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickHighlight",
@@ -512,7 +520,8 @@
       "suite": "reference",
       "episode": 33,
       "control_freq": 20,
-      "oracle_wall_seconds": 39.433
+      "oracle_wall_seconds": 39.433,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickHighlight",
@@ -542,7 +551,8 @@
       "suite": "reference",
       "episode": 35,
       "control_freq": 20,
-      "oracle_wall_seconds": 79.331
+      "oracle_wall_seconds": 79.331,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickHighlight",
@@ -557,7 +567,8 @@
       "suite": "reference",
       "episode": 36,
       "control_freq": 20,
-      "oracle_wall_seconds": 62.575
+      "oracle_wall_seconds": 62.575,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickHighlight",
@@ -572,7 +583,8 @@
       "suite": "reference",
       "episode": 37,
       "control_freq": 20,
-      "oracle_wall_seconds": 63.25
+      "oracle_wall_seconds": 63.25,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickHighlight",
@@ -632,7 +644,8 @@
       "suite": "reference",
       "episode": 41,
       "control_freq": 20,
-      "oracle_wall_seconds": 69.072
+      "oracle_wall_seconds": 69.072,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickHighlight",

@@ -10,7 +10,7 @@
       "seed": 2026106945,
       "difficulty": null,
       "variant": "hook",
-      "oracle_policy_step": 759,
+      "oracle_policy_step": 717,
       "scene_parameters": {
         "schema": "robomme-ood-move-cube/3",
         "task": "MoveCube",
@@ -859,18 +859,11 @@
       },
       "suite": "imitation",
       "control_freq": 20,
-      "trajectory_migration": {
-        "strategy": "replay_first",
-        "reused_phases": {
-          "demonstration": "last",
-          "execution": "last"
-        }
-      },
       "demonstration_actions": {
-        "resource": "assets/demonstrations/MoveCube/train/20hz/1270f7bcfafc9003/2026106945.npz",
+        "resource": "assets/demonstrations/MoveCube/train/20hz/5eb6e75dc1abf13a/2026106945.npz",
         "scene_sha256": "f3f30b7489c4d0d8751be27481f6f6379ec2506147c63153861f185081a2dc5e",
         "control_freq": 20,
-        "sha256": "85bd58d7968d0f672fdf68adcf63b643d0ee62d23f91962420618df72b5ee7d7"
+        "sha256": "a70a5ae2198f263da13850813cd2fe8f17572c9367fac804fb0701fd8716ff4c"
       }
     },
     {
@@ -879,7 +872,7 @@
       "seed": 2026201903,
       "difficulty": null,
       "variant": "poke",
-      "oracle_policy_step": 1086,
+      "oracle_policy_step": 1255,
       "scene_parameters": {
         "schema": "robomme-ood-move-cube/3",
         "task": "MoveCube",
@@ -1219,8 +1212,8 @@
             "plan_stride": 2
           },
           "execution": {
-            "flip": 1.0,
-            "poke_side": -0.5,
+            "flip": 0,
+            "poke_side": -0.35,
             "contact_speed": 0.2,
             "contact_precision": 0.003,
             "plan_stride": 2
@@ -1330,18 +1323,11 @@
       },
       "suite": "imitation",
       "control_freq": 20,
-      "trajectory_migration": {
-        "strategy": "replay_first",
-        "reused_phases": {
-          "demonstration": "last",
-          "execution": "last"
-        }
-      },
       "demonstration_actions": {
-        "resource": "assets/demonstrations/MoveCube/train/20hz/1e46078c420edf9b/2026201903.npz",
-        "scene_sha256": "0fadc3dd608723cd02ad57d986a061491bdfbd409b07ae1364661a704987e47b",
+        "resource": "assets/demonstrations/MoveCube/train/20hz/27d57a39785e5fa1/2026201903.npz",
+        "scene_sha256": "e736b1da145a0cb702e805cd143496e6c800d10887a6391cb4ee0d1140737f93",
         "control_freq": 20,
-        "sha256": "953bf14496dd6338fb6804c0299f4f0efd360208faea2163328fc71e059eb72c"
+        "sha256": "efed62011cc7d77872754badb4c6f4a8d1e840fdd75fb160f6211e051c7271d7"
       }
     },
     {
@@ -1350,7 +1336,7 @@
       "seed": 2026301906,
       "difficulty": null,
       "variant": "scoop",
-      "oracle_policy_step": 746,
+      "oracle_policy_step": 791,
       "scene_parameters": {
         "schema": "robomme-ood-move-cube/3",
         "task": "MoveCube",
@@ -2375,15 +2361,11 @@
       },
       "suite": "imitation",
       "control_freq": 20,
-      "trajectory_migration": {
-        "strategy": "new_native_20hz_calibration",
-        "attempt": 0
-      },
       "demonstration_actions": {
-        "resource": "assets/demonstrations/MoveCube/train/20hz/24bad543574fab06/2026301906.npz",
+        "resource": "assets/demonstrations/MoveCube/train/20hz/67c86d6b41c6c158/2026301906.npz",
         "scene_sha256": "f926addd5d91e7a01d637b6fe0ed706ef3aae8e2a12c1df3282479aa4e4391e8",
         "control_freq": 20,
-        "sha256": "540df7a61f119d36e0aa868ce60839ea3d7f0834842380cc1651b5dd2a741ab8"
+        "sha256": "1bb766a249a17fa924bf2b519837a215ab636a373c178d077f710b763a773874"
       }
     },
     {
@@ -2392,7 +2374,7 @@
       "seed": 2027403934,
       "difficulty": null,
       "variant": "ball",
-      "oracle_policy_step": 470,
+      "oracle_policy_step": 455,
       "scene_parameters": {
         "schema": "robomme-ood-move-cube/3",
         "task": "MoveCube",
@@ -2837,18 +2819,11 @@
       },
       "suite": "imitation",
       "control_freq": 20,
-      "trajectory_migration": {
-        "strategy": "replay_first",
-        "reused_phases": {
-          "demonstration": "last",
-          "execution": "last"
-        }
-      },
       "demonstration_actions": {
-        "resource": "assets/demonstrations/MoveCube/train/20hz/4a5f6f39b3ad53f9/2027403934.npz",
+        "resource": "assets/demonstrations/MoveCube/train/20hz/846475f2639d4acb/2027403934.npz",
         "scene_sha256": "7d7e97522060b231a3675c471aef82e8c9fca477cfe2405c752b9778fc670f52",
         "control_freq": 20,
-        "sha256": "502dbf65ec847e50871257bf7401659c479077d7e09b01ecd00d15c989d82f2b"
+        "sha256": "e10b4babc0fbbefc73f5d1687cae96c6fc70da893919df5291fa25e84d2af146"
       }
     },
     {
@@ -4037,18 +4012,11 @@
       },
       "suite": "imitation",
       "control_freq": 20,
-      "trajectory_migration": {
-        "strategy": "replay_first",
-        "reused_phases": {
-          "demonstration": "middle",
-          "execution": "middle"
-        }
-      },
       "demonstration_actions": {
-        "resource": "assets/demonstrations/MoveCube/train/20hz/08aec50aa1ad49bc/2026522092.npz",
+        "resource": "assets/demonstrations/MoveCube/train/20hz/b11155c1a9da5316/2026522092.npz",
         "scene_sha256": "3d517b719a63d23cb9443cf9eae64c5beeb9680d2825bf333f1472fcce94313c",
         "control_freq": 20,
-        "sha256": "6f02c046b5743ae47bc13f85cfa29caf2039f03f0b4480cfa6df6c64f90e0c14"
+        "sha256": "e0e89eb08bab6458c7d209ca60957feef85787baa09151e849719480711e3e26"
       }
     }
   ]

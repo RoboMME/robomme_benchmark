@@ -11,8 +11,12 @@
       "oracle_policy_step": 1659,
       "suite": "counting",
       "episode": 0,
-      "oracle_wall_seconds": 392.219,
-      "control_freq": 20
+      "oracle_wall_seconds": 71.577,
+      "control_freq": 20,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "table_marble"
+      }
     },
     {
       "task": "PickXtimes",
@@ -21,7 +25,7 @@
       "oracle_policy_step": 1177,
       "suite": "counting",
       "episode": 1,
-      "oracle_wall_seconds": 249.054,
+      "oracle_wall_seconds": 56.137,
       "control_freq": 20
     },
     {
@@ -31,7 +35,7 @@
       "oracle_policy_step": 1838,
       "suite": "counting",
       "episode": 2,
-      "oracle_wall_seconds": 350.125,
+      "oracle_wall_seconds": 84.588,
       "control_freq": 20
     }
   ]

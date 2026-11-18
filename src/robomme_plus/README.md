@@ -1,27 +1,48 @@
-# RoboMME-Plus: Benchmarking Robot Memory under More Demanding Conditions
+# RoboMME-Plus: Benchmarking Memory Generalization for Robot Policies
 
 <p align="center">
   <img src="../../assets/RoboMME-Plus-logo-v2.png" alt="RoboMME-Plus" width="640">
-  <br>
-  <a href="https://robomme.github.io/plus.html">Website</a>
 </p>
 
 RoboMME-Plus tests robot memory under more demanding conditions. It retains
 RoboMME's 16 tasks across counting, permanence, reference and imitation, with
 changes to object counts, motion, occlusion, demonstration histories and tools.
 
+`env.reset()` retries recoverable setup or conditioning-demo errors up to **three
+total attempts**. Budgeted agent development caps this at one attempt: a retry must reserve another training rollout. Each retry rebuilds the same task, seed, difficulty and variation
+from scratch; partial demonstrations are discarded. Reset logs record failures,
+and successful reset info includes `reset_attempts`. After three failures the
+exception is raised. Invalid arguments and memory/device failures fail immediately
+so the evaluator can recover in a fresh process. Policy actions and execution
+failures are never retried by this mechanism.
+
 ## Splits and training data
 
 - **Train:** 50 successful episodes: easy/medium/hard for 15 tasks, plus one example
-  for each of MoveCube's five methods. All recordings use 20 Hz control.
+  for each of MoveCube's five methods. One episode per non-MoveCube task has a
+  selected atomic variation: 13 appearance changes and 2 mechanism changes;
+  the other 35 retain their original settings. All recordings use 20 Hz control.
 - **Test:** 800 episodes, 50 per task. Tiered tasks have 10 easy, 15 medium and
   25 hard episodes; MoveCube has 10 per method. Train/test seeds are disjoint.
-- **Downloads:** [H5](https://huggingface.co/datasets/Yinpei/robomme_ood_data_h5) and
-  [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_ood_data_lerobot).
+- **Downloads:** [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
+  [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
+  The current `main` contains v2 with atomic training variations and successful
+  joint and end-effector replay. The original data is preserved on each dataset's `v1` branch.
 
 Training seeds and episode settings are in
 [`env_metadata/train/record_dataset_<Task>_metadata.json`](env_metadata/train/).
 Test settings are in [`env_metadata/test/`](env_metadata/test/).
+Fourteen tasks mark 5 medium and 8 hard test episodes each for seeded
+[perceptual variations](variation/): lighting is added on hard and also on
+VideoUnmask medium episodes; other medium tasks use non-lighting factors.
+These 182 episodes change observations while preserving task mechanics.
+Separately, 13 tasks mark 8 hard episodes each for
+[mechanism variation](variation/mechanism/): changes to motion, interactions or
+activation rules. These 104 episodes use new expert step references and never
+overlap perceptual variations. Both variations default to enabled for marked
+episodes and have independent builder switches. Training uses separate
+[atomic profiles](variation/#atomic-training-variations), without the combined
+test appearance factors or sensor noise. Unmarked episodes retain their original behavior.
 Use `dataset="train"` or `dataset="test"` with `BenchmarkEnvBuilder`.
 The [data guide](../../doc/plus_training_data_format.md) describes fields and mappings.
 MoveCube's packaged [demonstration controls](assets/demonstrations/MoveCube/)
@@ -73,7 +94,10 @@ SwingXtimes only credits valid visits after target dodges have settled.
 
 Permanence tasks add repeated colors, denser layouts and occlusion. Swapping
 variants move containers. ButtonUnmaskSwap includes finite and continuous motion;
-both buttons must be pressed before pickup. Continuous episodes allow neighborhood
+both buttons must be pressed before control step 180 and before pickup in either
+mode. ButtonUnmask requires its button press before control step 90. Missing either
+task's deadline causes task failure. These limits are 9 s and 4.5 s of simulated
+time at 20 Hz; API waiting does not count. Continuous episodes allow neighborhood
 pickup pauses after the first 150 execution steps. Each episode's metadata fixes
 the motion mode and controller version.
 
@@ -93,6 +117,9 @@ PatternLock uses shorter, tilted stick mounts on medium/hard; keep the physical
 stick less than 8° from downward vertical. RouteStick keeps a straight mount,
 adds shorter sticks and moving obstacles, and permits collisions. Both allow
 450 control steps without valid drawing, within the overall execution budget.
+Both show the final activated target for two control steps (0.1 s) before ending
+the demonstration. Execution keeps its original success checks, including each
+variation's activation requirements, without an added final wait.
 
 ## Evaluate
 

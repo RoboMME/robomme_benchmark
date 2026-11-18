@@ -1096,5 +1096,6 @@ from robomme_plus.tasks.counting.utils.environment import CountingMixin
 @register_env(TASKS["BinFill"].gym_id)
 class BinFill(CountingMixin, _TaskScene):
     """Fill the bin with requested cubes from a moving conveyor, then press the button."""
+    PERCEPTUAL_VARIATIONS = True
 
     task_name = "BinFill"
