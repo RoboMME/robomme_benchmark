@@ -10,41 +10,44 @@ One-shot Embodied-Astra uses the same `gpt-6-astra` waypoint policy as Embodied-
 
 **Track:** Agentic Track.
 
-**API Cost:** **approximately US$2,056.63 total; US$2.57/episode** across 800 episodes,
+**API Cost (historical v1 estimate):** **approximately US$2,056.63 total; US$2.57/episode** across 800 episodes,
 including failures. These are lower-bound estimates: **424 unpriced requests** are
 excluded. Uses the blog's October 27, 2026 rollout snapshot and `gpt-6-astra`
-pricing checked October 21, 2026. The success table below retains the October 26
-snapshot; the cost snapshot includes later rollout revisions.
+pricing checked October 21, 2026. V2 aggregate API cost has not been recomputed.
 
-**Evaluated by:** RoboMME Team. **Results snapshot:** October 26, 2026.
+**Evaluated by:** RoboMME Team. **Results snapshot:** v2 merged release, November 16, 2026.
 
-**Setting:** FS — few-shot adaptation with one training example in context.
+**Setting:** Adapt from demos (AfD), using a released training example as context.
+
+**Training-seed rollouts:** 0 (R0).
 
 > Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`waypoint`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
 
-One consolidated run; success rates are percentages. Only simulator success counts as success. All 800 episodes remain in the denominator, including failures, timeouts, model stops and errors.
+Success rates are percentages on the RoboMME-Plus V2 test split. Only simulator success counts as success. All 800 episodes remain in the denominator, including failures, timeouts, model stops and errors.
 
 | Suite | Task | Successes | Success (%) |
 | --- | --- | --- | --- |
-| Counting | BinFill | 14/50 | 28.00 |
-| Counting | PickXtimes | 42/50 | 84.00 |
+| Counting | BinFill | 13/50 | 26.00 |
+| Counting | PickXtimes | 40/50 | 80.00 |
 | Counting | SwingXtimes | 49/50 | 98.00 |
-| Counting | StopCube | 16/50 | 32.00 |
-| Permanence | VideoUnmask | 20/50 | 40.00 |
-| Permanence | VideoUnmaskSwap | 1/50 | 2.00 |
-| Permanence | ButtonUnmask | 47/50 | 94.00 |
-| Permanence | ButtonUnmaskSwap | 16/50 | 32.00 |
-| Reference | PickHighlight | 25/50 | 50.00 |
-| Reference | VideoRepick | 7/50 | 14.00 |
-| Reference | VideoPlaceButton | 12/50 | 24.00 |
-| Reference | VideoPlaceOrder | 9/50 | 18.00 |
+| Counting | StopCube | 19/50 | 38.00 |
+| Permanence | VideoUnmask | 14/50 | 28.00 |
+| Permanence | VideoUnmaskSwap | 0/50 | 0.00 |
+| Permanence | ButtonUnmask | 39/50 | 78.00 |
+| Permanence | ButtonUnmaskSwap | 13/50 | 26.00 |
+| Reference | PickHighlight | 21/50 | 42.00 |
+| Reference | VideoRepick | 8/50 | 16.00 |
+| Reference | VideoPlaceButton | 18/50 | 36.00 |
+| Reference | VideoPlaceOrder | 11/50 | 22.00 |
 | Imitation | MoveCube | 9/50 | 18.00 |
 | Imitation | InsertPeg | 14/50 | 28.00 |
 | Imitation | PatternLock | 9/50 | 18.00 |
 | Imitation | RouteStick | 4/50 | 8.00 |
-| **Overall** | **All tasks** | **294/800** | **36.75** |
+| **Overall** | **All tasks** | **281/800** | **35.13** |
 
-**Overall:** 294/800 successes (**36.75%**); 463 failures and 43 timeouts.
+**Overall:** 281/800 successes (**35.13%**); 481 failures and 38 timeouts.
+
+[Baseline results](../robomme_plus_baseline_results.md).
 
 ### Training Details
 

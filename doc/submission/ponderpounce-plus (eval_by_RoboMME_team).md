@@ -13,13 +13,15 @@ PonderPounce combines a Qwen3.5-9B episode-context model (Ponder) with a Pi0.5 a
 **Total Params:** **13.04B** (13,039,166,464), including Ponder, Pounce and their adapters.
 Frozen parameters are included; shared weights are counted once.
 
-**Evaluated by:** RoboMME Team. **Results snapshot:** October 26, 2026.
+**Evaluated by:** RoboMME Team. **Results snapshot:** v2 merged release, November 16, 2026.
 
-**Setting:** ZS — zero-shot transfer, without RoboMME-Plus adaptation.
+**Setting:** Zero-shot transfer (ZS).
+
+**Training-seed rollouts:** 0 (R0).
 
 > Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`joint_angle`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
 
-One consolidated run; success rates are percentages. Only simulator success counts as success. All 800 episodes remain in the denominator, including failures, timeouts, model stops and errors.
+Success rates are percentages on the RoboMME-Plus V2 test split. Only simulator success counts as success. All 800 episodes remain in the denominator, including failures, timeouts, model stops and errors.
 
 | Suite | Task | Successes | Success (%) |
 | --- | --- | --- | --- |
@@ -33,15 +35,17 @@ One consolidated run; success rates are percentages. Only simulator success coun
 | Permanence | ButtonUnmaskSwap | 0/50 | 0.00 |
 | Reference | PickHighlight | 0/50 | 0.00 |
 | Reference | VideoRepick | 4/50 | 8.00 |
-| Reference | VideoPlaceButton | 11/50 | 22.00 |
-| Reference | VideoPlaceOrder | 2/50 | 4.00 |
+| Reference | VideoPlaceButton | 9/50 | 18.00 |
+| Reference | VideoPlaceOrder | 1/50 | 2.00 |
 | Imitation | MoveCube | 0/50 | 0.00 |
 | Imitation | InsertPeg | 0/50 | 0.00 |
 | Imitation | PatternLock | 0/50 | 0.00 |
 | Imitation | RouteStick | 0/50 | 0.00 |
-| **Overall** | **All tasks** | **23/800** | **2.88** |
+| **Overall** | **All tasks** | **20/800** | **2.50** |
 
-**Overall:** 23/800 successes (**2.88%**); 611 failures and 166 timeouts.
+**Overall:** 20/800 successes (**2.50%**); 603 failures and 177 timeouts.
+
+[Baseline results](../robomme_plus_baseline_results.md).
 
 ### Training Details
 
