@@ -29,7 +29,7 @@ at the same setting and R; R caps simulator attempts per task on training seeds.
   adaptive memory between episodes. Test feedback cannot revise or select policies.
   Report test-time optimization separately.
 
-The [evaluation guide](../src/robomme_plus/README.md#evaluation-protocol) defines
+The [evaluation guide](../../src/robomme_plus/README.md#evaluation-protocol) defines
 the shared interface, default variations and execution limits.
 
 ### ASPIRE and RAX setup
@@ -69,8 +69,8 @@ interaction. One-shot Astra receives one selected training example for the task
 | Method | Training input | Successes | Success rate |
 |---|---|---:|---:|
 | [One-shot Embodied Astra](<submission/one-shot-embodied-astra-plus (eval_by_RoboMME_team).md>) | One selected example per task | 281/800 | 35.13% |
-| [ASPIRE](../scripts/plus_eval/agentic_methods/aspire/README.md) | All 50 demos available | 135/800 | 16.88% |
-| [RAX](../scripts/plus_eval/agentic_methods/rax/README.md) | All 50 demos available | 152/800 | 19.00% |
+| [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md) | All 50 demos available | 135/800 | 16.88% |
+| [RAX](../../scripts/plus_eval/agentic_methods/rax/README.md) | All 50 demos available | 152/800 | 19.00% |
 
 ## Adapt from interactions (AfI)
 
@@ -193,10 +193,10 @@ as the overall results above.
 
 ## Running baselines
 
-Use the [method READMEs](../scripts/plus_eval/README.md) for installation and launch
+Use the [method READMEs](../../scripts/plus_eval/README.md) for installation and launch
 commands. Model runners accept `--tasks BinFill --episodes 0 --output-dir runs/METHOD`;
 omit task/episode filters for all 800 tests. ASPIRE/RAX have separate frozen-policy
-runners; use the [shared harness](../scripts/plus_eval/benchmark_io/README.md) to
+runners; use the [shared harness](../../scripts/plus_eval/benchmark_io/README.md) to
 develop new policies.
 
 ### Model runner options
@@ -236,9 +236,9 @@ sanity runs do not replace them.
 
 ## Sources
 
-- [Model baseline summaries](../scripts/plus_eval/results/model_baselines.json)
-- [ASPIRE/RAX overall and per-task counts](../scripts/plus_eval/results/agentic_20261118.json)
-- Frozen solutions: [ASPIRE](../scripts/plus_eval/agentic_methods/aspire/solutions/README.md), [RAX](../scripts/plus_eval/agentic_methods/rax/solutions/README.md)
-- [Logs and rollout locations](../scripts/plus_eval/results/README.md)
+- [Model baseline summaries](../../scripts/plus_eval/results/model_baselines.json)
+- [ASPIRE/RAX overall and per-task counts](../../scripts/plus_eval/results/agentic_20261118.json)
+- Frozen solutions: [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/solutions/README.md), [RAX](../../scripts/plus_eval/agentic_methods/rax/solutions/README.md)
+- [Logs and rollout locations](../../scripts/plus_eval/results/README.md)
 - [Training data format and replay](plus_training_data_format.md)
 - Model rollout dataset: [Yinpei/RoboMME-plus-model-rollout](https://huggingface.co/datasets/Yinpei/RoboMME-plus-model-rollout)

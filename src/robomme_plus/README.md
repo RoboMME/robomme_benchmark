@@ -26,7 +26,7 @@ Training seeds and episode settings are in
 [`env_metadata/train/record_dataset_<Task>_metadata.json`](env_metadata/train).
 Test settings are in [`env_metadata/test/`](env_metadata/test).
 Use `dataset="train"` or `dataset="test"` with `BenchmarkEnvBuilder`.
-The [data guide](../../doc/plus_training_data_format.md) describes fields and mappings.
+The [data guide](../../doc/robomme_plus/plus_training_data_format.md) describes fields and mappings.
 MoveCube's packaged [demonstration controls](assets/demonstrations/MoveCube)
 are replayed through the simulator at reset to produce its conditioning video.
 
@@ -67,7 +67,7 @@ any of the 50 released demonstrations without a limit on training iterations.
 Evaluate all **50 test episodes per task (800 total)** with default variations
 and execution limits. Keep failures, timeouts and errors in the denominator;
 report changed test conditions separately. See the
-[baseline results and running instructions](../../doc/robomme_plus_baseline_results.md).
+[baseline results and running instructions](../../doc/robomme_plus/robomme_plus_baseline_results.md).
 
 ## Task changes
 
@@ -159,7 +159,7 @@ that episode's scene and execution budget internally.
 Only `status == "success"` counts as success. Include failures, timeouts and errors
 in the denominator. Keep oracle subgoals and test metadata out of policy inputs.
 Report each evaluation setting and interaction budget separately using the
-[submission template](../../doc/submission/model_example_plus.md).
+[submission template](../../doc/robomme_plus/submission/model_example_plus.md).
 
 Published dataset URLs and recording format identifiers retain their original
 names. Use `robomme_plus` and `RoboMME-Plus/<Task>-v0` in code.

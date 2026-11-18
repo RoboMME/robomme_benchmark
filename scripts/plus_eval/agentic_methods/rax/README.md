@@ -35,7 +35,7 @@ calibration, robot state and goal. No hidden object state or task source is expo
 Opus 5.5 uses Bedrock with high reasoning effort. Optional Gemini is disabled;
 frozen test execution makes no frontier-model API calls. R1/R3/R5/R10 develop
 independently. See the [evaluation protocol](../../../../src/robomme_plus/README.md#evaluation-protocol)
-and [baseline settings/results](../../../../doc/robomme_plus_baseline_results.md).
+and [baseline settings/results](../../../../doc/robomme_plus/robomme_plus_baseline_results.md).
 
 ## Run and inspect
 

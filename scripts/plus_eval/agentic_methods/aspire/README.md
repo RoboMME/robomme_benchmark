@@ -24,7 +24,7 @@ AfD/AfD+I receive released RGB recordings; live interaction uses calibrated RGB-
 Every simulator start, including verifier runs, consumes R. AfD has none.
 Opus 5.5 runs through Bedrock with high reasoning effort. Test execution makes no
 frontier-model calls. See the [evaluation protocol](../../../../src/robomme_plus/README.md#evaluation-protocol)
-and [baseline settings/results](../../../../doc/robomme_plus_baseline_results.md).
+and [baseline settings/results](../../../../doc/robomme_plus/robomme_plus_baseline_results.md).
 
 ## Setup and run
 

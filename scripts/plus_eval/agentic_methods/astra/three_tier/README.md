@@ -3,7 +3,7 @@
 Uses [Astra-on-RoboMME](Astra-on-RoboMME)'s Astra API planner, local System 1.5
 Qwen completion monitor and GroundSG Pi0.5 policy server. The checkout includes
 `mme_vla_suite`; a separate `robomme_policy_learning` checkout is unnecessary.
-See the [shared run instructions](../../../../../doc/robomme_plus_baseline_results.md#running-baselines) for the 800-episode run options, outputs,
+See the [shared run instructions](../../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for the 800-episode run options, outputs,
 metrics and API pricing.
 
 ## Setup
@@ -114,6 +114,6 @@ seed; it does not change it. Stop the server with `kill "$VLA_PID"` after evalua
   Sanitized copies of planner artifacts also appear under `native/astra/` in each
   episode; credentials and private paths are redacted.
 
-Omit task/episode filters for all 800 episodes. See [shared run options](../../../../../doc/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
+Omit task/episode filters for all 800 episodes. See [shared run options](../../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
 
 [Link finalized rollouts](../../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

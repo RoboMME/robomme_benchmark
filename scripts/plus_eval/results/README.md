@@ -1,6 +1,6 @@
 # Overall results
 
-- [Result tables and interpretation](../../../doc/robomme_plus_baseline_results.md)
+- [Result tables and interpretation](../../../doc/robomme_plus/robomme_plus_baseline_results.md)
 - [Model baseline summaries](model_baselines.json)
 - [ASPIRE/RAX counts by setting and task](agentic_20261118.json)
 - Frozen programs: [ASPIRE](../agentic_methods/aspire/solutions), [RAX](../agentic_methods/rax/solutions)

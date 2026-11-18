@@ -14,7 +14,7 @@ succeeded on StopCube episode 0 without infrastructure errors or frontier API ca
 The wheel was built and imported with all split metadata and required assets.
 This is release validation, not a new full benchmark evaluation.
 
-See the [evaluation protocol](../src/robomme_plus/README.md#evaluation-protocol),
+See the [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol),
 [baseline results and running instructions](robomme_plus_baseline_results.md),
-[compliance audit skill](skills/audit_robomme_plus_compliance.md), and
+[compliance audit skill](../skills/audit_robomme_plus_compliance.md), and
 [data/source pins](plus_release_manifest.json).

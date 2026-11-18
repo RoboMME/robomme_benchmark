@@ -21,8 +21,8 @@ training-data revision and evaluated policy hashes. Locate the protocol and
 prompts actually supplied to that run, including later operator messages.
 
 Read the [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol)
-and [adaptation protocol](../robomme_plus_baseline_results.md#evaluation-settings). Consult the
-[data format](../plus_training_data_format.md) for field provenance and the
+and [adaptation protocol](../robomme_plus/robomme_plus_baseline_results.md#evaluation-settings). Consult the
+[data format](../robomme_plus/plus_training_data_format.md) for field provenance and the
 [shared harness](../../scripts/plus_eval/benchmark_io/README.md) for artifact layout.
 Use the run's pinned versions when auditing historical experiments. Report
 differences from the current benchmark; do not silently apply today's budget to

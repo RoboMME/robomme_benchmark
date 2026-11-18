@@ -2,7 +2,7 @@
 
 Final results on **800 test episodes** with the default benchmark variations.
 See the [evaluation guide](../../src/robomme_plus/README.md) for rules and
-[per-task results](../../doc/robomme_plus_baseline_results.md) for the full breakdown.
+[per-task results](../../doc/robomme_plus/robomme_plus_baseline_results.md) for the full breakdown.
 Each method link below provides setup and running instructions.
 
 ## Model baselines

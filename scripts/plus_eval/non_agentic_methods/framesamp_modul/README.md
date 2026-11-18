@@ -2,7 +2,7 @@
 
 Evaluates the upstream **perceptual-framesamp-modul** policy through its WebSocket
 server, using the original history buffer, frame sampling, modulation and
-16-action chunks. See the [shared run instructions](../../../../doc/robomme_plus_baseline_results.md#running-baselines) for the 800-episode run
+16-action chunks. See the [shared run instructions](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for the 800-episode run
 options, outputs and metrics. Inference is local; no API or subgoal model is needed.
 
 ## Setup
@@ -82,6 +82,6 @@ includes JAX compilation. Stop the server with `kill "$VLA_PID"` after evaluatio
   action chunks and returned server timings. WebSocket latency includes transport;
   internal server features are not exposed by the interface.
 
-Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
+Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
 
 [Link finalized rollouts](../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.
