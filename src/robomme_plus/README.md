@@ -1,4 +1,4 @@
-# RoboMME-Plus: Benchmarking Memory Generalization for Robot Policies
+# RoboMME-Plus: Benchmarking Memory Generalization and Adaptation for Robot Policies
 
 <p align="center">
   <img src="../../assets/RoboMME-Plus-logo-v2.png" alt="RoboMME-Plus" width="640">
@@ -7,14 +7,6 @@
 RoboMME-Plus tests robot memory under more demanding conditions. It retains
 RoboMME's 16 tasks across counting, permanence, reference and imitation, with
 changes to object counts, motion, occlusion, demonstration histories and tools.
-
-`env.reset()` retries recoverable setup or conditioning-demo errors up to **three
-total attempts**. Budgeted agent development caps this at one attempt: a retry must reserve another training rollout. Each retry rebuilds the same task, seed, difficulty and variation
-from scratch; partial demonstrations are discarded. Reset logs record failures,
-and successful reset info includes `reset_attempts`. After three failures the
-exception is raised. Invalid arguments and memory/device failures fail immediately
-so the evaluator can recover in a fresh process. Policy actions and execution
-failures are never retried by this mechanism.
 
 ## Splits and training data
 
@@ -32,23 +24,36 @@ failures are never retried by this mechanism.
 Training seeds and episode settings are in
 [`env_metadata/train/record_dataset_<Task>_metadata.json`](env_metadata/train).
 Test settings are in [`env_metadata/test/`](env_metadata/test).
-Fourteen tasks mark 5 medium and 8 hard test episodes each for seeded
-[perceptual variations](variation): lighting is added on hard and also on
-VideoUnmask medium episodes; other medium tasks use non-lighting factors.
-These 182 episodes change observations while preserving task mechanics.
-Separately, 13 tasks mark 8 hard episodes each for
-[mechanism variation](variation/mechanism): changes to motion, interactions or
-activation rules. These 104 episodes use new expert step references and never
-overlap perceptual variations. Both variations default to enabled for marked
-episodes and have independent builder switches. Training uses separate
-[atomic profiles](variation#atomic-training-variations), without the combined
-test appearance factors or sensor noise. Unmarked episodes retain their original behavior.
 Use `dataset="train"` or `dataset="test"` with `BenchmarkEnvBuilder`.
 The [data guide](../../doc/plus_training_data_format.md) describes fields and mappings.
 MoveCube's packaged [demonstration controls](assets/demonstrations/MoveCube)
 are replayed through the simulator at reset to produce its conditioning video.
 
+## Variations
+
+Perceptual variations change appearance or reported sensor data, such as lighting,
+materials, colors and calibration noise. Mechanism variations change motion,
+interactions or activation rules. Both are deterministic from the episode seed
+and enabled by default only for marked episodes.
+
+| Split | No added variation | Perceptual | Mechanism | Total |
+|---|---:|---:|---:|---:|
+| Train | 35 | 13 | 2 | 50 |
+| Test | 514 | 182 | 104 | 800 |
+
+Training exposes selected individual factors; testing includes held-out factors
+and combinations. The perceptual and mechanism episode selections do not overlap.
+Exact settings live in the episode metadata. For ablations, set
+`perceptual_variations=False` and/or `mechanism_variations=False` on
+`BenchmarkEnvBuilder`; report these separately from the default benchmark.
+
 ## Evaluation protocol
+
+Evaluate direct transfer (ZS), adaptation from demonstrations (AfD), interaction
+(AfI), or both (AfD+I). Interaction budgets are at most 1, 3, 5 or 10 simulator
+starts per task, using only training seeds. Every preview, retry and verification
+start counts. See the [full protocol](../../doc/plus_agentic_evaluation.md) and
+[results by setting](../../doc/robomme_plus_baseline_results.md).
 
 - **Fine-tuning:** Use only the released **50 training demonstrations** for
   RoboMME-Plus fine-tuning.
@@ -122,6 +127,10 @@ the demonstration. Execution keeps its original success checks, including each
 variation's activation requirements, without an added final wait.
 
 ## Evaluate
+
+Recoverable setup errors retry at most three times with the same episode settings.
+Budgeted agent development uses one attempt per reserved rollout. Policy execution
+is not retried automatically; successful reset info reports `reset_attempts`.
 
 Follow the [installation](../../readme.md#-installation) and
 [model adapter guides](../../scripts/plus_eval/README.md), or use your own policy:
