@@ -13,7 +13,7 @@ at the same setting and R; R caps simulator attempts per task on training seeds.
 | Setting | Released demonstrations | Rollout budget per task |
 | --- | --- | --- |
 | Zero-shot transfer (ZS) | No | R0 |
-| Adapt from demos (AfD) | Yes; use listed below | R0 |
+| Adapt from demos (AfD) | Yes | R0 |
 | Adapt from interactions (AfI) | No | R1, R3, R5 or R10 |
 | Adapt from demos+interactions (AfD+I) | Yes | R1, R3, R5 or R10 |
 
@@ -32,8 +32,6 @@ at the same setting and R; R caps simulator attempts per task on training seeds.
 The [evaluation guide](../../src/robomme_plus/README.md#evaluation-protocol) defines
 the shared interface, default variations and execution limits.
 
-Adaptation details: [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md#adaptation)
-and [RAX](../../scripts/plus_eval/agentic_methods/rax/README.md#adaptation).
 
 ## Zero-shot transfer (ZS)
 

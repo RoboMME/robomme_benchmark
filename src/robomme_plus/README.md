@@ -126,43 +126,59 @@ names. Use `robomme_plus` and `RoboMME-Plus/<Task>-v0` in code.
 
 Triples below mean **easy / medium / hard**. Ranges describe the task code;
 the fixed seeds may not realize every endpoint. Goals count objects to retrieve.
-
-Selected episodes add either perceptual variations (appearance and sensor changes)
-or mechanism variations (motion and interaction changes). They are enabled by
-default; training exposes individual factors while testing includes held-out
-factors and combinations.
+Medium and hard also change motion, occlusion or tool geometry, so difficulty
+does not depend on counts alone.
 
 | Task | RoboMME setup | RoboMME-Plus setup |
 | --- | --- | --- |
-| **BinFill** | Collect **1–5 cubes** | Collect **6–8 / 3–6 / 3–6 cubes** |
-| **PickXtimes** | **1–5** pick-and-place cycles | **6–8 / 5–6 / 7–8** pick-and-place cycles |
+| **BinFill** | Collect **1–5 cubes** | Collect **6–8 / 3–6 / 3–6 cubes**. Medium/hard use a conveyor at **5 / 6.5 cm/s**; hard requires all three colors. |
+| **PickXtimes** | **1–5** pick-and-place cycles | **6–8 / 5–6 / 7–8** cycles. Medium/hard use a moving target; hard has a larger, faster path. |
 | **SwingXtimes** | **1–3** swing cycles; **0 target dodges** | **4–7 / 3–4 / 4–6** cycles; **0 / 0–2 / 0–4** target dodges per visit |
-| **StopCube** | Stop on pass **2–5**; **1 trajectory type** | Stop on pass **3–8 / 5–10 / 5–10**; **4 / 4 / 5** trajectory types |
-| **VideoUnmask** | **3, 5 or 15 containers**; **1–2 goals** | **5–10 / 11–15 / 16–28 containers**; **3–5 goals** at every level |
-| **ButtonUnmask** | **3, 5 or 15 containers**; **1–2 goals** | **6–8 / 8–12 / 16–18 containers**; **3–5 goals** at every level |
-| **VideoUnmaskSwap** | **3–4 containers**; **1–2 goals** | **6–8 / 8–10 / 9–12 containers**; **3–5 goals** at every level |
-| **ButtonUnmaskSwap** | **3–4 containers**; **1–2 goals** | **6–8 / 9–10 / 11–13 containers**; **3 / 3–4 / 3–4 goals** |
-| **PickHighlight** | **3–6 objects**; **1–3 goals**; **90-frame** highlights | **9–10 / 11–13 / 14–17 objects**; **3–5 / 4–6 / 5–9 goals**; **45 / 30–45 / 16–45-step** highlights |
-| **VideoRepick** | **3 or 15 cubes**; **1 goal** | **4–6 / 7–10 / 6–10 objects**; **1 goal** at every level |
-| **VideoPlaceButton** | **3–4 target rings**; **1 demonstrated cube** | **4 / 6 / 7–8 rings**; **1 / 1 / 2 demonstrated cubes** |
-| **VideoPlaceOrder** | **4 rings**; **2–4 placements**; request **1st–4th** | **4 / 6 / 7–8 rings**; **4 / 5 / 5 placements per cube**; request **1st–4th / 1st–5th / 1st–5th** |
+| **StopCube** | Stop on pass **2–5**; **1 trajectory type** | Stop on pass **3–8 / 5–10 / 5–10**; **4 / 4 / 5** trajectory types. Medium moves faster; hard changes speed within/across passes and shrinks the target. |
+| **VideoUnmask** | **3, 5 or 15 containers**; **1–2 goals** | **5–10 / 11–15 / 16–28 containers**; **3–5 goals**. Medium/hard add an occluding board and empty covers. |
+| **ButtonUnmask** | **3, 5 or 15 containers**; **1–2 goals** | **6–8 / 8–12 / 16–18 containers**; **3–5 goals**. Medium/hard add occlusion and empty covers; hard adds central distractors. |
+| **VideoUnmaskSwap** | **3–4 containers**; **1–2 goals** | **6–8 / 8–10 / 9–12 containers**; **3–5 goals**. Containers move independently; medium/hard add an occluding board. |
+| **ButtonUnmaskSwap** | **3–4 containers**; **1–2 goals** | **6–8 / 9–10 / 11–13 containers**; **3 / 3–4 / 3–4 goals**. Medium/hard add occlusion; hard has faster container traffic. |
+| **PickHighlight** | **3–6 objects**; **1–3 goals**; **90-frame** highlights | **9–10 / 11–13 / 14–17 objects**; **3–5 / 4–6 / 5–9 goals**; **45 / 30–45 / 16–45-step** highlights. Higher levels rearrange larger groups more often. |
+| **VideoRepick** | **3 or 15 cubes**; **1 goal** | **4–6 / 7–10 / 6–10 objects**; **1 goal**. Medium/hard exchange moving objects' destinations; hard adds an occluding board. |
+| **VideoPlaceButton** | **3–4 target rings**; **1 demonstrated cube** | **4 / 6 / 7–8 rings**; **1 / 1 / 2 demonstrated cubes**. Medium/hard swap rings more frequently. |
+| **VideoPlaceOrder** | **4 rings**; **2–4 placements**; request **1st–4th** | **4 / 6 / 7–8 rings**; **4 / 5 / 5 placements per cube**; request **1st–4th / 1st–5th / 1st–5th**. Medium/hard swap rings more frequently; hard tracks two cubes. |
 | **MoveCube** | **3 manipulation methods** | **5 methods**, **10 test episodes each**; **3 methods available per phase** |
 | **InsertPeg** | **34 mm hole**; **20 mm peg**; **0 mm hole shift** | **23–25 / 22–23 / 20.4 mm hole** (easy / medium / hard); **20 mm peg**; **5–10 mm shift along each hole-face axis** |
-| **PatternLock** | **2–8 nodes**; **3×3–5×5 grids**; **10 cm** stick | **4–5 / 6–8 / 9–12 nodes**; **5×5 grid**; **10 / 5–7 / 3.5–6 cm** execution stick |
-| **RouteStick** | **2–7 segments**; **10 cm** drawing stick | **8–13 / 4–7 / 6–8 curves**; **10 / 2.5–5 / 2.5–5 cm** execution stick |
+| **PatternLock** | **2–8 nodes**; **3×3–5×5 grids**; **10 cm** stick | **4–5 / 6–8 / 9–12 nodes**; **5×5 grid**; **10 / 5–7 / 3.5–6 cm** execution stick. Medium/hard shift, rotate and rescale the grid, with **10–20° / 20–30°** tool-mount tilt. |
+| **RouteStick** | **2–7 segments**; **10 cm** drawing stick | **8–13 / 4–7 / 6–8 curves**; **10 / 2.5–5 / 2.5–5 cm** execution stick. Medium/hard change the route layout; hard can move obstacle boards. |
 
-Counting and reference tasks add motion, distractors and rearrangement. PickXtimes
-and VideoPlace require release and a 5 cm upward retreat. SwingXtimes credits
+PickXtimes and VideoPlace require release and a 5 cm upward retreat. SwingXtimes credits
 visits after dodges settle; PickHighlight rejects wrong-object pickups through
 the final button press.
 
-Permanence tasks increase occlusion and container motion. ButtonUnmask requires
-a press before step 90; ButtonUnmaskSwap requires both buttons before step 180
+ButtonUnmask requires a press before step 90; ButtonUnmaskSwap requires both buttons before step 180
 and before pickup. Missing a deadline fails the task.
 
 MoveCube requires the demonstrated tool and method; InsertPeg requires the
 demonstrated peg end and box side. See [MoveCube's method criteria](tasks/imitation/move_cube_support/SUCCESS_CRITERIA.md).
 
-PatternLock uses tilted mounts and requires the stick within 8° of downward
-vertical; RouteStick adds moving obstacles. Both allow 450 control steps without
-valid drawing, subject to the overall execution budget.
+PatternLock requires the stick within 8° of downward vertical. Both drawing tasks
+allow 450 control steps without valid drawing, subject to the overall execution budget.
+
+**Mechanism variations** add the following changes to selected episodes, beyond
+their difficulty level. They are enabled by default.
+
+| Task(s) | Additional mechanism change |
+| --- | --- |
+| BinFill | Closely spaced conveyor neighbors at the original speed. |
+| PickXtimes | Target pauses, speed changes and forward/reverse dodges during placement. |
+| SwingXtimes | Larger, faster target orbits that continue after dodges. |
+| StopCube | Relocated route and target, pauses, reversals and changing speed. |
+| VideoUnmask, ButtonUnmask | Visible cube shuffles before stationary covers hide them. |
+| VideoUnmaskSwap | Visible cube shuffles, followed by mixed container motion and recurring swaps. |
+| ButtonUnmaskSwap | Visible cube shuffles before covering; training includes doubled container speed. |
+| VideoRepick | Motion patterns transferred from other tasks, with recurring swaps. |
+| VideoPlaceButton, VideoPlaceOrder | Alternating ring gathering/spreading and global swaps. |
+| PatternLock | Neighbor-node activation, longer contact holds, smaller targets, or combinations. |
+| RouteStick | Longer contact holds to activate targets. |
+
+**Perceptual variations** change textures, object appearance, lighting and, in
+selected test episodes, depth/calibration noise or visual clutter. They preserve
+task mechanics. Training exposes individual factors; testing includes held-out
+factors and combinations. Episode metadata selects both variation types.

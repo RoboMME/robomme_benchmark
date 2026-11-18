@@ -16,7 +16,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 FOLDER = ROOT / 'scripts/plus_eval/agentic_methods/astra/embodied'
-sys.path[:0] = [str(FOLDER), str(FOLDER.parent)]
+sys.path[:0] = [str(FOLDER), str(ROOT / 'scripts/plus_eval')]
 from one_shot_examples import TrainingExample, TrainingExamples, phase_sampling
 from agentic_methods.astra.image_sampling import image_count
 

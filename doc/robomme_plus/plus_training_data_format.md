@@ -5,12 +5,9 @@ one easy, medium and hard episode for 15 tasks, and five MoveCube methods.
 One episode per non-MoveCube task has an [atomic variation](../../src/robomme_plus/README.md#task-changes):
 13 appearance changes and 2 mechanism changes. The other 35 episodes have no added variation flags.
 H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
-[LeRobot v3](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot)
-from `main`. The original release is preserved unchanged on the
-[H5 v1](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5/tree/v1) and
-[LeRobot v1](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot/tree/v1) branches.
+[LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
 
-Use these recordings in AfD or AfD+I, with unlimited offline reuse and training
+Use these offline recordings in AfD or AfD+I, with unlimited
 iterations. Report the demos and modalities used. Simulator replays used for
 adaptation consume the per-task R budget; AfD permits none. See the
 [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol).
@@ -84,7 +81,7 @@ Action gripper commands use −1 closed and +1 open. Observed finger widths use
 0–0.04 m. Choice actions are unused. Replay execution with `action/joint_action`
 or `action/eef_action`; environment reset already performs the demonstration.
 
-## LeRobot v3
+## LeRobot
 
 The dataset root contains `meta/`, `data/` and `videos/`. Each episode has one
 Parquet file and front/wrist H264 videos. Each row corresponds to one H5 timestep.

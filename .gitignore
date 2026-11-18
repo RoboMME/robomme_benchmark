@@ -369,16 +369,16 @@ scripts/blog/
 /tests/lightweight/test_plus_training_observation.py
 /scripts/plus_eval/check_environment.py
 
-# External experiment artifacts and local provider installations.
+
+scripts/arxiv
+# Local baseline artifacts and website tools.
 /scripts/plus_eval/**/runs
 /scripts/plus_eval/results/*-runs
-/scripts/plus_eval/sam3.pt
-/scripts/plus_eval/sam3.zip
-/scripts/plus_eval/**/.venv*/
-
-# Local baseline artifacts and website tools.
 /scripts/plus_eval/results/local_tools/
 /scripts/plus_eval/**/checkpoints/
+/scripts/plus_eval/**/.venv*/
+/scripts/plus_eval/sam3.pt
+/scripts/plus_eval/sam3.zip
 
 # Tiny synthetic protocol fixtures; these are not experiment recordings.
 !/scripts/plus_eval/benchmark_io/prompts/current/fixtures/rax_workspace/runtime/autonomous_controller/runs/
