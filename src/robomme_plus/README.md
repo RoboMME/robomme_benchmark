@@ -46,23 +46,28 @@ Choose a setting before adaptation and compare results at the same setting and R
 ZS transfers from original RoboMME without Plus adaptation. AfD/AfD+I can reuse
 any of the 50 released demonstrations without a limit on training iterations.
 
-- **Count development rollouts:** R caps simulator attempts per task on the
-  [provided training seeds](env_metadata/train), not demonstrations or control
-  steps. Prompt/harness tuning, debugging, verification and model selection share
-  R. Every start counts, including failed setup, timeouts, early stops, retries,
-  previews and sandbox rehearsals. Follow the official episode step limits.
-- **Use permitted resources:** Learn only from allowed demonstrations, public
-  observations and simulator feedback. No task-source-derived solutions, oracle
-  queries or privileged simulator information. A task's conditioning video is a
-  normal observation in every setting, distinct from an expert training recording.
-- **Use one method across tasks:** Task-specific prompts and strategies must
-  come from permitted training experience, not hand-written task solutions.
-- **Freeze before testing:** Keep weights, programs, prompts, tools, libraries and
-  the harness fixed. Reset adaptive memory between episodes. Never use test data
-  or outcomes for adaptation or policy selection. Report test-time optimization
-  separately from the standard protocol.
-- **Report usage:** Include the setting, demo use, R, actual attempts and simulator
-  steps per task, and separate adaptation/evaluation API costs in USD.
+1. **Count development rollouts.** R caps simulator attempts per task on the
+   [provided training seeds](env_metadata/train), not demonstrations or control
+   steps. Prompt/harness tuning, debugging, verification and model selection share
+   R. Every start counts, including failed setup, timeouts, early stops, retries,
+   previews and sandbox rehearsals. Follow the official episode step limits.
+
+2. **Use permitted resources.** Learn only from allowed demonstrations, public
+   observations and simulator feedback. No task-source-derived solutions, oracle
+   queries or privileged simulator information. Use one method across tasks;
+   task-specific prompts and strategies must come from permitted training
+   experience, not hand-written task solutions. A task's conditioning video is a
+   normal observation in every setting, distinct from an expert training recording.
+
+3. **Keep the model and agentic framework frozen.** Complete adaptation before
+   testing. Keep weights, programs, prompts, tools, libraries and the harness
+   fixed. Reset adaptive memory between episodes. Never use test data or outcomes
+   for adaptation or policy selection. Report test-time optimization separately
+   from the standard protocol.
+
+4. **Report usage.** Include the setting, demo use, R, actual attempts and simulator
+   steps per task, and separate adaptation/evaluation API costs in USD. Compare
+   methods at the same setting and R.
 
 Evaluate all **50 test episodes per task (800 total)** with default variations
 and execution limits. Keep failures, timeouts and errors in the denominator;
