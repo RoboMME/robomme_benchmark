@@ -29,9 +29,19 @@ only to a separate runtime copy:
 with hashes, portable runner settings and policy provenance.
 `upstream.json` pins source and patches.
 
-The [shared adaptation notes](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#aspire-and-rax-adaptation-notes)
-record the model, input export, 512-timestamp cap, runtime limits and budget rules.
-RAX-specific changes:
+These settings describe this baseline under the
+[benchmark protocol](../../../../src/robomme_plus/README.md#evaluation-protocol).
+The model, time limits and input sampling are implementation choices.
+
+| Area | Configuration |
+| --- | --- |
+| Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; adaptation/evaluation usage and cost logged separately. |
+| Budgets | Nine independent runs: AfD R0, AfI and AfD+I at R1/R3/R5/R10. Lower budgets are not R10 checkpoints. All training starts, including failed setup and verification, share R. |
+| Training demos | AfD/AfD+I receive front/wrist RGB recordings, goals, phases and timestamps, with unlimited offline reuse. AfI receives none. |
+| Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |
+| Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
+| Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
+| Reset recovery | One setup attempt per reserved training start; up to three identical test setup attempts. Policy execution is not retried automatically. |
 
 - **Deadline:** 150 minutes from the recorded task-process start, including
   provisioning, API calls, offline work and rollouts. Resumes preserve the clock.
@@ -47,7 +57,23 @@ RAX-specific changes:
 Published `solutions/` contain the evaluated policies. Each task's `manifest.json`
 records its source selection, evaluated hashes and interface-adjustment provenance.
 
-See the [benchmark protocol](../../../../src/robomme_plus/README.md#evaluation-protocol).
+### Runtime limits
+
+The [runtime policy](../../benchmark_io/runtime_policy.py) is pinned in
+[`solutions/runtime_policy.json`](solutions/runtime_policy.json).
+
+| Limit | Value |
+| --- | --- |
+| Controller wall time per rollout | 20 minutes |
+| Setup / initial wait for a control step | 10 minutes each |
+| No control-step progress after execution starts | 3 minutes |
+| Provider request / simulator RPC | 60 seconds / 180 seconds |
+| Outer episode worker | 35 minutes, including startup and cleanup |
+
+These limits apply to development and testing without extending simulator step
+limits. Timeouts count as unsuccessful tests. The queue's 48-hour job cap and
+30-minute idle watchdog do not extend the per-task development deadline.
+Clocks, commands, transcripts and API usage are retained in run artifacts.
 
 ## Run and inspect
 
@@ -60,8 +86,8 @@ python scripts/plus_eval/agentic_methods/rax/eval_plus.py \
   --gpu 0 --output-dir "<RUN_ROOT>/rax-AfI-R3"
 ```
 
-`--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media. The same output directory resumes
-unstarted tests; use a new directory for a fresh run.
+`--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media.
+The same output directory resumes unstarted tests; use a new directory for a fresh run.
 
 [Link external artifacts](../../results/README.md) to inspect
 `runs/SETTING/Rn/{development,evaluation}`. Public packet examples are in

@@ -32,44 +32,7 @@ at the same setting and R; R caps simulator attempts per task on training seeds.
 The [evaluation guide](../../src/robomme_plus/README.md#evaluation-protocol) defines
 the shared interface, default variations and execution limits.
 
-### ASPIRE and RAX adaptation notes
-
-Both retain their LIBERO development workflows. The choices below describe
-these baseline runs; time limits, model/provider choices and input sampling are
-implementation settings, not additional requirements for every benchmark method.
-Core submodules stay unchanged; integration patches apply to runtime copies.
-
-| Area | RoboMME-Plus adaptation |
-| --- | --- |
-| Development model | Opus 5.5 through AWS Bedrock, high reasoning effort; usage/cost logged separately from evaluation. |
-| Settings | Nine independent runs per method: AfD R0, AfI and AfD+I at R1/R3/R5/R10. Lower budgets are not R10 checkpoints. |
-| Inputs | AfD/AfD+I receive front/wrist RGB training recordings with goals, phases and timestamps. Live inputs include RGB-D, calibration and robot state. AfI receives no released expert recordings. |
-| Interface | Public robot actions, observations, conditioning videos and terminal/error feedback replace LIBERO access; task source and hidden object state stay outside agent workspaces. |
-| Development deadline | **150 minutes per task per run**, including model calls, offline work and simulator attempts. Clocks persist across resumes. At expiry, stop development and preserve existing code for reporting/submission. |
-| Rollout accounting | All training starts share R, including verification, failed setup and frozen-bundle rehearsals. AfD permits no simulator rehearsal. |
-| Video transport | Uniformly sample long conditioning videos to **512 timestamps**, retaining endpoints, both cameras and a separate initial live frame. Released training recordings remain available offline. |
-| Frozen testing | Run selected Python policies and local providers, with no frontier-model API calls, test-driven revision or cross-episode adaptive memory. |
-| Reset recovery | Development uses one setup attempt per reserved start. Test setup can retry three times with identical settings; policy execution is not retried automatically. |
-
-The shared [runtime policy](../../scripts/plus_eval/benchmark_io/runtime_policy.py)
-is copied into each method's `solutions/runtime_policy.json`:
-
-| Runtime limit | Value |
-| --- | --- |
-| Controller wall time per rollout | 20 minutes |
-| Setup / initial wait for a control step | 10 minutes each |
-| No control-step progress after execution starts | 3 minutes |
-| Provider request / simulator RPC | 60 seconds / 180 seconds |
-| Outer episode worker | 35 minutes, including startup and cleanup |
-
-These watchdogs also apply to development rollouts and do not extend native
-simulator step limits. Timeouts remain unsuccessful test outcomes. The queue's
-48-hour job cap and 30-minute idle watchdog are outer safeguards, not extra
-per-task development time. Clocks and expiry records are saved under
-`study/development_clocks/`; full commands, transcripts and API usage remain in
-run artifacts.
-
-Method-specific workflows, deadline handling and policy provenance are documented in [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md#adaptation)
+Adaptation details: [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md#adaptation)
 and [RAX](../../scripts/plus_eval/agentic_methods/rax/README.md#adaptation).
 
 ## Zero-shot transfer (ZS)

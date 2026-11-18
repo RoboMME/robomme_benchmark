@@ -4,8 +4,9 @@ Shared simulator I/O, budget ledger, frozen evaluation, queue and API accounting
 for [ASPIRE](../agentic_methods/aspire/README.md) and [RAX](../agentic_methods/rax/README.md).
 Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol);
 [baseline settings and results](../../../doc/robomme_plus/robomme_plus_baseline_results.md) describe
-the finalized runs. [Adaptation notes](../../../doc/robomme_plus/robomme_plus_baseline_results.md#aspire-and-rax-adaptation-notes)
-record development deadlines, input changes and runtime limits. Saved agent-facing prompts are in [`prompts/current`](prompts/current).
+the finalized runs. [ASPIRE](../agentic_methods/aspire/README.md#adaptation) and
+[RAX](../agentic_methods/rax/README.md#adaptation) document their adaptation settings
+and runtime limits. Saved agent-facing prompts are in [`prompts/current`](prompts/current).
 
 ## Setup
 
