@@ -19,3 +19,4 @@
 [submodule "scripts/plus_eval/rax/rax"]
 	path = scripts/plus_eval/agentic_methods/rax/rax
 	url = https://github.com/robot-agent-exploration/rax.git
+	update = none

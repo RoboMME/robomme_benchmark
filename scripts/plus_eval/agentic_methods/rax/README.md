@@ -9,7 +9,8 @@ The pin originates from upstream's `libero-pro/container` branch. A complete
 [`upstream.bundle`](upstream.bundle), checksum-pinned in [`upstream.json`](upstream.json),
 preserves the same commit if that branch is rewritten. From the repository root,
 run `python3 scripts/plus_eval/agentic_methods/rax/restore_core.py` to initialize
-`rax/` offline. Existing checkouts are left unchanged; evaluated code is identical.
+`rax/` offline. Recursive clones skip this submodule's network fetch; use the
+restore command during setup. Existing checkouts are left unchanged; evaluated code is identical.
 
 ## Adaptation
 
