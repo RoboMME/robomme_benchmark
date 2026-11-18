@@ -34,11 +34,17 @@ def _load_source_tree() -> tuple[str, ast.AST]:
 def _collect_dict_keys(tree: ast.AST) -> set[str]:
     keys: set[str] = set()
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Dict):
-            continue
-        for key in node.keys:
-            if isinstance(key, ast.Constant) and isinstance(key.value, str):
-                keys.add(key.value)
+        if isinstance(node, ast.Dict):
+            for key in node.keys:
+                if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                    keys.add(key.value)
+        elif (
+            isinstance(node, ast.Subscript)
+            and isinstance(node.ctx, ast.Store)
+            and isinstance(node.slice, ast.Constant)
+            and isinstance(node.slice.value, str)
+        ):
+            keys.add(node.slice.value)
     return keys
 
 

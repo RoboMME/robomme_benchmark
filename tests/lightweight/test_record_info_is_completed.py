@@ -78,6 +78,13 @@ def _assert_source_wired(source: str, tree: ast.AST) -> None:
             for key in node.keys:
                 if isinstance(key, ast.Constant) and key.value == "is_completed":
                     has_info_key = True
+        elif (
+            isinstance(node, ast.Subscript)
+            and isinstance(node.ctx, ast.Store)
+            and isinstance(node.slice, ast.Constant)
+            and node.slice.value == "is_completed"
+        ):
+            has_info_key = True
 
     assert has_helper_call, "RecordWrapper did not call _is_online_subgoal_completed"
     assert has_info_key, "record_data['info'] does not contain is_completed"
