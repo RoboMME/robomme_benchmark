@@ -2,7 +2,7 @@
 
 Evaluates the upstream **perceptual-framesamp-modul** policy through its WebSocket
 server, using the original history buffer, frame sampling, modulation and
-16-action chunks. See the [shared protocol](../../README.md) for the 800-episode run
+16-action chunks. See the [shared run instructions](../../README.md) for the 800-episode run
 options, outputs and metrics. Inference is local; no API or subgoal model is needed.
 
 ## Setup

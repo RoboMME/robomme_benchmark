@@ -49,25 +49,34 @@ Exact settings live in the episode metadata. For ablations, set
 
 ## Evaluation protocol
 
-Evaluate direct transfer (ZS), adaptation from demonstrations (AfD), interaction
-(AfI), or both (AfD+I). Interaction budgets are at most 1, 3, 5 or 10 simulator
-starts per task, using only training seeds. Every preview, retry and verification
-start counts. See the [full protocol](../../doc/plus_agentic_evaluation.md) and
-[results by setting](../../doc/robomme_plus_baseline_results.md).
+Choose the setting before development and report each setting and budget separately.
 
-- **Fine-tuning:** Use only the released **50 training demonstrations** for
-  RoboMME-Plus fine-tuning.
-- **Interactive adaptation:** RSI-style VLM agents may adapt through simulator
-  interaction using only the [50 training seeds](env_metadata/train), mimicking
-  few-shot adaptation in the real world.
-- **No source-code access:** Agents must not inspect task implementations or
-  receive reverse-engineered task rules. Use task instructions, observations and
-  simulator feedback to learn how to solve tasks.
-- **General methods:** Use a shared method across tasks. Any task-specific prompts
-  or strategies must be discovered by the model from the permitted training
-  experience, rather than manually designed for individual tasks or cases.
-- **Held-out evaluation:** Reserve test episodes for evaluation. Do not use test
-  data, seeds or rollouts to select or tune models, prompts or strategies.
+| Setting | Released training demonstrations | Simulator starts per task |
+|---|---|---|
+| ZS: direct transfer | None | 0 |
+| AfD: adaptation from demonstrations | Up to all 50 | 0 (R0) |
+| AfI: adaptation from interaction | None | At most 1, 3, 5 or 10 |
+| AfD+I: adaptation from both | Up to all 50 | At most 1, 3, 5 or 10 |
+
+- **Training experience:** Use only the released demonstrations and
+  [training seeds](env_metadata/train). Demonstrations may be reused without limit;
+  any RoboMME-Plus fine-tuning uses only these 50 recordings. Every simulator start
+  counts toward R, including previews, debugging, verification, retries and sandbox
+  rehearsals. R is a rollout budget, not a control-step budget.
+- **Permitted inputs:** Learn from task instructions, public observations and
+  simulator feedback. Do not expose task source, oracle annotations or privileged
+  object state to the agent. A test episode's conditioning video is a normal
+  observation in every setting, distinct from an expert training demonstration.
+- **Shared method:** Use the same model or framework across tasks. Task-specific
+  prompts or strategies must be learned from the permitted training experience.
+- **Frozen testing:** Freeze weights, programs, prompt templates, tools and
+  libraries before testing. Reset adaptive memory between episodes. Test data,
+  seeds and rollout outcomes cannot be used for development or policy selection.
+
+Evaluate all **50 test episodes per task (800 total)** with the default variation
+settings and execution limits below. Report changed test conditions separately.
+See [adaptation details and reporting requirements](../../doc/plus_agentic_evaluation.md)
+and [results by setting](../../doc/robomme_plus_baseline_results.md).
 
 ## Task changes
 
@@ -133,7 +142,7 @@ Budgeted agent development uses one attempt per reserved rollout. Policy executi
 is not retried automatically; successful reset info reports `reset_attempts`.
 
 Follow the [installation](../../readme.md#-installation) and
-[model adapter guides](../../scripts/plus_eval/README.md), or use your own policy:
+[baseline running instructions](../../scripts/plus_eval/README.md), or use your own policy:
 
 ```python
 from robomme_plus import BenchmarkEnvBuilder
@@ -170,7 +179,7 @@ that episode's scene and execution budget internally.
 
 Only `status == "success"` counts as success. Include failures, timeouts and errors
 in the denominator. Keep oracle subgoals and test metadata out of policy inputs.
-Report zero-shot and few-shot results separately using the
+Report each evaluation setting and interaction budget separately using the
 [submission template](../../doc/submission/model_example_plus.md).
 
 Published dataset URLs and recording format identifiers retain their original

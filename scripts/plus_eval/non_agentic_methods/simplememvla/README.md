@@ -2,7 +2,7 @@
 
 Uses upstream [`build_policy()` and batched inference](https://github.com/YinpeiDai/SimpleMemVLA/blob/c564c17d276d7294200122b286c21901a3bfb99f/robomme_sim/eval_success.py),
 including history sampling, prompts, subtask generation and action prediction.
-The model and simulator share one GPU/process. See the [shared protocol](../../README.md)
+The model and simulator share one GPU/process. See the [shared run instructions](../../README.md)
 for the 800-episode run options, outputs and metrics.
 
 ## Setup

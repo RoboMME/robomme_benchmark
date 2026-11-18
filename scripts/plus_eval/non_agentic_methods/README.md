@@ -5,5 +5,5 @@
 - [PonderPounce](ponderpounce/README.md)
 
 Each directory contains its adapter, method helpers and pinned upstream submodule.
-The adapters use the [shared evaluation protocol](../README.md#protocol-and-outputs).
+The adapters follow the [benchmark evaluation rules](../../../src/robomme_plus/README.md#evaluation-protocol).
 Local rollouts are linked under ignored `runs/` directories.

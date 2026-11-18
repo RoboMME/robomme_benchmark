@@ -175,7 +175,8 @@ these full-evaluation totals.
 
 - [Model baseline summaries](../scripts/plus_eval/results/model_baselines.json)
 - [ASPIRE/RAX overall and per-task counts](../scripts/plus_eval/results/agentic_20261118.json)
-- [Evaluation entry points and run options](../scripts/plus_eval/README.md)
+- [Evaluation guide](../src/robomme_plus/README.md)
+- [Baseline running instructions](../scripts/plus_eval/README.md)
 - Frozen solutions: [ASPIRE](../scripts/plus_eval/agentic_methods/aspire/solutions/README.md), [RAX](../scripts/plus_eval/agentic_methods/rax/solutions/README.md)
 - [Logs and rollout locations](../scripts/plus_eval/results/README.md)
 - Model rollout dataset: [Yinpei/RoboMME-plus-model-rollout](https://huggingface.co/datasets/Yinpei/RoboMME-plus-model-rollout)

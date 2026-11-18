@@ -1,4 +1,8 @@
-# RoboMME-Plus evaluation
+# Running RoboMME-Plus baselines
+
+This directory contains setup and launch instructions for the baseline adapters.
+For evaluation settings, permitted training experience and benchmark rules, start
+with the [evaluation guide](../../src/robomme_plus/README.md#evaluation-protocol).
 
 Run commands from the repository root after the [simulator installation](../../readme.md#-installation).
 Initialize only the submodule needed by your model.
@@ -51,13 +55,10 @@ continuing; use a new output directory for another model, checkpoint or prompt.
 Replacements archive old episodes under `.history/`. Only one evaluator may
 write to an output directory at a time.
 
-## Protocol and outputs
+## Outputs
 
-[`evaluation.py`](evaluation.py) supplies the shared rollout, scoring and recording
-protocol. Only environment `status == "success"` counts as success. Failures,
-timeouts, model stops and errors remain in the requested-episode denominator.
-The execution limit is `ceil(1.5 * oracle_policy_step) + 200` control steps;
-reset demonstrations do not consume it. Test oracle annotations are never policy inputs.
+[`evaluation.py`](evaluation.py) handles rollout execution, scoring and recording
+according to the [benchmark evaluation rules](../../src/robomme_plus/README.md#evaluate).
 
 Each run saves `config.json`, `summary.json` and `run.log`. Episode directories
 contain `result.json`, `metadata.json`, `episode.mp4`, `actions.npz` and policy-call

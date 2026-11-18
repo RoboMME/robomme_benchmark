@@ -196,7 +196,8 @@ mean for the same setting and budget.
 Task-provided test demonstration videos are normal observations, not adaptation
 data. Original RoboMME training is outside the Plus rollout budget.
 
-Reference: [evaluation guides](../../scripts/plus_eval/README.md) ·
+Reference: [evaluation guide](../../src/robomme_plus/README.md) ·
+[baseline running instructions](../../scripts/plus_eval/README.md) ·
 [training data format and seed mapping](../plus_training_data_format.md).
 
 </details>

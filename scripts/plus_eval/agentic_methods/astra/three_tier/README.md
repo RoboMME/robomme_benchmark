@@ -3,7 +3,7 @@
 Uses [Astra-on-RoboMME](Astra-on-RoboMME)'s Astra API planner, local System 1.5
 Qwen completion monitor and GroundSG Pi0.5 policy server. The checkout includes
 `mme_vla_suite`; a separate `robomme_policy_learning` checkout is unnecessary.
-See the [shared protocol](../../../README.md) for the 800-episode run options, outputs,
+See the [shared run instructions](../../../README.md) for the 800-episode run options, outputs,
 metrics and API pricing.
 
 ## Setup
