@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "VideoRepick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "351ba553fb2aba7c926d8699a24eeb904f51590176924b14234e7bd7c927992a",
+    "motion.py": "b446debfb10cf47288f2d5b082482852b72a42166a961434445d326c204c738f",
+    "tracker.py": "fca296f90eabfba88fab654c4389dab73234f5ea1d30bd2f869bbe436fd102f4",
+    "vision.py": "0806e8867210c69f5172941b41c78a9f97e625bba1406bbc870e360c725c780f"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "351ba553fb2aba7c926d8699a24eeb904f51590176924b14234e7bd7c927992a",
+    "motion.py": "b446debfb10cf47288f2d5b082482852b72a42166a961434445d326c204c738f",
+    "tracker.py": "fca296f90eabfba88fab654c4389dab73234f5ea1d30bd2f869bbe436fd102f4",
+    "vision.py": "0806e8867210c69f5172941b41c78a9f97e625bba1406bbc870e360c725c780f"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

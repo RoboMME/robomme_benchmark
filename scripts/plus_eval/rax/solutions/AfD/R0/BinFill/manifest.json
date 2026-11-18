@@ -1,0 +1,59 @@
+{
+  "method": "rax",
+  "setting": "AfD",
+  "budget": 0,
+  "task": "BinFill",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "0b4e43fd9cd15745e3f980efb2c1a8181284ecb037e7ecc10df5e9b2924963d6",
+    "geom.py": "a7f6cda2100ea591bdca4d8512e4ed85acd102343af6ae6b57e968d71d6821ee",
+    "mcpio.py": "d4d9d88727ded9ffab7cfa5f88e50897ecdbea1ecc0b8d866b45a80cbf9e2b91",
+    "motion.py": "b405184f4b094a8be023f22e198ed762b17cea5f25ad270793e4f4ccdbfaaca6",
+    "robot.py": "4969aba82dc0a2e3f2a90823c64b3174439b90ab89ae9fe98ed6a2428cc829b9",
+    "scene.py": "2b744da068375065440093decd8667f2a8cebb1e0dc4e55ccd29d501dacbf058",
+    "vision.py": "2660b6413e409a763da4eb14e8c229bf703f1f41a62fcfb55d6d172a0cf6cfdf"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "0b4e43fd9cd15745e3f980efb2c1a8181284ecb037e7ecc10df5e9b2924963d6",
+    "geom.py": "a7f6cda2100ea591bdca4d8512e4ed85acd102343af6ae6b57e968d71d6821ee",
+    "mcpio.py": "d4d9d88727ded9ffab7cfa5f88e50897ecdbea1ecc0b8d866b45a80cbf9e2b91",
+    "motion.py": "b405184f4b094a8be023f22e198ed762b17cea5f25ad270793e4f4ccdbfaaca6",
+    "robot.py": "4969aba82dc0a2e3f2a90823c64b3174439b90ab89ae9fe98ed6a2428cc829b9",
+    "scene.py": "2b744da068375065440093decd8667f2a8cebb1e0dc4e55ccd29d501dacbf058",
+    "vision.py": "2660b6413e409a763da4eb14e8c229bf703f1f41a62fcfb55d6d172a0cf6cfdf"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "mcpio.py",
+        "functions": [
+          "_parse_pose"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "controller.py": "0b4e43fd9cd15745e3f980efb2c1a8181284ecb037e7ecc10df5e9b2924963d6",
+      "geom.py": "a7f6cda2100ea591bdca4d8512e4ed85acd102343af6ae6b57e968d71d6821ee",
+      "mcpio.py": "1d2a12c1b5b681899b650195a7310483417a977105231e5b84540815516c29a6",
+      "motion.py": "b405184f4b094a8be023f22e198ed762b17cea5f25ad270793e4f4ccdbfaaca6",
+      "robot.py": "4969aba82dc0a2e3f2a90823c64b3174439b90ab89ae9fe98ed6a2428cc829b9",
+      "scene.py": "2b744da068375065440093decd8667f2a8cebb1e0dc4e55ccd29d501dacbf058",
+      "vision.py": "2660b6413e409a763da4eb14e8c229bf703f1f41a62fcfb55d6d172a0cf6cfdf"
+    },
+    "repaired_files": {
+      "controller.py": "0b4e43fd9cd15745e3f980efb2c1a8181284ecb037e7ecc10df5e9b2924963d6",
+      "geom.py": "a7f6cda2100ea591bdca4d8512e4ed85acd102343af6ae6b57e968d71d6821ee",
+      "mcpio.py": "d4d9d88727ded9ffab7cfa5f88e50897ecdbea1ecc0b8d866b45a80cbf9e2b91",
+      "motion.py": "b405184f4b094a8be023f22e198ed762b17cea5f25ad270793e4f4ccdbfaaca6",
+      "robot.py": "4969aba82dc0a2e3f2a90823c64b3174439b90ab89ae9fe98ed6a2428cc829b9",
+      "scene.py": "2b744da068375065440093decd8667f2a8cebb1e0dc4e55ccd29d501dacbf058",
+      "vision.py": "2660b6413e409a763da4eb14e8c229bf703f1f41a62fcfb55d6d172a0cf6cfdf"
+    }
+  }
+}

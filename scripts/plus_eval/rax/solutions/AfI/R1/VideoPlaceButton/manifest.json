@@ -1,0 +1,59 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 1,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "TRANSITIONS.md": "882a15d7040963e1ebc8f8850688ae18871c154265cd820944e5359c6c13433f",
+    "controller.py": "0fff5094bba1979ebadfe49abc5a91f3d3791a1bef11d23802723b4040d7f32c",
+    "geom.py": "a2e885b57954d996b4d41bb82acd524e2c3dac8656be14d645ab3fe8c97b0749",
+    "io_utils.py": "74f51ece1f940815d6d9de8828a2bf27507fba403ab0b7665278c4cb613f01ae",
+    "perception.py": "e5d4183cbbfa5639376b1b3c921e817fa1e3db7674c4c8be65b880fcf634d403",
+    "robot.py": "00ac3b7395eb9009465d165a49cb42e120d7f70cc2db66c740ff60d2eaa3d79c",
+    "video.py": "edde8f20747a3de930bfbd1c8fd06d278c26791a96d241e1d4305f76454e5bd4"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "TRANSITIONS.md": "882a15d7040963e1ebc8f8850688ae18871c154265cd820944e5359c6c13433f",
+    "controller.py": "0fff5094bba1979ebadfe49abc5a91f3d3791a1bef11d23802723b4040d7f32c",
+    "geom.py": "a2e885b57954d996b4d41bb82acd524e2c3dac8656be14d645ab3fe8c97b0749",
+    "io_utils.py": "74f51ece1f940815d6d9de8828a2bf27507fba403ab0b7665278c4cb613f01ae",
+    "perception.py": "e5d4183cbbfa5639376b1b3c921e817fa1e3db7674c4c8be65b880fcf634d403",
+    "robot.py": "00ac3b7395eb9009465d165a49cb42e120d7f70cc2db66c740ff60d2eaa3d79c",
+    "video.py": "edde8f20747a3de930bfbd1c8fd06d278c26791a96d241e1d4305f76454e5bd4"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "perception.py",
+        "functions": [
+          "parse_pose"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "TRANSITIONS.md": "882a15d7040963e1ebc8f8850688ae18871c154265cd820944e5359c6c13433f",
+      "controller.py": "0fff5094bba1979ebadfe49abc5a91f3d3791a1bef11d23802723b4040d7f32c",
+      "geom.py": "a2e885b57954d996b4d41bb82acd524e2c3dac8656be14d645ab3fe8c97b0749",
+      "io_utils.py": "74f51ece1f940815d6d9de8828a2bf27507fba403ab0b7665278c4cb613f01ae",
+      "perception.py": "e7026e6124642e57219b67c62f8f11a468591967113b3b50680ae30a83e2d962",
+      "robot.py": "00ac3b7395eb9009465d165a49cb42e120d7f70cc2db66c740ff60d2eaa3d79c",
+      "video.py": "edde8f20747a3de930bfbd1c8fd06d278c26791a96d241e1d4305f76454e5bd4"
+    },
+    "repaired_files": {
+      "TRANSITIONS.md": "882a15d7040963e1ebc8f8850688ae18871c154265cd820944e5359c6c13433f",
+      "controller.py": "0fff5094bba1979ebadfe49abc5a91f3d3791a1bef11d23802723b4040d7f32c",
+      "geom.py": "a2e885b57954d996b4d41bb82acd524e2c3dac8656be14d645ab3fe8c97b0749",
+      "io_utils.py": "74f51ece1f940815d6d9de8828a2bf27507fba403ab0b7665278c4cb613f01ae",
+      "perception.py": "e5d4183cbbfa5639376b1b3c921e817fa1e3db7674c4c8be65b880fcf634d403",
+      "robot.py": "00ac3b7395eb9009465d165a49cb42e120d7f70cc2db66c740ff60d2eaa3d79c",
+      "video.py": "edde8f20747a3de930bfbd1c8fd06d278c26791a96d241e1d4305f76454e5bd4"
+    }
+  }
+}

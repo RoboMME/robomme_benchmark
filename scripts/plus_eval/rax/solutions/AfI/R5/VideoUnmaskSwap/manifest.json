@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "VideoUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "19ff0de09982252ca1c12ea50cbf5d29680cbb817145e17cb6cc466b5905f3ad",
+    "geom.py": "ce392135a9c5ea3c36caa7d632ef659ed8b60cb3be90411c3abecd8cd6260f73",
+    "motion.py": "26dd17c0485a5e4ece17fd08b2be3b3b13924e03ee05bef14de959157c89581f",
+    "track.py": "ae0e2c06728706cbf2c62b3552d519c3cd801917a7f50cc8b4d907b76b622677"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "19ff0de09982252ca1c12ea50cbf5d29680cbb817145e17cb6cc466b5905f3ad",
+    "geom.py": "ce392135a9c5ea3c36caa7d632ef659ed8b60cb3be90411c3abecd8cd6260f73",
+    "motion.py": "26dd17c0485a5e4ece17fd08b2be3b3b13924e03ee05bef14de959157c89581f",
+    "track.py": "ae0e2c06728706cbf2c62b3552d519c3cd801917a7f50cc8b4d907b76b622677"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

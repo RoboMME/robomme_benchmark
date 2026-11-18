@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "d394827c897d08200ea01c9c6d6e718057cc677411809005b3e7ec752cd53c19"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "RouteStick.py": "d394827c897d08200ea01c9c6d6e718057cc677411809005b3e7ec752cd53c19"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

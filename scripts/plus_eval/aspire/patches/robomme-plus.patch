@@ -1,0 +1,125 @@
+diff --git a/src/cap_harness/api.py b/src/cap_harness/api.py
+index 0b74fe3..8e70f33 100644
+--- a/src/cap_harness/api.py
++++ b/src/cap_harness/api.py
+@@ -1566,6 +1566,7 @@ class CapApi:
+             )
+         extensions = (
+             ("get_task_metadata", "metadata"),
++            ("get_conditioning_video", "observation"),
+             ("get_controller_metadata", "metadata"),
+             ("get_base_pose", "metadata"),
+             ("navigate_to_pose", "execution"),
+diff --git a/src/cap_harness/contracts.py b/src/cap_harness/contracts.py
+index 06d454d..0a64724 100644
+--- a/src/cap_harness/contracts.py
++++ b/src/cap_harness/contracts.py
+@@ -16,6 +16,7 @@ JOINT_DIMENSIONS: Mapping[str, int] = MappingProxyType(
+     {
+         "behavior": 7,
+         "libero": 7,
++        "robomme_plus": 7,
+         "robosuite": 7,
+         "yam_real": 6,
+     }
+diff --git a/src/cap_harness/providers/curobo/client.py b/src/cap_harness/providers/curobo/client.py
+index f3cbd16..8d8a6bc 100644
+--- a/src/cap_harness/providers/curobo/client.py
++++ b/src/cap_harness/providers/curobo/client.py
+@@ -415,7 +415,7 @@ class CuRoboProvider:
+     @staticmethod
+     def _encode_target(target: Pose | np.ndarray, embodiment: str) -> dict[str, object]:
+         if isinstance(target, Pose):
+-            if embodiment in ("libero", "robosuite"):
++            if embodiment in ("libero", "robosuite", "robomme_plus"):
+                 hand_position = target.position + (
+                     quaternion_wxyz_to_matrix(target.quaternion_wxyz) @ PANDA_EEF_TO_HAND_OFFSET_M
+                 )
+diff --git a/src/cap_harness/providers/pyroki/client.py b/src/cap_harness/providers/pyroki/client.py
+index 004d455..bd766af 100644
+--- a/src/cap_harness/providers/pyroki/client.py
++++ b/src/cap_harness/providers/pyroki/client.py
+@@ -64,7 +64,7 @@ class PyRokiProvider:
+                 arm=arm,
+                 embodiment=embodiment,
+             )
+-        if robot_state.embodiment not in {"libero", "robosuite"}:
++        if robot_state.embodiment not in {"libero", "robosuite", "robomme_plus"}:
+             return self._failure(
+                 ErrorCode.UNSUPPORTED,
+                 f"PyRoki does not support embodiment {robot_state.embodiment!r}",
+diff --git a/src/cap_harness/providers/sam3/service.py b/src/cap_harness/providers/sam3/service.py
+index faa871e..d69485f 100644
+--- a/src/cap_harness/providers/sam3/service.py
++++ b/src/cap_harness/providers/sam3/service.py
+@@ -213,6 +213,8 @@ def main() -> None:
+     parser.add_argument("--device", default="cuda")
+     parser.add_argument("--host", default="127.0.0.1")
+     parser.add_argument("--port", type=int, default=8114)
++    parser.add_argument("--checkpoint", default=None,
++                        help="Local original SAM3 checkpoint; default downloads from the official repository")
+     args = parser.parse_args()
+ 
+     global _DEVICE, _MODEL, _PROCESSOR
+@@ -223,7 +225,8 @@ def main() -> None:
+         if "cuda" in args.device:
+             torch.cuda.set_device(int(args.device.split(":")[-1]) if ":" in args.device else 0)
+     LOGGER.info("Loading SAM3 model on %s", args.device)
+-    _MODEL = build_sam3_image_model(enable_inst_interactivity=True).to(args.device)
++    _MODEL = build_sam3_image_model(enable_inst_interactivity=True,
++        checkpoint_path=args.checkpoint, load_from_HF=args.checkpoint is None).to(args.device)
+     _PROCESSOR = Sam3Processor(_MODEL, device=args.device, confidence_threshold=0.0)
+     uvicorn.run(app, host=args.host, port=args.port)
+ 
+diff --git a/src/cap_harness/providers/service_runtime.py b/src/cap_harness/providers/service_runtime.py
+index 041008b..b94a38c 100644
+--- a/src/cap_harness/providers/service_runtime.py
++++ b/src/cap_harness/providers/service_runtime.py
+@@ -16,6 +16,7 @@ from __future__ import annotations
+ 
+ import asyncio
+ import os
++import threading
+ 
+ _UNBOUNDED_PATHS = frozenset({"/openapi.json", "/docs", "/redoc", "/healthz"})
+ 
+@@ -52,7 +53,20 @@ def install_service_runtime(app, *, limit: int | None = None):
+         if request.url.path in _UNBOUNDED_PATHS:
+             return await call_next(request)
+         async with semaphore:
+-            return await call_next(request)
++            guard=None
++            if os.environ.get('ROBOMME_AGENTIC_RUNTIME_POLICY'):
++                from benchmark_io.runtime_policy import configured
++                def expired():
++                    # Native CUDA/JAX calls cannot be safely cancelled in-thread.
++                    # Terminate this shared service; its operator restarts it.
++                    os.write(2,b'Provider computation watchdog expired; restarting service\n')
++                    os._exit(124)
++                guard=threading.Timer(configured().provider_seconds+5,expired)
++                guard.daemon=True;guard.start()
++            try:
++                return await call_next(request)
++            finally:
++                if guard:guard.cancel()
+ 
+     @app.get("/healthz")
+     async def _healthz():  # pragma: no cover - exercised live
+diff --git a/src/cap_harness/registry.py b/src/cap_harness/registry.py
+index 61195fd..d4c2f3c 100644
+--- a/src/cap_harness/registry.py
++++ b/src/cap_harness/registry.py
+@@ -75,7 +75,13 @@ YAM_REAL_PUBLIC_TOOL_NAMES = frozenset(
+     {"yam_real.get_task_metadata", "yam_real.get_controller_metadata"}
+ )
+ 
++ROBOMME_PLUS_PUBLIC_TOOL_NAMES = frozenset({
++    "robomme_plus.get_task_metadata", "robomme_plus.get_controller_metadata",
++    "robomme_plus.get_conditioning_video",
++})
++
+ _APPROVED_EMBODIMENT_PREFIXES = (
++    "robomme_plus.",
+     "behavior.",
+     "yam_real.",
+     "libero.",

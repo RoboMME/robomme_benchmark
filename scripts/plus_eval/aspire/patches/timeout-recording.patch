@@ -1,0 +1,11 @@
+--- a/src/cap_harness/artifacts.py
++++ b/src/cap_harness/artifacts.py
+@@ -34,6 +34,8 @@
+ 
+ SCHEMA_VERSION = "1.0"
+ TERMINATION_REASONS = {
++    "controller_no_progress": "The policy made no simulator progress before the watchdog limit.",
++    "controller_wall_timeout": "The controller exceeded the wall-clock limit.",
+     "program_completed": "The generated Python program returned normally.",
+     "task_succeeded": "The environment ended after benchmark success.",
+     "environment_terminated": "The environment terminated without benchmark success.",

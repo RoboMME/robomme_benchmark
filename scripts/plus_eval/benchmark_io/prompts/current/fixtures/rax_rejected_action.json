@@ -1,0 +1,17 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32000,
+    "message": "each action row must have 7 numbers",
+    "data": {
+      "type": "RejectedBeforeAction",
+      "operation": "robomme_step",
+      "stage": "validation",
+      "reason": "each action row must have 7 numbers",
+      "episode_ended": false,
+      "call_id": "00000000000000000000000000000000",
+      "budget": {}
+    }
+  }
+}

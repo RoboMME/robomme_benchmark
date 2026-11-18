@@ -1,0 +1,51 @@
+{
+  "method": "rax",
+  "setting": "AfD",
+  "budget": 0,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "282f0d109b843b3929d5a038625233f75d35480d9262c71f6df2784470ce646a",
+    "geom.py": "9b8759aed66f4682dfd634b3d5e398cfe697b0e7ac76b124aa1d4bdfedd9e110",
+    "mcpio.py": "cb76c35354582ed81b8504229a2f16aab716a83c57b5c64fcccf3ddea5cf0093",
+    "perception.py": "04b2143b03aa665fd9956abf334a94667d4c2349391d1aabac2622b32efcd88e",
+    "videoan.py": "4aa62cc74e56b893ebd0f478da7e9d8c29624f5ecfe9caedba85fae58e1d4f86"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "282f0d109b843b3929d5a038625233f75d35480d9262c71f6df2784470ce646a",
+    "geom.py": "9b8759aed66f4682dfd634b3d5e398cfe697b0e7ac76b124aa1d4bdfedd9e110",
+    "mcpio.py": "cb76c35354582ed81b8504229a2f16aab716a83c57b5c64fcccf3ddea5cf0093",
+    "perception.py": "04b2143b03aa665fd9956abf334a94667d4c2349391d1aabac2622b32efcd88e",
+    "videoan.py": "4aa62cc74e56b893ebd0f478da7e9d8c29624f5ecfe9caedba85fae58e1d4f86"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "geom.py",
+        "functions": [
+          "parse_pose"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "controller.py": "282f0d109b843b3929d5a038625233f75d35480d9262c71f6df2784470ce646a",
+      "geom.py": "a1c2b592cfc10751a5b5bdfe63d706572dac337359c707b8837cb530c6815524",
+      "mcpio.py": "cb76c35354582ed81b8504229a2f16aab716a83c57b5c64fcccf3ddea5cf0093",
+      "perception.py": "04b2143b03aa665fd9956abf334a94667d4c2349391d1aabac2622b32efcd88e",
+      "videoan.py": "4aa62cc74e56b893ebd0f478da7e9d8c29624f5ecfe9caedba85fae58e1d4f86"
+    },
+    "repaired_files": {
+      "controller.py": "282f0d109b843b3929d5a038625233f75d35480d9262c71f6df2784470ce646a",
+      "geom.py": "9b8759aed66f4682dfd634b3d5e398cfe697b0e7ac76b124aa1d4bdfedd9e110",
+      "mcpio.py": "cb76c35354582ed81b8504229a2f16aab716a83c57b5c64fcccf3ddea5cf0093",
+      "perception.py": "04b2143b03aa665fd9956abf334a94667d4c2349391d1aabac2622b32efcd88e",
+      "videoan.py": "4aa62cc74e56b893ebd0f478da7e9d8c29624f5ecfe9caedba85fae58e1d4f86"
+    }
+  }
+}

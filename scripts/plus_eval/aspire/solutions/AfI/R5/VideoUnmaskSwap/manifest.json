@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "VideoUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "64b258018c986c35b4370ea4e366e060b79ba14225f32a8bd58f4cc86743f4fe"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "VideoUnmaskSwap.py": "64b258018c986c35b4370ea4e366e060b79ba14225f32a8bd58f4cc86743f4fe"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

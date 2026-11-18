@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfD+I",
+  "budget": 3,
+  "task": "VideoPlaceOrder",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "afc6aaa6e371dc012d95500fb4445f5addcbcf85a81f49e18429f0793e2de403",
+    "perception.py": "68c4724c5eca8b04b2439e312ecb6a83bba6acdcb33f7c2529da010f66fe9956",
+    "robot.py": "ae7fcc83e2143bf325703d88201e8b552b0e221a3071504e20b7911688a20143",
+    "skills.py": "5f66fa65d9397a538e2ba16d0e2d2694666c85b7cd930feed40fa78ca223ce93"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "afc6aaa6e371dc012d95500fb4445f5addcbcf85a81f49e18429f0793e2de403",
+    "perception.py": "68c4724c5eca8b04b2439e312ecb6a83bba6acdcb33f7c2529da010f66fe9956",
+    "robot.py": "ae7fcc83e2143bf325703d88201e8b552b0e221a3071504e20b7911688a20143",
+    "skills.py": "5f66fa65d9397a538e2ba16d0e2d2694666c85b7cd930feed40fa78ca223ce93"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

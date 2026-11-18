@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "AfD+I",
+  "budget": 5,
+  "task": "ButtonUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "eba2b187c2e02d3c9c44d2555b2f1c37cadd814699cb99c9dc817969e5b483bb"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "ButtonUnmask.py": "eba2b187c2e02d3c9c44d2555b2f1c37cadd814699cb99c9dc817969e5b483bb"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

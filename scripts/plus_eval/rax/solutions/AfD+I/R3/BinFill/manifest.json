@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "AfD+I",
+  "budget": 3,
+  "task": "BinFill",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "e0097426467ae01a02bbf67678ca1d67cbd2fbaddab01df42013fef5a72dc3d7",
+    "perception.py": "c560723a346292f56e419e93d77ac09b94d948a17eccdfc07befa271bea20e4c",
+    "rmio.py": "6dddcf2d9b2c17f3fdb64da2605736816eeb5d96f9ecb381ba79cbfc060522eb"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "e0097426467ae01a02bbf67678ca1d67cbd2fbaddab01df42013fef5a72dc3d7",
+    "perception.py": "c560723a346292f56e419e93d77ac09b94d948a17eccdfc07befa271bea20e4c",
+    "rmio.py": "6dddcf2d9b2c17f3fdb64da2605736816eeb5d96f9ecb381ba79cbfc060522eb"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

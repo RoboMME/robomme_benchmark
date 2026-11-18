@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfD",
+  "budget": 0,
+  "task": "ButtonUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "bu_geom.py": "c816d46b16962ebd199ec6dad83f39a8ee339217201f0fa30bab25603959b1f3",
+    "bu_io.py": "98e129cb73c404d69da2ed7fb77489358cf025b7852be25af5ec411b1c84a0c8",
+    "bu_vision.py": "57f088d2937c241de4f04fd086b103dbb646039885408a77d772c213cea04e5b",
+    "controller.py": "ab00a9bc83dbd3601fa81a29aa9f5a34a4372cb51cf5d054ec68ae53ea72dbf5"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "bu_geom.py": "c816d46b16962ebd199ec6dad83f39a8ee339217201f0fa30bab25603959b1f3",
+    "bu_io.py": "98e129cb73c404d69da2ed7fb77489358cf025b7852be25af5ec411b1c84a0c8",
+    "bu_vision.py": "57f088d2937c241de4f04fd086b103dbb646039885408a77d772c213cea04e5b",
+    "controller.py": "ab00a9bc83dbd3601fa81a29aa9f5a34a4372cb51cf5d054ec68ae53ea72dbf5"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

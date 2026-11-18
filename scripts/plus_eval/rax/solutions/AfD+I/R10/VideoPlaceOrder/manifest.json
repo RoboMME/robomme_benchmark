@@ -1,0 +1,27 @@
+{
+  "method": "rax",
+  "setting": "AfD+I",
+  "budget": 10,
+  "task": "VideoPlaceOrder",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "81fd617d1c8b969ca0f683137322a239fd8dd8d3903bb37f6139a67271b73c21",
+    "motion.py": "accdba16d1deb8cf6331fb34fc3d3c1f167d69ef6835e595ed4d34538e2376e2",
+    "perception.py": "e6d9d95bcf8315fe451c7aaa98615aaf973f63c57010e084f7b200d8e46dcabd",
+    "plan.py": "93dd0fb6736ce4d8bb7251a522cb2636abf50c08908ed68fda0516de62844340",
+    "robot.py": "bf381c7cb693c10c2eff48c2d78478743d2216215f7bfdd60eaa18efd015f238",
+    "swaps.py": "459dd2bdd237c560e9f4cb0a0164da45b84caa2afe9be93a018a9def136fdebe"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "81fd617d1c8b969ca0f683137322a239fd8dd8d3903bb37f6139a67271b73c21",
+    "motion.py": "accdba16d1deb8cf6331fb34fc3d3c1f167d69ef6835e595ed4d34538e2376e2",
+    "perception.py": "e6d9d95bcf8315fe451c7aaa98615aaf973f63c57010e084f7b200d8e46dcabd",
+    "plan.py": "93dd0fb6736ce4d8bb7251a522cb2636abf50c08908ed68fda0516de62844340",
+    "robot.py": "bf381c7cb693c10c2eff48c2d78478743d2216215f7bfdd60eaa18efd015f238",
+    "swaps.py": "459dd2bdd237c560e9f4cb0a0164da45b84caa2afe9be93a018a9def136fdebe"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

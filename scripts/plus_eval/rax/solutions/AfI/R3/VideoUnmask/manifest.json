@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 3,
+  "task": "VideoUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "22a6ec6fc27d0d13658d1be4b2f82860f10cf58ba6d489b9c80392642042f4d5",
+    "motion.py": "d721d5705b2d938f508de4e6e9258fc09fb721c205baed3ae57c7e3a6423db94",
+    "perception.py": "5363955c030c878bc4eb257e6efac9871d98dbf6d2c6b07f96519eb6ddf436e7",
+    "skills.py": "965c0ea53fea12a4b87d9c1ff8870b91723d4c2bfb745d36e4cf1ab77ceeb04f",
+    "video.py": "e7a44c3ac5619201efedc4813e87f1c4c3a9cd3cd54122ec4822b78438401fff"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "22a6ec6fc27d0d13658d1be4b2f82860f10cf58ba6d489b9c80392642042f4d5",
+    "motion.py": "d721d5705b2d938f508de4e6e9258fc09fb721c205baed3ae57c7e3a6423db94",
+    "perception.py": "5363955c030c878bc4eb257e6efac9871d98dbf6d2c6b07f96519eb6ddf436e7",
+    "skills.py": "965c0ea53fea12a4b87d9c1ff8870b91723d4c2bfb745d36e4cf1ab77ceeb04f",
+    "video.py": "e7a44c3ac5619201efedc4813e87f1c4c3a9cd3cd54122ec4822b78438401fff"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

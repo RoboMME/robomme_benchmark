@@ -1,0 +1,56 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 1,
+  "task": "VideoUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "8bb0c1406bf3a82177085fa252e657226e41f377a4aa794ae42a145703d126a0",
+    "vus_geom.py": "ade456c513be70f9a27e843e37a097731466378ee16b930aebc206c5b2354097",
+    "vus_io.py": "c94a16bc503a1c31064c2bb50ea50ac73b14da6b3d4028cae7a635c3c59927fb",
+    "vus_percept.py": "0b2bb6fc35efcad2e80491f8d1271da3e4aa06eb125a45cdaa8373355b5e5570",
+    "vus_robot.py": "b40d4f5db07b45b55d990e5eba81f6915770ffa364c63f075e05a9ee064d3c49",
+    "vus_video.py": "85a080be2c6ffe2ada858a019e421fc1e97879be365b90ffb1dd11aa5b246ca6"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "8bb0c1406bf3a82177085fa252e657226e41f377a4aa794ae42a145703d126a0",
+    "vus_geom.py": "ade456c513be70f9a27e843e37a097731466378ee16b930aebc206c5b2354097",
+    "vus_io.py": "c94a16bc503a1c31064c2bb50ea50ac73b14da6b3d4028cae7a635c3c59927fb",
+    "vus_percept.py": "0b2bb6fc35efcad2e80491f8d1271da3e4aa06eb125a45cdaa8373355b5e5570",
+    "vus_robot.py": "b40d4f5db07b45b55d990e5eba81f6915770ffa364c63f075e05a9ee064d3c49",
+    "vus_video.py": "85a080be2c6ffe2ada858a019e421fc1e97879be365b90ffb1dd11aa5b246ca6"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "vus_geom.py",
+        "functions": [
+          "_as_pose"
+        ],
+        "fix": "Accept documented camera_poses.position_m; preserve existing aliases, geometry and policy logic",
+        "verification": "<EXPERIMENT_ROOT>/operator_audits/20261117_pre_eval_interface_review/camera_candidates/rax/AfI/R1/VideoUnmaskSwap/policy_actual_probe.json"
+      }
+    ],
+    "original_files": {
+      "controller.py": "8bb0c1406bf3a82177085fa252e657226e41f377a4aa794ae42a145703d126a0",
+      "vus_geom.py": "c66b64bac427dd93f7005b36f5414698b3b35717224dd6bf4edc10b88391b69f",
+      "vus_io.py": "c94a16bc503a1c31064c2bb50ea50ac73b14da6b3d4028cae7a635c3c59927fb",
+      "vus_percept.py": "0b2bb6fc35efcad2e80491f8d1271da3e4aa06eb125a45cdaa8373355b5e5570",
+      "vus_robot.py": "b40d4f5db07b45b55d990e5eba81f6915770ffa364c63f075e05a9ee064d3c49",
+      "vus_video.py": "85a080be2c6ffe2ada858a019e421fc1e97879be365b90ffb1dd11aa5b246ca6"
+    },
+    "repaired_files": {
+      "controller.py": "8bb0c1406bf3a82177085fa252e657226e41f377a4aa794ae42a145703d126a0",
+      "vus_geom.py": "ade456c513be70f9a27e843e37a097731466378ee16b930aebc206c5b2354097",
+      "vus_io.py": "c94a16bc503a1c31064c2bb50ea50ac73b14da6b3d4028cae7a635c3c59927fb",
+      "vus_percept.py": "0b2bb6fc35efcad2e80491f8d1271da3e4aa06eb125a45cdaa8373355b5e5570",
+      "vus_robot.py": "b40d4f5db07b45b55d990e5eba81f6915770ffa364c63f075e05a9ee064d3c49",
+      "vus_video.py": "85a080be2c6ffe2ada858a019e421fc1e97879be365b90ffb1dd11aa5b246ca6"
+    }
+  }
+}

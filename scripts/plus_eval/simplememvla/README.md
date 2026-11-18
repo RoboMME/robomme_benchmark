@@ -70,3 +70,5 @@ Omit `--attn-implementation sdpa` to use the default `flash_attention_2` if inst
   to the preceding preprocessing `output.json`, avoiding duplicate tensor copies.
 
 Omit task/episode filters for all 800 episodes. See [shared run options](../README.md) for resume, rerun and outputs.
+
+[Link finalized rollouts](../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

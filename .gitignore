@@ -368,3 +368,10 @@ scripts/blog/
 /tests/lightweight/test_plus_training_export.py
 /tests/lightweight/test_plus_training_observation.py
 /scripts/plus_eval/check_environment.py
+
+# External experiment artifacts and local provider installations.
+/scripts/plus_eval/*/runs
+/scripts/plus_eval/results/*-runs
+/scripts/plus_eval/sam3.pt
+/scripts/plus_eval/sam3.zip
+/scripts/plus_eval/*/.venv*/

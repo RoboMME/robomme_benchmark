@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "PatternLock",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "eac211b07bcc06b435385b36d26383a855e27e05631cf50a93e5bcccbed572a3",
+    "geom.py": "4ab92ec103649e769d29709ad6cceb687e19bc1263f7c05758c5720a9def0c37",
+    "lattice.py": "7f6a92bb1dad7dfe59fc317cb7f917b7c4ffc2c1c31ff12ef953e41db4f3c593"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "eac211b07bcc06b435385b36d26383a855e27e05631cf50a93e5bcccbed572a3",
+    "geom.py": "4ab92ec103649e769d29709ad6cceb687e19bc1263f7c05758c5720a9def0c37",
+    "lattice.py": "7f6a92bb1dad7dfe59fc317cb7f917b7c4ffc2c1c31ff12ef953e41db4f3c593"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

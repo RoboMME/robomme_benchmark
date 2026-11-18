@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "AfD+I",
+  "budget": 1,
+  "task": "PickHighlight",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "746b0b23b7c3df6da3a00916d244cf3c5471cfac68ed1b12fc41cb2fb396921d"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "PickHighlight.py": "746b0b23b7c3df6da3a00916d244cf3c5471cfac68ed1b12fc41cb2fb396921d"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

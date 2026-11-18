@@ -115,3 +115,5 @@ seed; it does not change it. Stop the server with `kill "$VLA_PID"` after evalua
   episode; credentials and private paths are redacted.
 
 Omit task/episode filters for all 800 episodes. See [shared run options](../README.md) for resume, rerun and outputs.
+
+[Link finalized rollouts](../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

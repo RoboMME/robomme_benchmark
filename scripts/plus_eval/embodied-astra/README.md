@@ -36,10 +36,10 @@ stop reasons are recorded per episode.
 
 ## One-shot
 
-Download the [H5 dataset](https://huggingface.co/datasets/Yinpei/robomme_ood_data_h5):
+Download the [H5 dataset](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5):
 
 ```bash
-hf download Yinpei/robomme_ood_data_h5 --repo-type dataset --local-dir data/plus_train
+hf download Yinpei/robomme_plus_data_h5 --repo-type dataset --local-dir data/plus_train
 CUDA_VISIBLE_DEVICES=0 "$SIM_PYTHON" scripts/plus_eval/embodied-astra/eval_plus_fs.py   --tasks BinFill --episodes 0 --training-root data/plus_train   --training-context images --output-dir runs/embodied-astra-one-shot
 ```
 
@@ -60,3 +60,5 @@ Validate the training files without GPU/API calls with:
 ```bash
 "$SIM_PYTHON" scripts/plus_eval/embodied-astra/eval_plus_fs.py   --training-root data/plus_train --validate-training   --output-dir runs/one-shot-data-check
 ```
+
+[Link finalized rollouts](../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

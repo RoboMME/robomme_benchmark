@@ -12,6 +12,23 @@ Initialize only the submodule needed by your model.
 | [SimpleMemVLA](simplememvla/README.md) | `simplememvla/eval_plus.py` | Local model |
 | [PonderPounce](ponderpounce/README.md) | `ponderpounce/eval_plus.py` | Local Ponder and Pounce |
 
+## Layout and agentic baselines
+
+Each method directory contains a pinned upstream Git submodule, its adapter and
+README. ASPIRE/RAX integration patches are applied only to separate runtime copies.
+Shared rollout code, `benchmark_io/`, and `results/` live outside method directories.
+Large external logs/videos are linked through ignored `METHOD/runs/` directories.
+
+| Agentic method | Frozen policy rerun | Development |
+| --- | --- | --- |
+| [ASPIRE](aspire/README.md) | `aspire/eval_plus.py` | Native coordinator, workers and verifier |
+| [RAX](rax/README.md) | `rax/eval_plus.py` | Native exploration, rehearsal and submission |
+
+See the [adaptation protocol](../../doc/plus_agentic_evaluation.md),
+[shared setup](benchmark_io/README.md), and [overall results](results/README.md).
+The run options below apply to the six model adapters above; agentic adapters
+have their own documented options.
+
 ## Run options
 
 All adapters accept `--tasks BinFill --episodes 0 --output-dir runs/METHOD`.
@@ -49,7 +66,7 @@ Rebuild summaries without inference with:
 ```
 
 Zero-shot evaluation needs no training data. One-shot Astra uses the
-[H5 training dataset](https://huggingface.co/datasets/Yinpei/robomme_ood_data_h5);
+[H5 training dataset](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5);
 see the [data format and seed mapping](../../doc/plus_training_data_format.md).
 Use [`dataset_replay.py`](dataset_replay.py) to replay training actions and save
 front/wrist videos; see the [replay command](../../doc/plus_training_data_format.md#replay).

@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"episode_id\": \"synthetic-episode\", \"observation_step_id\": 0, \"selections\": [{\"camera\": \"front\", \"u\": 128, \"v\": 128, \"valid\": true, \"position_m\": [1.0, 2.0, 2.5], \"depth_m\": 0.5, \"frame\": \"world\", \"depth_spread_m\": 0.0}], \"episode_ended\": false}"
+    }
+  ]
+}

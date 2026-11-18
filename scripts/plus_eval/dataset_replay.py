@@ -27,8 +27,8 @@ def write_frames(writer, obs, demonstration=False):
         writer.append_data(frame)
 
 
-def replay(task, index, episode, output_dir):
-    builder = BenchmarkEnvBuilder(task, dataset="train", action_space="joint_angle")
+def replay(task, index, episode, output_dir, action_space):
+    builder = BenchmarkEnvBuilder(task, dataset="train", action_space=action_space)
     metadata = builder.get_episode_metadata(index)
     recorded = json.loads(np.asarray(episode["setup/episode_metadata"][()]).item())
     fps = int(episode["setup/control_freq"][()])
@@ -36,7 +36,7 @@ def replay(task, index, episode, output_dir):
             or fps != metadata["control_freq"]):
         raise ValueError(f"{task} episode {index}: H5 and packaged training metadata differ")
 
-    path = output_dir / task / f"episode_{index}.mp4"
+    path = output_dir / task / f"episode_{index}_{action_space}.mp4"
     path.parent.mkdir(parents=True, exist_ok=True)
     steps = sorted((key for key in episode if key.startswith("timestep_")),
                    key=lambda key: int(key.split("_")[1]))
@@ -49,17 +49,21 @@ def replay(task, index, episode, output_dir):
                 step = episode[key]
                 if bool(step["info/is_video_demo"][()]):
                     continue  # env.reset() already performed the demonstration.
-                action = np.asarray(step["action/native_joint_action"][()], dtype=np.float64)
+                field = "eef_action" if action_space == "ee_pose" else "joint_action"
+                action = np.asarray(step[f"action/{field}"][()], dtype=np.float64)
                 obs, _, terminated, truncated, info = env.step(action)
-                write_frames(writer, obs)
+                if obs:
+                    write_frames(writer, obs)
                 if terminated or truncated:
                     break
     finally:
         env.close()
     status = info.get("status", "ongoing")
-    print(f"{task} episode {index}: {status} -> {path}", flush=True)
+    print(f"{task} episode {index} ({action_space}): {status} -> {path}", flush=True)
     if info.get("failure_reason"):
         print(info["failure_reason"], flush=True)
+    if info.get("error_message"):
+        print(info["error_message"], flush=True)
     return status == "success"
 
 
@@ -70,6 +74,8 @@ def main():
     parser.add_argument("--tasks", nargs="+", choices=BenchmarkEnvBuilder.get_task_list())
     parser.add_argument("--episodes", nargs="+", type=int, help="Episode indices within each task")
     parser.add_argument("--output-dir", type=Path, default=Path("runs/plus_dataset_replay"))
+    parser.add_argument("--action-space", choices=("both", "joint_angle", "ee_pose"),
+                        default="both", help="Replay both saved action formats by default")
     args = parser.parse_args()
     files = ([args.h5_data_dir / f"record_dataset_{task}.h5" for task in args.tasks]
              if args.tasks else sorted(args.h5_data_dir.glob("record_dataset_*.h5")))
@@ -84,8 +90,10 @@ def main():
             for index in indices:
                 if f"episode_{index}" not in dataset:
                     parser.error(f"{path.name} has no episode {index}")
-                passed += replay(task, index, dataset[f"episode_{index}"], args.output_dir)
-                total += 1
+                spaces = ("joint_angle", "ee_pose") if args.action_space == "both" else (args.action_space,)
+                for space in spaces:
+                    passed += replay(task, index, dataset[f"episode_{index}"], args.output_dir, space)
+                    total += 1
     print(f"{passed}/{total} replays succeeded.")
     return 0 if total and passed == total else 1
 

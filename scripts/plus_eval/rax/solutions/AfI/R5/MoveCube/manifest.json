@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "MoveCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "0232e4886975500d107f867b4d34d769b95ed30d614387c7be80a8b7df42685a",
+    "motion.py": "c8619ac00857f610a5c9135801ed1ea9b62b4a9213bbd7ae6fa737c81b22c36b",
+    "perc.py": "20f7ede6e596dadb0ebe1d356c7a6f398a3e979bb26f97b967409fecbbb2e3da",
+    "scene.py": "23987aee226676be0392933d8dcdefa470fceca6460b3c807cc12a69cc4f8d6e"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "0232e4886975500d107f867b4d34d769b95ed30d614387c7be80a8b7df42685a",
+    "motion.py": "c8619ac00857f610a5c9135801ed1ea9b62b4a9213bbd7ae6fa737c81b22c36b",
+    "perc.py": "20f7ede6e596dadb0ebe1d356c7a6f398a3e979bb26f97b967409fecbbb2e3da",
+    "scene.py": "23987aee226676be0392933d8dcdefa470fceca6460b3c807cc12a69cc4f8d6e"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

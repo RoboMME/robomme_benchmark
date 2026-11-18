@@ -1,0 +1,59 @@
+{
+  "method": "rax",
+  "setting": "AfD+I",
+  "budget": 1,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "CHANGELOG.md": "91dca117eb9aafdcc5ee41b0d0aa81821c1e79828aa7b0abb0f7bd402a8a1340",
+    "controller.py": "da817f6966efac9353df48e3d1705b54f785a82b7a1638ef4bf46c7b80c760db",
+    "geometry.py": "888fd50eead218633ba2d571306b4c89612659a55565e566044b362bba1e2b8b",
+    "mcpio.py": "e92bc1bbfe90ef6cb596e2aa7c278a209e41764a2af8f47fba0bd2bb21b44ad9",
+    "planner.py": "cb4c3eb14a4429123c0201d7824677b847221fd5a8e03a29d1fb0a5acfbac524",
+    "video.py": "ca28791da44acbc80259d0fb3e19596bd528838ad014968f030cdbda1d2167d6",
+    "vision.py": "6dcb61649c0b6a69c2c64232c6098441e9c03ef90577dae83f0e44555667b1af"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "CHANGELOG.md": "91dca117eb9aafdcc5ee41b0d0aa81821c1e79828aa7b0abb0f7bd402a8a1340",
+    "controller.py": "da817f6966efac9353df48e3d1705b54f785a82b7a1638ef4bf46c7b80c760db",
+    "geometry.py": "888fd50eead218633ba2d571306b4c89612659a55565e566044b362bba1e2b8b",
+    "mcpio.py": "e92bc1bbfe90ef6cb596e2aa7c278a209e41764a2af8f47fba0bd2bb21b44ad9",
+    "planner.py": "cb4c3eb14a4429123c0201d7824677b847221fd5a8e03a29d1fb0a5acfbac524",
+    "video.py": "ca28791da44acbc80259d0fb3e19596bd528838ad014968f030cdbda1d2167d6",
+    "vision.py": "6dcb61649c0b6a69c2c64232c6098441e9c03ef90577dae83f0e44555667b1af"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "controller.py",
+        "functions": [
+          "parse_calibration"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "CHANGELOG.md": "91dca117eb9aafdcc5ee41b0d0aa81821c1e79828aa7b0abb0f7bd402a8a1340",
+      "controller.py": "de443e990b13e94cf0e18da6045ff963422472f57aec3b67ab1d8dac8b683fcc",
+      "geometry.py": "888fd50eead218633ba2d571306b4c89612659a55565e566044b362bba1e2b8b",
+      "mcpio.py": "e92bc1bbfe90ef6cb596e2aa7c278a209e41764a2af8f47fba0bd2bb21b44ad9",
+      "planner.py": "cb4c3eb14a4429123c0201d7824677b847221fd5a8e03a29d1fb0a5acfbac524",
+      "video.py": "ca28791da44acbc80259d0fb3e19596bd528838ad014968f030cdbda1d2167d6",
+      "vision.py": "6dcb61649c0b6a69c2c64232c6098441e9c03ef90577dae83f0e44555667b1af"
+    },
+    "repaired_files": {
+      "CHANGELOG.md": "91dca117eb9aafdcc5ee41b0d0aa81821c1e79828aa7b0abb0f7bd402a8a1340",
+      "controller.py": "da817f6966efac9353df48e3d1705b54f785a82b7a1638ef4bf46c7b80c760db",
+      "geometry.py": "888fd50eead218633ba2d571306b4c89612659a55565e566044b362bba1e2b8b",
+      "mcpio.py": "e92bc1bbfe90ef6cb596e2aa7c278a209e41764a2af8f47fba0bd2bb21b44ad9",
+      "planner.py": "cb4c3eb14a4429123c0201d7824677b847221fd5a8e03a29d1fb0a5acfbac524",
+      "video.py": "ca28791da44acbc80259d0fb3e19596bd528838ad014968f030cdbda1d2167d6",
+      "vision.py": "6dcb61649c0b6a69c2c64232c6098441e9c03ef90577dae83f0e44555667b1af"
+    }
+  }
+}

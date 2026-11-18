@@ -1,0 +1,55 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 1,
+  "task": "VideoPlaceOrder",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "CHANGELOG.md": "ffa346b3ff1306ff492fbb46ebf4cdb4f772b14e1634b4a3bd18b3e9b7039925",
+    "CHECKLIST.md": "941a96befead21069856cfdd104dddc9485cdc139749585b6610e9e3964c3561",
+    "controller.py": "0c29627864d2af64bc35fd6fd0f88c81333e75b445068ca9bf151d816cc0ef8f",
+    "vpo_percept.py": "4026385315755c472ba1ceb3d5c1ce928d3d3aa6fe01e0d6ec007fa2f6c1da89",
+    "vpo_robot.py": "b87261d78c0667a8f9bd8bfbaab19bccde38fe6263d2f874cd9b6e645649a497",
+    "vpo_util.py": "28c8fd5467abcb786585e3b28c3e5278474ceff5caba9cde0a5b3c178242c167"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "CHANGELOG.md": "ffa346b3ff1306ff492fbb46ebf4cdb4f772b14e1634b4a3bd18b3e9b7039925",
+    "CHECKLIST.md": "941a96befead21069856cfdd104dddc9485cdc139749585b6610e9e3964c3561",
+    "controller.py": "0c29627864d2af64bc35fd6fd0f88c81333e75b445068ca9bf151d816cc0ef8f",
+    "vpo_percept.py": "4026385315755c472ba1ceb3d5c1ce928d3d3aa6fe01e0d6ec007fa2f6c1da89",
+    "vpo_robot.py": "b87261d78c0667a8f9bd8bfbaab19bccde38fe6263d2f874cd9b6e645649a497",
+    "vpo_util.py": "28c8fd5467abcb786585e3b28c3e5278474ceff5caba9cde0a5b3c178242c167"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "vpo_util.py",
+        "functions": [
+          "parse_pose"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "CHANGELOG.md": "ffa346b3ff1306ff492fbb46ebf4cdb4f772b14e1634b4a3bd18b3e9b7039925",
+      "CHECKLIST.md": "941a96befead21069856cfdd104dddc9485cdc139749585b6610e9e3964c3561",
+      "controller.py": "0c29627864d2af64bc35fd6fd0f88c81333e75b445068ca9bf151d816cc0ef8f",
+      "vpo_percept.py": "4026385315755c472ba1ceb3d5c1ce928d3d3aa6fe01e0d6ec007fa2f6c1da89",
+      "vpo_robot.py": "b87261d78c0667a8f9bd8bfbaab19bccde38fe6263d2f874cd9b6e645649a497",
+      "vpo_util.py": "ccba660076f080769b49a4d9398747133892bcb7c4cf8d841464dfd43ab47b7a"
+    },
+    "repaired_files": {
+      "CHANGELOG.md": "ffa346b3ff1306ff492fbb46ebf4cdb4f772b14e1634b4a3bd18b3e9b7039925",
+      "CHECKLIST.md": "941a96befead21069856cfdd104dddc9485cdc139749585b6610e9e3964c3561",
+      "controller.py": "0c29627864d2af64bc35fd6fd0f88c81333e75b445068ca9bf151d816cc0ef8f",
+      "vpo_percept.py": "4026385315755c472ba1ceb3d5c1ce928d3d3aa6fe01e0d6ec007fa2f6c1da89",
+      "vpo_robot.py": "b87261d78c0667a8f9bd8bfbaab19bccde38fe6263d2f874cd9b6e645649a497",
+      "vpo_util.py": "28c8fd5467abcb786585e3b28c3e5278474ceff5caba9cde0a5b3c178242c167"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "AfD+I",
+  "budget": 3,
+  "task": "PickHighlight",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "d3bb9263eb067bbb69dd58be96c11d803a21ca61bc97625764cc251506df5195",
+    "perception.py": "7f0a2ae1e83bb4141954ccd9ba4197bdfcd43b1d61fd04fa71a6ecfb0ac3f0a9",
+    "robot.py": "b6349cb6cbcd5a03f91a03ab23bbd31d475a361954ee6607357d0ced098098f3",
+    "task3.py": "ba7acd7e391939131a82e6e2a4c616445cdc01659a8039315e9548ad4c82a5f4",
+    "tracker.py": "452a4bd5ff482daf614678507492284bd89aa7005521ba963faff7c439e9b6f2"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "d3bb9263eb067bbb69dd58be96c11d803a21ca61bc97625764cc251506df5195",
+    "perception.py": "7f0a2ae1e83bb4141954ccd9ba4197bdfcd43b1d61fd04fa71a6ecfb0ac3f0a9",
+    "robot.py": "b6349cb6cbcd5a03f91a03ab23bbd31d475a361954ee6607357d0ced098098f3",
+    "task3.py": "ba7acd7e391939131a82e6e2a4c616445cdc01659a8039315e9548ad4c82a5f4",
+    "tracker.py": "452a4bd5ff482daf614678507492284bd89aa7005521ba963faff7c439e9b6f2"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

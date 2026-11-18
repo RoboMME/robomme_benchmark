@@ -1,0 +1,19 @@
+{
+  "method": "rax",
+  "setting": "AfD",
+  "budget": 0,
+  "task": "InsertPeg",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "CHANGELOG.md": "665d48c8bbbe25daad590783524253cd0c25e8654d2d43af5cc173f1e2ac4d82",
+    "controller.py": "2b844572c47e7caa067c5a7e030b3cf05fe7a5c7a043e8b9a066e07350b31853"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "CHANGELOG.md": "665d48c8bbbe25daad590783524253cd0c25e8654d2d43af5cc173f1e2ac4d82",
+    "controller.py": "2b844572c47e7caa067c5a7e030b3cf05fe7a5c7a043e8b9a066e07350b31853"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

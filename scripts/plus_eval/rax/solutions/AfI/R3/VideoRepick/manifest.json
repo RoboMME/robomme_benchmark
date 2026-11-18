@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 3,
+  "task": "VideoRepick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "CHECKLIST.md": "a9cbb83e803bc6d4d8ef5fb542792a09e033d4b4d3368c35897d21487f1f54bd",
+    "controller.py": "676efbcd4ef34e00d29259083a9a2e694e18a32ccd26e9656044283050ce5464",
+    "geom.py": "383195cdd72a3742e4b7ac5ef433ca9888362641b3aecc0da0ec5f2b819bfbd0",
+    "robot.py": "a80cf8039b01d37676decc6cbe41adae08ceb9927d64ff4e49e85bc34a3fd9dd",
+    "track.py": "c43876250cac299a2be16d860a29217479b3cfc9b80ed94aea2ad59694ac6e2d"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "CHECKLIST.md": "a9cbb83e803bc6d4d8ef5fb542792a09e033d4b4d3368c35897d21487f1f54bd",
+    "controller.py": "676efbcd4ef34e00d29259083a9a2e694e18a32ccd26e9656044283050ce5464",
+    "geom.py": "383195cdd72a3742e4b7ac5ef433ca9888362641b3aecc0da0ec5f2b819bfbd0",
+    "robot.py": "a80cf8039b01d37676decc6cbe41adae08ceb9927d64ff4e49e85bc34a3fd9dd",
+    "track.py": "c43876250cac299a2be16d860a29217479b3cfc9b80ed94aea2ad59694ac6e2d"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

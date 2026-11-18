@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfD+I",
+  "budget": 3,
+  "task": "InsertPeg",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "8fbee6f6ddb589aba4cfe8baa62d02b2e28a0f4999ec3f5536c414926f6e210e",
+    "motion.py": "c06cdfdbd3447e5d9cbda5a785949f6d0c837c2f662460a4b5fc100657b79dd9",
+    "percep.py": "9e09358ccb79f0c33275ff7961aea9723d9ef0a64ca4377fadf5af15fb139de6",
+    "plan.py": "9fcd017732a5491b2aeffa713a3a8579de2420919cb2a4b981ea4ba56e7f467f"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "8fbee6f6ddb589aba4cfe8baa62d02b2e28a0f4999ec3f5536c414926f6e210e",
+    "motion.py": "c06cdfdbd3447e5d9cbda5a785949f6d0c837c2f662460a4b5fc100657b79dd9",
+    "percep.py": "9e09358ccb79f0c33275ff7961aea9723d9ef0a64ca4377fadf5af15fb139de6",
+    "plan.py": "9fcd017732a5491b2aeffa713a3a8579de2420919cb2a4b981ea4ba56e7f467f"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

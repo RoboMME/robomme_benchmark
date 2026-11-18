@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "AfD",
+  "budget": 0,
+  "task": "SwingXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "bdd7765426fa510d26d996f9d899e123f4af6ff040a977e5158dea34e64a28fb"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "SwingXtimes.py": "bdd7765426fa510d26d996f9d899e123f4af6ff040a977e5158dea34e64a28fb"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

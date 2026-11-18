@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "AfD+I",
+  "budget": 5,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "4959e664ec75fa681e79068bc49dc74976c502436eed3012fd622a74ea6e0690",
+    "frames.py": "f4c428f2cc6b16a0299e1ee27f5443fb7c0e8c61ab1b617e6203c4a7b62310aa",
+    "percept.py": "79274d94e1763bfe67bd2b09ff9b011070088e21863b7cdf8b7b78d2614fdbc2",
+    "robot.py": "a74d0860d59571dcfe2c7a4548765d41561c3a4e5a70bd157ffd983d6d2281bc",
+    "video.py": "2a8fb9dd96022571d27ae969d8bee9a3a8b95339f7312aed261a13517115b45c"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "4959e664ec75fa681e79068bc49dc74976c502436eed3012fd622a74ea6e0690",
+    "frames.py": "f4c428f2cc6b16a0299e1ee27f5443fb7c0e8c61ab1b617e6203c4a7b62310aa",
+    "percept.py": "79274d94e1763bfe67bd2b09ff9b011070088e21863b7cdf8b7b78d2614fdbc2",
+    "robot.py": "a74d0860d59571dcfe2c7a4548765d41561c3a4e5a70bd157ffd983d6d2281bc",
+    "video.py": "2a8fb9dd96022571d27ae969d8bee9a3a8b95339f7312aed261a13517115b45c"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

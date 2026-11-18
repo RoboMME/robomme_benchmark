@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "2971aae8aa88b40937d87290612a6cf06a6f3210abd8552b4ed7751068a3328a"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "VideoPlaceButton.py": "2971aae8aa88b40937d87290612a6cf06a6f3210abd8552b4ed7751068a3328a"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

@@ -101,7 +101,7 @@ def recorded_responder(owner, key):
 class ThreeTierAstraEvaluation(Evaluation):
     method = "3-tier-astra"
     api_applicable = True
-    source_dependencies = [HERE.parent / 'three_tier_images.py', HERE.parent / 'astra_image_sampling.py']
+    source_dependencies = [HERE / 'three_tier_images.py', HERE.parent / 'astra_image_sampling.py']
 
     def configuration(self):
         return {"model": "gpt-6-astra", "reasoning_effort": "medium", "execute_horizon": 16,

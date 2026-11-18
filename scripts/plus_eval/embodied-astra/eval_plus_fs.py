@@ -67,10 +67,13 @@ class OneShotEmbodiedAstraEvaluation(base.EmbodiedAstraEvaluation):
                            PROMPT_FILE, IMAGE_ONLY_PROMPT_FILE,
                            HERE.parent / 'astra_image_sampling.py')
 
+    def training_examples(self):
+        return training_examples(self.args)
+
     def setup(self):
         self.adaptation_prompt = (PROMPT_FILE if includes_training_state(self.args)
                                   else IMAGE_ONLY_PROMPT_FILE).read_text()
-        self.examples = None if self.args.tasks == ['MoveCube'] else training_examples(self.args)
+        self.examples = None if self.args.tasks == ['MoveCube'] else self.training_examples()
         if self.examples is not None:
             tasks = self.args.tasks or list(dict.fromkeys(r['task'] for r in self.examples.records))
             for task in tasks:

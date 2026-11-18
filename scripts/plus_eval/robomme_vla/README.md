@@ -83,3 +83,5 @@ includes JAX compilation. Stop the server with `kill "$VLA_PID"` after evaluatio
   internal server features are not exposed by the interface.
 
 Omit task/episode filters for all 800 episodes. See [shared run options](../README.md) for resume, rerun and outputs.
+
+[Link finalized rollouts](../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

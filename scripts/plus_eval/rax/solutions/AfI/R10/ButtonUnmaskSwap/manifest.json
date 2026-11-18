@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 10,
+  "task": "ButtonUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "26453eb1201092f9bc3a0a20e814570bd0021ad7fcb4c3a40212bee08961232c",
+    "geom.py": "4245e921de6cc36307ac8a51b55dc176c7a2b324ebf2caf5421fe7a02ae6ad39",
+    "percept.py": "ff9cda9f2ad5e190849c6f068499b3ff4d8c90f5b401eb71fd5d51f39dd07156",
+    "robot.py": "808635d189f27ce717339be581c7ef8f2fe1bba40aded966e35df20f4daef433",
+    "tracker.py": "78cdc4c86cc536a9dac34807443cbb2b338efd0a3147497c4f6e53ef87340c25"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "26453eb1201092f9bc3a0a20e814570bd0021ad7fcb4c3a40212bee08961232c",
+    "geom.py": "4245e921de6cc36307ac8a51b55dc176c7a2b324ebf2caf5421fe7a02ae6ad39",
+    "percept.py": "ff9cda9f2ad5e190849c6f068499b3ff4d8c90f5b401eb71fd5d51f39dd07156",
+    "robot.py": "808635d189f27ce717339be581c7ef8f2fe1bba40aded966e35df20f4daef433",
+    "tracker.py": "78cdc4c86cc536a9dac34807443cbb2b338efd0a3147497c4f6e53ef87340c25"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

@@ -1,0 +1,1015 @@
+{
+  "method": "aspire",
+  "configurations": 9,
+  "tasks": 16,
+  "entries": [
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "BinFill",
+      "path": "AfD/R0/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "ButtonUnmask",
+      "path": "AfD/R0/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfD/R0/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "InsertPeg",
+      "path": "AfD/R0/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "MoveCube",
+      "path": "AfD/R0/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "PatternLock",
+      "path": "AfD/R0/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "PickHighlight",
+      "path": "AfD/R0/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "PickXtimes",
+      "path": "AfD/R0/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "RouteStick",
+      "path": "AfD/R0/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "StopCube",
+      "path": "AfD/R0/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "SwingXtimes",
+      "path": "AfD/R0/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "VideoPlaceButton",
+      "path": "AfD/R0/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "VideoPlaceOrder",
+      "path": "AfD/R0/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "VideoRepick",
+      "path": "AfD/R0/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "VideoUnmask",
+      "path": "AfD/R0/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD",
+      "budget": 0,
+      "task": "VideoUnmaskSwap",
+      "path": "AfD/R0/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "BinFill",
+      "path": "AfI/R1/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "ButtonUnmask",
+      "path": "AfI/R1/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfI/R1/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "InsertPeg",
+      "path": "AfI/R1/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "MoveCube",
+      "path": "AfI/R1/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "PatternLock",
+      "path": "AfI/R1/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "PickHighlight",
+      "path": "AfI/R1/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "PickXtimes",
+      "path": "AfI/R1/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "RouteStick",
+      "path": "AfI/R1/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "StopCube",
+      "path": "AfI/R1/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "SwingXtimes",
+      "path": "AfI/R1/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "VideoPlaceButton",
+      "path": "AfI/R1/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "VideoPlaceOrder",
+      "path": "AfI/R1/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "VideoRepick",
+      "path": "AfI/R1/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "VideoUnmask",
+      "path": "AfI/R1/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 1,
+      "task": "VideoUnmaskSwap",
+      "path": "AfI/R1/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "BinFill",
+      "path": "AfI/R3/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "ButtonUnmask",
+      "path": "AfI/R3/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfI/R3/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "InsertPeg",
+      "path": "AfI/R3/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "MoveCube",
+      "path": "AfI/R3/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "PatternLock",
+      "path": "AfI/R3/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "PickHighlight",
+      "path": "AfI/R3/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "PickXtimes",
+      "path": "AfI/R3/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "RouteStick",
+      "path": "AfI/R3/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "StopCube",
+      "path": "AfI/R3/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "SwingXtimes",
+      "path": "AfI/R3/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "VideoPlaceButton",
+      "path": "AfI/R3/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "VideoPlaceOrder",
+      "path": "AfI/R3/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "VideoRepick",
+      "path": "AfI/R3/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "VideoUnmask",
+      "path": "AfI/R3/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 3,
+      "task": "VideoUnmaskSwap",
+      "path": "AfI/R3/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "BinFill",
+      "path": "AfI/R5/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "ButtonUnmask",
+      "path": "AfI/R5/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfI/R5/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "InsertPeg",
+      "path": "AfI/R5/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "MoveCube",
+      "path": "AfI/R5/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "PatternLock",
+      "path": "AfI/R5/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "PickHighlight",
+      "path": "AfI/R5/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "PickXtimes",
+      "path": "AfI/R5/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "RouteStick",
+      "path": "AfI/R5/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "StopCube",
+      "path": "AfI/R5/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "SwingXtimes",
+      "path": "AfI/R5/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "VideoPlaceButton",
+      "path": "AfI/R5/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "VideoPlaceOrder",
+      "path": "AfI/R5/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "VideoRepick",
+      "path": "AfI/R5/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "VideoUnmask",
+      "path": "AfI/R5/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 5,
+      "task": "VideoUnmaskSwap",
+      "path": "AfI/R5/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "BinFill",
+      "path": "AfI/R10/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "ButtonUnmask",
+      "path": "AfI/R10/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfI/R10/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "InsertPeg",
+      "path": "AfI/R10/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "MoveCube",
+      "path": "AfI/R10/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "PatternLock",
+      "path": "AfI/R10/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "PickHighlight",
+      "path": "AfI/R10/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "PickXtimes",
+      "path": "AfI/R10/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "RouteStick",
+      "path": "AfI/R10/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "StopCube",
+      "path": "AfI/R10/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "SwingXtimes",
+      "path": "AfI/R10/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "VideoPlaceButton",
+      "path": "AfI/R10/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "VideoPlaceOrder",
+      "path": "AfI/R10/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "VideoRepick",
+      "path": "AfI/R10/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "VideoUnmask",
+      "path": "AfI/R10/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfI",
+      "budget": 10,
+      "task": "VideoUnmaskSwap",
+      "path": "AfI/R10/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "BinFill",
+      "path": "AfD+I/R1/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "ButtonUnmask",
+      "path": "AfD+I/R1/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfD+I/R1/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "InsertPeg",
+      "path": "AfD+I/R1/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "MoveCube",
+      "path": "AfD+I/R1/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "PatternLock",
+      "path": "AfD+I/R1/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "PickHighlight",
+      "path": "AfD+I/R1/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "PickXtimes",
+      "path": "AfD+I/R1/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "RouteStick",
+      "path": "AfD+I/R1/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "StopCube",
+      "path": "AfD+I/R1/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "SwingXtimes",
+      "path": "AfD+I/R1/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "VideoPlaceButton",
+      "path": "AfD+I/R1/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "VideoPlaceOrder",
+      "path": "AfD+I/R1/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "VideoRepick",
+      "path": "AfD+I/R1/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "VideoUnmask",
+      "path": "AfD+I/R1/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 1,
+      "task": "VideoUnmaskSwap",
+      "path": "AfD+I/R1/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "BinFill",
+      "path": "AfD+I/R3/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "ButtonUnmask",
+      "path": "AfD+I/R3/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfD+I/R3/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "InsertPeg",
+      "path": "AfD+I/R3/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "MoveCube",
+      "path": "AfD+I/R3/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "PatternLock",
+      "path": "AfD+I/R3/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "PickHighlight",
+      "path": "AfD+I/R3/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "PickXtimes",
+      "path": "AfD+I/R3/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "RouteStick",
+      "path": "AfD+I/R3/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "StopCube",
+      "path": "AfD+I/R3/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "SwingXtimes",
+      "path": "AfD+I/R3/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "VideoPlaceButton",
+      "path": "AfD+I/R3/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "VideoPlaceOrder",
+      "path": "AfD+I/R3/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "VideoRepick",
+      "path": "AfD+I/R3/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "VideoUnmask",
+      "path": "AfD+I/R3/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 3,
+      "task": "VideoUnmaskSwap",
+      "path": "AfD+I/R3/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "BinFill",
+      "path": "AfD+I/R5/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "ButtonUnmask",
+      "path": "AfD+I/R5/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfD+I/R5/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "InsertPeg",
+      "path": "AfD+I/R5/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "MoveCube",
+      "path": "AfD+I/R5/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "PatternLock",
+      "path": "AfD+I/R5/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "PickHighlight",
+      "path": "AfD+I/R5/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "PickXtimes",
+      "path": "AfD+I/R5/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "RouteStick",
+      "path": "AfD+I/R5/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "StopCube",
+      "path": "AfD+I/R5/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "SwingXtimes",
+      "path": "AfD+I/R5/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "VideoPlaceButton",
+      "path": "AfD+I/R5/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "VideoPlaceOrder",
+      "path": "AfD+I/R5/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "VideoRepick",
+      "path": "AfD+I/R5/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "VideoUnmask",
+      "path": "AfD+I/R5/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 5,
+      "task": "VideoUnmaskSwap",
+      "path": "AfD+I/R5/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "BinFill",
+      "path": "AfD+I/R10/BinFill",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "ButtonUnmask",
+      "path": "AfD+I/R10/ButtonUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "ButtonUnmaskSwap",
+      "path": "AfD+I/R10/ButtonUnmaskSwap",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "InsertPeg",
+      "path": "AfD+I/R10/InsertPeg",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "MoveCube",
+      "path": "AfD+I/R10/MoveCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "PatternLock",
+      "path": "AfD+I/R10/PatternLock",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "PickHighlight",
+      "path": "AfD+I/R10/PickHighlight",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "PickXtimes",
+      "path": "AfD+I/R10/PickXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "RouteStick",
+      "path": "AfD+I/R10/RouteStick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "StopCube",
+      "path": "AfD+I/R10/StopCube",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "SwingXtimes",
+      "path": "AfD+I/R10/SwingXtimes",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "VideoPlaceButton",
+      "path": "AfD+I/R10/VideoPlaceButton",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "VideoPlaceOrder",
+      "path": "AfD+I/R10/VideoPlaceOrder",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "VideoRepick",
+      "path": "AfD+I/R10/VideoRepick",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "VideoUnmask",
+      "path": "AfD+I/R10/VideoUnmask",
+      "status": "frozen_policy"
+    },
+    {
+      "setting": "AfD+I",
+      "budget": 10,
+      "task": "VideoUnmaskSwap",
+      "path": "AfD+I/R10/VideoUnmaskSwap",
+      "status": "frozen_policy"
+    }
+  ]
+}

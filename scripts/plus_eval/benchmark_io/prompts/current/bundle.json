@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "scope": "public interface documentation and synthetic data examples",
+  "supersedes": 2,
+  "changes": [
+    "Exact RAX observation, calibration, depth, limits and terminal field names",
+    "Synthetic examples generated through public packet serializers",
+    "Separate requested motion, measured motion, process completion and task outcome"
+  ]
+}

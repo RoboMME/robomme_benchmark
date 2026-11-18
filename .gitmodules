@@ -13,3 +13,9 @@
 [submodule "scripts/plus_eval/ponderpounce/PonderPounce"]
 	path = scripts/plus_eval/ponderpounce/PonderPounce
 	url = https://github.com/worv-ai/PonderPounce.git
+[submodule "scripts/plus_eval/aspire/ASPIRE"]
+	path = scripts/plus_eval/aspire/ASPIRE
+	url = https://github.com/NVlabs/ASPIRE.git
+[submodule "scripts/plus_eval/rax/rax"]
+	path = scripts/plus_eval/rax/rax
+	url = https://github.com/robot-agent-exploration/rax.git

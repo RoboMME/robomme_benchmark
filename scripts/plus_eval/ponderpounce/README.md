@@ -84,3 +84,5 @@ CUDA_VISIBLE_DEVICES=0 TOKENIZERS_PARALLELISM=false \
   prompt IDs, noise and action chunks.
 
 Omit task/episode filters for all 800 episodes. See [shared run options](../README.md) for resume, rerun and outputs.
+
+[Link finalized rollouts](../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

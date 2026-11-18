@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 3,
+  "task": "PickXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "98683b258f5e2de9f90e0e0d2ac0da0cac4049e5762524a78b9b49b1808ad5c0",
+    "rlib.py": "f1f6278ee244d5be0c70c8f13dad16e7d195801e4686ec82508d0c8468dd9d0a",
+    "track.py": "6937e214fb55d15ccc233a6f06ec6cdb0e5eee784247ee0e18f885ba4b90b489"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "98683b258f5e2de9f90e0e0d2ac0da0cac4049e5762524a78b9b49b1808ad5c0",
+    "rlib.py": "f1f6278ee244d5be0c70c8f13dad16e7d195801e4686ec82508d0c8468dd9d0a",
+    "track.py": "6937e214fb55d15ccc233a6f06ec6cdb0e5eee784247ee0e18f885ba4b90b489"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

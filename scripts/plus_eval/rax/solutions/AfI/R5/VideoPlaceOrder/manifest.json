@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "VideoPlaceOrder",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "e09a5b49e15493d17b6a65499441b349d488aadfbeec82b2be18e80f2738e7f8",
+    "motion.py": "7fc3cc2878af930a1de06abd62a9d62a434019db2f4b9f399f3b0f8e0da48a17",
+    "perception.py": "fb02499bba50de751b4c66adc827d5b119fdc114fd177721b23bcdc7243549b9",
+    "rule.json": "ae82661942599a40a5a6c516c78a3538855624bb2c3e43b7fcc3ef19dcc7132f"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "e09a5b49e15493d17b6a65499441b349d488aadfbeec82b2be18e80f2738e7f8",
+    "motion.py": "7fc3cc2878af930a1de06abd62a9d62a434019db2f4b9f399f3b0f8e0da48a17",
+    "perception.py": "fb02499bba50de751b4c66adc827d5b119fdc114fd177721b23bcdc7243549b9",
+    "rule.json": "ae82661942599a40a5a6c516c78a3538855624bb2c3e43b7fcc3ef19dcc7132f"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

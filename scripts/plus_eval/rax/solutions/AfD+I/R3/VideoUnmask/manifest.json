@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "AfD+I",
+  "budget": 3,
+  "task": "VideoUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "67125f84cff9a9d2edccba5c21b3832bd7ff81893d57e05d9e137b9d4dc73a84",
+    "geom.py": "9f8d70775fd7765bad231aba5a4267023000d022a7405f00d0071e8b5cb70082",
+    "motion.py": "483a0dfbff319bf20d6cae10af45b4e07064f60289f9a5d9a7eaba29dbff2ac2",
+    "perception.py": "5e990b71327fa6f00c09a5d41bb73c70960f753e9b9f2c2e7dbc9700f66b90a6",
+    "skills.py": "0ec858334400684cce260576a6f68422e9397017be1ae671f4873de496a6c1d5"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "67125f84cff9a9d2edccba5c21b3832bd7ff81893d57e05d9e137b9d4dc73a84",
+    "geom.py": "9f8d70775fd7765bad231aba5a4267023000d022a7405f00d0071e8b5cb70082",
+    "motion.py": "483a0dfbff319bf20d6cae10af45b4e07064f60289f9a5d9a7eaba29dbff2ac2",
+    "perception.py": "5e990b71327fa6f00c09a5d41bb73c70960f753e9b9f2c2e7dbc9700f66b90a6",
+    "skills.py": "0ec858334400684cce260576a6f68422e9397017be1ae671f4873de496a6c1d5"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

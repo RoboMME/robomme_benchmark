@@ -1,0 +1,19 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 10,
+  "task": "SwingXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "ef6b5957eaed51b2d8cddadd4fd53a27136f707e2ecef98300275fb7e7654b1a",
+    "lib.py": "798fad7bdc96d4432875aa7967a934502e11dbea787fc417b0b11c0bae96dad9"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "ef6b5957eaed51b2d8cddadd4fd53a27136f707e2ecef98300275fb7e7654b1a",
+    "lib.py": "798fad7bdc96d4432875aa7967a934502e11dbea787fc417b0b11c0bae96dad9"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

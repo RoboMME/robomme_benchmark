@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "AfD",
+  "budget": 0,
+  "task": "BinFill",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "1c42c6f800f57031502cf3a805ae655581498047c7eab00899a543525162c406"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "BinFill.py": "1c42c6f800f57031502cf3a805ae655581498047c7eab00899a543525162c406"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

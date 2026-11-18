@@ -130,15 +130,19 @@ def compatible_metadata(directory, case, expected):
     try:
         from robomme_plus.evaluation.metadata import replay_identity
         saved = read(Path(directory) / episode_name(case) / 'metadata.json')
+        if 'oracle_policy_step' not in expected:
+            return saved == expected  # Original RoboMME stores native episode records.
         return replay_identity(case['task'], saved) == replay_identity(case['task'], expected)
     except (OSError, ValueError, KeyError, TypeError):
         return False
 
 
-def benchmark_sources():
+def benchmark_sources(benchmark='robomme_plus'):
+    if benchmark not in ('robomme', 'robomme_plus'):
+        raise ValueError(f'Unknown benchmark: {benchmark}')
     root = Path(__file__).resolve().parents[2]
     return {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in sorted((root / 'src/robomme_plus').rglob('*.py'))}
+            for path in sorted((root / 'src' / benchmark).rglob('*.py'))}
 
 
 def check_benchmark_sources(old, new, mode):
@@ -197,6 +201,11 @@ def argument_identity(arguments):
 def check_configuration(old, new, mode='resume'):
     if old['method'] != new['method']:
         raise ValueError('Existing run belongs to a different method')
+    if old.get('benchmark') != new.get('benchmark'):
+        raise ValueError('Existing run belongs to a different benchmark')
+    condition = lambda config: config.get('perceptual_variations', config.get('arguments', {}).get('perceptual_variations', False))
+    if condition(old) != condition(new):
+        raise ValueError('Perceptual variation setting changed. Use a separate output directory to preserve both conditions.')
     check_benchmark_sources(old, new, mode)
     if new['method'] == 'embodied-astra-fs':
         current_context = new['arguments'].get('training_observation_context_version')
@@ -268,7 +277,7 @@ def rebuild_task(directory):
     directory = Path(directory)
     config = read(directory / 'config.json')
     results = [r for case in config['cases'] if (r := saved_result(directory, case)) is not None]
-    report = summarize(config['cases'], results, config['method'])
+    report = summarize(config['cases'], results, config['method'], config.get('benchmark'))
     state = directory / 'run_state.json'
     report['pending_replacements'] = read(state).get('pending', []) if state.exists() else []
     report['updated_utc'] = utc_now()
@@ -302,7 +311,7 @@ def rebuild_batch(directory, batch=None, *, refresh_tasks=True):
         results.extend(r for r in report['results'] if key(r) in allowed)
         row.update(completed=report['completed'], counts=report['counts'],
                    success_rate=report['success_rate'], metrics=report['metrics'])
-    report = summarize(cases, results, batch['method'])
+    report = summarize(cases, results, batch['method'], batch.get('benchmark'))
     report['updated_utc'] = utc_now()
     if 'workers' in batch:
         report['execution'] = {name: batch[name] for name in

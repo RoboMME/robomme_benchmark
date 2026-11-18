@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfD",
+  "budget": 0,
+  "task": "MoveCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "c9e6220978c6fae5fc2434e639ba214a5fecec802152d071d50555dcb22de28f",
+    "io_utils.py": "70c48c50f8aaa05c2ad14ed876ca8259f5ed5bcd11ebd2891a43bba21ee5182d",
+    "robot.py": "f935c70043c88f1baacc2961b98897e16867c5a37bc895b8399930a17b81eedc",
+    "vision.py": "ceb41808b153a40a6bc66ab6bc29f0827ef976aad27a9f367b353e23f5a20228"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "c9e6220978c6fae5fc2434e639ba214a5fecec802152d071d50555dcb22de28f",
+    "io_utils.py": "70c48c50f8aaa05c2ad14ed876ca8259f5ed5bcd11ebd2891a43bba21ee5182d",
+    "robot.py": "f935c70043c88f1baacc2961b98897e16867c5a37bc895b8399930a17b81eedc",
+    "vision.py": "ceb41808b153a40a6bc66ab6bc29f0827ef976aad27a9f367b353e23f5a20228"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

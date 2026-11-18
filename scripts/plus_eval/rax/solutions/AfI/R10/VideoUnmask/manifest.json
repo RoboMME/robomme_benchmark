@@ -1,0 +1,19 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 10,
+  "task": "VideoUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "51b0b5de141cb025c54a54401dd027cf888b237050b6cbd3953362019cbe6555",
+    "lib.py": "fb76c360986b01252cd5f78dbe31bb0a2a50a4e931d52df528b0ddf112190102"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "51b0b5de141cb025c54a54401dd027cf888b237050b6cbd3953362019cbe6555",
+    "lib.py": "fb76c360986b01252cd5f78dbe31bb0a2a50a4e931d52df528b0ddf112190102"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

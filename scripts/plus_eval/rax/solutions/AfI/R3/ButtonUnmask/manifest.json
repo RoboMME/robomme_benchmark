@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 3,
+  "task": "ButtonUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "CHANGELOG.md": "3dcd68d5b2e3e5673388ad28b1a5b099ec263445bea2dd150d23857b3ca0dc61",
+    "controller.py": "8d52e843249cb769ec5e9591ceda313184c4264300811089d5627b09396d9c44",
+    "motion.py": "dd93ddc500358530356665d3344b52393ae1faccb7f4e0162628d8fe8feedeac",
+    "perception.py": "5d91147af380a8560e7541cefa006062c2364d1b1efc7c42653e4af317b16ed3",
+    "tracker.py": "a06a765fa2cfbd1d3e50b80a09db5748e984a51dbe7fa2fdfdd5c99967b988df"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "CHANGELOG.md": "3dcd68d5b2e3e5673388ad28b1a5b099ec263445bea2dd150d23857b3ca0dc61",
+    "controller.py": "8d52e843249cb769ec5e9591ceda313184c4264300811089d5627b09396d9c44",
+    "motion.py": "dd93ddc500358530356665d3344b52393ae1faccb7f4e0162628d8fe8feedeac",
+    "perception.py": "5d91147af380a8560e7541cefa006062c2364d1b1efc7c42653e4af317b16ed3",
+    "tracker.py": "a06a765fa2cfbd1d3e50b80a09db5748e984a51dbe7fa2fdfdd5c99967b988df"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "AfI",
+  "budget": 5,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "18be3b0c08209315fa5235f8b88acdc5dc4aac5a2ef3359a3bd11a5f51fb6e05",
+    "geom.py": "e0a491473406703ac297ea2acd3d687c7e19b1482d4919d7a47f292094fa3738",
+    "video.py": "267f7a6396b09d392ea08fa8005146dc318acb3f3acfe0a9b30dec12668dfc86",
+    "vision.py": "a7c6a40a96d77096f21b5576c17b2f3b495fd790acc21abf7f0f4bbd2afb7243"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "18be3b0c08209315fa5235f8b88acdc5dc4aac5a2ef3359a3bd11a5f51fb6e05",
+    "geom.py": "e0a491473406703ac297ea2acd3d687c7e19b1482d4919d7a47f292094fa3738",
+    "video.py": "267f7a6396b09d392ea08fa8005146dc318acb3f3acfe0a9b30dec12668dfc86",
+    "vision.py": "a7c6a40a96d77096f21b5576c17b2f3b495fd790acc21abf7f0f4bbd2afb7243"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}
