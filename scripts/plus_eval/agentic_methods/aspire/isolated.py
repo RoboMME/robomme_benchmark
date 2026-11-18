@@ -16,7 +16,6 @@ import uuid
 
 from cap_harness.api import CapApi
 from cap_harness.artifacts import RunRecorder, TracedProvider
-from cap_harness.providers.sam3.client import Sam3Provider
 from cap_harness.providers.graspnet.client import ContactGraspNetProvider
 from cap_harness.providers.pyroki.client import PyRokiProvider
 from cap_harness.providers.curobo.client import CuRoboProvider
@@ -26,6 +25,7 @@ from cap_harness.robomme_plus.adapter import RoboMMEPlusAdapter
 from benchmark_io.protocol import Study
 from benchmark_io.runtime_policy import configured, ProgressWatchdog, observation_memory_gib
 from .wire import dumps, loads, write_reply
+from .sam3_reliability import ReliableSam3Provider
 
 HERE = Path(__file__).resolve().parent
 UPSTREAM = HERE / 'ASPIRE/src/cap_harness'
@@ -147,6 +147,7 @@ def run_program(*, study_root, output_root, task, episode, code, image,
     success = False
     process = None
     terminal_stop = None
+    sam3 = None
     container = 'aspire-program-' + uuid.uuid4().hex
     limits = configured()
     try:
@@ -157,7 +158,9 @@ def run_program(*, study_root, output_root, task, episode, code, image,
         recorder.on_reset(observation, adapter.get_task_metadata())
         url = lambda offset: f'http://127.0.0.1:{provider_port_base + offset}'
         bounded = dict(timeout_s=limits.provider_seconds,max_retries=0) if limits else {}
-        segmentation = TracedProvider(Sam3Provider(url(4), **bounded), recorder, 'sam3')
+        sam3 = ReliableSam3Provider(url(4), log_path=recorder.root/'sam3_requests.jsonl',
+                                   timeout_s=limits.provider_seconds if limits else 60)
+        segmentation = TracedProvider(sam3, recorder, 'sam3')
         grasp = TracedProvider(ContactGraspNetProvider(url(5), **bounded), recorder, 'contact_graspnet')
         pyroki = TracedProvider(PyRokiProvider(url(6), **(bounded or dict(timeout_s=180))), recorder, 'pyroki')
         curobo = TracedProvider(CuRoboProvider(url(8), **(bounded or dict(timeout_s=240)),
@@ -232,8 +235,11 @@ def run_program(*, study_root, output_root, task, episode, code, image,
         recorder.finalize(program_ok=bool(execution and execution.ok), task_success=success,
             termination_reason=terminal_stop or ('harness_error' if error else ('program_error' if execution and not execution.ok else 'program_completed')),
             error=error, program_result=execution.result if execution else None)
+    provider_failures = sam3.infrastructure_failures if sam3 else 0
     return dict(program_ok=bool(execution and execution.ok), task_success=success,
                 run_dir=str(recorder.root), error=error or (str(execution.error) if execution and execution.error else None),
                 termination_reason=terminal_stop or ('harness_error' if error else 'program_completed'),
                 control_steps=adapter.episode.steps if adapter.episode else 0, episode=episode,
-                failure_kind='policy_timeout' if terminal_stop in ('controller_wall_timeout','controller_no_progress') else None)
+                provider_infrastructure_failures=provider_failures,
+                failure_kind='infrastructure' if provider_failures else
+                    ('policy_timeout' if terminal_stop in ('controller_wall_timeout','controller_no_progress') else None))

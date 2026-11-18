@@ -33,6 +33,7 @@ The model, time limits and input sampling are implementation choices.
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
 | Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
 | Reset recovery | One setup attempt per reserved training start; up to three identical test setup attempts. Policy execution is not retried automatically. |
+| SAM3 recovery | At most three HTTP attempts per request for transient service/connection errors, with 1-second then 2-second backoff. Each attempt retains the 60-second timeout; episode watchdogs still apply. No retries for empty detections or invalid prompts. |
 
 - **Deadline:** 150 minutes from a task's first worker assignment, including API
   calls, offline work and rollouts. Resumes preserve its clock. Expiry stops the
@@ -45,6 +46,11 @@ The model, time limits and input sampling are implementation choices.
 - **Providers and isolation:** retain SAM3, Contact-GraspNet, PyRoki and cuRobo;
   add RoboMME robot/tool registration, local SAM3 loading and bounded requests.
   Agent containers access public APIs through the operator bridge.
+  SAM3 attempts are recorded in `sam3_requests.jsonl`. Exhausted service errors
+  mark the episode as infrastructure-affected even if the policy catches them.
+  HTTP retries do not reset or step the simulator and consume no extra rollout.
+  Infrastructure reruns preserve the frozen policy and test seed; retain the
+  previous artifacts and replace selected results regardless of success/failure.
 
 Published `solutions/` contain the evaluated policies. Each task's `manifest.json`
 records its source selection, evaluated hashes and interface-adjustment provenance.

@@ -13,7 +13,8 @@ and runtime limits. Saved agent-facing prompts are in [`prompts/current`](prompt
 From the repository root, using the simulator's Python 3.11 environment:
 
 ```bash
-git submodule update --init scripts/plus_eval/agentic_methods/aspire/ASPIRE scripts/plus_eval/agentic_methods/rax/rax
+git submodule update --init scripts/plus_eval/agentic_methods/aspire/ASPIRE
+python3 scripts/plus_eval/agentic_methods/rax/restore_core.py
 source .venv/bin/activate
 uv pip install -r scripts/plus_eval/agentic_methods/requirements.txt
 export PYTHONPATH="$PWD/src:$PWD/scripts/plus_eval"

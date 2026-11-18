@@ -5,6 +5,12 @@ Core: [`rax/`](rax), the unchanged
 submodule at `d49c8ad605008bb5a87e909d0473cc3f5e3600a6`.
 Adapters, patches, solutions and this README live outside the submodule.
 
+The pin originates from upstream's `libero-pro/container` branch. A complete
+[`upstream.bundle`](upstream.bundle), checksum-pinned in [`upstream.json`](upstream.json),
+preserves the same commit if that branch is rewritten. From the repository root,
+run `python3 scripts/plus_eval/agentic_methods/rax/restore_core.py` to initialize
+`rax/` offline. Existing checkouts are left unchanged; evaluated code is identical.
+
 ## Adaptation
 
 We retain LIBERO's per-task exploration → bundle registration → exact-bundle
