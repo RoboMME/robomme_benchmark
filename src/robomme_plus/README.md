@@ -70,6 +70,9 @@ and execution limits. Keep failures, timeouts and errors in the denominator;
 report changed test conditions separately. See the
 [baseline results and running instructions](../../doc/robomme_plus/robomme_plus_baseline_results.md).
 
+Use the [compliance audit skill](../../doc/skills/audit_robomme_plus_compliance.md)
+to check agentic system code and development logs against this evaluation protocol.
+
 ## Evaluate
 
 Recoverable setup errors retry at most three times with the same episode settings.
