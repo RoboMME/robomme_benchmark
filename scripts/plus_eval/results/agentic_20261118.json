@@ -8,7 +8,7 @@
       "setting": "AfD",
       "budget": 0,
       "total": 800,
-      "successes": 135,
+      "successes": 136,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -52,7 +52,7 @@
         },
         "SwingXtimes": {
           "total": 50,
-          "successes": 35
+          "successes": 36
         },
         "VideoPlaceButton": {
           "total": 50,
@@ -128,7 +128,7 @@
         },
         "StopCube": {
           "total": 50,
-          "successes": 33
+          "successes": 32
         },
         "SwingXtimes": {
           "total": 50,
@@ -136,7 +136,7 @@
         },
         "VideoPlaceButton": {
           "total": 50,
-          "successes": 7
+          "successes": 8
         },
         "VideoPlaceOrder": {
           "total": 50,
@@ -248,7 +248,7 @@
       "setting": "AfI",
       "budget": 5,
       "total": 800,
-      "successes": 213,
+      "successes": 215,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -280,7 +280,7 @@
         },
         "PickXtimes": {
           "total": 50,
-          "successes": 15
+          "successes": 17
         },
         "RouteStick": {
           "total": 50,
@@ -328,7 +328,7 @@
       "setting": "AfI",
       "budget": 10,
       "total": 800,
-      "successes": 340,
+      "successes": 341,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -372,7 +372,7 @@
         },
         "SwingXtimes": {
           "total": 50,
-          "successes": 31
+          "successes": 32
         },
         "VideoPlaceButton": {
           "total": 50,
@@ -408,7 +408,7 @@
       "setting": "AfD+I",
       "budget": 1,
       "total": 800,
-      "successes": 153,
+      "successes": 155,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -416,7 +416,7 @@
         },
         "ButtonUnmask": {
           "total": 50,
-          "successes": 23
+          "successes": 24
         },
         "ButtonUnmaskSwap": {
           "total": 50,
@@ -448,7 +448,7 @@
         },
         "StopCube": {
           "total": 50,
-          "successes": 13
+          "successes": 14
         },
         "SwingXtimes": {
           "total": 50,
@@ -488,7 +488,7 @@
       "setting": "AfD+I",
       "budget": 3,
       "total": 800,
-      "successes": 260,
+      "successes": 261,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -532,7 +532,7 @@
         },
         "SwingXtimes": {
           "total": 50,
-          "successes": 19
+          "successes": 20
         },
         "VideoPlaceButton": {
           "total": 50,
@@ -568,7 +568,7 @@
       "setting": "AfD+I",
       "budget": 5,
       "total": 800,
-      "successes": 250,
+      "successes": 252,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -612,7 +612,7 @@
         },
         "SwingXtimes": {
           "total": 50,
-          "successes": 16
+          "successes": 18
         },
         "VideoPlaceButton": {
           "total": 50,
@@ -648,7 +648,7 @@
       "setting": "AfD+I",
       "budget": 10,
       "total": 800,
-      "successes": 273,
+      "successes": 279,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -656,7 +656,7 @@
         },
         "ButtonUnmask": {
           "total": 50,
-          "successes": 24
+          "successes": 26
         },
         "ButtonUnmaskSwap": {
           "total": 50,
@@ -688,7 +688,7 @@
         },
         "StopCube": {
           "total": 50,
-          "successes": 32
+          "successes": 36
         },
         "SwingXtimes": {
           "total": 50,

@@ -55,7 +55,7 @@ interaction. One-shot Astra receives one selected training example for the task
 | Method | Training input | Successes | Success rate |
 |---|---|---:|---:|
 | [One-shot Embodied Astra](<submission/one-shot-embodied-astra-plus (eval_by_RoboMME_team).md>) | One selected example per task | 281/800 | 35.13% |
-| [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md) | All 50 demos available | 135/800 | 16.88% |
+| [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md) | All 50 demos available | 136/800 | 17.00% |
 | [RAX](../../scripts/plus_eval/agentic_methods/rax/README.md) | All 50 demos available | 152/800 | 19.00% |
 
 ## Adapt from interactions (AfI)
@@ -64,17 +64,17 @@ interaction. One-shot Astra receives one selected training example for the task
 |---|---:|---:|
 | R1 | 117/800 (14.63%) | 26/800 (3.25%) |
 | R3 | 134/800 (16.75%) | 351/800 (43.88%) |
-| R5 | 213/800 (26.63%) | 265/800 (33.13%) |
-| R10 | 340/800 (42.50%) | 312/800 (39.00%) |
+| R5 | 215/800 (26.88%) | 265/800 (33.13%) |
+| R10 | 341/800 (42.63%) | 312/800 (39.00%) |
 
 ## Adapt from demos+interactions (AfD+I)
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
-| R1 | 153/800 (19.13%) | 156/800 (19.50%) |
-| R3 | 260/800 (32.50%) | 315/800 (39.38%) |
-| R5 | 250/800 (31.25%) | 283/800 (35.38%) |
-| R10 | 273/800 (34.13%) | 337/800 (42.13%) |
+| R1 | 155/800 (19.38%) | 156/800 (19.50%) |
+| R3 | 261/800 (32.63%) | 315/800 (39.38%) |
+| R5 | 252/800 (31.50%) | 283/800 (35.38%) |
+| R10 | 279/800 (34.88%) | 337/800 (42.13%) |
 
 ## Per-task success rates
 
@@ -120,7 +120,7 @@ as the overall results above.
 | PickXtimes | 80.0% | 20.0% | 8.0% |
 | RouteStick | 8.0% | 20.0% | 14.0% |
 | StopCube | 38.0% | 0.0% | 54.0% |
-| SwingXtimes | 98.0% | 70.0% | 20.0% |
+| SwingXtimes | 98.0% | 72.0% | 20.0% |
 | VideoPlaceButton | 36.0% | 22.0% | 30.0% |
 | VideoPlaceOrder | 22.0% | 30.0% | 38.0% |
 | VideoRepick | 16.0% | 16.0% | 58.0% |
@@ -141,11 +141,11 @@ as the overall results above.
 | MoveCube | 0.0% | 8.0% | 0.0% | 12.0% | 0.0% | 2.0% | 4.0% | 4.0% |
 | PatternLock | 20.0% | 20.0% | 20.0% | 20.0% | 0.0% | 20.0% | 18.0% | 20.0% |
 | PickHighlight | 0.0% | 6.0% | 14.0% | 48.0% | 0.0% | 42.0% | 72.0% | 66.0% |
-| PickXtimes | 14.0% | 14.0% | 30.0% | 52.0% | 0.0% | 54.0% | 8.0% | 54.0% |
+| PickXtimes | 14.0% | 14.0% | 34.0% | 52.0% | 0.0% | 54.0% | 8.0% | 54.0% |
 | RouteStick | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% |
-| StopCube | 66.0% | 88.0% | 70.0% | 58.0% | 2.0% | 64.0% | 52.0% | 62.0% |
-| SwingXtimes | 20.0% | 14.0% | 38.0% | 62.0% | 0.0% | 58.0% | 6.0% | 12.0% |
-| VideoPlaceButton | 14.0% | 10.0% | 36.0% | 58.0% | 0.0% | 70.0% | 0.0% | 40.0% |
+| StopCube | 64.0% | 88.0% | 70.0% | 58.0% | 2.0% | 64.0% | 52.0% | 62.0% |
+| SwingXtimes | 20.0% | 14.0% | 38.0% | 64.0% | 0.0% | 58.0% | 6.0% | 12.0% |
+| VideoPlaceButton | 16.0% | 10.0% | 36.0% | 58.0% | 0.0% | 70.0% | 0.0% | 40.0% |
 | VideoPlaceOrder | 18.0% | 26.0% | 34.0% | 20.0% | 2.0% | 48.0% | 4.0% | 32.0% |
 | VideoRepick | 32.0% | 30.0% | 28.0% | 70.0% | 0.0% | 48.0% | 56.0% | 56.0% |
 | VideoUnmask | 4.0% | 2.0% | 66.0% | 56.0% | 4.0% | 66.0% | 56.0% | 64.0% |
@@ -159,7 +159,7 @@ as the overall results above.
 | Task | ASPIRE R1 | ASPIRE R3 | ASPIRE R5 | ASPIRE R10 | RAX R1 | RAX R3 | RAX R5 | RAX R10 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | BinFill | 26.0% | 84.0% | 52.0% | 48.0% | 72.0% | 54.0% | 74.0% | 74.0% |
-| ButtonUnmask | 46.0% | 36.0% | 56.0% | 48.0% | 0.0% | 58.0% | 56.0% | 54.0% |
+| ButtonUnmask | 48.0% | 36.0% | 56.0% | 52.0% | 0.0% | 58.0% | 56.0% | 54.0% |
 | ButtonUnmaskSwap | 0.0% | 4.0% | 16.0% | 16.0% | 2.0% | 16.0% | 24.0% | 12.0% |
 | InsertPeg | 6.0% | 2.0% | 8.0% | 0.0% | 2.0% | 42.0% | 18.0% | 20.0% |
 | MoveCube | 0.0% | 6.0% | 2.0% | 2.0% | 4.0% | 6.0% | 2.0% | 6.0% |
@@ -167,8 +167,8 @@ as the overall results above.
 | PickHighlight | 16.0% | 20.0% | 6.0% | 22.0% | 14.0% | 32.0% | 56.0% | 20.0% |
 | PickXtimes | 26.0% | 62.0% | 24.0% | 54.0% | 20.0% | 48.0% | 54.0% | 58.0% |
 | RouteStick | 0.0% | 20.0% | 20.0% | 20.0% | 14.0% | 16.0% | 20.0% | 20.0% |
-| StopCube | 26.0% | 58.0% | 44.0% | 64.0% | 30.0% | 62.0% | 66.0% | 66.0% |
-| SwingXtimes | 4.0% | 38.0% | 32.0% | 70.0% | 20.0% | 76.0% | 30.0% | 74.0% |
+| StopCube | 28.0% | 58.0% | 44.0% | 72.0% | 30.0% | 62.0% | 66.0% | 66.0% |
+| SwingXtimes | 4.0% | 40.0% | 36.0% | 70.0% | 20.0% | 76.0% | 30.0% | 74.0% |
 | VideoPlaceButton | 10.0% | 20.0% | 22.0% | 20.0% | 26.0% | 20.0% | 24.0% | 34.0% |
 | VideoPlaceOrder | 32.0% | 34.0% | 46.0% | 36.0% | 54.0% | 22.0% | 12.0% | 32.0% |
 | VideoRepick | 74.0% | 60.0% | 60.0% | 56.0% | 34.0% | 38.0% | 58.0% | 58.0% |

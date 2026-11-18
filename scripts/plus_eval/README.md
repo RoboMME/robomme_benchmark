@@ -23,15 +23,15 @@ R caps simulator attempts per task. ASPIRE and RAX develop each budget independe
 
 | Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
 |---|---|---:|---:|
-| AfD | R0 | 135/800 (16.88%) | 152/800 (19.00%) |
+| AfD | R0 | 136/800 (17.00%) | 152/800 (19.00%) |
 | AfI | R1 | 117/800 (14.63%) | 26/800 (3.25%) |
 | AfI | R3 | 134/800 (16.75%) | 351/800 (43.88%) |
-| AfI | R5 | 213/800 (26.63%) | 265/800 (33.13%) |
-| AfI | R10 | 340/800 (42.50%) | 312/800 (39.00%) |
-| AfD+I | R1 | 153/800 (19.13%) | 156/800 (19.50%) |
-| AfD+I | R3 | 260/800 (32.50%) | 315/800 (39.38%) |
-| AfD+I | R5 | 250/800 (31.25%) | 283/800 (35.38%) |
-| AfD+I | R10 | 273/800 (34.13%) | 337/800 (42.13%) |
+| AfI | R5 | 215/800 (26.88%) | 265/800 (33.13%) |
+| AfI | R10 | 341/800 (42.63%) | 312/800 (39.00%) |
+| AfD+I | R1 | 155/800 (19.38%) | 156/800 (19.50%) |
+| AfD+I | R3 | 261/800 (32.63%) | 315/800 (39.38%) |
+| AfD+I | R5 | 252/800 (31.50%) | 283/800 (35.38%) |
+| AfD+I | R10 | 279/800 (34.88%) | 337/800 (42.13%) |
 
 Final summaries: [model baselines](results/model_baselines.json) ·
 [ASPIRE/RAX](results/agentic_20261118.json).
