@@ -2,8 +2,9 @@
 
 Shared simulator I/O, budget ledger, frozen evaluation, queue and API accounting
 for [ASPIRE](../agentic_methods/aspire/README.md) and [RAX](../agentic_methods/rax/README.md).
-Read the [experimental protocol](../../../doc/plus_agentic_evaluation.md) for
-settings and rules. Final agent-facing prompts are in [`prompts/current`](prompts/current).
+Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol);
+[baseline settings and results](../../../doc/robomme_plus_baseline_results.md) describe
+the finalized runs. Saved agent-facing prompts are in [`prompts/current`](prompts/current).
 
 ## Setup
 
@@ -73,8 +74,9 @@ Under `METHOD/SETTING/Rn/`: `study/` contains metadata/attempts;
 policies, test results and logs. R0/R10 save full test media; R1/R3/R5 save logs.
 All development history is retained. `progress.json` aggregates the study.
 
-Costs use provider-reported tokens and the recorded rate card; missing usage is
-not zero cost. Frozen evaluation has zero frontier-model API cost in this setup.
+Report demo use, actual attempts and simulator steps per task, and separate
+adaptation/evaluation API costs. Costs use provider tokens and the recorded rate
+card; missing usage is not zero cost. Frozen evaluation has zero frontier-model API cost in this setup.
 Keep `runtime/private/` and credentials out of public archives.
 [Link external runs](../results/README.md) to browse logs from the method directories.
 

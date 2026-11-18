@@ -3,7 +3,7 @@
 Calls upstream [`PonderPounceRoboMMEServer`](https://github.com/worv-ai/PonderPounce/blob/723df35762bb641e1d520e4fa9359b98644adc21/ponderpounce/eval/robomme_server.py)
 callbacks directly. Ponder (Qwen3.5-9B), Pounce (Pi0.5) and the simulator share one
 GPU; allow roughly 35 GB of free GPU memory. No Docker or separate server is needed.
-See the [shared run instructions](../../../../doc/plus_baseline_running.md) for the 800-episode run options, outputs
+See the [shared run instructions](../../../../doc/robomme_plus_baseline_results.md#running-baselines) for the 800-episode run options, outputs
 and metrics.
 
 ## Setup
@@ -83,6 +83,6 @@ CUDA_VISIBLE_DEVICES=0 TOKENIZERS_PARALLELISM=false \
   Previous call IDs link persistent context. Pounce records inputs, cognition age,
   prompt IDs, noise and action chunks.
 
-Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/plus_baseline_running.md) for resume, rerun and outputs.
+Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
 
 [Link finalized rollouts](../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

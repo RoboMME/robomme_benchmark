@@ -34,7 +34,8 @@ AfD/AfD+I receive released RGB recordings; interaction uses front/wrist RGB-D,
 calibration, robot state and goal. No hidden object state or task source is exposed.
 Opus 5.5 uses Bedrock with high reasoning effort. Optional Gemini is disabled;
 frozen test execution makes no frontier-model API calls. R1/R3/R5/R10 develop
-independently. See the [protocol](../../../../doc/plus_agentic_evaluation.md).
+independently. See the [evaluation protocol](../../../../src/robomme_plus/README.md#evaluation-protocol)
+and [baseline settings/results](../../../../doc/robomme_plus_baseline_results.md).
 
 ## Run and inspect
 

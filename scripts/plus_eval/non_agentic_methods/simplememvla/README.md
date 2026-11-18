@@ -2,7 +2,7 @@
 
 Uses upstream [`build_policy()` and batched inference](https://github.com/YinpeiDai/SimpleMemVLA/blob/c564c17d276d7294200122b286c21901a3bfb99f/robomme_sim/eval_success.py),
 including history sampling, prompts, subtask generation and action prediction.
-The model and simulator share one GPU/process. See the [shared run instructions](../../../../doc/plus_baseline_running.md)
+The model and simulator share one GPU/process. See the [shared run instructions](../../../../doc/robomme_plus_baseline_results.md#running-baselines)
 for the 800-episode run options, outputs and metrics.
 
 ## Setup
@@ -69,6 +69,6 @@ Omit `--attn-implementation sdpa` to use the default `flash_attention_2` if inst
   state, processed tensors/patch keys and action chunk. Policy `input.json` links
   to the preceding preprocessing `output.json`, avoiding duplicate tensor copies.
 
-Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/plus_baseline_running.md) for resume, rerun and outputs.
+Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
 
 [Link finalized rollouts](../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

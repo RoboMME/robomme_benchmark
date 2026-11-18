@@ -16,7 +16,9 @@ FrameSamp+Modul is the RoboMME perceptual-memory baseline. It samples historical
 
 **Setting:** Zero-shot transfer (ZS).
 
-**Training-seed rollouts:** 0 (R0).
+**Demo use:** No released RoboMME-Plus training demonstrations.
+
+**Rollout budget:** R0; 0 training-seed attempts.
 
 > Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`joint_angle`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
 

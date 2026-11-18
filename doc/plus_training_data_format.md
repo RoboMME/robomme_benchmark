@@ -10,6 +10,11 @@ from `main`. The original release is preserved unchanged on the
 [H5 v1](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5/tree/v1) and
 [LeRobot v1](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot/tree/v1) branches.
 
+Use these recordings in AfD or AfD+I, with unlimited offline reuse and training
+iterations. Report the demos and modalities used. Simulator replays used for
+adaptation consume the per-task R budget; AfD permits none. See the
+[evaluation protocol](../src/robomme_plus/README.md#evaluation-protocol).
+
 ## Replay
 
 Replay both saved joint and end-effector actions through the simulator and export

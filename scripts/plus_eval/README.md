@@ -18,8 +18,8 @@ Each method link below provides setup and running instructions.
 
 ## Agentic adaptation
 
-AfD uses demonstrations; AfI uses training-seed interactions; AfD+I uses both.
-R is the maximum simulator starts per task. Each budget is developed independently.
+AfD adapts from demos; AfI from interactions on training seeds; AfD+I from both.
+R caps simulator attempts per task. ASPIRE and RAX develop each budget independently.
 
 | Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
 |---|---|---:|---:|

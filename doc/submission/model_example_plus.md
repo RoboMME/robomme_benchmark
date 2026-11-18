@@ -5,8 +5,9 @@ and fill in the results table. Both Standard and Agentic tracks can use any
 setting. For interaction settings, report R1, R3, R5, and R10 in the same table;
 mark unevaluated columns N/R.
 
-All released offline demonstrations are available by default for **AfD** and
-**AfD+I**; no demonstration count is required. **ZS** and **AfI** do not use them.
+All 50 released demonstrations are available for **AfD** and **AfD+I**, with
+unlimited reuse. State which demos and modalities were used. **ZS** and **AfI**
+do not use released demonstrations.
 
 Each result uses **800 fixed test episodes: 16 tasks × 50 episodes**. Report
 success rates as percentages with two decimal places. API costs are in USD;
@@ -65,6 +66,8 @@ Report this if you choose **AfD**. Adapt using released offline demonstrations, 
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Standard track):** [SIZE IN B / N/A]
 - **Adaptation:** [BRIEF DESCRIPTION]
+- **Demo use:** [SELECTION AND MODALITIES]
+- **Adaptation API cost (USD):** [COST / N/A]
 - **Total evaluation API cost (USD):** [COST / N/A]
 - **Results:** [ARTIFACTS LINK]
 
@@ -104,6 +107,7 @@ Report this if you choose **AfI**. Adapt through training-seed interactions, wit
 - **Parameters (Standard track):** [SIZE IN B / N/A]
 - **Adaptation:** [BRIEF DESCRIPTION]
 - **Usage log:** [LINK TO ATTEMPTS AND SIMULATOR STEPS PER TASK, BY BUDGET]
+- **Adaptation API cost (USD):** R1 [COST / N/A]; R3 [COST / N/A]; R5 [COST / N/A]; R10 [COST / N/A]
 - **Total evaluation API cost (USD):** R1 [COST / N/A]; R3 [COST / N/A]; R5 [COST / N/A]; R10 [COST / N/A]
 - **Results:** [ARTIFACTS LINK]
 
@@ -142,7 +146,9 @@ Report this if you choose **AfD+I**. Adapt using released offline demonstrations
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Standard track):** [SIZE IN B / N/A]
 - **Adaptation:** [BRIEF DESCRIPTION]
+- **Demo use:** [SELECTION AND MODALITIES]
 - **Usage log:** [LINK TO ATTEMPTS AND SIMULATOR STEPS PER TASK, BY BUDGET]
+- **Adaptation API cost (USD):** R1 [COST / N/A]; R3 [COST / N/A]; R5 [COST / N/A]; R10 [COST / N/A]
 - **Total evaluation API cost (USD):** R1 [COST / N/A]; R3 [COST / N/A]; R5 [COST / N/A]; R10 [COST / N/A]
 - **Results:** [ARTIFACTS LINK]
 
@@ -177,14 +183,15 @@ Report this if you choose **AfD+I**. Adapt using released offline demonstrations
 2. **Use permitted resources.** Adapt only with released Plus demonstrations
    and provided training seeds, according to the chosen setting. Do not derive
    solutions from task source code, query oracles, or use privileged simulator
-   information. Keep task-specific prompting minimal.
+   information. Task-specific prompts and strategies must come from permitted training experience, not hand-written task solutions.
 3. **Keep the model and agentic framework frozen.** Complete adaptation before
    testing. Keep weights, prompts, tools, and the harness fixed throughout
    evaluation. Reset memory between test episodes. Never adapt from test results.
 4. **Report test-time optimization separately.** It is outside the standard
    protocol; report its results separately from these tables.
-5. **Report usage and cost.** Include the setting, rollout budget, actual
-   attempts and simulator steps per task, and total API cost in USD.
+5. **Report usage and cost.** Include the setting, demo use, R, actual attempts
+   and simulator steps per task, and separate adaptation/evaluation API costs
+   in USD. Compare methods at the same setting and R.
 
 Use a shared model checkpoint or agentic framework across all 16 tasks. Keep
 all 800 episodes in the denominator, including failures, timeouts, model stops,
@@ -197,7 +204,7 @@ Task-provided test demonstration videos are normal observations, not adaptation
 data. Original RoboMME training is outside the Plus rollout budget.
 
 Reference: [evaluation guide](../../src/robomme_plus/README.md) ·
-[baseline running instructions](../../scripts/plus_eval/README.md) ·
+[baseline results and running instructions](../robomme_plus_baseline_results.md) ·
 [training data format and seed mapping](../plus_training_data_format.md).
 
 </details>

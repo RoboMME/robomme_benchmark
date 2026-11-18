@@ -4,9 +4,10 @@
   <img src="../../assets/RoboMME-Plus-logo-v2.png" alt="RoboMME-Plus" width="640">
 </p>
 
-RoboMME-Plus tests robot memory under more demanding conditions. It retains
-RoboMME's 16 tasks across counting, permanence, reference and imitation, with
-changes to object counts, motion, occlusion, demonstration histories and tools.
+RoboMME-Plus tests whether robot memory skills transfer when task conditions
+change, and how much new experience helps policies adapt. It retains RoboMME's
+16 tasks across Counting, Permanence, Reference and Imitation, with more objects,
+repetitions, motion and occlusion, plus perceptual and mechanism variations.
 
 ## Splits and training data
 
@@ -15,7 +16,7 @@ changes to object counts, motion, occlusion, demonstration histories and tools.
   selected atomic variation: 13 appearance changes and 2 mechanism changes;
   the other 35 retain their original settings. All recordings use 20 Hz control.
 - **Test:** 800 episodes, 50 per task. Tiered tasks have 10 easy, 15 medium and
-  25 hard episodes; MoveCube has 10 per method. Train/test seeds are disjoint.
+  25 hard episodes; MoveCube has 10 per method. Train/test seeds are disjoint within each task.
 - **Downloads:** [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
   [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
   The current `main` contains v2 with atomic training variations and successful
@@ -31,34 +32,42 @@ are replayed through the simulator at reset to produce its conditioning video.
 
 ## Evaluation protocol
 
-Choose the setting before development and report each setting and budget separately.
+The same rules apply to **Standard** policies trained or fine-tuned for control
+and **Agentic** systems that use foundation models to plan, act or write code.
+Choose a setting before adaptation and compare results at the same setting and R.
 
-| Setting | Released training demonstrations | Simulator starts per task |
-|---|---|---|
-| ZS: direct transfer | None | 0 |
-| AfD: adaptation from demonstrations | Up to all 50 | 0 (R0) |
-| AfI: adaptation from interaction | None | At most 1, 3, 5 or 10 |
-| AfD+I: adaptation from both | Up to all 50 | At most 1, 3, 5 or 10 |
+| Setting | Released demonstrations | Rollout budget per task |
+| --- | --- | --- |
+| Zero-shot transfer (ZS) | No | R0 |
+| Adapt from demos (AfD) | Yes | R0 |
+| Adapt from interactions (AfI) | No | R1, R3, R5 or R10 |
+| Adapt from demos+interactions (AfD+I) | Yes | R1, R3, R5 or R10 |
 
-- **Training experience:** Use only the released demonstrations and
-  [training seeds](env_metadata/train). Demonstrations may be reused without limit;
-  any RoboMME-Plus fine-tuning uses only these 50 recordings. Every simulator start
-  counts toward R, including previews, debugging, verification, retries and sandbox
-  rehearsals. R is a rollout budget, not a control-step budget.
-- **Permitted inputs:** Learn from task instructions, public observations and
-  simulator feedback. Do not expose task source, oracle annotations or privileged
-  object state to the agent. A test episode's conditioning video is a normal
-  observation in every setting, distinct from an expert training demonstration.
-- **Shared method:** Use the same model or framework across tasks. Task-specific
-  prompts or strategies must be learned from the permitted training experience.
-- **Frozen testing:** Freeze weights, programs, prompt templates, tools and
-  libraries before testing. Reset adaptive memory between episodes. Test data,
-  seeds and rollout outcomes cannot be used for development or policy selection.
+ZS transfers from original RoboMME without Plus adaptation. AfD/AfD+I can reuse
+any of the 50 released demonstrations without a limit on training iterations.
 
-Evaluate all **50 test episodes per task (800 total)** with the default variation
-settings and execution limits below. Report changed test conditions separately.
-See [adaptation details and reporting requirements](../../doc/plus_agentic_evaluation.md)
-and [results by setting](../../doc/robomme_plus_baseline_results.md).
+- **Count development rollouts:** R caps simulator attempts per task on the
+  [provided training seeds](env_metadata/train), not demonstrations or control
+  steps. Prompt/harness tuning, debugging, verification and model selection share
+  R. Every start counts, including failed setup, timeouts, early stops, retries,
+  previews and sandbox rehearsals. Follow the official episode step limits.
+- **Use permitted resources:** Learn only from allowed demonstrations, public
+  observations and simulator feedback. No task-source-derived solutions, oracle
+  queries or privileged simulator information. A task's conditioning video is a
+  normal observation in every setting, distinct from an expert training recording.
+- **Use one method across tasks:** Task-specific prompts and strategies must
+  come from permitted training experience, not hand-written task solutions.
+- **Freeze before testing:** Keep weights, programs, prompts, tools, libraries and
+  the harness fixed. Reset adaptive memory between episodes. Never use test data
+  or outcomes for adaptation or policy selection. Report test-time optimization
+  separately from the standard protocol.
+- **Report usage:** Include the setting, demo use, R, actual attempts and simulator
+  steps per task, and separate adaptation/evaluation API costs in USD.
+
+Evaluate all **50 test episodes per task (800 total)** with default variations
+and execution limits. Keep failures, timeouts and errors in the denominator;
+report changed test conditions separately. See the
+[baseline results and running instructions](../../doc/robomme_plus_baseline_results.md).
 
 ## Task changes
 

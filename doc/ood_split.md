@@ -17,18 +17,18 @@ using `config_ood` in the [original task implementations](../src/robomme/robomme
 It is for testing only, with no new training split; the original train, validation
 and test splits are unchanged.
 
-### What's difference from RoboMME-plus
+### Difference from RoboMME-Plus
 
 Use `ood_test` to test whether a model trained on regular RoboMME generalizes to
 extrapolated parameters without further training. It changes counts, sequence
 lengths and geometry while retaining the original task mechanisms and success
 criteria.
 
-Use [RoboMME-Plus](../src/robomme_plus/README.md) to evaluate robot memory across
-a broader range of demanding conditions, including moving targets, stronger
-occlusion and additional manipulation methods. Its separate training and test
-splits support both zero-shot evaluation and few-shot adaptation. The easy-level test episodes in RoboMME-plus
-is similar to `ood_test`, but the medium- and hard-level episodes contain more diverse changes.
+[RoboMME-Plus](../src/robomme_plus/README.md) evaluates memory generalization and
+adaptation with changed task mechanisms and perceptual variations. Its 50 training
+demos and 800 test episodes support zero-shot transfer (ZS), adaptation from demos
+(AfD), training-seed interactions (AfI), or both (AfD+I). Interaction budgets cap
+attempts per task at R1, R3, R5 or R10. It is separate from `ood_test`.
 
 ## Parameter changes
 

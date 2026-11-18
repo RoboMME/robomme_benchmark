@@ -1,6 +1,6 @@
 # One-shot Embodied-Astra
 
-### [Code](https://github.com/jackbjed/embodied-astra-robomme) | [RoboMME-Plus training data](https://huggingface.co/datasets/Yinpei/robomme_ood_data_h5)
+### [Code](https://github.com/jackbjed/embodied-astra-robomme) | [RoboMME-Plus training data](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5)
 
 ## Introduction
 
@@ -10,7 +10,7 @@ One-shot Embodied-Astra uses the same `gpt-6-astra` waypoint policy as Embodied-
 
 **Track:** Agentic Track.
 
-**API Cost (historical v1 estimate):** **approximately US$2,056.63 total; US$2.57/episode** across 800 episodes,
+**Evaluation API cost (historical v1 estimate):** **approximately US$2,056.63 total; US$2.57/episode** across 800 episodes,
 including failures. These are lower-bound estimates: **424 unpriced requests** are
 excluded. Uses the blog's October 27, 2026 rollout snapshot and `gpt-6-astra`
 pricing checked October 21, 2026. V2 aggregate API cost has not been recomputed.
@@ -19,7 +19,9 @@ pricing checked October 21, 2026. V2 aggregate API cost has not been recomputed.
 
 **Setting:** Adapt from demos (AfD), using a released training example as context.
 
-**Training-seed rollouts:** 0 (R0).
+**Demo use:** One selected training episode per task, except MoveCube; RGB images and task goals.
+
+**Rollout budget:** R0; 0 training-seed attempts.
 
 > Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`waypoint`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
 
@@ -52,7 +54,7 @@ Success rates are percentages on the RoboMME-Plus V2 test split. Only simulator 
 ### Training Details
 
 - **Adaptation:** one medium training example for each of 15 tasks. InsertPeg uses training episode 1; MoveCube receives no training example.
-- **Example format:** front and wrist images are paired side by side, with demonstration/execution phase labels and the training goal. The context contains images rather than oracle actions or subgoals.
+- **Example format:** front and wrist images are paired side by side, with demonstration/execution phase labels and the training goal. The context includes RGB images and the goal; recorded actions and subgoal annotations are excluded.
 - **Current episode:** the same front-camera history, current wrist view, robot state, camera calibration, and `lr_note` prompt as the zero-shot policy.
 - **Image budget:** 1,100 images in the initial request, with up to 550 allocated to the example, and 1,500 images across the conversation. No gradient updates or RoboMME-Plus checkpoint training are performed.
 
@@ -62,7 +64,7 @@ Success rates are percentages on the RoboMME-Plus V2 test split. Only simulator 
 
 ### Released Checkpoints
 
-The underlying Astra model is accessed through its API. Adaptation uses the [RoboMME-Plus training set](https://huggingface.co/datasets/Yinpei/robomme_ood_data_h5); this entry does not produce a fine-tuned checkpoint.
+The underlying Astra model is accessed through its API. Adaptation uses the [RoboMME-Plus training set](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5); this entry does not produce a fine-tuned checkpoint.
 
 ### Citations
 

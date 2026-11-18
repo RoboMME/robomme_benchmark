@@ -10,7 +10,7 @@ Embodied-Astra uses the `gpt-6-astra` API model directly as a robot policy. Give
 
 **Track:** Agentic Track.
 
-**API Cost (historical v1 estimate):** **approximately US$759.45 total; US$0.95/episode** across 800 episodes,
+**Evaluation API cost (historical v1 estimate):** **approximately US$759.45 total; US$0.95/episode** across 800 episodes,
 including failures. These are lower-bound estimates: **47 unpriced requests** are
 excluded. Uses the blog's October 27, 2026 rollout snapshot and `gpt-6-astra`
 pricing checked October 21, 2026. V2 aggregate API cost has not been recomputed.
@@ -19,7 +19,9 @@ pricing checked October 21, 2026. V2 aggregate API cost has not been recomputed.
 
 **Setting:** Zero-shot transfer (ZS).
 
-**Training-seed rollouts:** 0 (R0).
+**Demo use:** No released RoboMME-Plus training demonstrations.
+
+**Rollout budget:** R0; 0 training-seed attempts.
 
 > Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`waypoint`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
 
