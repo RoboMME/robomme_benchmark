@@ -12,7 +12,7 @@ FrameSamp+Modul is the RoboMME perceptual-memory baseline. It samples historical
 
 **Total Params:** **3.44B** (3,441,899,024), including frozen parameters.
 
-**Evaluated by:** RoboMME Team. **Results snapshot:** v2 merged release, November 16, 2026.
+**Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
 **Setting:** Zero-shot transfer (ZS).
 

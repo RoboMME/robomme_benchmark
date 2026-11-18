@@ -19,11 +19,11 @@ Run this Python directly afterward: `uv sync` can undo the dependency overrides.
 Set `OPENAI_API_KEY` in your environment, then run:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 "$SIM_PYTHON" scripts/plus_eval/agentic_methods/astra/embodied/eval_plus.py   --tasks BinFill --episodes 0 --prompt-variant lr_note   --output-dir runs/embodied-astra-smoke
+CUDA_VISIBLE_DEVICES=0 "$SIM_PYTHON" scripts/plus_eval/agentic_methods/astra/embodied/eval_plus.py   --prompt-variant lr_note   --output-dir runs/embodied-astra
 ```
 
-Omit the task/episode filters for all 800 episodes. See [shared options](../../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines)
-for resume, rerun and recorded outputs. The model defaults to `gpt-6-astra` and
+The default evaluates all 800 episodes. See [shared options](../../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines)
+for continuation options and recorded outputs. The model defaults to `gpt-6-astra` and
 frame stride to 3. `lr_note` supplies the left/right convention used in our runs.
 
 ## Image and step budgets
@@ -41,7 +41,7 @@ Download the [H5 dataset](https://huggingface.co/datasets/Yinpei/robomme_plus_da
 
 ```bash
 hf download Yinpei/robomme_plus_data_h5 --repo-type dataset --local-dir data/plus_train
-CUDA_VISIBLE_DEVICES=0 "$SIM_PYTHON" scripts/plus_eval/agentic_methods/astra/embodied/eval_plus_fs.py   --tasks BinFill --episodes 0 --training-root data/plus_train   --training-context images --output-dir runs/embodied-astra-one-shot
+CUDA_VISIBLE_DEVICES=0 "$SIM_PYTHON" scripts/plus_eval/agentic_methods/astra/embodied/eval_plus_fs.py   --training-root data/plus_train   --training-context images --output-dir runs/embodied-astra-one-shot
 ```
 
 Each test episode receives the same task's medium training example; InsertPeg

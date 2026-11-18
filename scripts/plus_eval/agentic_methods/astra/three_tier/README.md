@@ -80,16 +80,16 @@ mkdir -p "$ROBOMME_ROOT/runs"
 VLA_PID=$!
 ```
 
-Supply an API key with access to `gpt-6-astra` (paid calls), then run one BinFill
-episode with the simulator/monitor on GPU 1. The client waits for the server:
+Supply an API key with access to `gpt-6-astra` (paid calls), then evaluate all 800
+test episodes with the simulator/monitor on GPU 1. The client waits for the server:
 
 ```bash
 read -rsp 'OpenAI API key: ' OPENAI_API_KEY
 export OPENAI_API_KEY
 printf '\n'
 CUDA_VISIBLE_DEVICES=1 "$SIM_PYTHON" "$ROBOMME_ROOT/scripts/plus_eval/agentic_methods/astra/three_tier/eval_plus.py" \
-  --tasks BinFill --episodes 0 --model-seed 42 \
-  --output-dir "$ROBOMME_ROOT/runs/astra-plus-smoke"
+  --model-seed 42 \
+  --output-dir "$ROBOMME_ROOT/runs/astra-plus"
 ```
 
 Keep server/client ports and seeds consistent: `--model-seed` records the server
@@ -114,6 +114,6 @@ seed; it does not change it. Stop the server with `kill "$VLA_PID"` after evalua
   Sanitized copies of planner artifacts also appear under `native/astra/` in each
   episode; credentials and private paths are redacted.
 
-Omit task/episode filters for all 800 episodes. See [shared run options](../../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
+The default evaluates all 800 episodes. See [shared run options](../../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for continuation options and outputs.
 
 [Link finalized rollouts](../../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

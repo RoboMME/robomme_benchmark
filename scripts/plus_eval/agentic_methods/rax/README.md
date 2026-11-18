@@ -12,8 +12,7 @@ rehearsal → submission workflow. Rehearsals consume the same R budget. AfD all
 explicit offline submission because it forbids simulator access. We add no CaP
 code, task solver or policy-selection algorithm.
 
-The working integration changed eight upstream Python files. Those edits are
-preserved in [`patches/robomme-plus.patch`](patches/robomme-plus.patch), applied
+Runtime integration patches cover eight upstream Python files in [`patches/robomme-plus.patch`](patches/robomme-plus.patch), applied
 only to a separate runtime copy:
 
 | Upstream area | Integration change |
@@ -27,29 +26,41 @@ only to a separate runtime copy:
 `adapter/` contains the simulator backend and native skill references.
 `robomme_full.py` drives development; `eval_plus.py` runs frozen test policies.
 `solutions/` contains all 144 evaluated task bundles under settings, R and task,
-with hashes, portable runner settings and recorded interface corrections.
+with hashes, portable runner settings and policy provenance.
 `upstream.json` pins source and patches.
 
-AfD/AfD+I receive released RGB recordings; interaction uses front/wrist RGB-D,
-calibration, robot state and goal. No hidden object state or task source is exposed.
-Opus 5.5 uses Bedrock with high reasoning effort. Optional Gemini is disabled;
-frozen test execution makes no frontier-model API calls. R1/R3/R5/R10 develop
-independently. See the [evaluation protocol](../../../../src/robomme_plus/README.md#evaluation-protocol)
-and [baseline settings/results](../../../../doc/robomme_plus/robomme_plus_baseline_results.md).
+The [shared adaptation notes](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#aspire-and-rax-adaptation-notes)
+record the model, input export, 512-timestamp cap, runtime limits and budget rules.
+RAX-specific changes:
+
+- **Deadline:** 150 minutes from the recorded task-process start, including
+  provisioning, API calls, offline work and rollouts. Resumes preserve the clock.
+  Expiry stops the sandbox/simulator, then allows at most 120 seconds for read-only
+  reporting or submission of an existing eligible bundle; no edits or rehearsals.
+- **Submission:** interaction settings retain the clean rehearsal of the exact
+  submitted bundle, charged to the same R. AfD adds offline submission with zero
+  simulator starts. Test outcomes never return to development.
+- **Providers and transport:** optional Gemini is disabled; native coding-model
+  vision and RGB-D geometry tools remain. Large artifacts are streamed, initial
+  videos sampled, and terminal/timeout handling uses the public simulator result.
+
+Published `solutions/` contain the evaluated policies. Each task's `manifest.json`
+records its source selection, evaluated hashes and interface-adjustment provenance.
+
+See the [benchmark protocol](../../../../src/robomme_plus/README.md#evaluation-protocol).
 
 ## Run and inspect
 
-Follow [shared setup/development](../../benchmark_io/README.md), then rerun a
-published solution without development:
+Follow [shared setup/development](../../benchmark_io/README.md), then evaluate a
+published configuration on all 800 test episodes:
 
 ```bash
 python scripts/plus_eval/agentic_methods/rax/eval_plus.py \
-  --setting AfI --budget 3 --tasks StopCube --episodes 0 1 \
-  --gpu 0 --output-dir "<RUN_ROOT>/rax-rerun"
+  --setting AfI --budget 3 \
+  --gpu 0 --output-dir "<RUN_ROOT>/rax-AfI-R3"
 ```
 
-Omit task/episode filters for all 800 tests. `--workers` sets concurrent processes
-on that GPU; `--artifacts logs` omits media. The same output directory resumes
+`--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media. The same output directory resumes
 unstarted tests; use a new directory for a fresh run.
 
 [Link external artifacts](../../results/README.md) to inspect

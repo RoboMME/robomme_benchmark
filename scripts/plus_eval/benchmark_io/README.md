@@ -4,7 +4,8 @@ Shared simulator I/O, budget ledger, frozen evaluation, queue and API accounting
 for [ASPIRE](../agentic_methods/aspire/README.md) and [RAX](../agentic_methods/rax/README.md).
 Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol);
 [baseline settings and results](../../../doc/robomme_plus/robomme_plus_baseline_results.md) describe
-the finalized runs. Saved agent-facing prompts are in [`prompts/current`](prompts/current).
+the finalized runs. [Adaptation notes](../../../doc/robomme_plus/robomme_plus_baseline_results.md#aspire-and-rax-adaptation-notes)
+record development deadlines, input changes and runtime limits. Saved agent-facing prompts are in [`prompts/current`](prompts/current).
 
 ## Setup
 
@@ -42,13 +43,12 @@ python -m benchmark_io.prepare_unified prepare \
 python -m benchmark_io.watch_unified --root "<RUN_ROOT>"
 ```
 
-Preparation snapshots the benchmark, 50 recordings, protocol, runtime and image
+Preparation pins the benchmark, 50 recordings, protocol, runtime and image
 digest without API calls or simulator starts. It creates 18 configurations:
 2 methods × (AfD R0; AfI R1/R3/R5/R10; AfD+I R1/R3/R5/R10).
 
-The queue shares six development and sixteen evaluation slots across two GPUs.
-Evaluation starts only after that configuration freezes. To hold evaluation
-until all development finishes, create `<RUN_ROOT>/schedule_policy.json`:
+Worker allocation is configurable. Evaluation requires frozen policies.
+Example `<RUN_ROOT>/schedule_policy.json` for two GPUs:
 
 ```json
 {
@@ -60,11 +60,10 @@ until all development finishes, create `<RUN_ROOT>/schedule_policy.json`:
 }
 ```
 
-Modes: `asynchronous`, `after_all_development`, `held`. Optional
-`evaluation_episode_indices: [0, 1]` selects a sanity subset; remove it to complete
-the frozen run. Create `STOP` to stop dispatching. The monitor adopts owned workers
-rather than replaying trials. Limits are in [`runtime_policy.py`](runtime_policy.py).
-For reruns using published policies, use each method's `eval_plus.py`.
+The default episode selection covers all 800 tests. Create `STOP` to stop
+dispatching; running workers remain owned by the monitor. Limits are in
+[`runtime_policy.py`](runtime_policy.py). To evaluate published frozen policies,
+use each method's `eval_plus.py`.
 
 ## Artifacts and checks
 

@@ -145,6 +145,17 @@ not retried automatically. Check that retries do not reroll seeds, discard
 policy failures or return test feedback to development. Report any separately
 authorized infrastructure rerun and how its final result was selected.
 
+## Check declared development limits
+
+Read the study's adaptation notes and clock records. Current ASPIRE/RAX use a
+150-minute wall-clock limit per task/run, including offline work, API calls and
+rollouts. Check that resumes preserve the deadline and that expiry stops code
+changes and simulator attempts; reporting must use existing code. RAX's 120-second
+wrap-up is not extra development time. Distinguish per-task limits from outer
+job watchdogs. These are study-specific settings: do not impose them on another
+method unless its declared protocol includes them. Report time-limit deviations
+separately from rollout-budget violations.
+
 ## Check freezing, leakage and result integrity
 
 - Compare frozen and executed hashes for programs, weights, prompts, tools,

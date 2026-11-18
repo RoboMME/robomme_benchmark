@@ -10,12 +10,9 @@ One-shot Embodied-Astra uses the same `gpt-6-astra` waypoint policy as Embodied-
 
 **Track:** Agentic Track.
 
-**Evaluation API cost (historical v1 estimate):** **approximately US$2,056.63 total; US$2.57/episode** across 800 episodes,
-including failures. These are lower-bound estimates: **424 unpriced requests** are
-excluded. Uses the blog's October 27, 2026 rollout snapshot and `gpt-6-astra`
-pricing checked October 21, 2026. V2 aggregate API cost has not been recomputed.
+**Final evaluation API cost:** Not aggregated.
 
-**Evaluated by:** RoboMME Team. **Results snapshot:** v2 merged release, November 16, 2026.
+**Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
 **Setting:** Adapt from demos (AfD), using a released training example as context.
 

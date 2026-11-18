@@ -57,12 +57,12 @@ mkdir -p "$ROBOMME_ROOT/runs"
 VLA_PID=$!
 ```
 
-Run one BinFill episode on GPU 1; the client waits for the server:
+Evaluate all 800 test episodes on GPU 1; the client waits for the server:
 
 ```bash
 CUDA_VISIBLE_DEVICES=1 "$SIM_PYTHON" "$ROBOMME_ROOT/scripts/plus_eval/non_agentic_methods/framesamp_modul/eval_plus.py" \
-  --tasks BinFill --episodes 0 --port 18763 --model-seed 7 \
-  --output-dir "$ROBOMME_ROOT/runs/framesamp-modul-plus-smoke"
+  --port 18763 --model-seed 7 \
+  --output-dir "$ROBOMME_ROOT/runs/framesamp-modul-plus"
 ```
 
 `--checkpoint` (or `VLA_CHECKPOINT`) and `--model-seed` record server settings;
@@ -82,6 +82,6 @@ includes JAX compilation. Stop the server with `kill "$VLA_PID"` after evaluatio
   action chunks and returned server timings. WebSocket latency includes transport;
   internal server features are not exposed by the interface.
 
-Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
+The default evaluates all 800 episodes. See [shared run options](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for continuation options and outputs.
 
 [Link finalized rollouts](../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

@@ -48,14 +48,14 @@ configuration, processor/tokenizer files and `stats.json` together.
 
 ## Run
 
-Run one BinFill episode with SDPA:
+Evaluate all 800 test episodes with SDPA:
 
 ```bash
 cd "$ROBOMME_ROOT"
 CUDA_VISIBLE_DEVICES=0 TOKENIZERS_PARALLELISM=false \
   "$SIMPLEMEMVLA_PYTHON" scripts/plus_eval/non_agentic_methods/simplememvla/eval_plus.py \
-  --tasks BinFill --episodes 0 --attn-implementation sdpa \
-  --output-dir runs/simplememvla-plus-smoke
+  --attn-implementation sdpa \
+  --output-dir runs/simplememvla-plus
 ```
 
 Omit `--attn-implementation sdpa` to use the default `flash_attention_2` if installed.
@@ -69,6 +69,6 @@ Omit `--attn-implementation sdpa` to use the default `flash_attention_2` if inst
   state, processed tensors/patch keys and action chunk. Policy `input.json` links
   to the preceding preprocessing `output.json`, avoiding duplicate tensor copies.
 
-Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
+The default evaluates all 800 episodes. See [shared run options](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for continuation options and outputs.
 
 [Link finalized rollouts](../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

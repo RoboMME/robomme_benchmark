@@ -13,7 +13,7 @@ PonderPounce combines a Qwen3.5-9B episode-context model (Ponder) with a Pi0.5 a
 **Total Params:** **13.04B** (13,039,166,464), including Ponder, Pounce and their adapters.
 Frozen parameters are included; shared weights are counted once.
 
-**Evaluated by:** RoboMME Team. **Results snapshot:** v2 merged release, November 16, 2026.
+**Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
 **Setting:** Zero-shot transfer (ZS).
 

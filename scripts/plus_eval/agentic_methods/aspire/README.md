@@ -13,18 +13,33 @@ an independent multi-task campaign. Programs and libraries freeze before testing
 
 - `adapter/`: public RoboMME-Plus RGB-D, calibration, robot-state, goal and action bridge.
 - `patches/`: robot/tool registration, bounded provider requests, local SAM3
-  checkpoint support, and correct timeout recording. Applied only to a runtime copy.
+  checkpoint support, and timeout outcome recording. Applied only to a runtime copy.
 - `campaign.py` and companion modules: development isolation, budget/deadline
   enforcement, transport and logging.
 - `eval_plus.py`: frozen test execution through the public benchmark interface.
 - `solutions/`: all 144 evaluated task policies, organized by setting, R and task.
 - `runs/`: optional ignored link to external development logs and test rollouts.
 
-AfD/AfD+I receive released RGB recordings; live interaction uses calibrated RGB-D.
-Every simulator start, including verifier runs, consumes R. AfD has none.
-Opus 5.5 runs through Bedrock with high reasoning effort. Test execution makes no
-frontier-model calls. See the [evaluation protocol](../../../../src/robomme_plus/README.md#evaluation-protocol)
-and [baseline settings/results](../../../../doc/robomme_plus/robomme_plus_baseline_results.md).
+The [shared adaptation notes](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#aspire-and-rax-adaptation-notes)
+record the model, input export, 512-timestamp cap, runtime limits and budget rules.
+ASPIRE-specific changes:
+
+- **Deadline:** 150 minutes from a task's first worker assignment, including API
+  calls, offline work and rollouts. Resumes preserve its clock. Expiry stops the
+  campaign container, snapshots that task and remounts its directory read-only;
+  the coordinator reports its limitations and continues other unfinished tasks.
+- **Verification:** all worker/verifier starts share the task's R. Keep the native
+  verification criterion; insufficient released seeds or budget leave a skill
+  unverified. AfD has no simulator verification. Held-out evaluation and revisits
+  using test feedback are disabled until the campaign is frozen.
+- **Providers and isolation:** retain SAM3, Contact-GraspNet, PyRoki and cuRobo;
+  add RoboMME robot/tool registration, local SAM3 loading and bounded requests.
+  Agent containers access public APIs through the operator bridge.
+
+Published `solutions/` contain the evaluated policies. Each task's `manifest.json`
+records its source selection, evaluated hashes and interface-adjustment provenance.
+
+See the [benchmark protocol](../../../../src/robomme_plus/README.md#evaluation-protocol).
 
 ## Setup and run
 
@@ -36,18 +51,17 @@ Set `ROBOMME_ASPIRE_PROVIDER_ROOT="<PROVIDER_ROOT>"` and
 `.venv-{sam3,graspnet,pyroki,curobo}` environments and `third_party` dependencies.
 Weights and environments are not included here.
 
-Rerun a published solution without development:
+Evaluate a published configuration on all 800 test episodes:
 
 ```bash
 python scripts/plus_eval/agentic_methods/aspire/eval_plus.py \
-  --setting AfI --budget 3 --tasks StopCube --episodes 0 1 \
-  --gpu 0 --output-dir "<RUN_ROOT>/aspire-rerun"
+  --setting AfI --budget 3 \
+  --gpu 0 --output-dir "<RUN_ROOT>/aspire-AfI-R3"
 ```
 
-Omit task/episode filters for all 800 tests. `--workers` sets concurrent processes
-on that GPU; `--artifacts logs` omits media. The same output directory resumes
+`--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media. The same output directory resumes
 unstarted tests; use a new directory for a fresh run. Solution manifests preserve
-file hashes and any recorded interface correction.
+file hashes and policy provenance.
 
 [Link logs and rollouts](../../results/README.md) to access
 `runs/SETTING/Rn/{development,evaluation}`. Exact public data formats and synthetic

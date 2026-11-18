@@ -44,14 +44,14 @@ configuration/tokenizer/processor files for `Qwen/Qwen3.5-9B` and
 
 ## Run
 
-Run one BinFill episode:
+Evaluate all 800 test episodes:
 
 ```bash
 cd "$ROBOMME_ROOT"
 CUDA_VISIBLE_DEVICES=0 TOKENIZERS_PARALLELISM=false \
   "$PP_PYTHON" scripts/plus_eval/non_agentic_methods/ponderpounce/eval_plus.py \
-  --tasks BinFill --episodes 0 --model-seed 0 \
-  --output-dir runs/ponderpounce-plus-smoke
+  --model-seed 0 \
+  --output-dir runs/ponderpounce-plus
 ```
 
 ## Adapter notes
@@ -59,15 +59,14 @@ CUDA_VISIBLE_DEVICES=0 TOKENIZERS_PARALLELISM=false \
 - Preserves upstream prompts, demonstration sampling, normalization and scheduling:
   a 20 Hz control clock, 1-second system periods, 300 ms cognition delay, initial
   hold, 20-action chunks, BF16 and 10 denoising steps.
-- Corrects the initial hold's gripper units: measured finger positions in metres
+- Initial hold uses measured finger positions in metres, which
   are converted using the Panda controller's physical limits to its normalized
   action range. An open gripper stays open while waiting for the first prediction.
   Learned action chunks retain their original gripper commands; the stick tasks
-  keep their unused gripper channel. The correction and limits are recorded in
+  keep their unused gripper channel. The conversion and limits are recorded in
   `config.json` under `policy_configuration`.
-- Each episode gets a fresh session. The historical `ood_<Task>_ep<N>` ID is
-  retained because upstream derives action noise from it, the episode counter
-  and `--model-seed`; renaming it would change predictions.
+- Each episode gets a fresh session. The `ood_<Task>_ep<N>` ID,
+  episode counter and `--model-seed` determine upstream action noise.
 - Ponder reserves space for the next response before appending an observation.
   When its context would exceed the checkpoint/cache limit (16,384 tokens for
   the released model), it discards the oldest complete execution queries and
@@ -83,6 +82,6 @@ CUDA_VISIBLE_DEVICES=0 TOKENIZERS_PARALLELISM=false \
   Previous call IDs link persistent context. Pounce records inputs, cognition age,
   prompt IDs, noise and action chunks.
 
-Omit task/episode filters for all 800 episodes. See [shared run options](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for resume, rerun and outputs.
+The default evaluates all 800 episodes. See [shared run options](../../../../doc/robomme_plus/robomme_plus_baseline_results.md#running-baselines) for continuation options and outputs.
 
 [Link finalized rollouts](../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.

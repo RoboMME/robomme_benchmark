@@ -13,7 +13,7 @@ SimpleMemVLA supplies sampled visual history as native video context to its visi
 **Total Params:** **5.71B** (5,708,513,800), including the backbone and action head.
 Frozen parameters are included; shared weights are counted once.
 
-**Evaluated by:** RoboMME Team. **Results snapshot:** v2 merged release, November 16, 2026.
+**Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
 **Setting:** Zero-shot transfer (ZS).
 

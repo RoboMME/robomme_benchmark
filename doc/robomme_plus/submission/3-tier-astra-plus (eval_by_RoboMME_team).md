@@ -10,11 +10,9 @@
 
 **Track:** Agentic Track.
 
-**Evaluation API cost (historical v1 estimate):** **US$842.87 total; US$1.05/episode**, estimated across 800 episodes,
-including failures. Uses the blog's October 27, 2026 rollout snapshot and
-`gpt-6-astra` pricing checked October 21, 2026. V2 aggregate API cost has not been recomputed.
+**Final evaluation API cost:** Not aggregated.
 
-**Evaluated by:** RoboMME Team. **Results snapshot:** v2 merged release, November 16, 2026.
+**Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
 **Setting:** Zero-shot transfer (ZS).
 
