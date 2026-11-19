@@ -1,6 +1,6 @@
 ---
 name: audit-robomme-plus-compliance
-description: Check agentic method code and development logs against the RoboMME-Plus evaluation protocol in src/robomme_plus/README.md, including permitted inputs, rollout budgets, seed restrictions and frozen testing. Use for benchmark compliance reviews, not general code quality checks.
+description: Audit any method's code, development logs and evaluation artifacts against the RoboMME-Plus evaluation protocol in src/robomme_plus/README.md. Check input provenance, rollout budgets, seed restrictions and frozen testing without assuming a particular model, harness or log format. Use for benchmark compliance reviews, not general code quality checks.
 ---
 
 # Audit RoboMME-Plus benchmark compliance
@@ -11,8 +11,12 @@ Check both what the harness permits and what the agent actually did. Report evid
 violations and unresolved gaps; do not infer compliance from a high success rate,
 a policy's explanation, or an empty keyword search.
 
-Example request: “Use this skill to audit RAX AfI R3 in `<RUN_ROOT>`, including
-development commands, rollout accounting and the frozen evaluation policies.”
+Apply the same benchmark rules to any method. Discover its actual interfaces,
+artifact layout and execution flow; do not assume a particular provider, framework,
+directory name, ledger format or policy representation.
+
+Example request: “Audit the method in `<METHOD_ROOT>` and its AfI R3 run in
+`<RUN_ROOT>`, including development commands, counted attempts and frozen testing.”
 
 ## Establish the applicable rules
 
@@ -21,9 +25,11 @@ training-data revision and evaluated policy hashes. Locate the protocol and
 prompts actually supplied to that run, including later operator messages.
 
 Read the [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol)
-and [adaptation protocol](../robomme_plus/robomme_plus_baseline_results.md#evaluation-settings). Consult the
-[data format](../robomme_plus/plus_training_data_format.md) for field provenance and the
-[shared harness](../../scripts/plus_eval/benchmark_io/README.md) for artifact layout.
+as the source of benchmark rules. Read the method's own configuration, interface
+documentation and adaptation notes for its declared restrictions. Consult the
+[data format](../robomme_plus/plus_training_data_format.md) when inspecting released
+recordings. The [shared harness guide](../../scripts/plus_eval/benchmark_io/README.md)
+applies only if the method uses that harness; otherwise map its own artifacts.
 Use the run's pinned versions when auditing historical experiments. Report
 differences from the current benchmark; do not silently apply today's budget to
 an older study or treat a prompt contradicting the benchmark as an exemption.
@@ -82,14 +88,13 @@ to the model prompt, generated program or policy-selection process.
 | Task implementation, oracle queries, hidden runtime subgoals or grounding labels | Forbidden agent inputs, including copies, summaries and retrieved snippets. Distinguish hidden simulator fields from published training annotations. |
 | Test metadata, reference test execution, other methods' solutions or test outcomes used for adaptation | Forbidden. The trusted evaluator may load test metadata to construct an episode; the agent must not use it to obtain answers or choose a policy. |
 
-For current ASPIRE/RAX, the released-demo export contains RGB images, goals,
-phase labels and recording times; live observations also provide RGB-D,
-calibration and robot state. Other methods may have a different declared public
-input contract. Do not silently add H5 fields to an export that excludes them.
-The public H5 release also contains expert actions and subgoal annotations.
-Check whether a method actually receives these through its declared training
-interface; their presence in the release does not add them to a restricted export.
-Published training annotations differ from hidden runtime fields or new oracle queries.
+Determine the declared inputs separately for training recordings, live training
+observations and test observations. Inspect actual exports and payloads rather
+than assuming all fields in a source dataset reach the method. A restricted
+export may omit depth, robot state or expert actions even when the public
+interface permits them. Check any use of published expert actions or annotations
+against both the benchmark rules and the declared training interface. Do not
+confuse published training annotations with hidden runtime fields or new oracle queries.
 
 Inspect prompts, tool replies, filesystem mounts, symlinks, imports, subprocesses,
 download/search commands and service responses. Check indirect access through
@@ -110,9 +115,11 @@ unused. Missing access logs cannot establish absence of access.
 1. Group attempts by method, setting, declared run and task across all workers,
    coordinators, child agents and restarts. A task's R is shared; it is not a
    fresh allowance per worker, seed, tool, development stage or submitted program.
-2. Reconcile the durable budget ledger with simulator construction/reset events,
-   tool replies, attempt records and rollout outcomes. Reservations must happen
-   before construction, persist after crashes and serialize concurrent starts.
+2. Reconcile any budget ledger with simulator construction/reset events,
+   tool replies, attempt records and rollout outcomes. Inspect how accounting
+   prevents extra starts across concurrency and crashes. When reservations are
+   used, they must precede construction, persist and serialize concurrent starts;
+   accept equivalent enforcement without requiring a particular ledger format.
    Do not count JSON files or API messages as rollouts, or double-count one start
    because it appears in several logs.
 3. Count **every development start**: failed setup, zero-action previews,
@@ -147,14 +154,12 @@ authorized infrastructure rerun and how its final result was selected.
 
 ## Check declared development limits
 
-Read the study's adaptation notes and clock records. Current ASPIRE/RAX use a
-150-minute wall-clock limit per task/run, including offline work, API calls and
-rollouts. Check that resumes preserve the deadline and that expiry stops code
-changes and simulator attempts; reporting must use existing code. RAX's 120-second
-wrap-up is not extra development time. Distinguish per-task limits from outer
-job watchdogs. These are study-specific settings: do not impose them on another
-method unless its declared protocol includes them. Report time-limit deviations
-separately from rollout-budget violations.
+Apply time, token, API-call or compute limits only when the audited study declares
+them. Identify the scope, included activities, resume behavior and any wrap-up
+allowance. Check that expiry enforces the stated limit and does not silently add
+development time or simulator attempts. Distinguish per-task limits from outer
+job watchdogs. Do not import another method's deadline or grace period; report
+study-specific deviations separately from benchmark rollout-budget violations.
 
 ## Check freezing, leakage and result integrity
 
@@ -162,18 +167,20 @@ separately from rollout-budget violations.
   skill libraries and adapters. Follow imported helpers and shared files, not
   just the submitted entrypoint. Record operator patches and whether test
   feedback informed them; authorization alone does not establish comparability.
-- Verify policy selection used only allowed training evidence within R. Current
-  ASPIRE/RAX R1/R3/R5/R10 are independently developed runs. For a study explicitly
-  using checkpoints instead, verify the selected code and all dependencies
-  existed within its budget, without later-rollout information. Do not substitute
-  an R10 final policy for R1 or silently mix independent settings.
+- Verify policy selection used only allowed training evidence within R. Determine
+  whether budget points are independent runs or checkpoints from one run; verify
+  that design against the saved evidence. For checkpoints, the selected artifact
+  and all dependencies must exist within the reported budget, without later-rollout
+  information. Do not substitute a higher-budget final policy for a lower-budget
+  checkpoint or silently mix independent settings.
 - Check shared libraries and caches for contamination from another setting,
   higher budget, forbidden demos or test episodes. Cross-task reuse can be
   legitimate when the declared workflow permits it; verify its provenance.
 - Reset adaptive memory between test episodes, including persistent processes,
   retrieval stores, cached plans and files. Within-episode tracking, memory and
-  feedback control are allowed. Frozen testing does not universally prohibit
-  inference-time API calls; current ASPIRE/RAX specifically report none.
+  feedback control are allowed. Frozen testing may use inference-time API calls
+  under the fixed method. Audit their inputs and costs, and distinguish normal
+  within-episode inference from adapting the method using test feedback.
 - Check hand-written task strategies, seed-index lookups, copied trajectories
   and fixed target coordinates for provenance. Constants alone are not proof of
   a violation: distinguish robot calibration or training-derived parameters from
@@ -197,7 +204,8 @@ Return a concise Markdown report with:
    A pass requires evidence for the applicable checks, not just no search hits.
    Code-only review cannot certify historical agent behavior. A confirmed
    violation remains a violation even when other checks are unverified.
-3. **Findings table:** rule, status, evidence (`file:line`, event/tool-call ID,
+3. **Findings table:** benchmark rule number (1–4) or declared study restriction,
+   status, evidence (`file:line`, event/tool-call ID,
    timestamp or attempt ID), explanation and affected tasks/policies/results.
    Separate observed violations, enforcement weaknesses and missing evidence.
 4. **Budget table:** method/setting/task, R, ledger reservations, reconciled starts,
