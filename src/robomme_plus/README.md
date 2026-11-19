@@ -70,8 +70,23 @@ and execution limits. Keep failures, timeouts and errors in the denominator;
 report changed test conditions separately. See the
 [baseline results and running instructions](../../doc/robomme_plus/robomme_plus_baseline_results.md).
 
+### Guidance for coding agents
+
+When developing under AfD, AfI or AfD+I:
+
+- **Respect the setting.** Use released demonstrations only in AfD/AfD+I.
+  Development rollouts must use the provided training seeds and episode settings
+  within the per-task R budget; AfD permits no development rollouts. Debugging,
+  verification and failed attempts count toward the same budget.
+- **Keep testing separate.** Never use test seeds, data or outcomes for development
+  or policy selection. Freeze the policy and agentic framework before evaluation.
+- **Preserve audit evidence.** Save complete prompts, model responses, tool calls
+  and outputs, including child and resumed sessions. Retain code revisions,
+  rollout ledgers with task/seed/outcome records (including failures), frozen
+  artifact hashes, and separate adaptation/evaluation API usage and costs.
+
 Use the [compliance audit skill](../../doc/skills/audit_robomme_plus_compliance.md)
-to check agentic system code and development logs against this evaluation protocol.
+to check both system code and saved development logs against this protocol.
 
 ## Evaluate
 
