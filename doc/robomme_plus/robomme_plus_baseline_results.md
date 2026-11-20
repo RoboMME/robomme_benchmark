@@ -7,18 +7,18 @@ failures, timeouts and errors remain in the denominator.
 
 ## Evaluation settings
 
-The same settings apply to Standard policies and Agentic systems. Compare methods
-at the same setting and R; R caps simulator attempts per task on training seeds.
+The same settings apply to Non-Agentic policies and Agentic systems. Compare methods
+at the same setting and rollout budget, which caps simulator attempts per task on training seeds.
 
 | Setting | Released demonstrations | Rollout budget per task |
 | --- | --- | --- |
-| Zero-shot transfer (ZS) | No | R0 |
-| Adapt from demos (AfD) | Yes | R0 |
-| Adapt from interactions (AfI) | No | R1, R3, R5 or R10 |
-| Adapt from demos+interactions (AfD+I) | Yes | R1, R3, R5 or R10 |
+| Zero-shot | No | 0 |
+| Few-shot demonstrations | Yes | 0 |
+| Few-shot interactions | No | 5 or 10 |
+| Few-shot demonstrations+interactions | Yes | 5 or 10 |
 
 - Use only released training demos and seeds for the chosen setting. Offline
-  demo reuse is unlimited. Every development simulator start counts toward R,
+  demo reuse is unlimited. Every development simulator start counts toward the rollout budget,
   including failed setup, timeouts, early stops, retries and frozen-policy rehearsal.
   Prompt/harness tuning, debugging, verification and selection share this budget.
 - Use public observations and feedback; task-source-derived solutions, oracle
@@ -33,7 +33,7 @@ The [evaluation guide](../../src/robomme_plus/README.md#evaluation-protocol) def
 the shared interface, default variations and execution limits.
 
 
-## Zero-shot transfer (ZS)
+## Zero-shot
 
 These baselines use their pretrained models without RoboMME-Plus training demos
 or simulator adaptation.
@@ -46,7 +46,7 @@ or simulator adaptation.
 | [3-tier Astra](<submission/3-tier-astra-plus (eval_by_RoboMME_team).md>) | 70/800 | 8.75% |
 | [PonderPounce](<submission/ponderpounce-plus (eval_by_RoboMME_team).md>) | 20/800 | 2.50% |
 
-## Adapt from demos (AfD, R0)
+## Few-shot demonstrations
 
 ASPIRE and RAX can inspect the released 50 demonstrations without simulator
 interaction. One-shot Astra receives one selected training example for the task
@@ -58,23 +58,23 @@ interaction. One-shot Astra receives one selected training example for the task
 | [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md) | All 50 demos available | 136/800 | 17.00% |
 | [RAX](../../scripts/plus_eval/agentic_methods/rax/README.md) | All 50 demos available | 152/800 | 19.00% |
 
-## Adapt from interactions (AfI)
+## Few-shot interactions
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
-| R1 | 117/800 (14.63%) | 26/800 (3.25%) |
-| R3 | 134/800 (16.75%) | 351/800 (43.88%) |
 | R5 | 215/800 (26.88%) | 265/800 (33.13%) |
 | R10 | 341/800 (42.63%) | 312/800 (39.00%) |
 
-## Adapt from demos+interactions (AfD+I)
+## Few-shot demonstrations+interactions
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
-| R1 | 155/800 (19.38%) | 156/800 (19.50%) |
-| R3 | 261/800 (32.63%) | 315/800 (39.38%) |
 | R5 | 252/800 (31.50%) | 283/800 (35.38%) |
 | R10 | 279/800 (34.88%) | 337/800 (42.13%) |
+
+Current interaction results use R5 and R10 (5 or 10 attempts per task).
+Archived R1/R3 results and policies remain in the linked JSON files and solution
+directories; their budgets are not relabeled.
 
 ## Per-task success rates
 
@@ -82,7 +82,7 @@ Each cell uses 50 episodes. The tables below use the same setting and budget
 as the overall results above.
 
 <details>
-<summary>Zero-shot transfer (ZS)</summary>
+<summary>Zero-shot</summary>
 
 | Task | Embodied Astra | FrameSamp+Modul | SimpleMemVLA | 3-tier Astra | PonderPounce |
 |---|---:|---:|---:|---:|---:|
@@ -106,7 +106,7 @@ as the overall results above.
 </details>
 
 <details>
-<summary>Adapt from demos (AfD, R0)</summary>
+<summary>Few-shot demonstrations</summary>
 
 | Task | One-shot Astra | ASPIRE | RAX |
 |---|---:|---:|---:|
@@ -130,50 +130,50 @@ as the overall results above.
 </details>
 
 <details>
-<summary>Adapt from interactions (AfI)</summary>
+<summary>Few-shot interactions</summary>
 
-| Task | ASPIRE R1 | ASPIRE R3 | ASPIRE R5 | ASPIRE R10 | RAX R1 | RAX R3 | RAX R5 | RAX R10 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| BinFill | 2.0% | 10.0% | 20.0% | 50.0% | 12.0% | 74.0% | 70.0% | 50.0% |
-| ButtonUnmask | 6.0% | 10.0% | 16.0% | 58.0% | 12.0% | 24.0% | 74.0% | 58.0% |
-| ButtonUnmaskSwap | 2.0% | 10.0% | 6.0% | 20.0% | 0.0% | 22.0% | 20.0% | 20.0% |
-| InsertPeg | 0.0% | 0.0% | 8.0% | 0.0% | 0.0% | 32.0% | 0.0% | 4.0% |
-| MoveCube | 0.0% | 8.0% | 0.0% | 12.0% | 0.0% | 2.0% | 4.0% | 4.0% |
-| PatternLock | 20.0% | 20.0% | 20.0% | 20.0% | 0.0% | 20.0% | 18.0% | 20.0% |
-| PickHighlight | 0.0% | 6.0% | 14.0% | 48.0% | 0.0% | 42.0% | 72.0% | 66.0% |
-| PickXtimes | 14.0% | 14.0% | 34.0% | 52.0% | 0.0% | 54.0% | 8.0% | 54.0% |
-| RouteStick | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% |
-| StopCube | 64.0% | 88.0% | 70.0% | 58.0% | 2.0% | 64.0% | 52.0% | 62.0% |
-| SwingXtimes | 20.0% | 14.0% | 38.0% | 64.0% | 0.0% | 58.0% | 6.0% | 12.0% |
-| VideoPlaceButton | 16.0% | 10.0% | 36.0% | 58.0% | 0.0% | 70.0% | 0.0% | 40.0% |
-| VideoPlaceOrder | 18.0% | 26.0% | 34.0% | 20.0% | 2.0% | 48.0% | 4.0% | 32.0% |
-| VideoRepick | 32.0% | 30.0% | 28.0% | 70.0% | 0.0% | 48.0% | 56.0% | 56.0% |
-| VideoUnmask | 4.0% | 2.0% | 66.0% | 56.0% | 4.0% | 66.0% | 56.0% | 64.0% |
-| VideoUnmaskSwap | 16.0% | 0.0% | 20.0% | 76.0% | 0.0% | 58.0% | 70.0% | 62.0% |
+| Task | ASPIRE R5 | ASPIRE R10 | RAX R5 | RAX R10 |
+| --- | ---: | ---: | ---: | ---: |
+| BinFill | 20.0% | 50.0% | 70.0% | 50.0% |
+| ButtonUnmask | 16.0% | 58.0% | 74.0% | 58.0% |
+| ButtonUnmaskSwap | 6.0% | 20.0% | 20.0% | 20.0% |
+| InsertPeg | 8.0% | 0.0% | 0.0% | 4.0% |
+| MoveCube | 0.0% | 12.0% | 4.0% | 4.0% |
+| PatternLock | 20.0% | 20.0% | 18.0% | 20.0% |
+| PickHighlight | 14.0% | 48.0% | 72.0% | 66.0% |
+| PickXtimes | 34.0% | 52.0% | 8.0% | 54.0% |
+| RouteStick | 20.0% | 20.0% | 20.0% | 20.0% |
+| StopCube | 70.0% | 58.0% | 52.0% | 62.0% |
+| SwingXtimes | 38.0% | 64.0% | 6.0% | 12.0% |
+| VideoPlaceButton | 36.0% | 58.0% | 0.0% | 40.0% |
+| VideoPlaceOrder | 34.0% | 20.0% | 4.0% | 32.0% |
+| VideoRepick | 28.0% | 70.0% | 56.0% | 56.0% |
+| VideoUnmask | 66.0% | 56.0% | 56.0% | 64.0% |
+| VideoUnmaskSwap | 20.0% | 76.0% | 70.0% | 62.0% |
 
 </details>
 
 <details>
-<summary>Adapt from demos+interactions (AfD+I)</summary>
+<summary>Few-shot demonstrations+interactions</summary>
 
-| Task | ASPIRE R1 | ASPIRE R3 | ASPIRE R5 | ASPIRE R10 | RAX R1 | RAX R3 | RAX R5 | RAX R10 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| BinFill | 26.0% | 84.0% | 52.0% | 48.0% | 72.0% | 54.0% | 74.0% | 74.0% |
-| ButtonUnmask | 48.0% | 36.0% | 56.0% | 52.0% | 0.0% | 58.0% | 56.0% | 54.0% |
-| ButtonUnmaskSwap | 0.0% | 4.0% | 16.0% | 16.0% | 2.0% | 16.0% | 24.0% | 12.0% |
-| InsertPeg | 6.0% | 2.0% | 8.0% | 0.0% | 2.0% | 42.0% | 18.0% | 20.0% |
-| MoveCube | 0.0% | 6.0% | 2.0% | 2.0% | 4.0% | 6.0% | 2.0% | 6.0% |
-| PatternLock | 0.0% | 20.0% | 20.0% | 20.0% | 20.0% | 20.0% | 16.0% | 12.0% |
-| PickHighlight | 16.0% | 20.0% | 6.0% | 22.0% | 14.0% | 32.0% | 56.0% | 20.0% |
-| PickXtimes | 26.0% | 62.0% | 24.0% | 54.0% | 20.0% | 48.0% | 54.0% | 58.0% |
-| RouteStick | 0.0% | 20.0% | 20.0% | 20.0% | 14.0% | 16.0% | 20.0% | 20.0% |
-| StopCube | 28.0% | 58.0% | 44.0% | 72.0% | 30.0% | 62.0% | 66.0% | 66.0% |
-| SwingXtimes | 4.0% | 40.0% | 36.0% | 70.0% | 20.0% | 76.0% | 30.0% | 74.0% |
-| VideoPlaceButton | 10.0% | 20.0% | 22.0% | 20.0% | 26.0% | 20.0% | 24.0% | 34.0% |
-| VideoPlaceOrder | 32.0% | 34.0% | 46.0% | 36.0% | 54.0% | 22.0% | 12.0% | 32.0% |
-| VideoRepick | 74.0% | 60.0% | 60.0% | 56.0% | 34.0% | 38.0% | 58.0% | 58.0% |
-| VideoUnmask | 38.0% | 10.0% | 60.0% | 60.0% | 0.0% | 52.0% | 56.0% | 60.0% |
-| VideoUnmaskSwap | 2.0% | 46.0% | 32.0% | 10.0% | 0.0% | 68.0% | 0.0% | 74.0% |
+| Task | ASPIRE R5 | ASPIRE R10 | RAX R5 | RAX R10 |
+| --- | ---: | ---: | ---: | ---: |
+| BinFill | 52.0% | 48.0% | 74.0% | 74.0% |
+| ButtonUnmask | 56.0% | 52.0% | 56.0% | 54.0% |
+| ButtonUnmaskSwap | 16.0% | 16.0% | 24.0% | 12.0% |
+| InsertPeg | 8.0% | 0.0% | 18.0% | 20.0% |
+| MoveCube | 2.0% | 2.0% | 2.0% | 6.0% |
+| PatternLock | 20.0% | 20.0% | 16.0% | 12.0% |
+| PickHighlight | 6.0% | 22.0% | 56.0% | 20.0% |
+| PickXtimes | 24.0% | 54.0% | 54.0% | 58.0% |
+| RouteStick | 20.0% | 20.0% | 20.0% | 20.0% |
+| StopCube | 44.0% | 72.0% | 66.0% | 66.0% |
+| SwingXtimes | 36.0% | 70.0% | 30.0% | 74.0% |
+| VideoPlaceButton | 22.0% | 20.0% | 24.0% | 34.0% |
+| VideoPlaceOrder | 46.0% | 36.0% | 12.0% | 32.0% |
+| VideoRepick | 60.0% | 56.0% | 58.0% | 58.0% |
+| VideoUnmask | 60.0% | 60.0% | 56.0% | 60.0% |
+| VideoUnmaskSwap | 32.0% | 10.0% | 0.0% | 74.0% |
 
 </details>
 
@@ -204,7 +204,7 @@ without inference:
 ### Reporting and artifacts
 
 Report successes/800, per-task successes/50, setting, demo use, R, actual attempts
-and simulator steps per task, and separate adaptation/evaluation API costs in USD.
+and simulator steps per task, and separate development/evaluation API costs in USD.
 Use the [submission template](submission/model_example_plus.md). Cost estimates
 use saved provider usage and rate cards; missing usage is not zero cost.
 

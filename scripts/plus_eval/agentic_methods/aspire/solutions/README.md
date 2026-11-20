@@ -1,7 +1,10 @@
 # Frozen RoboMME-Plus solutions
 
-Nine configurations, 16 tasks each: `AfD/R0`, `AfI/R1,R3,R5,R10`,
+The archive contains nine configurations, 16 tasks each: `AfD/R0`, `AfI/R1,R3,R5,R10`,
 `AfD+I/R1,R3,R5,R10`. [index.json](index.json) lists all 144 selections.
+
+Use R5/R10 for the current interaction protocol; R1/R3 are historical results.
+The keys `AfD`, `AfI` and `AfD+I` retain the original artifact layout.
 
 Files match the programs used for the full evaluation; each task's
 `manifest.json` records evaluated hashes and policy provenance. RAX also

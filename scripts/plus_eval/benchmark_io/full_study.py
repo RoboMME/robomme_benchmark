@@ -444,10 +444,10 @@ class Pipeline:
         return rows
 
     def configurations(self):
-        for method in self.methods:
-            for setting,budgets in [('AfD',[0]),('AfI',[1,3,5,10]),('AfD+I',[1,3,5,10])]:
-                for budget in budgets:
-                    yield method,setting,budget,self.root/method/setting/f'R{budget}'
+        from .study_configurations import configurations
+        for key, method, setting, budget in configurations(self.root):
+            if method in self.methods:
+                yield method,setting,budget,self.root/key
 
     def develop_case(self, case, method, setting, budget):
         study,tasks=self.prepare(case,method,setting,budget)

@@ -46,8 +46,18 @@ python -m benchmark_io.watch_unified --root "<RUN_ROOT>"
 ```
 
 Preparation pins the benchmark, 50 recordings, protocol, runtime and image
-digest without API calls or simulator starts. It creates 18 configurations:
-2 methods × (AfD R0; AfI R1/R3/R5/R10; AfD+I R1/R3/R5/R10).
+digest without API calls or simulator starts. New studies create **10 configurations**:
+2 methods × (demonstrations only at 0; each interaction setting at 5 and 10).
+Each configuration evaluates 800 episodes: 8,000 tests across both methods.
+Existing studies retain their pinned configuration list, including historical budgets.
+
+CLI keys and directory names remain stable for compatibility:
+
+| Current setting | CLI/artifact key | Budget |
+| --- | --- | --- |
+| Few-shot demonstrations | `AfD` | 0 |
+| Few-shot interactions | `AfI` | 5 or 10 |
+| Few-shot demonstrations+interactions | `AfD+I` | 5 or 10 |
 
 Worker allocation is configurable. Evaluation requires frozen policies.
 Example `<RUN_ROOT>/schedule_policy.json` for two GPUs:
@@ -72,11 +82,12 @@ use each method's `eval_plus.py`.
 Under `METHOD/SETTING/Rn/`: `study/` contains metadata/attempts;
 `development/` contains native commands, transcripts, code and training rollouts;
 `development_api/` contains usage/cost records; `evaluation/` contains frozen
-policies, test results and logs. R0/R10 save full test media; R1/R3/R5 save logs.
+policies, test results and logs. R0/R10 save full test media; R5 saves logs.
+Archived R1/R3 results and their original labels remain available.
 All development history is retained. `progress.json` aggregates the study.
 
 Report demo use, actual attempts and simulator steps per task, and separate
-adaptation/evaluation API costs. Costs use provider tokens and the recorded rate
+development/evaluation API costs. Costs use provider tokens and the recorded rate
 card; missing usage is not zero cost. Frozen evaluation has zero frontier-model API cost in this setup.
 Keep `runtime/private/` and credentials out of public archives.
 [Link external runs](../results/README.md) to browse logs from the method directories.

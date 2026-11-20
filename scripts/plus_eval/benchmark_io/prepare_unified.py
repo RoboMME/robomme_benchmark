@@ -84,12 +84,12 @@ def prepare(root, demos, *, protocol=None):
     shutil.copytree(protocol, root/'protocol', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     write(root/'runtime_policy.json', asdict(RuntimePolicy()))
     pin_runtime(root)
-    write(root/'study_plan.json', dict(configurations=[dict(key=k,method=m,setting=s,budget=b)
-        for k,m,s,b in configurations()], development_workers=6,development_per_gpu=3,
+    selected = [dict(key=k,method=m,setting=s,budget=b) for k,m,s,b in configurations()]
+    write(root/'study_plan.json', dict(configurations=selected, development_workers=6,development_per_gpu=3,
         evaluation_workers=16,evaluation_per_gpu=8,image=image,model='us.anthropic.claude-opus-5-5',
-        reasoning_effort='high',optional_gemini=False,conditioning_timestamps=512,test_trials=14400,
+        reasoning_effort='high',optional_gemini=False,conditioning_timestamps=512,test_trials=800*len(selected),
         test_feedback_to_development=False,independent_budgets=True,full_artifact_budgets=[0,10],
-        logs_only_budgets=[1,3,5],protocol_version=version))
+        logs_only_budgets=[5],protocol_version=version))
     Queue(root).seed()
     subprocess.run([sys.executable,'-m','benchmark_io.prepare_unified','ledgers','--root',str(root)],
                    env=environment(root),check=True,cwd=REPO)
@@ -100,7 +100,7 @@ def prepare(root, demos, *, protocol=None):
 def ledgers(root):
     pipeline = Pipeline(root, ['0','1'])
     from robomme_plus import BenchmarkEnvBuilder
-    for key, method, setting, budget in configurations():
+    for key, method, setting, budget in configurations(root):
         study,tasks = pipeline.prepare(Path(root)/key,method,setting,budget)
         if len(tasks)!=16 or sum(map(len,study.config['records'].values()))!=50 or study.attempts():
             raise ValueError('Expected a fresh complete study')

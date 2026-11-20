@@ -2,7 +2,7 @@
 
 Uses the upstream waypoint policy with the benchmark motion planner.
 One GPU runs the simulator; inference uses the Astra API. The default is
-zero-shot transfer (ZS); the one-shot variant uses AfD with no training rollouts.
+**Zero-shot**; the one-shot variant uses **Few-shot demonstrations** with no training rollouts.
 
 ## Setup
 

@@ -45,10 +45,18 @@ def test_first_finished_configuration_does_not_release_evaluation(tmp_path):
     assert Queue(tmp_path).next_job('evaluate') is None
 
 
-def test_all_configurations_must_finish_and_freeze_before_release(tmp_path):
+@pytest.mark.parametrize('legacy', [False, True])
+def test_all_configurations_must_finish_and_freeze_before_release(tmp_path, legacy):
+    if legacy:
+        write(tmp_path/'study_plan.json', dict(configurations=[
+            dict(key=f'{method}/{setting}/R{budget}', method=method, setting=setting, budget=budget)
+            for method in ('aspire', 'rax')
+            for setting, budgets in (('AfD', [0]), ('AfI', [1, 3, 5, 10]), ('AfD+I', [1, 3, 5, 10]))
+            for budget in budgets]))
     queue=Queue(tmp_path);queue.seed()
     write(tmp_path/'schedule_policy.json',dict(evaluation_mode='after_all_development'))
-    keys=[row[0] for row in configurations()]
+    keys=[row[0] for row in configurations(tmp_path)]
+    assert evaluation_gate(tmp_path)['development_total'] == len(keys) == (18 if legacy else 10)
     for key in keys[:-1]:
         freeze(queue,key);queue.update('develop/'+key,state='done')
     last=keys[-1]
@@ -58,7 +66,7 @@ def test_all_configurations_must_finish_and_freeze_before_release(tmp_path):
     queue.update('develop/'+last,state='running')
     assert queue.next_job('evaluate') is None
     queue.update('develop/'+last,state='done')
-    assert evaluation_gate(tmp_path)['development_completed']==18
+    assert evaluation_gate(tmp_path)['development_completed']==len(keys)
     assert queue.next_job('evaluate') is not None
 
 

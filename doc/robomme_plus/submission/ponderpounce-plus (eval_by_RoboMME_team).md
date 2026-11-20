@@ -8,18 +8,18 @@ PonderPounce combines a Qwen3.5-9B episode-context model (Ponder) with a Pi0.5 a
 
 ## Results
 
-**Track:** Standard Track.
+**Track:** Non-Agentic Track.
 
 **Total Params:** **13.04B** (13,039,166,464), including Ponder, Pounce and their adapters.
 Frozen parameters are included; shared weights are counted once.
 
 **Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
-**Setting:** Zero-shot transfer (ZS).
+**Setting:** Zero-shot.
 
 **Demo use:** No released RoboMME-Plus training demonstrations.
 
-**Rollout budget:** R0; 0 training-seed attempts.
+**Rollout budget:** 0; 0 training-seed attempts.
 
 > Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`joint_angle`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
 

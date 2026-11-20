@@ -14,11 +14,11 @@ One-shot Embodied-Astra uses the same `gpt-6-astra` waypoint policy as Embodied-
 
 **Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
-**Setting:** Adapt from demos (AfD), using a released training example as context.
+**Setting:** Few-shot demonstrations, using a released training example as context.
 
 **Demo use:** One selected training episode per task, except MoveCube; RGB images and task goals.
 
-**Rollout budget:** R0; 0 training-seed attempts.
+**Rollout budget:** 0; 0 training-seed attempts.
 
 > Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`waypoint`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
 

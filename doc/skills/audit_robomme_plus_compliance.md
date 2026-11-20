@@ -15,8 +15,8 @@ Apply the same benchmark rules to any method. Discover its actual interfaces,
 artifact layout and execution flow; do not assume a particular provider, framework,
 directory name, ledger format or policy representation.
 
-Example request: “Audit the method in `<METHOD_ROOT>` and its AfI R3 run in
-`<RUN_ROOT>`, including development commands, counted attempts and frozen testing.”
+Example request: “Audit `<METHOD_ROOT>` and its few-shot interactions run in
+`<RUN_ROOT>` with a budget of 5, including counted attempts and frozen testing.”
 
 ## Establish the applicable rules
 
@@ -36,13 +36,13 @@ an older study or treat a prompt contradicting the benchmark as an exemption.
 
 | Current setting | Released expert training demos | Development simulator starts per task |
 | --- | --- | --- |
-| Zero-shot transfer (ZS) | No | R0 |
-| Adapt from demos (AfD) | Yes | R0 |
-| Adapt from interactions (AfI) | No | At most the assigned R: 1, 3, 5 or 10 |
-| Adapt from demos+interactions (AfD+I) | Yes | At most the assigned R: 1, 3, 5 or 10 |
+| Zero-shot | No | 0 |
+| Few-shot demonstrations | Yes | 0 |
+| Few-shot interactions | No | At most the assigned budget R: 5 or 10 rollouts |
+| Few-shot demonstrations+interactions | Yes | At most the assigned budget R: 5 or 10 rollouts |
 
-These rules apply to both Standard and Agentic tracks. ZS transfers from original
-RoboMME without Plus adaptation. Fixed demos can be reused without a training-iteration
+These rules apply to both Non-Agentic and Agentic tracks. Zero-shot uses the original policy
+without Plus adaptation. Fixed demos can be reused without a training-iteration
 limit; interaction budgets are per task and cannot be transferred between tasks.
 
 The released split has 50 training episodes: three per task and five for
@@ -81,8 +81,8 @@ to the model prompt, generated program or policy-selection process.
 | Public task goal and API/rule documentation | Allowed. An interface reference is not automatically simulator task source. Check its actual contents. |
 | RGB, supported depth, camera calibration and robot proprioception | Allowed when supplied by the declared public interface. Depth and robot transforms are not privileged object state. |
 | Object detections, tracks or poses computed from permitted observations | Allowed. Verify the computation's inputs rather than rejecting a variable named `object_pose`. |
-| Current episode's conditioning video | Allowed in every setting, including AfI/ZS. It is distinct from an expert solution recording. |
-| Released expert training recordings | Only AfD/AfD+I. Repeated offline inspection is unlimited. Check the actual export's field allowlist. |
+| Current episode's conditioning video | Allowed in every setting, including zero-shot and few-shot interactions. It is distinct from an expert solution recording. |
+| Released expert training recordings | Only settings with demonstrations. Repeated offline inspection is unlimited. Check the actual export's field allowlist. |
 | Public terminal/error feedback and execution limits | Allowed as documented. Do not pass the simulator's entire raw `info` dictionary without checking its contents. |
 | Hidden object poses/identities, semantic ground truth, targets, counters or simulator state | Forbidden when obtained from simulator internals rather than public sensors. |
 | Task implementation, oracle queries, hidden runtime subgoals or grounding labels | Forbidden agent inputs, including copies, summaries and retrieved snippets. Distinguish hidden simulator fields from published training annotations. |
@@ -216,7 +216,7 @@ Return a concise Markdown report with:
    rerun experiments, rewrite logs or change published results during the audit.
 
 Check reporting of demo use, actual attempts and simulator steps per task, and
-separate adaptation/evaluation API costs in USD. Reconcile saved provider usage
+separate development/evaluation API costs in USD. Reconcile saved provider usage
 when available; missing token records mean unknown cost, not zero.
 Keep source-access claims precise: “no forbidden read observed in these logs”
 is narrower than “the agent could not access source.”

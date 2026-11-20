@@ -23,6 +23,9 @@ def test_fresh_prepare_needs_no_old_study_or_simulator(tmp_path,monkeypatch):
     root=tmp_path/'study'
     prepare_unified.prepare(root,demos,protocol=source/'scripts/plus_eval/benchmark_io/prompts/current')
     assert json.loads((root/'preparation.json').read_text())['simulator_starts']==0
+    plan = json.loads((root/'study_plan.json').read_text())
+    assert len(plan['configurations']) == 10 and plan['test_trials'] == 8000
+    assert plan['logs_only_budgets'] == [5]
     assert (root/'runtime/private/relay-token').stat().st_mode & 0o077 == 0
     for key,method,setting,budget in configurations():
         with sqlite3.connect(root/key/'study/attempts.sqlite3') as db:

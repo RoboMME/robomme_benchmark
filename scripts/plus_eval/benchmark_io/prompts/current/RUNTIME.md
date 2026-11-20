@@ -19,6 +19,6 @@ may already have advanced. Stop after the simulator reports a terminal episode.
 Every development simulator start still counts against R, including timeouts and
 failed rehearsals. Resource limits do not authorize additional attempts.
 
-R0 and R10 evaluations retain rollout artifacts; R1/R3/R5 retain results and logs.
+R0 and R10 evaluations retain rollout artifacts; R5 retains results and logs.
 The operator records sampled frame counts, policy hashes, outcomes and errors.
 Frozen evaluation cannot modify the policy or feed test results into development.

@@ -18,14 +18,8 @@ from .protocol import Study
 from .evaluation import EvaluationStudy
 from .runtime_policy import RuntimePolicy, configured
 from .costs import summarize
+from .study_configurations import configurations
 from .schedule_policy import development_slots, evaluation_slots, evaluation_placement, evaluation_gate, evaluation_excluded_cases, evaluation_episode_indices
-
-
-def configurations():
-    for setting,budget in [('AfD',0),('AfI',1),('AfD+I',1),('AfI',3),('AfD+I',3),
-                           ('AfI',5),('AfD+I',5),('AfI',10),('AfD+I',10)]:
-        for method in ('aspire','rax'):
-            yield f'{method}/{setting}/R{budget}',method,setting,budget
 
 
 class Queue:
@@ -50,8 +44,9 @@ class Queue:
         return db
 
     def seed(self):
+        selected = list(configurations(self.root))
         with self.connect() as db:
-            for ordinal,(key,method,setting,budget) in enumerate(configurations()):
+            for ordinal,(key,method,setting,budget) in enumerate(selected):
                 db.execute('INSERT OR IGNORE INTO cases(key,method,setting,budget,ordinal) VALUES(?,?,?,?,?)',
                            (key,method,setting,budget,ordinal))
                 db.execute('INSERT OR IGNORE INTO jobs(id,kind,case_key) VALUES(?,?,?)',('develop/'+key,'develop',key))
@@ -399,7 +394,7 @@ class Scheduler:
             if job['state']=='failed':
                 name='development_status.json' if job['kind']=='develop' else 'evaluation_status.json'
                 write(self.root/job['case_key']/name,dict(updated=time.time(),phase='needs_attention',error=job['error']))
-        for key,method,setting,budget in configurations():
+        for key,method,setting,budget in configurations(self.root):
             case=self.root/key
             if (case/'development_api').exists():write(case/'api_cost_summary.json',summarize(case/'development_api'))
         from .publish_progress import publish

@@ -49,7 +49,7 @@ def main(method, evaluate, method_dir):
     parser.add_argument('--_worker', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     if (args.setting=='AfD') != (args.budget==0):
-        parser.error('AfD uses R0; interaction settings use R1/R3/R5/R10')
+        parser.error('AfD uses R0; interactions use R5/R10 (archived R1/R3 are also available)')
     if args.workers<1 or not args.episodes or any(i<0 or i>=50 for i in args.episodes):
         parser.error('Use positive worker counts and test episode indices 0–49')
     args.output_dir=args.output_dir.resolve();args.solutions=args.solutions.resolve()

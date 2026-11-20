@@ -31,11 +31,13 @@ The assigned adaptation setting determines what development may use:
 
 | Setting | Released training recordings | Simulator starts per task |
 | --- | --- | --- |
-| AfD | Yes | 0 |
-| AfI | No | At most the assigned R |
-| AfD+I | Yes | At most the assigned R |
+| Few-shot demonstrations (`AfD`) | Yes | 0 |
+| Few-shot interactions (`AfI`) | No | At most 5 or 10 |
+| Few-shot demonstrations+interactions (`AfD+I`) | Yes | At most 5 or 10 |
 
-R is 1, 3, 5 or 10; it counts attempts, not distinct seeds or demonstrations.
+The assigned budget R is 5 or 10 for interaction settings and 0 for demonstrations
+only. It counts attempts, not distinct seeds or demonstrations. The short setting
+keys above are used by the tools and saved artifacts.
 Every start counts, including a preview, debugging run, failed attempt, retry,
 verification run or frozen-program rehearsal. Only the released training episode
 indices are allowed: 0–2, or 0–4 for MoveCube. These indices identify the same

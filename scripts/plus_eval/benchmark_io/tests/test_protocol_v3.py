@@ -66,15 +66,16 @@ def test_decode_both_views_units_calibration_phase_boundary_limits_and_terminal(
     assert not rejected['error']['data']['episode_ended']
 
 
-def test_v3_install_is_immutable_and_does_not_replace_v2(tmp_path, monkeypatch):
+def test_current_install_is_immutable_and_does_not_replace_v2(tmp_path, monkeypatch):
     source = tmp_path/'source'
     shutil.copytree(DEFAULT_BUNDLE, source)
     (source/'fixtures/__pycache__').mkdir(exist_ok=True)
     (source/'fixtures/__pycache__/unwanted.pyc').write_bytes(b'not source')
     monkeypatch.setenv('ROBOMME_AGENTIC_PROMPTS', str(source))
     workspace = tmp_path/'workspace'
-    assert 'robomme-protocol-v3' in install(workspace, 'rax')
-    manifest = json.loads((workspace/'docs/robomme-protocol-v3/manifest.json').read_text())
+    version = json.loads((source/'bundle.json').read_text())['version']
+    assert f'robomme-protocol-v{version}' in install(workspace, 'rax')
+    manifest = json.loads((workspace/f'docs/robomme-protocol-v{version}/manifest.json').read_text())
     assert not any(name.endswith('.pyc') for name in manifest['sha256'])
     before = hashes(workspace)
     (source/'RAX.md').write_text('changed')

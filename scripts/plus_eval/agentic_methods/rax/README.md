@@ -14,6 +14,10 @@ restore command during setup. Existing checkouts are left unchanged; evaluated c
 
 ## Adaptation
 
+CLI and artifact keys `AfD`, `AfI` and `AfD+I` mean **Few-shot demonstrations**,
+**Few-shot interactions** and **Few-shot demonstrations+interactions**, respectively.
+Current interaction results use budgets 5 and 10.
+
 We retain LIBERO's per-task exploration → bundle registration → exact-bundle
 rehearsal → submission workflow. Rehearsals consume the same R budget. AfD allows
 explicit offline submission because it forbids simulator access. We add no CaP
@@ -42,8 +46,8 @@ The model, time limits and input sampling are implementation choices.
 
 | Area | Configuration |
 | --- | --- |
-| Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; adaptation/evaluation usage and cost logged separately. |
-| Budgets | Nine independent runs: AfD R0, AfI and AfD+I at R1/R3/R5/R10. Lower budgets are not R10 checkpoints. All training starts, including failed setup and verification, share R. |
+| Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; development/evaluation usage and cost logged separately. |
+| Budgets | Demonstrations only: 0 starts. Interaction settings: at most 5 or 10 starts per task, developed independently. All starts, including failed setup and verification, share the budget. Archived R1/R3 solutions remain available. |
 | Training demos | AfD/AfD+I receive front/wrist RGB recordings, goals, phases and timestamps, with unlimited offline reuse. AfI receives none. |
 | Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
@@ -89,8 +93,8 @@ published configuration on all 800 test episodes:
 
 ```bash
 python scripts/plus_eval/agentic_methods/rax/eval_plus.py \
-  --setting AfI --budget 3 \
-  --gpu 0 --output-dir "<RUN_ROOT>/rax-AfI-R3"
+  --setting AfI --budget 5 \
+  --gpu 0 --output-dir "<RUN_ROOT>/rax-AfI-R5"
 ```
 
 `--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media.

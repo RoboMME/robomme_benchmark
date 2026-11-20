@@ -28,25 +28,29 @@ The [data guide](../../doc/robomme_plus/plus_training_data_format.md) describes 
 
 ## Evaluation protocol
 
-The same rules apply to **Standard** policies trained or fine-tuned for control
+The same rules apply to **Non-Agentic** policies trained or fine-tuned for control
 and **Agentic** systems that use foundation models to plan, act or write code.
-Choose a setting before adaptation and compare results at the same setting and R.
+Choose a setting before adaptation and compare results at the same setting and rollout budget.
 
-| Setting | Released demonstrations | Rollout budget per task |
+| Setting | What it may use before testing | Rollouts per task |
 | --- | --- | --- |
-| Zero-shot transfer (ZS) | No | R0 |
-| Adapt from demos (AfD) | Yes | R0 |
-| Adapt from interactions (AfI) | No | R1, R3, R5 or R10 |
-| Adapt from demos+interactions (AfD+I) | Yes | R1, R3, R5 or R10 |
+| Zero-shot | The original policy, or a policy trained on original RoboMME | 0 |
+| Few-shot demonstrations | Released training demonstrations | 0 |
+| Few-shot interactions | Simulator rollouts on training seeds | 5 or 10 |
+| Few-shot demonstrations+interactions | Both | 5 or 10 |
 
-ZS transfers from original RoboMME without Plus adaptation. AfD/AfD+I can reuse
-any of the 50 released demonstrations without a limit on training iterations.
+Zero-shot uses the original policy without Plus adaptation. Settings with
+demonstrations can reuse any of the 50 released recordings without a limit on
+training iterations. Interaction budgets are **at most 5 or 10 development
+attempts per task**; each reported result still evaluates all 800 test episodes.
 
-1. **Count development rollouts.** R caps simulator attempts per task on the
+1. **Count development rollouts.** The rollout budget caps simulator attempts per task on the
    [provided training seeds](env_metadata/train), not demonstrations or control
    steps. Prompt/harness tuning, debugging, verification and model selection share
-   R. Every start counts, including failed setup, timeouts, early stops, retries,
+   the budget. Every start counts, including failed setup, timeouts, early stops, retries,
    previews and sandbox rehearsals. Follow the official episode step limits.
+   Agentic methods must preserve full development logs and use the
+   [compliance audit skill](../../doc/skills/audit_robomme_plus_compliance.md).
 
 2. **Use permitted resources.** Learn only from allowed demonstrations, public
    observations and simulator feedback. No task-source-derived solutions, oracle
@@ -61,9 +65,9 @@ any of the 50 released demonstrations without a limit on training iterations.
    for adaptation or policy selection. Report test-time optimization separately
    from the standard protocol.
 
-4. **Report usage.** Include the setting, demo use, R, actual attempts and simulator
-   steps per task, and separate adaptation/evaluation API costs in USD. Compare
-   methods at the same setting and R.
+4. **Report usage.** Include the setting, demo use, rollout budget, actual attempts and simulator
+   steps per task, and separate development/evaluation API costs in USD. Compare
+   methods at the same setting and rollout budget.
 
 Evaluate all **50 test episodes per task (800 total)** with default variations
 and execution limits. Keep failures, timeouts and errors in the denominator;
@@ -72,18 +76,18 @@ report changed test conditions separately. See the
 
 ### Guidance for coding agents
 
-When developing under AfD, AfI or AfD+I:
+When developing under a few-shot setting:
 
-- **Respect the setting.** Use released demonstrations only in AfD/AfD+I.
+- **Respect the setting.** Use released demonstrations only in the settings that include them.
   Development rollouts must use the provided training seeds and episode settings
-  within the per-task R budget; AfD permits no development rollouts. Debugging,
-  verification and failed attempts count toward the same budget.
+  within the per-task rollout budget. The demonstrations-only setting permits no
+  development rollouts; debugging, verification and failures share the budget.
 - **Keep testing separate.** Never use test seeds, data or outcomes for development
   or policy selection. Freeze the policy and agentic framework before evaluation.
 - **Preserve audit evidence.** Save complete prompts, model responses, tool calls
   and outputs, including child and resumed sessions. Retain code revisions,
   rollout ledgers with task/seed/outcome records (including failures), frozen
-  artifact hashes, and separate adaptation/evaluation API usage and costs.
+  artifact hashes, and separate development/evaluation API usage and costs.
 
 Use the [compliance audit skill](../../doc/skills/audit_robomme_plus_compliance.md)
 to check both system code and saved development logs against this protocol.

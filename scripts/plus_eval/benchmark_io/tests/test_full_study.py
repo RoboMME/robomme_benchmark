@@ -133,5 +133,6 @@ def test_parallel_method_queues_keep_placement_status_and_relays_separate(tmp_pa
     report=public_progress(tmp_path)
     active=[r for r in report['rows'] if r['phase']=='development']
     assert {r['method'] for r in active}=={'aspire','rax'}
-    assert len(report['rows'])==18
+    assert len(report['rows'])==10
+    assert report['test_trials_planned']==8000
     assert 'PRIVATE_PATH' not in json.dumps(report)

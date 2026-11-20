@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import sqlite3
 
+from .study_configurations import configurations
+
 
 def development_slots(root):
     """Reload operator concurrency independently of experiment/model settings."""
@@ -46,13 +48,15 @@ def evaluation_gate(root):
     if mode not in ('asynchronous', 'after_all_development', 'held'):
         raise ValueError('Unknown evaluation scheduling mode')
     completed = 0
-    total = 18
+    expected = {key for key, _, _, _ in configurations(root)}
+    total = len(expected)
     if (root/'queue.sqlite3').is_file():
         with sqlite3.connect(root/'queue.sqlite3') as db:
             # The marker alone does not acknowledge a finished worker. Require
             # both the frozen handoff and successful development job completion.
-            completed = db.execute("SELECT count(*) FROM cases c JOIN jobs j ON j.case_key=c.key "
-                "WHERE j.kind='develop' AND j.state='done' AND c.ready=1").fetchone()[0]
+            finished = db.execute("SELECT c.key FROM cases c JOIN jobs j ON j.case_key=c.key "
+                "WHERE j.kind='develop' AND j.state='done' AND c.ready=1").fetchall()
+            completed = len(expected.intersection(row[0] for row in finished))
     enabled = mode == 'asynchronous' or (mode == 'after_all_development' and completed == total)
     return dict(mode=mode, enabled=enabled, development_completed=completed,
                 development_total=total)

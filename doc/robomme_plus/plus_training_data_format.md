@@ -7,9 +7,10 @@ One episode per non-MoveCube task has an [atomic variation](../../src/robomme_pl
 H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
 [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
 
-Use these offline recordings in AfD or AfD+I, with unlimited
-iterations. Report the demos and modalities used. Simulator replays used for
-adaptation consume the per-task R budget; AfD permits none. See the
+Use these recordings in **Few-shot demonstrations** or
+**Few-shot demonstrations+interactions**, with unlimited offline reuse. Report
+the demos and modalities used. Simulator replays consume the per-task budget
+of 5 or 10 attempts; the demonstrations-only setting permits no starts. See the
 [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol).
 
 ## Replay
