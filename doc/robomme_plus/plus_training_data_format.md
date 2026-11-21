@@ -48,7 +48,7 @@ LeRobot `meta/source_episodes.json` maps global episode indices back to these ro
   shifted one frame relative to H5. The first execution observation matches the
   final reset observation.
 - Positions use metres, angles radians, quaternions `wxyz`, and extrinsic `xyz` Euler angles.
-- VideoPlace recordings include release and at least 5 cm of upward gripper retreat.
+- VideoPlace recordings include release and an upward gripper retreat.
 - Some MoveCube recordings retain settling frames after first success. A public
   evaluator replay stops at first success.
 

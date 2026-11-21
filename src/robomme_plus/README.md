@@ -21,15 +21,12 @@ tests add perceptual and mechanism variations that are mostly unseen in training
    Before development, run the [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness).
 4. **Develop and retain every solution revision and its logs**, including failed
    and interrupted work. Freeze the final policy, prompts, tools and harness.
-5. **Audit the saved development record** with the
-   [instructions and example prompt](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record).
-6. **[Evaluate all 800 test episodes](#evaluate) and [submit results](../../doc/robomme_plus/submission/model_example_plus.md)**
-   with links to code and development logs, and both audit results at the bottom
-   of the submission Markdown. Public development logs need not include raw
-   trajectories, images or videos.
+5. **[Evaluate all 800 test episodes](#evaluate)** with the frozen system.
+6. **Audit and submit:** run the [development-log audit](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record)
+   after evaluation, then follow [What to submit](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
 
-The two audits apply to agentic development. The
-[complete guide](../../doc/robomme_plus/README.md) links the audit skills,
+The audits in steps 3 and 6 apply only to [agentic development](#evaluation-protocol).
+The [complete guide](../../doc/robomme_plus/README.md) links the audit skills,
 ASPIRE/RAX setup and submission examples.
 
 ## Splits and training data
@@ -51,8 +48,10 @@ The [data guide](../../doc/robomme_plus/plus_training_data_format.md) describes 
 
 ## Evaluation protocol
 
-The same rules apply to **Non-Agentic** policies trained or fine-tuned for control
-and **Agentic** systems that prompt frontier models to plan, act or write code. Choose a setting before development.
+Choose a setting before development. These rules cover **Non-Agentic** control
+policies and **Agentic** systems that prompt frontier models to plan, act or code.
+**Agentic development** uses agents to improve policies, prompts, skills or memory
+from Plus demonstrations or rollouts. It requires development logs and two audits.
 
 | Setting | What it may use before testing | Maximum Plus rollouts per task |
 | --- | --- | --- |
@@ -61,29 +60,39 @@ and **Agentic** systems that prompt frontier models to plan, act or write code. 
 | `interaction-only` | Simulator rollouts on provided training seeds; no released demonstrations | 10 |
 | `demo&interaction` | Released demonstrations and training-seed rollouts | 10 |
 
-`zero-shot` uses the original policy without Plus adaptation. Released training
-demonstrations are recorded data for offline analysis and learning. Replaying
-their actions through the simulator counts as development interaction and is
-not permitted in the `demo-only` setting. Interaction budgets are
-**at most 10 development attempts per task, across all its training seeds
-combined**. Reporting results for 1, 3 and 5 attempts is optional; the leaderboard uses 10 attempts for interaction settings. Each result evaluates all 800 test episodes.
+Demonstrations are offline recordings. Replaying their actions in the simulator
+counts as interaction and is forbidden in `demo-only`. The interaction budget is
+**at most 10 attempts per task across all its training seeds combined**.
+The leaderboard uses this budget; 1, 3 and 5 are optional. Each result covers all 800 tests.
 
 1. **Keep the full development history.** Record the whole development process
    so it can be audited. Every simulator start on a Plus training seed counts,
    including previews, failed setup, retries, demonstration replays, debugging,
    verification and model selection. All share the task's budget and follow its
-   episode step limits. Agentic methods follow the
-   [shared development interface](../../doc/robomme_plus/agentic_development.md)
-   and publish complete text logs and code history. Raw trajectories, images and
-   videos are optional in public development records; retain their source
-   references and attempt metadata. Include the
-   [harness audit](../../doc/skills/audit_robomme_plus_harness.md) and
-   [development-log audit](../../doc/skills/audit_robomme_plus_development.md).
+   episode step limits. Agentic development uses the
+   [shared development interface](../../doc/robomme_plus/agentic_development.md),
+   publishes its text logs and code history, and includes the
+   [harness](../../doc/skills/audit_robomme_plus_harness.md) and
+   [development-log](../../doc/skills/audit_robomme_plus_development.md) audits.
 
 2. **Use only permitted resources.** Adapt to Plus using released demonstrations
    and/or training seeds, according to the setting. Do not access privileged
    information, reverse-engineer Plus task code, use test seeds during development,
-   or handcraft task solutions from implementation details. The original RoboMME
+   or handcraft task solutions from implementation details. Agent-readable docs
+   are this README, the [training-data format](../../doc/robomme_plus/plus_training_data_format.md),
+   the [development interface](../../doc/robomme_plus/agentic_development.md), and
+   the Markdown files in the [public prompt bundle](../../scripts/plus_eval/benchmark_io/prompts/current/README.md).
+   This permission does not extend to linked files. Baseline results, submissions,
+   audit evidence and other methods' solutions are for operators and reviewers only.
+   Agents must not be able to read or import the `robomme_plus` package beyond this
+   README. That covers task code, variations, scoring, success criteria and
+   simulator internals, including installed copies. They must also be unable to
+   reach test metadata (`env_metadata/test/`), test results or other methods'
+   Plus solutions. **Any agent access to these is a violation.** Prompts, skills
+   and notes given to agents must not restate task-code details, such as exact
+   parameters, thresholds or success criteria, beyond this public documentation.
+   List the documents given to agents in the audit record.
+   The original RoboMME
    [dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) and
    [simulator](../robomme) may be used freely in every setting, outside the Plus
    rollout budget. A task's conditioning video is a normal observation in every
@@ -100,10 +109,8 @@ combined**. Reporting results for 1, 3 and 5 attempts is optional; the leaderboa
 
 Evaluate all **50 test episodes per task (800 total)** with default variations
 and execution limits. Keep failures, timeouts and errors in the denominator;
-report changed test conditions separately. Submit per-task results with links to
-code and development logs, followed by the audit results in the submission Markdown,
-through a pull request using the
-[submission template](../../doc/robomme_plus/submission/model_example_plus.md).
+report changed test conditions separately. Submit through a pull request using the
+[submission template](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
 See the [baseline results](../../doc/robomme_plus/robomme_plus_baseline_results.md)
 and [running instructions](../../scripts/plus_eval/README.md).
 
@@ -111,24 +118,13 @@ and [running instructions](../../scripts/plus_eval/README.md).
 
 During RoboMME-Plus development:
 
-- **Respect the setting.** Use released Plus demonstrations only in demo settings.
-  Plus development rollouts use the provided training seeds and episode settings
-  within the per-task budget. `demo-only` permits no Plus rollouts. Original
-  RoboMME data and simulator use remains allowed in every setting.
-- **Keep testing separate.** Never use Plus test seeds, data or outcomes for development
-  or policy selection. Freeze the policy and agentic framework before evaluation.
-- **Preserve audit evidence.** Save complete prompts, model responses, tool calls
-  and outputs, including child and resumed sessions. Retain code revisions,
-  rollout ledgers with task/seed/outcome records (including failures), frozen
-  artifact hashes, and separate development/evaluation API usage and costs.
-
-Use the [harness audit](../../doc/skills/audit_robomme_plus_harness.md) and
-[development-log audit](../../doc/skills/audit_robomme_plus_development.md)
-to check development compliance against this protocol.
-Follow the [audit procedure and example prompts](../../doc/robomme_plus/auditing.md)
-to review the harness before development and the saved logs before submission.
-Include both audits' verdicts, findings and evidence references in the final
-[agentic development audit record](../../doc/robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
+- **Respect the setting.** Use released Plus demonstrations only in demo settings,
+  and Plus rollouts only on the provided training seeds within the per-task budget.
+  Original RoboMME data and simulator remain allowed in every setting.
+- **Keep testing separate.** Never use Plus test seeds, data, results or task source
+  for development or policy selection. Freeze the policy and framework before evaluation.
+- **Preserve audit evidence** as listed in the
+  [development interface](../../doc/robomme_plus/agentic_development.md#preserve-evidence).
 
 ## Evaluate
 
@@ -186,42 +182,44 @@ names. Use `robomme_plus` and `RoboMME-Plus/<Task>-v0` in code.
 
 ## Task changes
 
-Triples below mean **easy / medium / hard**. Ranges describe the task code;
-the fixed seeds may not realize every endpoint. Goals count objects to retrieve.
-Medium and hard also change motion, occlusion or tool geometry, so difficulty
-does not depend on counts alone.
+Easy, medium and hard differ in counts, motion, occlusion and tool geometry.
+This summary is qualitative; do not recover exact parameters
+from Plus task code ([rule 2](#evaluation-protocol)).
 
-| Task | RoboMME setup | RoboMME-Plus setup |
+| Task | RoboMME setup | RoboMME-Plus changes |
 | --- | --- | --- |
-| **BinFill** | Collect **1–5 cubes** | Collect **6–8 / 3–6 / 3–6 cubes**. Medium/hard use a conveyor at **5 / 6.5 cm/s**; hard requires all three colors. |
-| **PickXtimes** | **1–5** pick-and-place cycles | **6–8 / 5–6 / 7–8** cycles. Medium/hard use a moving target; hard has a larger, faster path. |
-| **SwingXtimes** | **1–3** swing cycles; **0 target dodges** | **4–7 / 3–4 / 4–6** cycles; **0 / 0–2 / 0–4** target dodges per visit |
-| **StopCube** | Stop on pass **2–5**; **1 trajectory type** | Stop on pass **3–8 / 5–10 / 5–10**; **4 / 4 / 5** trajectory types. Medium moves faster; hard changes speed within/across passes and shrinks the target. |
-| **VideoUnmask** | **3, 5 or 15 containers**; **1–2 goals** | **5–10 / 11–15 / 16–28 containers**; **3–5 goals**. Medium/hard add an occluding board and empty covers. |
-| **ButtonUnmask** | **3, 5 or 15 containers**; **1–2 goals** | **6–8 / 8–12 / 16–18 containers**; **3–5 goals**. Medium/hard add occlusion and empty covers; hard adds central distractors. |
-| **VideoUnmaskSwap** | **3–4 containers**; **1–2 goals** | **6–8 / 8–10 / 9–12 containers**; **3–5 goals**. Containers move independently; medium/hard add an occluding board. |
-| **ButtonUnmaskSwap** | **3–4 containers**; **1–2 goals** | **6–8 / 9–10 / 11–13 containers**; **3 / 3–4 / 3–4 goals**. Medium/hard add occlusion; hard has faster container traffic. |
-| **PickHighlight** | **3–6 objects**; **1–3 goals**; **90-frame** highlights | **9–10 / 11–13 / 14–17 objects**; **3–5 / 4–6 / 5–9 goals**; **45 / 30–45 / 16–45-step** highlights. Higher levels rearrange larger groups more often. |
-| **VideoRepick** | **3 or 15 cubes**; **1 goal** | **4–6 / 7–10 / 6–10 objects**; **1 goal**. Medium/hard exchange moving objects' destinations; hard adds an occluding board. |
-| **VideoPlaceButton** | **3–4 target rings**; **1 demonstrated cube** | **4 / 6 / 7–8 rings**; **1 / 1 / 2 demonstrated cubes**. Medium/hard swap rings more frequently. |
-| **VideoPlaceOrder** | **4 rings**; **2–4 placements**; request **1st–4th** | **4 / 6 / 7–8 rings**; **4 / 5 / 5 placements per cube**; request **1st–4th / 1st–5th / 1st–5th**. Medium/hard swap rings more frequently; hard tracks two cubes. |
-| **MoveCube** | **3 manipulation methods** | **5 methods**, **10 test episodes each**; **3 methods available per phase** |
-| **InsertPeg** | **34 mm hole**; **20 mm peg**; **0 mm hole shift** | **23–25 / 22–23 / 20.4 mm hole** (easy / medium / hard); **20 mm peg**; **5–10 mm shift along each hole-face axis** |
-| **PatternLock** | **2–8 nodes**; **3×3–5×5 grids**; **10 cm** stick | **4–5 / 6–8 / 9–12 nodes**; **5×5 grid**; **10 / 5–7 / 3.5–6 cm** execution stick. Medium/hard shift, rotate and rescale the grid, with **10–20° / 20–30°** tool-mount tilt. |
-| **RouteStick** | **2–7 segments**; **10 cm** drawing stick | **8–13 / 4–7 / 6–8 curves**; **10 / 2.5–5 / 2.5–5 cm** execution stick. Medium/hard change the route layout; hard can move obstacle boards. |
+| **BinFill** | Collect **1–5 cubes** | More cubes. Medium/hard add a moving conveyor; hard requires all three colors. |
+| **PickXtimes** | **1–5** pick-and-place cycles | More cycles. Medium/hard move the target; hard uses a larger, faster path. |
+| **SwingXtimes** | **1–3** swing cycles; no target dodges | More cycles. At medium/hard the target can dodge during visits. |
+| **StopCube** | Stop on pass **2–5**; one trajectory type | Later stopping passes and several trajectory types. Medium moves faster; hard varies speed within and across passes and shrinks the target. |
+| **VideoUnmask** | **3, 5 or 15 containers**; **1–2 goals** | More containers and goals. Medium/hard add an occluding board and empty covers. |
+| **ButtonUnmask** | **3, 5 or 15 containers**; **1–2 goals** | More containers and goals. Medium/hard add occlusion and empty covers; hard adds central distractors. |
+| **VideoUnmaskSwap** | **3–4 containers**; **1–2 goals** | More containers and goals, moving independently. Medium/hard add an occluding board. |
+| **ButtonUnmaskSwap** | **3–4 containers**; **1–2 goals** | More containers and goals. Medium/hard add occlusion; hard has faster container traffic. |
+| **PickHighlight** | **3–6 objects**; **1–3 goals**; **90-frame** highlights | More objects and goals with shorter highlights. Higher levels rearrange larger groups more often. |
+| **VideoRepick** | **3 or 15 cubes**; **1 goal** | Varied object counts; still one goal. Medium/hard exchange moving objects' destinations; hard adds an occluding board. |
+| **VideoPlaceButton** | **3–4 target rings**; **1 demonstrated cube** | More rings, swapped more often at medium/hard; hard demonstrates two cubes. |
+| **VideoPlaceOrder** | **4 rings**; **2–4 placements**; request **1st–4th** | More rings and placements, with later placements requested. Medium/hard swap rings more often; hard tracks two cubes. |
+| **MoveCube** | **3 manipulation methods** | **5 methods**, with a subset available in each phase. |
+| **InsertPeg** | **34 mm hole**; **20 mm peg**; no hole shift | Tighter clearance at higher levels; the hole is offset on its face. |
+| **PatternLock** | **2–8 nodes**; **3×3–5×5 grids**; **10 cm** stick | More nodes at higher levels and a shorter execution stick at medium/hard. Medium/hard also shift, rotate and rescale the grid and tilt the tool mount. |
+| **RouteStick** | **2–7 segments**; **10 cm** drawing stick | Curved routes and a shorter execution stick at medium/hard. Medium/hard change the route layout; hard can move obstacle boards. |
 
-PickXtimes and VideoPlace require release and a 5 cm upward retreat. SwingXtimes credits
-visits after dodges settle; PickHighlight rejects wrong-object pickups through
-the final button press.
+**Success rules** beyond the language goal:
 
-ButtonUnmask requires a press before step 90; ButtonUnmaskSwap requires both buttons before step 180
-and before pickup. Missing a deadline fails the task.
+PickXtimes and VideoPlace require releasing the object and retreating upward.
+SwingXtimes credits visits after dodges settle; PickHighlight rejects wrong-object
+pickups through the final button press.
+
+ButtonUnmask and ButtonUnmaskSwap require their button presses within an early
+deadline; ButtonUnmaskSwap needs both buttons, before pickup. Missing a deadline
+fails the task. Exact deadlines are in the [public timing rules](../../scripts/plus_eval/benchmark_io/prompts/current/PUBLIC_RULES.md).
 
 MoveCube requires the demonstrated tool and method; InsertPeg requires the
-demonstrated peg end and box side. See [MoveCube's method criteria](tasks/imitation/move_cube_support/SUCCESS_CRITERIA.md).
+demonstrated peg end and box side.
 
-PatternLock requires the stick within 8° of downward vertical. Both drawing tasks
-allow 450 control steps without valid drawing, subject to the overall execution budget.
+PatternLock requires the stick to stay close to vertical. Both drawing tasks fail
+after a long period without valid drawing, within the overall execution budget.
 
 **Mechanism variations** add the following changes to selected episodes, beyond
 their difficulty level. They are enabled by default.
@@ -234,7 +232,7 @@ their difficulty level. They are enabled by default.
 | StopCube | Relocated route and target, pauses, reversals and changing speed. |
 | VideoUnmask, ButtonUnmask | Visible cube shuffles before stationary covers hide them. |
 | VideoUnmaskSwap | Visible cube shuffles, followed by mixed container motion and recurring swaps. |
-| ButtonUnmaskSwap | Visible cube shuffles before covering; training includes doubled container speed. |
+| ButtonUnmaskSwap | Visible cube shuffles before covering; training includes faster container motion. |
 | VideoRepick | Motion patterns transferred from other tasks, with recurring swaps. |
 | VideoPlaceButton, VideoPlaceOrder | Alternating ring gathering/spreading and global swaps. |
 | PatternLock | Neighbor-node activation, longer contact holds, smaller targets, or combinations. |

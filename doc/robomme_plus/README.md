@@ -1,39 +1,14 @@
 # RoboMME-Plus: start here
 
-RoboMME-Plus measures robot memory generalization and adaptation across 16 tasks,
-with 50 released training demonstrations and 800 fixed test episodes.
+Start with the [getting-started workflow and evaluation protocol](../../src/robomme_plus/README.md#getting-started).
+RoboMME-Plus has 50 training demonstrations and 800 tests across 16 tasks.
 
-1. **Understand the benchmark and choose a setting.** Read the
-   [overview and evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol):
-   `zero-shot`, `demo-only`, `interaction-only` or `demo&interaction`. Interaction settings
-   allow at most **10 Plus development starts per task across all training seeds
-   combined**. Demonstrations are offline recordings; simulator replay counts as
-   interaction and is forbidden in `demo-only`.
-2. **Prepare your environment and inputs.** Follow the
-   [installation instructions](../../readme.md#-installation) and
-   [training-data guide](plus_training_data_format.md). Record the benchmark and
-   dataset revisions, and expose only the resources permitted by your setting.
-3. **Connect and audit your agentic harness before development.** Follow the
-   [development interface](agentic_development.md) to integrate your own method,
-   select training seeds and share one persistent rollout counter across workers.
-   Then use the [harness-audit procedure and example prompt](auditing.md#1-review-the-harness).
-4. **Develop and preserve the complete history.** Keep every solution revision
-   and its associated prompts, responses, commands/tool outputs, rollout records
-   and API costs, including unsuccessful and interrupted work. Link each rollout
-   to its saved code revision. Freeze the final policy, prompts, tools and harness
-   before testing.
-5. **Audit the development record.** Follow the
-   [development-log audit procedure and example prompt](auditing.md#2-review-the-completed-development-record).
-   The two audit skills instruct a reviewer to inspect code and evidence; they do
-   not automatically certify compliance.
-6. **Evaluate and submit.** Run the frozen method on
-   [all 800 test episodes](../../src/robomme_plus/README.md#evaluate), then use the
-   [submission template](submission/model_example_plus.md) to link code and
-   development logs and include both audit results at the bottom. Public
-   development logs may omit raw trajectories, images and videos.
-
-The harness and development-log audits apply to agentic development. To run an
-existing baseline, use its [setup and running instructions](../../scripts/plus_eval/README.md).
+- **Prepare data:** [training formats, seeds and replay](plus_training_data_format.md).
+- **Run a baseline:** [installation and commands](../../scripts/plus_eval/README.md).
+- **Build an agentic method:** [development interface and required logs](agentic_development.md).
+- **Audit:** [procedure and copyable prompts](auditing.md)—harness before development,
+  saved logs after frozen evaluation.
+- **Submit:** [required artifacts and template](submission/model_example_plus.md#what-to-submit).
 
 ## Reference
 

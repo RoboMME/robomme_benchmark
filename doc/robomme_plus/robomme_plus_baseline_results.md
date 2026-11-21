@@ -7,8 +7,7 @@ failures, timeouts and errors remain in the denominator.
 
 ## Evaluation settings
 
-The same settings apply to Non-Agentic policies and Agentic systems. Compare methods
-at the same setting and rollout budget, which caps simulator attempts per task on training seeds.
+Compare both tracks under the same setting and per-task rollout budget.
 
 | Setting | Released Plus demonstrations | Maximum Plus rollouts per task |
 | --- | --- | --- |
@@ -17,12 +16,8 @@ at the same setting and rollout budget, which caps simulator attempts per task o
 | `interaction-only` | No | 10 |
 | `demo&interaction` | Yes | 10 |
 
-Original RoboMME's dataset and simulator may be used freely in every setting,
-outside the Plus rollout budget. Plus demos are offline recordings; every Plus
-simulator start counts, including replay, debugging, failures and verification.
-Keep the complete development history and freeze the system before testing.
-The [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol)
-defines permitted resources, audits, reporting and execution limits.
+See the [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol)
+for permitted inputs, rollout accounting, audits and reporting.
 
 
 ## `zero-shot`
@@ -82,6 +77,8 @@ The [ASPIRE submission](<submission/aspire-plus (eval_by_RoboMME_team).md#develo
 and [RAX submission](<submission/rax-plus (eval_by_RoboMME_team).md#development-audit>)
 report **PASS WITHIN AUDITED SCOPE** for the historical main configurations'
 harness and development records, with disclosed log gaps and interface corrections.
+They have not been re-run against the current
+[audit requirements](auditing.md#hard-requirements) H1–H7 and R1–R3.
 All 1,099 starts across main and optional studies reconcile with native records;
 no assigned per-task allowance was exceeded. The main configurations' 11,384 saved
 API requests were also inspected. Optional R1/R3/R5 received accounting and

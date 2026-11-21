@@ -1,40 +1,36 @@
 # RoboMME-Plus submission templates
 
 Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol).
-Copy the template for each setting you report. Replace bracketed placeholders
-and fill in the results table. Both Non-Agentic and Agentic tracks can use any
-setting. For interaction settings, report results under a budget of at most
-10 development rollouts per task.
-Both `interaction-only` and `demo&interaction` may also report **1, 3 and 5
-rollouts per task** as optional results. The leaderboard uses the 10-rollout
-results. `zero-shot` and `demo-only` use zero simulator rollouts.
+Copy one section per setting you report and replace the bracketed placeholders.
+Either track may use any setting. Each result covers all **800 test episodes
+(16 tasks × 50)**. The leaderboard uses 10 rollouts per task for interaction
+settings; 1, 3 and 5 rollouts are optional.
 
-All 50 released demonstrations are available as recorded data for offline analysis
-and learning in `demo-only` and `demo&interaction`.
-Replaying their actions through the simulator consumes the development rollout
-budget and is forbidden in the `demo-only` setting. State which demos
-and modalities were used.
-`zero-shot` and `interaction-only` do not use released demonstrations.
+Report success rates as percentages with two decimal places. Report API costs in
+USD, development and evaluation separately; use N/A when no paid API is used.
+Label estimates and identify missing usage; incomplete required records block an audit PASS.
 
-Each result uses **800 fixed test episodes: 16 tasks × 50 episodes**. Report
-success rates as percentages with two decimal places. API costs are in USD;
-report the evaluation total for all 800 episodes, and development cost separately.
-Use N/A when no paid API is used. Label estimates or incomplete costs.
+## What to submit
 
-For submissions involving agentic development, provide:
+Open a pull request containing this Markdown. Link every artifact at a pinned
+revision (a commit or dataset revision, not a moving branch).
 
-- **Code link:** the method's source, harness and frozen policy revision.
-- **Development-log link:** a public archive containing prompts, responses,
-  commands/tool calls and text outputs, every code revision, all simulator-attempt
-  records and API usage/costs, including failed and resumed work. **Raw trajectory
-  data, images and videos do not need to be uploaded.** Keep source/hash or manifest
-  references when omitting large payloads from logs.
-- **Audit results:** include the harness and development-log audit verdicts,
-  findings and warnings **at the bottom of the submission Markdown**, using the
-  [audit record](#agentic-development-audit-record). Separate report links are optional.
+| Item | Required for | Contents |
+| --- | --- | --- |
+| Code | Every result | Method source at the evaluated revision, including test-time prompts and tools |
+| Test results | Every result | Per-episode task, episode, status and control steps for all 800 episodes, plus start/finish times for agentic development, e.g. `summary.json` from [`scripts/plus_eval/evaluation.py`](../../../scripts/plus_eval/evaluation.py) |
+| Usage log | Any Plus rollouts | Per-task starts, failed/incomplete starts and simulator steps for each budget |
+| Freeze manifest | Agentic development | Content hashes of the frozen programs, prompts, tools and harness, created before the first test episode |
+| Development logs | Agentic development | The agents' public text archive described in [Preserve evidence](../agentic_development.md#preserve-evidence); raw trajectories, images and videos are optional |
+| Audit record | Agentic development | Both audits, filled in at the [bottom of this file](#agentic-development-audit-record) |
 
-Cover each reported setting and budget. If no agentic development was performed,
-mark development logs and audits N/A and explain this briefly.
+The last three items apply to [agentic development](../../../src/robomme_plus/README.md#evaluation-protocol).
+Otherwise mark them N/A.
+
+**Review.** Maintainers check these artifacts. For agentic development, both audits
+must conclude **PASS**. Methods without agentic development mark them N/A.
+Recover missing evidence or fix confirmed breaches and rerun the affected
+development. Disclose self-reviews.
 
 
 **Track (select one):**
@@ -60,7 +56,7 @@ Test the policy directly, or develop it only on original RoboMME, without Plus a
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
 - **Total evaluation API cost (USD):** [COST / N/A]
-- **Results:** [ARTIFACTS LINK]
+- **Test results:** [PER-EPISODE RESULTS LINK]
 
 | Suite | Task | Successes | Success (%) |
 | --- | --- | --- | --- |
@@ -85,7 +81,7 @@ Test the policy directly, or develop it only on original RoboMME, without Plus a
 
 ## 2. `demo-only`
 
-Report this if you choose `demo-only`. Adapt using released offline demonstrations, without Plus simulator interactions.
+Adapt using released offline demonstrations, without Plus simulator interactions.
 
 ### [Model / framework name]
 
@@ -103,7 +99,7 @@ Report this if you choose `demo-only`. Adapt using released offline demonstratio
 - **Demo use:** [SELECTION AND MODALITIES]
 - **Development API cost (USD):** [COST / N/A]
 - **Total evaluation API cost (USD):** [COST / N/A]
-- **Results:** [ARTIFACTS LINK]
+- **Test results:** [PER-EPISODE RESULTS LINK]
 
 | Suite | Task | Successes | Success (%) |
 | --- | --- | --- | --- |
@@ -128,7 +124,7 @@ Report this if you choose `demo-only`. Adapt using released offline demonstratio
 
 ## 3. `interaction-only`
 
-Report this if you choose `interaction-only`. Adapt through training-seed interactions, without released offline demonstrations.
+Adapt through training-seed interactions, without released offline demonstrations.
 
 ### [Model / framework name]
 
@@ -146,7 +142,7 @@ Report this if you choose `interaction-only`. Adapt through training-seed intera
 - **Usage log:** [LINK TO ATTEMPTS AND SIMULATOR STEPS PER TASK, BY BUDGET]
 - **Development API cost (USD):** 10 rollouts: [COST / N/A]
 - **Total evaluation API cost (USD):** 10 rollouts: [COST / N/A]
-- **Results:** [ARTIFACTS LINK]
+- **Test results:** [PER-EPISODE RESULTS LINK]
 
 | Suite | Task | Successes | Success with 10 rollouts (%) |
 | --- | --- | --- | --- |
@@ -203,15 +199,17 @@ use N/A for budgets you do not report.
 
 **Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
-Link actual attempts/steps and the frozen code revision for each budget. Include a matching audit verdict and evidence in the final audit section.
-Choose and freeze policies before testing; test outcomes cannot select checkpoints.
+For each budget, link the usage log and frozen code revision and add a matching
+audit below. A saved checkpoint for budget R must be frozen before **any** task's
+(R+1)th start, so components shared across tasks cannot carry later experience.
+Test outcomes cannot select checkpoints.
 
 </details>
 
 
 ## 4. `demo&interaction`
 
-Report this if you choose `demo&interaction`. Adapt using released offline demonstrations and training-seed interactions.
+Adapt using released offline demonstrations and training-seed interactions.
 
 ### [Model / framework name]
 
@@ -230,7 +228,7 @@ Report this if you choose `demo&interaction`. Adapt using released offline demon
 - **Usage log:** [LINK TO ATTEMPTS AND SIMULATOR STEPS PER TASK, BY BUDGET]
 - **Development API cost (USD):** 10 rollouts: [COST / N/A]
 - **Total evaluation API cost (USD):** 10 rollouts: [COST / N/A]
-- **Results:** [ARTIFACTS LINK]
+- **Test results:** [PER-EPISODE RESULTS LINK]
 
 | Suite | Task | Successes | Success with 10 rollouts (%) |
 | --- | --- | --- | --- |
@@ -287,57 +285,56 @@ use N/A for budgets you do not report.
 
 **Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
-Link actual attempts/steps and the frozen code revision for each budget. Include a matching audit verdict and evidence in the final audit section.
-Choose and freeze policies before testing; test outcomes cannot select checkpoints.
+For each budget, link the usage log and frozen code revision and add a matching
+audit below. A saved checkpoint for budget R must be frozen before **any** task's
+(R+1)th start, so components shared across tasks cannot carry later experience.
+Test outcomes cannot select checkpoints.
 
 </details>
 
 
 ## Agentic development audit record
 
-Keep this section at the **bottom of your submission**. Follow
-[How to audit](../auditing.md) for the procedure and copy-and-paste prompts.
-Include findings here for each setting and budget; external full reports are optional.
+Keep this section at the **bottom of your submission**, one per setting and
+budget. [How to audit](../auditing.md) gives the procedure and prompts; full
+report links are optional.
 
-| Audit | Verdict | Summary of findings |
+| Audit | Conclusion | Summary |
 | --- | --- | --- |
-| Development harness | [VERDICT] | [CONTROLS CHECKED AND GAPS] |
-| Development logs | [VERDICT] | [RECORDS RECONCILED AND GAPS] |
-
-Use **PASS WITHIN AUDITED SCOPE**, **VIOLATION FOUND** or **UNVERIFIED**. If an
-audit is not completed, mark it **Pending report**. A harness audit checks the
-interface; a log audit checks what happened during development.
+| Development harness | [PASS / FAIL / PENDING] | [ONE LINE; REASON FOR ANY FAIL] |
+| Development logs | [PASS / FAIL / PENDING] | [ONE LINE; REASON FOR ANY FAIL] |
 
 - **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN ID]
 - **Versions:** [BENCHMARK/PROTOCOL, TRAINING DATA AND HARNESS REVISIONS]
-- **Frozen policy:** [CODE LINK, COMMIT OR CONTENT HASHES]
+- **Frozen policy:** [CODE LINK AND FREEZE MANIFEST HASHES]
 - **Development logs:** [PUBLIC ARCHIVE LINK]
-- **Auditor / date:** [NAME, DATE; SELF-REVIEW OR INDEPENDENT REVIEW]
+- **Auditor / date:** [NAME OR ASSISTANT MODEL AND VERSION, DATE; SELF-REVIEW OR INDEPENDENT]
 - **Coverage:** [RECORDS INSPECTED; OMITTED PAYLOADS AND ANY ADDITIONAL LOCAL EVIDENCE]
+- **Agent-visible documentation:** [FILES AND REVISIONS FROM THE PROTOCOL'S ALLOWLIST]
 
-For each item below, set **STATUS** to PASS, FAIL, UNVERIFIED or N/A and provide
-a short evidence reference. Check `[x]` **only for PASS**; leave `[ ]` for the other
-statuses and explain them. Any FAIL makes that audit's verdict VIOLATION FOUND;
-otherwise any UNVERIFIED makes it UNVERIFIED. A pass needs all applicable checks
-to pass. A checked box does not simply mean the check was performed.
+Each audit concludes **PASS** only if H1–H7 and R1–R3 are PASS or N/A with a reason;
+any FAIL or GAP blocks PASS. Distinguish breaches from missing evidence.
+Check `[x]` only when an item passes in both audits.
+The [hard requirements](../auditing.md#hard-requirements) define H1–H7; the
+skills give the checks.
 
-### Harness checklist
+### Hard requirements
 
-- [ ] **Rule 1 — Complete text logs and code history — STATUS** · Evidence: [FILE:LINE]
-- [ ] **Rule 1 — Shared budget counts every simulator start and retry — STATUS** · Evidence: [FILE:LINE]
-- [ ] **Rule 2 — Inputs and agent access respect the setting — STATUS** · Evidence: [FILE:LINE]
-- [ ] **Rule 2 — Only released training seeds/settings are exposed — STATUS** · Evidence: [FILE:LINE]
-- [ ] **Rule 3 — Freeze and development/test separation are enforced — STATUS** · Evidence: [FILE:LINE]
-- [ ] **Rule 4 — Attempts, steps and separate API costs are recorded — STATUS** · Evidence: [FILE:LINE]
+- [ ] **H1 — No privileged information** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
+- [ ] **H2 — No Plus task code or other methods' Plus solutions** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
+- [ ] **H3 — No task-code details in prompts, skills or notes** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
+- [ ] **H4 — Training seeds only; no test seeds, metadata or results** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
+- [ ] **H5 — At most the rollout budget per task, every start counted** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
+- [ ] **H6 — Demonstrations only in demo settings** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
+- [ ] **H7 — Frozen before testing; no test-feedback tuning** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
 
-### Development-log checklist
+### Required evidence
 
-- [ ] **Rule 1 — All sessions, tool records and code revisions are accounted for — STATUS** · Evidence: [LOG/EVENT IDS]
-- [ ] **Rule 1 — Starts reconcile across seeds/workers; budget respected — STATUS** · Evidence: [LEDGER/RECORD IDS]
-- [ ] **Rule 2 — Recorded inputs, source access and demo use are permitted — STATUS** · Evidence: [LOG/EVENT IDS]
-- [ ] **Rule 2 — Training seeds and full episode configurations match — STATUS** · Evidence: [METADATA/HASHES]
-- [ ] **Rule 3 — Frozen policies trace to code history; no test-feedback tuning — STATUS** · Evidence: [HASHES/EVENT IDS]
-- [ ] **Rule 4 — Per-task attempts/steps and API usage/costs reconcile — STATUS** · Evidence: [USAGE RECORDS]
+A GAP makes the audit FAIL. Optional media may be omitted with source/hash references.
+
+- [ ] **R1 — Complete logs and code history** · Harness: [PASS/GAP] · Logs: [PASS/GAP] · Evidence: [REFS]
+- [ ] **R2 — Resource usage recorded and reconciled** · Harness: [PASS/GAP] · Logs: [PASS/GAP] · Evidence: [REFS]
+- [ ] **R3 — Human corrections disclosed with diffs** · Harness: [PASS/GAP/N/A] · Logs: [PASS/GAP/N/A] · Evidence: [REFS]
 
 ### Per-task accounting
 
@@ -348,11 +345,8 @@ counts rather than zero. Failed/incomplete starts are included in Starts.
 | --- | --- | --- | --- | --- | --- | --- |
 | [TASK] | [LIMIT] | [COUNT] | [COUNT] | [COUNT / UNKNOWN] | [STATUS] | [STATUS] |
 
-Raw trajectories, images and videos are optional. Identify any specific finding
-that cannot be verified from the available evidence.
-
 ### Warnings and required action
 
 | Finding | Affected tasks/settings | Evidence | Required action |
 | --- | --- | --- | --- |
-| [GAP, VIOLATION OR DISCLOSED CORRECTION; NONE IF NONE] | [SCOPE] | [REFERENCE] | [ACTION] |
+| [FAIL, GAP OR DISCLOSED CORRECTION; NONE IF NONE] | [SCOPE] | [REFERENCE] | [ACTION] |

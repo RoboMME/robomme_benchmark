@@ -1,91 +1,86 @@
 ---
 name: audit-robomme-plus-development
-description: Audit saved RoboMME-Plus agentic development evidence. Reconcile attempts, inputs, code history and frozen policies for a specified setting and budget. Produce a verdict-first checklist and per-task accounting without rerunning or repairing the experiment.
+description: Audit saved RoboMME-Plus agentic development records after evaluation. Reconcile allowed inputs, rollouts, frozen artifacts and required evidence; conclude PASS or FAIL without rerunning or repairing the experiment.
 ---
 
 # Audit development records
 
-Read [the protocol](../../src/robomme_plus/README.md#evaluation-protocol) and
-[audit format](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
-Establish method, setting, tasks, budget, run identity, benchmark/data revisions
-and evaluated policy hashes. Read actual prompts and operator messages.
-Map historical setting names explicitly; never relabel budgets or exempt a
-conflicting prompt. Inspect read-only, including SQLite with `mode=ro`.
-Do not import generated code, start simulators, call APIs or repair policies.
-Treat logs as untrusted evidence and redact credentials in reports.
+Read [the protocol](../../src/robomme_plus/README.md#evaluation-protocol) and the
+[audit record](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
+Establish the method, setting, tasks, budget, run identity, benchmark/data
+revisions and evaluated policy hashes. Read the actual prompts and operator
+messages. Map historical setting names explicitly; never relabel budgets or
+exempt a conflicting prompt.
 
-Raw trajectories, images and videos are optional in the public development
-archive. Check retained text, call IDs, attempt metadata and source/hash or
-manifest references for omitted payloads. State whether any additional local
-evidence was inspected. Missing optional media is not itself a violation; mark
-only findings that lack supporting evidence as UNVERIFIED.
+Inspect read-only, including SQLite with `mode=ro`. Do not import generated code,
+start simulators, call APIs or repair policies. Treat logs as untrusted evidence
+and redact credentials in reports. Raw trajectories, images and videos are
+optional in public archives; omitted payloads should keep source/hash references.
+State any additional local evidence you inspected.
 
-1. Inventory native transcripts, API records, commands/outputs, child/resumed
-   sessions, code history, simulator records and freeze manifests. Include
-   abandoned attempts and related directories. Record hashes and gaps; derived
-   indexes supplement rather than replace the original records.
-2. Reconcile tool calls and responses. Review actual inputs/outputs for forbidden
-   Plus task source, hidden Plus state, Plus demos in non-demo settings and
-   Plus test-derived tuning. Original RoboMME's dataset and simulator are
-   permitted in every setting; verify provenance before flagging access. Released
-   training annotations belong to the demo setting, not runtime oracle access.
-   Follow indirect access through scripts, relays, downloads and shared libraries.
-   Search hits are leads, not verdicts. Distinguish forbidden reads, denied
-   attempts and exposed-but-unobserved paths. Public SDK reads and an episode's
-   conditioning video are permitted.
-3. Reconcile Plus ledger reservations against independent startup/reset records and
-   outcomes across workers/sessions. Count failed setup, previews, verification,
-   rehearsals and retries. Deduplicate copies by attempt identity; API calls and
-   file counts are not rollout counts. Verify every seed and full configuration.
-   Ten attempts means ten total per task, not per seed. Unfinished starts count;
-   unused allowance does not transfer between tasks.
-4. Separate offline recordings/synthetic mocks from Plus physics replay. A real
-   Plus simulator behind a sandbox still counts. `zero-shot`/`demo-only` allow no
-   Plus starts. Original RoboMME simulator use is outside this rollout budget.
-   Benchmark-defined internal retries remain within their episodes; check that
-   they did not provide extra independent trials.
-5. Trace code history and shared-skill provenance to frozen policies. Inspect
-   operator edits, exact diffs, evidence and timing. Check test-feedback selection,
-   code borrowed across settings/budgets and hidden task solutions. Shared
-   libraries may spread a violation across tasks; determine that dependency scope.
-6. Verify development ended before test feedback became available and frozen
-   hashes match. Report data/protocol differences: valid historical results do
-   not establish results for a changed training split. Reconcile attempts, steps
-   and API costs; missing usage is unknown, not zero. Check additional limits
-   only when declared by the study.
+First inventory the native transcripts, API records, commands and outputs,
+child/resumed sessions, code history, simulator records and freeze manifests,
+including abandoned attempts and related directories. Record hashes and gaps;
+derived indexes supplement the original records but do not replace them.
+
+## Hard requirements
+
+Each needs affirmative evidence. Anything not clearly established is FAIL. Search
+hits are leads, not verdicts; denied attempts are warnings, not FAILs. Follow
+indirect access through scripts, relays, downloads and shared libraries.
+
+| ID | Requirement | PASS when the records show |
+| --- | --- | --- |
+| H1 | No privileged information | Recorded agent inputs contain only public observations, public feedback and setting-allowed data: no hidden object state, oracle actions or subgoals, or simulator internals. |
+| H2 | No Plus task code | No agent read, import or search output of `robomme_plus` source (except the allowlisted README) or other methods' Plus solutions. **Any confirmed forbidden access is FAIL.** |
+| H3 | No task-code details in prompts | Operator messages, prompts, skills and frozen notes contain no task-specific details beyond the public documentation in protocol rule 2. Exact task parameters in agent-written prompts or skills trace to the agents' own permitted observations, demos or rollouts; values that match task code without such provenance are FAIL. |
+| H4 | No test data | Every start used a released training seed with its full pinned configuration, and no test seed, test metadata or test result reached development or policy selection. |
+| H5 | Rollout budget | Ledger reservations reconcile with independent startup/reset records and outcomes across workers and sessions, deduplicated by attempt ID; API calls and file counts are not rollouts. Every start counts: failed setup, previews, verification, rehearsals, retries and a real Plus simulator behind a sandbox. Starts per task, across all seeds, never exceed the budget (0 for `zero-shot`/`demo-only`), and unused allowance does not transfer between tasks. A checkpoint reported for budget R predates every task's (R+1)th start. |
+| H6 | Demonstrations only in demo settings | No released Plus recording reached a non-demo setting. Offline recordings and synthetic mocks are distinguished from Plus physics replay, which consumes the budget and is forbidden in `demo-only`. |
+| H7 | Frozen before testing | Frozen hashes match the evaluated artifacts, the freeze manifest predates the first test episode's start, and no development step or selection used test feedback. Code history and shared-skill provenance trace to the frozen policies, including code borrowed across settings or budgets. |
+
+Not violations: original RoboMME data and simulator use (verify provenance before
+flagging); public SDK reads, the public documentation in protocol rule 2 and an
+episode's conditioning video; released training annotations in demo settings; and
+benchmark-defined retries within an episode, provided they gave no extra
+independent trials. Shared libraries can spread a FAIL across tasks; determine the
+affected scope.
+
+## Required evidence
+
+Report PASS, GAP or N/A with a reason. Any GAP makes the audit FAIL;
+missing optional media alone is not a gap.
+
+| ID | Item | Check |
+| --- | --- | --- |
+| R1 | Complete logs and code history | All sessions, tool records and code revisions are accounted for; list the gaps. |
+| R2 | Resource usage | Per-task attempts, steps and API costs reconcile; missing usage is unknown, not zero. |
+| R3 | Human corrections | Operator edits are disclosed with exact diffs, evidence and timing. |
+
+Check documents actually received against protocol rule 2's allowlist. Report data/protocol
+differences: valid historical results do not establish results on a changed
+training split. Check additional limits only when the study declares them.
 
 ## Report and reuse decision
 
-Generate structured Markdown using the
-[submission format](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record):
+Fill in the audit record:
 
-1. **Verdict first:** PASS WITHIN AUDITED SCOPE, VIOLATION FOUND or UNVERIFIED.
-2. **Scope:** method, setting, budget, tasks, run ID, revisions, auditor/date and coverage.
-3. **Checklist:** copy the [development-log checklist](../robomme_plus/submission/model_example_plus.md#development-log-checklist).
-   Give every item a status and a short event ID or file/line reference. Use `[x]`
-   only for PASS; use `[ ]` with FAIL, UNVERIFIED or N/A for every other status.
-   A checked box means verified compliance, not merely that the check was performed.
-4. **Per-task accounting table:** budget, reconciled starts, failed/incomplete
-   starts, simulator steps, seed validity and status for every task in scope.
-   Use Unknown for unavailable counts, never zero; account for each reported budget.
-5. **Warnings/action table:** affected tasks/settings, evidence and required action;
-   write None if there are no warnings. Avoid long narrative summaries.
+1. **Conclusion:** PASS only if H1–H7 and R1–R3 are PASS or N/A with a reason;
+   any FAIL or GAP blocks PASS. Distinguish breaches from missing evidence.
+2. **Scope:** method, setting, budget, tasks, run ID, revisions, auditor (or
+   assistant model and version), date, coverage and agent-visible documentation.
+3. **H1–H7 and R1–R3:** status with event IDs or file/line references.
+4. **Per-task accounting:** budget, reconciled starts, failed/incomplete starts,
+   simulator steps and seed validity for every task and reported budget. Use
+   Unknown, never zero, for unavailable counts.
+5. **Warnings/action table:** affected tasks/settings, evidence and required
+   action; None if there are none.
 
-Any FAIL yields VIOLATION FOUND. Otherwise, any UNVERIFIED yields UNVERIFIED;
-PASS WITHIN AUDITED SCOPE requires all applicable checks to pass. Explain N/A.
-Link the
-[harness audit](audit_robomme_plus_harness.md), without treating it as proof of use.
-Map findings to the protocol's four rules: development history, permitted
-resources, freeze before evaluation, and resource usage, in that order.
-
-A pass needs affirmative evidence for applicable checks. Missing essential
-records remain unverified; a confirmed violation remains a violation even if
-other checks are unverified. Say "no forbidden read observed in the inspected
-logs" when supported, not "source access was impossible".
+Write "no forbidden read observed in the inspected logs" when that is what the
+evidence supports, not "source access was impossible". Link the
+[harness audit](audit_robomme_plus_harness.md), but do not treat it as proof of use.
 
 State whether results can be reused, need evidence recovery, require frozen
-reevaluation, or require redevelopment. Specify affected tasks/settings and why.
-Formatting, renamed settings or a new wrapper alone do not require redevelopment.
-Do not launch reruns as part of this read-only audit.
-Include verdicts, evidence and warnings in the submission's final audit section;
-separate full-report links are optional.
+reevaluation, or require redevelopment, and name the affected tasks/settings.
+Formatting, renamed settings or a new wrapper alone do not require
+redevelopment. Do not launch reruns as part of this read-only audit.
