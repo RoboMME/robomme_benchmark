@@ -7,11 +7,11 @@ setting. For interaction settings, report results under a budget of at most
 Results with 1, 3 or 5 rollouts per task are optional supplementary tables and do not enter the leaderboard.
 
 All 50 released demonstrations are available as recorded data for offline analysis
-and learning in **Demo-only** and **Demo+interaction**.
+and learning in `demo-only` and `demo&interaction`.
 Replaying their actions through the simulator consumes the development rollout
-budget and is forbidden in the demo-only setting. State which demos
+budget and is forbidden in the `demo-only` setting. State which demos
 and modalities were used.
-**Zero-shot** and **Interaction-only** do not use released demonstrations.
+`zero-shot` and `interaction-only` do not use released demonstrations.
 
 Each result uses **800 fixed test episodes: 16 tasks × 50 episodes**. Report
 success rates as percentages with two decimal places. API costs are in USD;
@@ -20,7 +20,7 @@ Use N/A when no paid API is used. Label estimates or incomplete costs.
 
 Submissions involving agentic development must include the
 [development audit record](#agentic-development-audit-record) for each reported
-setting and budget. An unchanged zero-shot system should state that no
+setting and budget. An unchanged `zero-shot` system should state that no
 RoboMME-Plus development was performed.
 
 
@@ -30,7 +30,7 @@ RoboMME-Plus development was performed.
 - [ ] Agentic Track: systems using pretrained foundation models for planning, action, or coding.
 
 
-## 1. Zero-shot
+## 1. `zero-shot`
 
 Test the policy directly, or develop it only on original RoboMME, without Plus adaptation.
 
@@ -67,9 +67,9 @@ Test the policy directly, or develop it only on original RoboMME, without Plus a
 | **Overall** | **All tasks** | **___/800** |  |
 
 
-## 2. Demo-only
+## 2. `demo-only`
 
-Report this if you choose **Demo-only**. Adapt using released offline demonstrations, without Plus simulator interactions.
+Report this if you choose `demo-only`. Adapt using released offline demonstrations, without Plus simulator interactions.
 
 ### [Model / framework name]
 
@@ -107,9 +107,9 @@ Report this if you choose **Demo-only**. Adapt using released offline demonstrat
 | **Overall** | **All tasks** | **___/800** |  |
 
 
-## 3. Interaction-only
+## 3. `interaction-only`
 
-Report this if you choose **Interaction-only**. Adapt through training-seed interactions, without released offline demonstrations.
+Report this if you choose `interaction-only`. Adapt through training-seed interactions, without released offline demonstrations.
 
 ### [Model / framework name]
 
@@ -147,9 +147,9 @@ Report this if you choose **Interaction-only**. Adapt through training-seed inte
 | **Overall** | **All tasks** |  |  |
 
 
-## 4. Demo+interaction
+## 4. `demo&interaction`
 
-Report this if you choose **Demo+interaction**. Adapt using released offline demonstrations and training-seed interactions.
+Report this if you choose `demo&interaction`. Adapt using released offline demonstrations and training-seed interactions.
 
 ### [Model / framework name]
 

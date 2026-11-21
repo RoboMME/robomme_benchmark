@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 5,
+  "task": "ButtonUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "a5e7fab0e8261452bd3ec128e20ff58a8b48c20f78a6975a83abf33e8375b328",
+    "percep.py": "06819031a9d418f71e20292acae64107f965488271c3ac060ed40874e56d1446",
+    "robo.py": "24cdfa5fd2e435f708092a16ea4de53334fa3f77f0c0b60ea2831f94f1e6ddc9",
+    "skills.py": "2db2bd479b0f838940dca9422b7bd2441a5ca5e18fbe486c99a6cb4ad1f369b4"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "a5e7fab0e8261452bd3ec128e20ff58a8b48c20f78a6975a83abf33e8375b328",
+    "percep.py": "06819031a9d418f71e20292acae64107f965488271c3ac060ed40874e56d1446",
+    "robo.py": "24cdfa5fd2e435f708092a16ea4de53334fa3f77f0c0b60ea2831f94f1e6ddc9",
+    "skills.py": "2db2bd479b0f838940dca9422b7bd2441a5ca5e18fbe486c99a6cb4ad1f369b4"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

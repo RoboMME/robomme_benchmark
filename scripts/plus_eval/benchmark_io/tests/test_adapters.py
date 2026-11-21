@@ -42,7 +42,7 @@ def test_settings_are_enforced_before_data_or_simulator_access(tmp_path):
         study.reserve("BinFill", purpose="preview")
     with pytest.raises(PermissionError):
         make_study(tmp_path / "interaction-only").require_demos()
-    make_study(tmp_path / "both", setting="demo+interaction").require_demos()
+    make_study(tmp_path / "both", setting="demo&interaction").require_demos()
     with pytest.raises(ValueError):
         make_study(tmp_path / "interaction-only", budget=9)
     with pytest.raises(ValueError):

@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 1,
+  "task": "BinFill",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "CHANGELOG.md": "e7045da01820c7b55620df2ad8be78b0671623c163198ed29c633a6daeec7242",
+    "controller.py": "e06e81a1bb01a9d09691cb851efa8c4302381c4ca0322f383a0d6108acd1325c",
+    "geom.py": "7b015670333d8bfb497807471dbcb08e2a10b71e57716412d9c49468cb48d7a9",
+    "io_utils.py": "db1d0efc3c8df5895ec52e54c0e31acabb7a3dcb29cd7aa3b1476f0f36f68ee1",
+    "perception.py": "2578d203def06bce742598c70f8bfdf03541605b5df33a3ffa1e70db440fc031"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "CHANGELOG.md": "e7045da01820c7b55620df2ad8be78b0671623c163198ed29c633a6daeec7242",
+    "controller.py": "e06e81a1bb01a9d09691cb851efa8c4302381c4ca0322f383a0d6108acd1325c",
+    "geom.py": "7b015670333d8bfb497807471dbcb08e2a10b71e57716412d9c49468cb48d7a9",
+    "io_utils.py": "db1d0efc3c8df5895ec52e54c0e31acabb7a3dcb29cd7aa3b1476f0f36f68ee1",
+    "perception.py": "2578d203def06bce742598c70f8bfdf03541605b5df33a3ffa1e70db440fc031"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

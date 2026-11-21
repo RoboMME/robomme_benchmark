@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 5,
+  "task": "SwingXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "cacaf8f4572158dd1f3cb3ec5ccef3e75bff4d6ef37373c30ee703b1687e5eb1",
+    "motion.py": "639532818b7d4f7ee7177c336a20b0d385e51d91e0e6582e9b9d9cff5b88ce15",
+    "perc.py": "b802bf57f30ae2a3b0093128c8b00c20714d111c1376606fa5fa939222534384",
+    "scene.py": "f27c95ff86c9e818748509af701498edc5e48773b41e06bc6c31a29b26078cdb"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "cacaf8f4572158dd1f3cb3ec5ccef3e75bff4d6ef37373c30ee703b1687e5eb1",
+    "motion.py": "639532818b7d4f7ee7177c336a20b0d385e51d91e0e6582e9b9d9cff5b88ce15",
+    "perc.py": "b802bf57f30ae2a3b0093128c8b00c20714d111c1376606fa5fa939222534384",
+    "scene.py": "f27c95ff86c9e818748509af701498edc5e48773b41e06bc6c31a29b26078cdb"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

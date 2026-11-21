@@ -14,7 +14,7 @@ Embodied-Astra uses the `gpt-6-astra` API model directly as a robot policy. Give
 
 **Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
-**Setting:** Zero-shot.
+**Setting:** `zero-shot`.
 
 **Demo use:** No released RoboMME-Plus training demonstrations.
 

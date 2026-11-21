@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 5,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "82039b0b43f76b0c50de225eb31fc461031c54477340d41f85bdc68e56a68cda",
+    "geom.py": "e4b14dd535f83babdb1e00334bb2b4c9d0a3ee398ea874497f68df46f0fb3bcc",
+    "scene.py": "5b550b81fa646bc1094018283a4d2f6856e4189e435f048b357e8aaf8949d437",
+    "tool.py": "0154f0ef7bf3820abdf025878f615c0801e80846f763c1839f56543a06ca1af2"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "82039b0b43f76b0c50de225eb31fc461031c54477340d41f85bdc68e56a68cda",
+    "geom.py": "e4b14dd535f83babdb1e00334bb2b4c9d0a3ee398ea874497f68df46f0fb3bcc",
+    "scene.py": "5b550b81fa646bc1094018283a4d2f6856e4189e435f048b357e8aaf8949d437",
+    "tool.py": "0154f0ef7bf3820abdf025878f615c0801e80846f763c1839f56543a06ca1af2"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

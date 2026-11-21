@@ -5,7 +5,7 @@ logs before submission**. Use a coding assistant that can read the method's code
 and evidence files. The skills are Markdown instructions for that assistant;
 there is no separate audit command or automatic certification.
 
-Choose `zero-shot`, `demo-only`, `interaction-only` or `demo+interaction` first.
+Choose `zero-shot`, `demo-only`, `interaction-only` or `demo&interaction` first.
 Use a Plus rollout budget of 0 for the first two, and 10 for the interaction
 settings. R1/R3/R5 are optional. The budget is per task across all its training seeds.
 

@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 10,
+  "task": "VideoUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "2d85dc4788369d833255f1e4c6064d28b8631482d2e0ba3fee0b32941c6364cc",
+    "motion.py": "e101e89e8e625592b1e86f426cf9851db12f6db0f6804ac6d22c07ef48e106d4",
+    "percep.py": "7fe70e831b21ca1b571bba6139715c2c6c3c5983b27e0d4ac4dbc559bd244625"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "2d85dc4788369d833255f1e4c6064d28b8631482d2e0ba3fee0b32941c6364cc",
+    "motion.py": "e101e89e8e625592b1e86f426cf9851db12f6db0f6804ac6d22c07ef48e106d4",
+    "percep.py": "7fe70e831b21ca1b571bba6139715c2c6c3c5983b27e0d4ac4dbc559bd244625"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

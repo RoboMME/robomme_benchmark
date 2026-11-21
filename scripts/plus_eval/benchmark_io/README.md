@@ -55,7 +55,7 @@ python -m benchmark_io.watch_unified --root "<RUN_ROOT>"
 
 Preparation pins the benchmark, 50 recordings, protocol, runtime and image
 digest without API calls or simulator starts. New studies create **6 configurations**:
-2 methods × (demo-only at 0; each interaction setting at 10).
+2 methods × (`demo-only` at 0; each interaction setting at 10).
 Each configuration evaluates 800 episodes: 4,800 tests across both methods.
 Existing studies retain their pinned configuration list, including historical budgets.
 
@@ -65,7 +65,9 @@ Use these setting names in commands and directories:
 | --- | --- |
 | `demo-only` | 0 |
 | `interaction-only` | 10 |
-| `demo+interaction` | 10 |
+| `demo&interaction` | 10 |
+
+In shell commands, write `--setting 'demo&interaction'` with quotes.
 
 Worker allocation is configurable. Evaluation requires frozen policies.
 Example `<RUN_ROOT>/schedule_policy.json` for two GPUs:

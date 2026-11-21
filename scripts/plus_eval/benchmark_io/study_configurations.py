@@ -22,7 +22,7 @@ def configurations(root=None):
                 rows = None  # A new queue, before its first assignment.
     if rows is None:
         rows = [dict(key=f'{method}/{setting}/R{budget}', method=method, setting=setting, budget=budget)
-                for setting, budget in (('demo-only', 0), ('interaction-only', 10), ('demo+interaction', 10))
+                for setting, budget in (('demo-only', 0), ('interaction-only', 10), ('demo&interaction', 10))
                 for method in ('aspire', 'rax')]
     if not isinstance(rows, list) or not rows:
         raise ValueError('A study must have explicit configuration assignments')
@@ -30,7 +30,7 @@ def configurations(root=None):
     for row in rows:
         method, setting, budget = row['method'], row['setting'], row['budget']
         key = row['key']
-        if (method not in ('aspire', 'rax') or setting not in ('demo-only', 'interaction-only', 'demo+interaction')
+        if (method not in ('aspire', 'rax') or setting not in ('demo-only', 'interaction-only', 'demo&interaction')
                 or type(budget) is not int or not 0 <= budget <= 10
                 or (setting == 'demo-only') != (budget == 0)
                 or key != f'{method}/{setting}/R{budget}' or key in seen):

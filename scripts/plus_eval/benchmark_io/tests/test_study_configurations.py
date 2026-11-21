@@ -11,7 +11,7 @@ def optional_budget_plan():
     return {'configurations': [dict(key=f'{method}/{setting}/R{budget}', method=method,
                                     setting=setting, budget=budget)
             for method in ('aspire', 'rax')
-            for setting, budgets in (('demo-only', [0]), ('interaction-only', [1, 3, 5, 10]), ('demo+interaction', [1, 3, 5, 10]))
+            for setting, budgets in (('demo-only', [0]), ('interaction-only', [1, 3, 5, 10]), ('demo&interaction', [1, 3, 5, 10]))
             for budget in budgets]}
 
 
@@ -20,7 +20,7 @@ def test_new_study_schedules_only_current_budgets(tmp_path):
     queue.seed()
     jobs = queue.jobs(kind='develop')
     expected = {(method, setting, budget) for method in ('aspire', 'rax')
-                for setting, budgets in (('demo-only', [0]), ('interaction-only', [10]), ('demo+interaction', [10]))
+                for setting, budgets in (('demo-only', [0]), ('interaction-only', [10]), ('demo&interaction', [10]))
                 for budget in budgets}
     assert len(jobs) == len(expected) == 6
     assert {(j['method'], j['setting'], j['budget']) for j in jobs} == expected

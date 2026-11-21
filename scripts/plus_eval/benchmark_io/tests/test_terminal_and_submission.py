@@ -36,7 +36,7 @@ def test_nonterminal_worker_completion_is_preserved():
         lambda: pytest.fail('A running episode must not be stopped')) == (b'normal result', b'', None)
 
 
-@pytest.mark.parametrize('setting,budget', [('demo-only', 0), ('interaction-only', 1), ('demo+interaction', 1)])
+@pytest.mark.parametrize('setting,budget', [('demo-only', 0), ('interaction-only', 1), ('demo&interaction', 1)])
 @pytest.mark.parametrize('expired', [False, True])
 def test_native_submit_accepts_offline_demo_only_but_still_requires_interaction_rehearsal(tmp_path, monkeypatch, setting, budget, expired):
     study = Study(tmp_path/'study', method='rax', setting=setting, budget=budget,

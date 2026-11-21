@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "demo&interaction",
+  "budget": 3,
+  "task": "PatternLock",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "8ef701759809cc34298e4f02ed2f1dddf7082525c12cb756f86b74cf10b898e4"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "PatternLock.py": "8ef701759809cc34298e4f02ed2f1dddf7082525c12cb756f86b74cf10b898e4"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

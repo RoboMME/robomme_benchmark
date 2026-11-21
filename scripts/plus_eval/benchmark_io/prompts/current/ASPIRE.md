@@ -69,7 +69,7 @@ the published button deadlines, which can terminate before that horizon.
 The existing API documentation defines the permitted constructors, helper
 functions and sandbox syntax. Use actual public contract objects when testing
 parsers offline; a hand-written image-only mock is not equivalent to an
-`Observation`. Offline checks do not authorize a simulator start in demo-only.
+`Observation`. Offline checks do not authorize a simulator start in `demo-only`.
 
 After a motion or gripper helper reports `terminated` or `truncated`, finish the
 program using the result already returned. Further state/image reads may raise

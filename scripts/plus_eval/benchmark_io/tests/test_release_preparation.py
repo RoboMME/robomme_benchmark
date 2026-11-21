@@ -9,7 +9,7 @@ from benchmark_io import prepare_unified
 from benchmark_io.unified_study import configurations
 
 
-@pytest.mark.parametrize('settings,case_count', [(None,6),(['interaction-only','demo+interaction'],4)])
+@pytest.mark.parametrize('settings,case_count', [(None,6),(['interaction-only','demo&interaction'],4)])
 def test_fresh_prepare_needs_no_old_study_or_simulator(tmp_path,monkeypatch,settings,case_count):
     source=Path(__file__).resolve().parents[4]
     monkeypatch.setattr(prepare_unified,'REPO',source)

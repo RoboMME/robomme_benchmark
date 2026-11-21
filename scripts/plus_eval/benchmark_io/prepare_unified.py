@@ -63,7 +63,7 @@ def prepare(root, demos, *, protocol=None, settings=None):
     root = Path(root).resolve()
     if root.exists():
         raise FileExistsError('Use a fresh study directory')
-    allowed = ('demo-only', 'interaction-only', 'demo+interaction')
+    allowed = ('demo-only', 'interaction-only', 'demo&interaction')
     if settings is not None and (not settings or len(set(settings)) != len(settings)
                                  or not set(settings) <= set(allowed)):
         raise ValueError('Choose distinct supported development settings')
@@ -125,7 +125,7 @@ def main():
     parser.add_argument('--root',type=Path,required=True)
     parser.add_argument('--demos',type=Path,help='Directory containing the 16 released training H5 files')
     parser.add_argument('--protocol',type=Path,help='Immutable public protocol bundle')
-    parser.add_argument('--settings',nargs='+',choices=['demo-only','interaction-only','demo+interaction'],
+    parser.add_argument('--settings',nargs='+',choices=['demo-only','interaction-only','demo&interaction'],
                         help='Development settings to prepare; default: all three')
     args = parser.parse_args()
     if args.command=='prepare':

@@ -151,7 +151,7 @@ def develop(args):
         f'of another budget or smoke test. The TOTAL per-task simulator-start ceiling is R{budget}. '
         'Every preview, interaction, reset and rehearsal counts. Status is authoritative. '
         'Choose your own strategy under that ceiling. demo-only is offline with the released task recordings; '
-        'interaction-only has no expert recordings; demo+interaction has recordings and the same bounded simulator tools. '
+        'interaction-only has no expert recordings; demo&interaction has recordings and the same bounded simulator tools. '
         'Keep all program versions, commands, reasoning notes and evidence. Register your selected '
         'bundle and use the native submit tool to freeze it. For interaction settings, the original '
         'clean rehearsal of that exact bundle is required and consumes one of the same allowed starts. '

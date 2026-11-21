@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "demo&interaction",
+  "budget": 1,
+  "task": "VideoPlaceOrder",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "e0adcb58cd841889c4e3842cdd9a08628adc16b56d411492059c4edf3e7763b0"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "VideoPlaceOrder.py": "e0adcb58cd841889c4e3842cdd9a08628adc16b56d411492059c4edf3e7763b0"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

@@ -51,7 +51,7 @@ def test_all_configurations_must_finish_and_freeze_before_release(tmp_path, opti
         write(tmp_path/'study_plan.json', dict(configurations=[
             dict(key=f'{method}/{setting}/R{budget}', method=method, setting=setting, budget=budget)
             for method in ('aspire', 'rax')
-            for setting, budgets in (('demo-only', [0]), ('interaction-only', [1, 3, 5, 10]), ('demo+interaction', [1, 3, 5, 10]))
+            for setting, budgets in (('demo-only', [0]), ('interaction-only', [1, 3, 5, 10]), ('demo&interaction', [1, 3, 5, 10]))
             for budget in budgets]))
     queue=Queue(tmp_path);queue.seed()
     write(tmp_path/'schedule_policy.json',dict(evaluation_mode='after_all_development'))

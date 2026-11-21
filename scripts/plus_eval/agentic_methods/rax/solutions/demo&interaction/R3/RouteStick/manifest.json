@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 3,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "e5405789e1aecf5d31323461a1d8333a21bc568efc30e91e1b5860f981e8f2b6",
+    "discs.py": "5a2f470b7ef2f59c64487265dcf6844c7d558e00c7cba56eef71ca023abc6075",
+    "geom.py": "acc820a0888777db4e3152bf39b6345c27bb8c526851da26e5efb712ff1627ae"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "e5405789e1aecf5d31323461a1d8333a21bc568efc30e91e1b5860f981e8f2b6",
+    "discs.py": "5a2f470b7ef2f59c64487265dcf6844c7d558e00c7cba56eef71ca023abc6075",
+    "geom.py": "acc820a0888777db4e3152bf39b6345c27bb8c526851da26e5efb712ff1627ae"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

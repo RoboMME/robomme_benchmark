@@ -9,12 +9,12 @@ Each method link below provides setup and running instructions.
 
 | Method | Setting | Successes (rate) |
 |---|---|---:|
-| [Embodied Astra](agentic_methods/astra/embodied/README.md) | Zero-shot | 194/800 (24.25%) |
-| [One-shot Astra](agentic_methods/astra/embodied/README.md#one-shot) | Demo-only | 281/800 (35.13%) |
-| [3-tier Astra](agentic_methods/astra/three_tier/README.md) | Zero-shot | 70/800 (8.75%) |
-| [FrameSamp+Modul](non_agentic_methods/framesamp_modul/README.md) | Zero-shot | 19/800 (2.38%) |
-| [SimpleMemVLA](non_agentic_methods/simplememvla/README.md) | Zero-shot | 14/800 (1.75%) |
-| [PonderPounce](non_agentic_methods/ponderpounce/README.md) | Zero-shot | 20/800 (2.50%) |
+| [Embodied Astra](agentic_methods/astra/embodied/README.md) | `zero-shot` | 194/800 (24.25%) |
+| [One-shot Astra](agentic_methods/astra/embodied/README.md#one-shot) | `demo-only` | 281/800 (35.13%) |
+| [3-tier Astra](agentic_methods/astra/three_tier/README.md) | `zero-shot` | 70/800 (8.75%) |
+| [FrameSamp+Modul](non_agentic_methods/framesamp_modul/README.md) | `zero-shot` | 19/800 (2.38%) |
+| [SimpleMemVLA](non_agentic_methods/simplememvla/README.md) | `zero-shot` | 14/800 (1.75%) |
+| [PonderPounce](non_agentic_methods/ponderpounce/README.md) | `zero-shot` | 20/800 (2.50%) |
 
 ## Agentic adaptation
 
@@ -24,9 +24,9 @@ all results use 800 test episodes.
 
 | Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
 |---|---|---:|---:|
-| Demo-only | 0 | 136/800 (17.00%) | 152/800 (19.00%) |
-| Interaction-only | 10 | 341/800 (42.63%) | 312/800 (39.00%) |
-| Demo+interaction | 10 | 279/800 (34.88%) | 337/800 (42.13%) |
+| `demo-only` | 0 | 136/800 (17.00%) | 152/800 (19.00%) |
+| `interaction-only` | 10 | 341/800 (42.63%) | 312/800 (39.00%) |
+| `demo&interaction` | 10 | 279/800 (34.88%) | 337/800 (42.13%) |
 
 [Optional R1/R3/R5 results](../../doc/robomme_plus/robomme_plus_baseline_results.md#optional-interaction-budgets)
 remain documented, with frozen solutions and JSON summaries.

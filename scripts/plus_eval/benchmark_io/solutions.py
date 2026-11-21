@@ -36,7 +36,7 @@ def resolve_image(image):
 
 def main(method, evaluate, method_dir):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--setting', choices=['demo-only','interaction-only','demo+interaction'], required=True)
+    parser.add_argument('--setting', choices=['demo-only','interaction-only','demo&interaction'], required=True)
     parser.add_argument('--budget', type=int, choices=[0,1,3,5,10], required=True)
     parser.add_argument('--solutions', type=Path, default=Path(method_dir)/'solutions')
     parser.add_argument('--output-dir', type=Path, required=True)

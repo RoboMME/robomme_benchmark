@@ -1,0 +1,23 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 10,
+  "task": "ButtonUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "eaee4734ab59a053c72313cb8498e5ecfed52277446db953ca22ff0a23d82c96",
+    "rlib.py": "efa4a3e5ed5e297d1e29a51b96336a99525672e15f53075437a4f4ffd50bcc32",
+    "robot.py": "1b53abfa7c04069f0246fe949b06389bd951de63d6b5ac3babbdb9fcd6589a0b",
+    "tracker.py": "b3c44472a6b2df35911c919bf34f327391f35b5ece8ad9f4c8b56fb47872c95f"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "eaee4734ab59a053c72313cb8498e5ecfed52277446db953ca22ff0a23d82c96",
+    "rlib.py": "efa4a3e5ed5e297d1e29a51b96336a99525672e15f53075437a4f4ffd50bcc32",
+    "robot.py": "1b53abfa7c04069f0246fe949b06389bd951de63d6b5ac3babbdb9fcd6589a0b",
+    "tracker.py": "b3c44472a6b2df35911c919bf34f327391f35b5ece8ad9f4c8b56fb47872c95f"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

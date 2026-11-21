@@ -12,7 +12,7 @@ import re
 import sqlite3
 import time
 
-SETTINGS = ("zero-shot", "demo-only", "interaction-only", "demo+interaction")
+SETTINGS = ("zero-shot", "demo-only", "interaction-only", "demo&interaction")
 
 
 def setting_key(setting):
@@ -37,7 +37,7 @@ class Study:
         if type(budget) is not int or not 0 <= budget <= 10:
             raise ValueError("The per-task budget must be an integer in 0..10")
         if (setting in ("zero-shot", "demo-only")) != (budget == 0):
-            raise ValueError("Zero-shot/demo-only require R0; interaction settings require R1..R10")
+            raise ValueError("zero-shot/demo-only require R0; interaction settings require R1..R10")
         if not records or any(len(rows) != (5 if task == "MoveCube" else 3)
                               for task, rows in records.items()):
             raise ValueError("Use the released training episode counts")
@@ -150,7 +150,7 @@ class Study:
             return [dict(row) for row in db.execute("SELECT * FROM attempts ORDER BY id")]
 
     def require_demos(self):
-        if self.config["setting"] not in ("demo-only", "demo+interaction"):
+        if self.config["setting"] not in ("demo-only", "demo&interaction"):
             raise PermissionError("This setting cannot access released demonstrations")
 
 

@@ -14,7 +14,8 @@ python -m benchmark_io.prepare --root runs/my_agent/interaction-only \
   --method my_agent --setting interaction-only --budget 10
 ```
 
-Settings are `zero-shot`, `demo-only`, `interaction-only`, `demo+interaction`.
+Settings are `zero-shot`, `demo-only`, `interaction-only`, `demo&interaction`.
+In shell commands, quote the combined setting: `--setting 'demo&interaction'`.
 The first two permit zero Plus simulator starts. The interaction allowance is **10
 starts per task across all its training seeds combined**: not 10 per seed, worker,
 verification stage or restart. R1/R3/R5 are optional results; the leaderboard uses
@@ -60,7 +61,7 @@ Observations contain phase-tagged front/wrist RGB-D, calibration, robot state,
 goal, control limits and public success/error feedback. The initial task video
 is an observation in every setting. Expert recordings are separate offline data
 available only in demo settings. Simulator replay consumes the development
-budget and is forbidden in demo-only.
+budget and is forbidden in `demo-only`.
 
 The ledger commits before simulator construction. Failed setup, zero-action
 previews, early stops, timeouts, retries and frozen-policy rehearsals all count.

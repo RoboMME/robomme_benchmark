@@ -7,11 +7,8 @@ One episode per non-MoveCube task has an [atomic variation](../../src/robomme_pl
 H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
 [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
 
-Use these recordings as offline data in **Demo-only** or
-**Demo+interaction**. Report the demos and modalities used.
-Replaying recorded actions through the simulator consumes the per-task budget
-of at most 10 attempts; demo-only permits no Plus simulator starts. See the
-[evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol).
+Use these recordings as offline data in `demo-only` or
+`demo&interaction`.
 
 ## Replay
 

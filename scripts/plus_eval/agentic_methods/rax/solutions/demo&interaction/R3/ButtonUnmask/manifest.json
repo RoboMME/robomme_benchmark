@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 3,
+  "task": "ButtonUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "0a5fa1d61aa53d25e2ebdbd4c0d380d5fce3c824591b2887897ce6f20025b977",
+    "perception.py": "443e2a33a88ddcbf2f6cac72238913dbc2700f818669e615db12b942681c5e20",
+    "robot.py": "21e3948fd55d57920711d6e572881161fa80ec8e2a804d9d8f13abb79419a519"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "0a5fa1d61aa53d25e2ebdbd4c0d380d5fce3c824591b2887897ce6f20025b977",
+    "perception.py": "443e2a33a88ddcbf2f6cac72238913dbc2700f818669e615db12b942681c5e20",
+    "robot.py": "21e3948fd55d57920711d6e572881161fa80ec8e2a804d9d8f13abb79419a519"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

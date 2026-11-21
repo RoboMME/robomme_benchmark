@@ -5,7 +5,7 @@ Evaluated by the RoboMME team. [Adapter and reproduction instructions](../../../
 - **Track:** Agentic.
 - **Development model:** Claude Opus 5.5, high reasoning effort.
 - **Evaluation:** frozen Python policies and local providers; no frontier-model API calls.
-- **Demonstrations:** all 50 recordings available in demo settings; front/wrist RGB, goal, phase and timestamps. Interaction-only receives no expert recordings.
+- **Demonstrations:** all 50 recordings available in demo settings; front/wrist RGB, goal, phase and timestamps. `interaction-only` receives no expert recordings.
 - **Interaction inputs:** public RGB-D, camera calibration, robot state, goal, conditioning video and terminal/error feedback.
 - **Development limits:** 150 minutes per task; each reported budget was an independent study. All starts, including verification and rehearsals, share the task budget.
 - **Study:** `full_20261116_protocol_v2`, with pinned v2/v3 interface prompts. These historical results use its original training snapshot; see the release-version qualification below.
@@ -16,13 +16,13 @@ Each setting evaluates all 800 tests; failures, timeouts and errors remain in th
 
 | Setting | Budget per task | Success | Actual starts, all tasks | Known development API cost (USD) | Evaluation API cost |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Demo-only | 0 | 136/800 (17.00%) | 0 | ≥$164.34 | $0 |
-| Interaction-only | 10 | 341/800 (42.63%) | 150 | ≥$167.09 | $0 |
-| Demo+interaction | 10 | 279/800 (34.88%) | 135 | ≥$178.99 | $0 |
+| `demo-only` | 0 | 136/800 (17.00%) | 0 | ≥$164.34 | $0 |
+| `interaction-only` | 10 | 341/800 (42.63%) | 150 | ≥$167.09 | $0 |
+| `demo&interaction` | 10 | 279/800 (34.88%) | 135 | ≥$178.99 | $0 |
 
 Development costs use saved token usage and the pinned historical rate card; incomplete requests make the shown value a known subtotal. Local compute is excluded.
 
-| Task | Demo-only | Interaction-only, R10 | Demo+interaction, R10 |
+| Task | `demo-only` | `interaction-only`, R10 | `demo&interaction`, R10 |
 | --- | ---: | ---: | ---: |
 | BinFill | 33/50 | 25/50 | 24/50 |
 | ButtonUnmask | 2/50 | 29/50 | 26/50 |
@@ -45,7 +45,7 @@ Development costs use saved token usage and the pinned historical rate card; inc
 
 These budgets are supplementary and do not enter the leaderboard.
 
-| Budget per task | Interaction-only | Demo+interaction |
+| Budget per task | `interaction-only` | `demo&interaction` |
 | --- | ---: | ---: |
 | R1 | 117/800 (14.63%) | 155/800 (19.38%) |
 | R3 | 134/800 (16.75%) | 261/800 (32.63%) |
@@ -54,7 +54,7 @@ These budgets are supplementary and do not enter the leaderboard.
 <details>
 <summary>Optional per-task successes (each out of 50)</summary>
 
-| Task | Interaction R1 | R3 | R5 | Demo+interaction R1 | R3 | R5 |
+| Task | `interaction-only` R1 | R3 | R5 | `demo&interaction` R1 | R3 | R5 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | BinFill | 1 | 5 | 10 | 13 | 42 | 26 |
 | ButtonUnmask | 3 | 5 | 8 | 24 | 18 | 28 |
@@ -85,9 +85,9 @@ Audit date: 2026-11-21. Auditor: Codex, using automated inventories and manual s
 
 | Main setting | Transcript tool calls | Saved API requests checked | Starts reconciled |
 | --- | ---: | ---: | ---: |
-| Demo-only | 2071 | 2062 | 0 |
-| Interaction-only | 2093 | 2087 | 150 |
-| Demo+interaction | 2640 | 2452 | 135 |
+| `demo-only` | 2071 | 2062 | 0 |
+| `interaction-only` | 2093 | 2087 | 150 |
+| `demo&interaction` | 2640 | 2452 | 135 |
 
 | Rule / check | Finding | Evidence |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ The model-input review covers the main configurations. Optional R1/R3/R5 receive
 <details>
 <summary>Main development attempts and recorded control steps per task</summary>
 
-| Task | Interaction R10 starts | Control steps | Demo+interaction R10 starts | Control steps |
+| Task | `interaction-only` R10 starts | Control steps | `demo&interaction` R10 starts | Control steps |
 | --- | ---: | ---: | ---: | ---: |
 | BinFill | 10/10 | 5138 | 10/10 | 5409 |
 | ButtonUnmask | 10/10 | 2682 | 5/10 | 2419 |
@@ -122,12 +122,12 @@ The model-input review covers the main configurations. Optional R1/R3/R5 receive
 
 </details>
 
-Demo-only has zero simulator starts and zero simulator control steps for every task.
+`demo-only` has zero simulator starts and zero simulator control steps for every task.
 
 ### Warnings and release-version qualification
 
-- Demo-only has one missing tool-response transcript entry for an offline mock sweep. The API tool call and five redirected output files survive (`development_api/0969_2657a508/events.jsonl`; `development/workspace/campaign/robomme_plus/robomme_plus/task_15/debug/logs/v0*/sweep_final_mock.txt`). No simulator was involved; the missing transcript entry remains disclosed.
-- Optional interaction R5 and demo+interaction R3 each have one missing tool-response entry. Their simulator starts are still fully reconciled. Optional demo+interaction R1 includes a disclosed terminal-handling correction.
+- `demo-only` has one missing tool-response transcript entry for an offline mock sweep. The API tool call and five redirected output files survive (`development_api/0969_2657a508/events.jsonl`; `development/workspace/campaign/robomme_plus/robomme_plus/task_15/debug/logs/v0*/sweep_final_mock.txt`). No simulator was involved; the missing transcript entry remains disclosed.
+- Optional `interaction-only` R5 and `demo&interaction` R3 each have one missing tool-response entry. Their simulator starts are still fully reconciled. Optional `demo&interaction` R1 includes a disclosed terminal-handling correction.
 - The pinned training snapshot and current v2 differ in **10 recordings and nine execution limits** across ButtonUnmaskSwap, MoveCube, PickHighlight, RouteStick and VideoRepick. Seed identities, difficulty, variants and variation profiles match. The inspected fixed test metadata checks match the current release.
 - These results may be retained under their original pinned training version. They must not be relabeled as development on current v2. Renamed settings and the new accounting wrapper alone do not require redevelopment.
 

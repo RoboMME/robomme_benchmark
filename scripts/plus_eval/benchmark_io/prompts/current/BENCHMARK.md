@@ -17,11 +17,11 @@ There are three different sources of visual information:
 
 - **Released training demonstration:** a fixed recording of a training episode.
   It can contain an initial task video followed by the expert robot's execution.
-  It is recorded data for offline analysis, available in demo-only and
-  demo+interaction.
+  It is recorded data for offline analysis, available in `demo-only` and
+  `demo&interaction`.
 - **Task conditioning video:** earlier events supplied as part of the current
   episode's input, when that task has a video. It is available during both training
-  interaction and testing, including interaction-only. It is not an additional training
+  interaction and testing, including `interaction-only`. It is not an additional training
   demonstration or the solution trajectory for the current execution.
 - **Live execution observation:** the current camera views and robot state while
   your program controls the robot. The front camera observes the scene; the wrist
@@ -32,12 +32,12 @@ The assigned adaptation setting determines what development may use:
 
 | Setting | Released Plus training recordings | Plus simulator starts per task |
 | --- | --- | --- |
-| Zero-shot | No | 0 |
-| Demo-only | Yes | 0 |
-| Interaction-only | No | At most 10 |
-| Demo+interaction | Yes | At most 10 |
+| `zero-shot` | No | 0 |
+| `demo-only` | Yes | 0 |
+| `interaction-only` | No | At most 10 |
+| `demo&interaction` | Yes | At most 10 |
 
-The main budget R is 10 for interaction settings and 0 for zero-shot/demo-only.
+The main budget R is 10 for interaction settings and 0 for `zero-shot`/`demo-only`.
 R1/R3/R5 are optional results; use the assigned budget, which is a total per task
 across all its training seeds, workers, sessions and verification stages. It counts attempts, not distinct seeds or demonstrations. Use the same setting names in tools and saved artifacts.
 Every Plus start counts, including a preview, debugging run, failed attempt, retry,
@@ -46,7 +46,7 @@ indices are allowed: 0–2, or 0–4 for MoveCube. These indices identify the sa
 training episodes as the corresponding recordings. Reading an existing recording
 does not start a simulator; starting an episode to obtain new observations does.
 Replaying recorded actions through physics consumes this budget and is forbidden
-in demo-only. Agents may choose any released training seed; no even allocation
+in `demo-only`. Agents may choose any released training seed; no even allocation
 is required. The default interface rotates seeds when no choice is supplied.
 Do not create another study or use another simulator entry point to obtain extra
 experience. The operator's persistent ledger accounts for every accepted start.

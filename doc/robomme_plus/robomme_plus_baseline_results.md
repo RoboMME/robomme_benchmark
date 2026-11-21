@@ -12,10 +12,10 @@ at the same setting and rollout budget, which caps simulator attempts per task o
 
 | Setting | Released Plus demonstrations | Maximum Plus rollouts per task |
 | --- | --- | --- |
-| Zero-shot | No | 0 |
-| Demo-only | Yes | 0 |
-| Interaction-only | No | 10 |
-| Demo+interaction | Yes | 10 |
+| `zero-shot` | No | 0 |
+| `demo-only` | Yes | 0 |
+| `interaction-only` | No | 10 |
+| `demo&interaction` | Yes | 10 |
 
 Original RoboMME's dataset and simulator may be used freely in every setting,
 outside the Plus rollout budget. Plus demos are offline recordings; every Plus
@@ -25,7 +25,7 @@ The [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol)
 defines permitted resources, audits, reporting and execution limits.
 
 
-## Zero-shot
+## `zero-shot`
 
 These baselines use their pretrained models without RoboMME-Plus training demos
 or simulator adaptation.
@@ -38,7 +38,7 @@ or simulator adaptation.
 | [3-tier Astra](<submission/3-tier-astra-plus (eval_by_RoboMME_team).md>) | 70/800 | 8.75% |
 | [PonderPounce](<submission/ponderpounce-plus (eval_by_RoboMME_team).md>) | 20/800 | 2.50% |
 
-## Demo-only
+## `demo-only`
 
 ASPIRE and RAX can inspect the released 50 demonstrations without simulator
 interaction. One-shot Astra receives one selected training example for the task
@@ -50,13 +50,13 @@ interaction. One-shot Astra receives one selected training example for the task
 | [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md) | All 50 demos available | 136/800 | 17.00% |
 | [RAX](../../scripts/plus_eval/agentic_methods/rax/README.md) | All 50 demos available | 152/800 | 19.00% |
 
-## Interaction-only
+## `interaction-only`
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
 | R10 | 341/800 (42.63%) | 312/800 (39.00%) |
 
-## Demo+interaction
+## `demo&interaction`
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
@@ -69,12 +69,12 @@ interaction settings. Each historical budget was developed independently.
 
 | Setting | Budget | ASPIRE | RAX |
 | --- | --- | ---: | ---: |
-| Interaction-only | R1 | 117/800 (14.63%) | 26/800 (3.25%) |
-| Interaction-only | R3 | 134/800 (16.75%) | 351/800 (43.88%) |
-| Interaction-only | R5 | 215/800 (26.88%) | 265/800 (33.13%) |
-| Demo+interaction | R1 | 155/800 (19.38%) | 156/800 (19.50%) |
-| Demo+interaction | R3 | 261/800 (32.63%) | 315/800 (39.38%) |
-| Demo+interaction | R5 | 252/800 (31.50%) | 283/800 (35.38%) |
+| `interaction-only` | R1 | 117/800 (14.63%) | 26/800 (3.25%) |
+| `interaction-only` | R3 | 134/800 (16.75%) | 351/800 (43.88%) |
+| `interaction-only` | R5 | 215/800 (26.88%) | 265/800 (33.13%) |
+| `demo&interaction` | R1 | 155/800 (19.38%) | 156/800 (19.50%) |
+| `demo&interaction` | R3 | 261/800 (32.63%) | 315/800 (39.38%) |
+| `demo&interaction` | R5 | 252/800 (31.50%) | 283/800 (35.38%) |
 
 ## Agentic development audit status
 
@@ -103,7 +103,7 @@ Each cell uses 50 episodes. R5 columns are optional supplementary results.
 The method submissions also include per-task R1/R3 results.
 
 <details>
-<summary>Zero-shot</summary>
+<summary><code>zero-shot</code></summary>
 
 | Task | Embodied Astra | FrameSamp+Modul | SimpleMemVLA | 3-tier Astra | PonderPounce |
 |---|---:|---:|---:|---:|---:|
@@ -127,7 +127,7 @@ The method submissions also include per-task R1/R3 results.
 </details>
 
 <details>
-<summary>Demo-only</summary>
+<summary><code>demo-only</code></summary>
 
 | Task | One-shot Astra | ASPIRE | RAX |
 |---|---:|---:|---:|
@@ -151,7 +151,7 @@ The method submissions also include per-task R1/R3 results.
 </details>
 
 <details>
-<summary>Interaction-only</summary>
+<summary><code>interaction-only</code></summary>
 
 | Task | ASPIRE R5 | ASPIRE R10 | RAX R5 | RAX R10 |
 | --- | ---: | ---: | ---: | ---: |
@@ -175,7 +175,7 @@ The method submissions also include per-task R1/R3 results.
 </details>
 
 <details>
-<summary>Demo+interaction</summary>
+<summary><code>demo&amp;interaction</code></summary>
 
 | Task | ASPIRE R5 | ASPIRE R10 | RAX R5 | RAX R10 |
 | --- | ---: | ---: | ---: | ---: |

@@ -5,7 +5,7 @@ Evaluated by the RoboMME team. [Adapter and reproduction instructions](../../../
 - **Track:** Agentic.
 - **Development model:** Claude Opus 5.5, high reasoning effort.
 - **Evaluation:** frozen Python policies and local providers; no frontier-model API calls.
-- **Demonstrations:** all 50 recordings available in demo settings; front/wrist RGB, goal, phase and timestamps. Interaction-only receives no expert recordings.
+- **Demonstrations:** all 50 recordings available in demo settings; front/wrist RGB, goal, phase and timestamps. `interaction-only` receives no expert recordings.
 - **Interaction inputs:** public RGB-D, camera calibration, robot state, goal, conditioning video and terminal/error feedback.
 - **Development limits:** 150 minutes per task; each reported budget was an independent study. All starts, including verification and rehearsals, share the task budget.
 - **Study:** `full_20261116_protocol_v2`, with pinned v2/v3 interface prompts. These historical results use its original training snapshot; see the release-version qualification below.
@@ -16,13 +16,13 @@ Each setting evaluates all 800 tests; failures, timeouts and errors remain in th
 
 | Setting | Budget per task | Success | Actual starts, all tasks | Known development API cost (USD) | Evaluation API cost |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Demo-only | 0 | 152/800 (19.00%) | 0 | ≥$133.34 | $0 |
-| Interaction-only | 10 | 312/800 (39.00%) | 134 | ≈$109.63 | $0 |
-| Demo+interaction | 10 | 337/800 (42.13%) | 114 | ≈$89.03 | $0 |
+| `demo-only` | 0 | 152/800 (19.00%) | 0 | ≥$133.34 | $0 |
+| `interaction-only` | 10 | 312/800 (39.00%) | 134 | ≈$109.63 | $0 |
+| `demo&interaction` | 10 | 337/800 (42.13%) | 114 | ≈$89.03 | $0 |
 
 Development costs use saved token usage and the pinned historical rate card; incomplete requests make the shown value a known subtotal. Local compute is excluded.
 
-| Task | Demo-only | Interaction-only, R10 | Demo+interaction, R10 |
+| Task | `demo-only` | `interaction-only`, R10 | `demo&interaction`, R10 |
 | --- | ---: | ---: | ---: |
 | BinFill | 10/50 | 25/50 | 37/50 |
 | ButtonUnmask | 0/50 | 29/50 | 27/50 |
@@ -45,7 +45,7 @@ Development costs use saved token usage and the pinned historical rate card; inc
 
 These budgets are supplementary and do not enter the leaderboard.
 
-| Budget per task | Interaction-only | Demo+interaction |
+| Budget per task | `interaction-only` | `demo&interaction` |
 | --- | ---: | ---: |
 | R1 | 26/800 (3.25%) | 156/800 (19.50%) |
 | R3 | 351/800 (43.88%) | 315/800 (39.38%) |
@@ -54,7 +54,7 @@ These budgets are supplementary and do not enter the leaderboard.
 <details>
 <summary>Optional per-task successes (each out of 50)</summary>
 
-| Task | Interaction R1 | R3 | R5 | Demo+interaction R1 | R3 | R5 |
+| Task | `interaction-only` R1 | R3 | R5 | `demo&interaction` R1 | R3 | R5 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | BinFill | 6 | 37 | 35 | 36 | 27 | 37 |
 | ButtonUnmask | 6 | 12 | 37 | 0 | 29 | 28 |
@@ -85,9 +85,9 @@ Audit date: 2026-11-21. Auditor: Codex, using automated inventories and manual s
 
 | Main setting | Transcript tool calls | Saved API requests checked | Starts reconciled |
 | --- | ---: | ---: | ---: |
-| Demo-only | 1863 | 1719 | 0 |
-| Interaction-only | 1818 | 1627 | 134 |
-| Demo+interaction | 1567 | 1437 | 114 |
+| `demo-only` | 1863 | 1719 | 0 |
+| `interaction-only` | 1818 | 1627 | 134 |
+| `demo&interaction` | 1567 | 1437 | 114 |
 
 | Rule / check | Finding | Evidence |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ The model-input review covers the main configurations. Optional R1/R3/R5 receive
 <details>
 <summary>Main development attempts and recorded control steps per task</summary>
 
-| Task | Interaction R10 starts | Control steps | Demo+interaction R10 starts | Control steps |
+| Task | `interaction-only` R10 starts | Control steps | `demo&interaction` R10 starts | Control steps |
 | --- | ---: | ---: | ---: | ---: |
 | BinFill | 10/10 | 6332 | 7/10 | 4699 |
 | ButtonUnmask | 8/10 | 4229 | 8/10 | 4560 |
@@ -122,12 +122,12 @@ The model-input review covers the main configurations. Optional R1/R3/R5 receive
 
 </details>
 
-Demo-only has zero simulator starts and zero simulator control steps for every task.
+`demo-only` has zero simulator starts and zero simulator control steps for every task.
 
 ### Warnings and release-version qualification
 
-- Ten demo-only task policies received operator corrections accepting the documented `camera_poses.position_m` field. Original/corrected hashes and reasons are in their solution manifests. Report these as interface-corrected results, not unmodified native submissions. Optional R1 configurations also contain disclosed corrections.
-- Demo+interaction R10 / PickHighlight has one truncated `api-request` metadata line. Complete saved request files parse and all native tool IDs reconcile. Optional interaction R5 / PickXtimes has two unfinalized reservations; both are counted, but their final control-step totals are incomplete.
+- Ten `demo-only` task policies received operator corrections accepting the documented `camera_poses.position_m` field. Original/corrected hashes and reasons are in their solution manifests. Report these as interface-corrected results, not unmodified native submissions. Optional R1 configurations also contain disclosed corrections.
+- `demo&interaction` R10 / PickHighlight has one truncated `api-request` metadata line. Complete saved request files parse and all native tool IDs reconcile. Optional `interaction-only` R5 / PickXtimes has two unfinalized reservations; both are counted, but their final control-step totals are incomplete.
 - The pinned training snapshot and current v2 differ in **10 recordings and nine execution limits** across ButtonUnmaskSwap, MoveCube, PickHighlight, RouteStick and VideoRepick. Seed identities, difficulty, variants and variation profiles match. The inspected fixed test metadata checks match the current release.
 - These results may be retained under their original pinned training version. They must not be relabeled as development on current v2. Renamed settings and the new accounting wrapper alone do not require redevelopment.
 

@@ -14,11 +14,11 @@ restore command during setup. Existing checkouts are left unchanged; evaluated c
 
 ## Adaptation
 
-Settings are `demo-only`, `interaction-only` and `demo+interaction`.
+Settings are `demo-only`, `interaction-only` and `demo&interaction`.
 The leaderboard uses R10; R1/R3/R5 are optional reported results.
 
 We retain LIBERO's per-task exploration → bundle registration → exact-bundle
-rehearsal → submission workflow. Rehearsals consume the same R budget. demo-only allows
+rehearsal → submission workflow. Rehearsals consume the same R budget. `demo-only` allows
 explicit offline submission because it forbids simulator access. We add no CaP
 code, task solver or policy-selection algorithm.
 
@@ -28,7 +28,7 @@ only to a separate runtime copy:
 | Upstream area | Integration change |
 | --- | --- |
 | `services/benchmarks.py` | Register public RoboMME-Plus backend/tools |
-| `controller/config.py`, `frontend.py` | demo-only zero-interaction submission, reasoning effort and budget gates |
+| `controller/config.py`, `frontend.py` | `demo-only` zero-interaction submission, reasoning effort and budget gates |
 | `controller/supervisor.py`, `sandbox.py` | Bounded execution and safe continuation of unstarted tests |
 | `services/artifact_io.py` | Stream large artifacts |
 | `harness/{claude,codex}_cli/auto_research.py` | Public protocol, deadline and read-only wrap-up |
@@ -46,8 +46,8 @@ The model, time limits and input sampling are implementation choices.
 | Area | Configuration |
 | --- | --- |
 | Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; development/evaluation usage and cost logged separately. |
-| Budgets | Demonstrations only: 0 starts. Interaction settings: at most 10 starts per task. Historical R1/R3/R5 studies were developed independently. All starts, including failed setup and verification, share the budget. Optional-budget solutions remain available. |
-| Training demos | demo-only/demo+interaction receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. interaction-only receives none. Simulator replay counts toward the development budget. |
+| Budgets | `demo-only`: 0 starts. Interaction settings: at most 10 starts per task. Historical R1/R3/R5 studies were developed independently. All starts, including failed setup and verification, share the budget. Optional-budget solutions remain available. |
+| Training demos | `demo-only`/`demo&interaction` receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. `interaction-only` receives none. Simulator replay counts toward the development budget. |
 | Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
 | Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
@@ -58,7 +58,7 @@ The model, time limits and input sampling are implementation choices.
   Expiry stops the sandbox/simulator, then allows at most 120 seconds for read-only
   reporting or submission of an existing eligible bundle; no edits or rehearsals.
 - **Submission:** interaction settings retain the clean rehearsal of the exact
-  submitted bundle, charged to the same R. demo-only adds offline submission with zero
+  submitted bundle, charged to the same R. `demo-only` adds offline submission with zero
   simulator starts. Test outcomes never return to development.
 - **Providers and transport:** optional Gemini is disabled; native coding-model
   vision and RGB-D geometry tools remain. Large artifacts are streamed, initial

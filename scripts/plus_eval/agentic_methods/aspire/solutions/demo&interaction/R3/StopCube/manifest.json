@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "demo&interaction",
+  "budget": 3,
+  "task": "StopCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "badaf809e48bec897569b905803bd833975cd419ed6f24c6314bba3f0f4ce4d5"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "StopCube.py": "badaf809e48bec897569b905803bd833975cd419ed6f24c6314bba3f0f4ce4d5"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

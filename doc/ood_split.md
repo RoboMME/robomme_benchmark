@@ -26,9 +26,10 @@ criteria.
 
 [RoboMME-Plus](../src/robomme_plus/README.md) evaluates memory generalization and
 adaptation with changed task mechanisms and perceptual variations. Its 50 training
-demos and 800 test episodes support zero-shot transfer (ZS), adaptation from demos
-(AfD), training-seed interactions (AfI), or both (AfD+I). Interaction budgets cap
-attempts per task at R1, R3, R5 or R10. It is separate from `ood_test`.
+demos and 800 test episodes support `zero-shot`, `demo-only`, `interaction-only`
+and `demo&interaction`. Interaction settings allow at most 10 starts per task
+across all training seeds combined; R1/R3/R5 results are optional. It is separate
+from `ood_test`.
 
 ## Parameter changes
 

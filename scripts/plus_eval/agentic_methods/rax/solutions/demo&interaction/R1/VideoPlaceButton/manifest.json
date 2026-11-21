@@ -1,0 +1,44 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 1,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "cbcbcce0a43bcfd6f5d1884320529af6168d099c1b27d9233e28da132bc6ecc4",
+    "perception.py": "092296ef6b494b4ee542ca499f6a50205478a2d8a34e721c68bb562a5b65da0b",
+    "rio.py": "669fe5619aea998b42aeb0f8516d0469da4db97331f27cbe29bc8fc3fb1e0d0d"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "cbcbcce0a43bcfd6f5d1884320529af6168d099c1b27d9233e28da132bc6ecc4",
+    "perception.py": "092296ef6b494b4ee542ca499f6a50205478a2d8a34e721c68bb562a5b65da0b",
+    "rio.py": "669fe5619aea998b42aeb0f8516d0469da4db97331f27cbe29bc8fc3fb1e0d0d"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "controller.py",
+        "functions": [
+          "backproject"
+        ],
+        "fix": "Accept documented camera_poses.position_m; preserve existing aliases, geometry and policy logic",
+        "verification": "<EXPERIMENT_ROOT>/operator_audits/20261117_pre_eval_interface_review/camera_candidates/rax/demo&interaction/R1/VideoPlaceButton/policy_actual_probe.json"
+      }
+    ],
+    "original_files": {
+      "controller.py": "b2d034cacd2160932e8eb339580121400bcd8de5b861d61c71c92d2a2ec10fbe",
+      "perception.py": "092296ef6b494b4ee542ca499f6a50205478a2d8a34e721c68bb562a5b65da0b",
+      "rio.py": "669fe5619aea998b42aeb0f8516d0469da4db97331f27cbe29bc8fc3fb1e0d0d"
+    },
+    "repaired_files": {
+      "controller.py": "cbcbcce0a43bcfd6f5d1884320529af6168d099c1b27d9233e28da132bc6ecc4",
+      "perception.py": "092296ef6b494b4ee542ca499f6a50205478a2d8a34e721c68bb562a5b65da0b",
+      "rio.py": "669fe5619aea998b42aeb0f8516d0469da4db97331f27cbe29bc8fc3fb1e0d0d"
+    }
+  }
+}

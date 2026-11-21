@@ -205,7 +205,7 @@ only the benchmark access, budget and evaluation protocol, not your learning str
   ASPIRE's original verifier criterion remains unchanged: do not claim a five-seed
   verification from three distinct seeds. Report insufficient evidence as untested;
   do not promote unverified proposals. demo-only has no simulator verification.
-- interaction-only has no expert recordings. demo-only and demo+interaction have all 50 released recordings under
+- interaction-only has no expert recordings. demo-only and demo&interaction have all 50 released recordings under
   /workspace/demonstrations/<TASK>/manifest.json (front/wrist RGB, goal and phase).
   Recordings are fixed evidence, not access to oracle actions or simulator code.
 - The host provides {len(args.gpus)} simulator slots, one on each assigned GPU, and

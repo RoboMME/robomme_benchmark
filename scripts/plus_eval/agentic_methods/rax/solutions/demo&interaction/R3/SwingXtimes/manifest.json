@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 3,
+  "task": "SwingXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "76cfaa80cd635438981b7d237dfacd38a543d21e1417f8154d527d180dcb761c",
+    "percep.py": "ca40fa39dd634d0765f19ccd72b625180ebb83eccb6aeacaafc5849ecb2ee9e3",
+    "rlib.py": "7442360e699b989a09d725bd0553b85ef07c2425198f6fd8fd87d45e2462755e"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "76cfaa80cd635438981b7d237dfacd38a543d21e1417f8154d527d180dcb761c",
+    "percep.py": "ca40fa39dd634d0765f19ccd72b625180ebb83eccb6aeacaafc5849ecb2ee9e3",
+    "rlib.py": "7442360e699b989a09d725bd0553b85ef07c2425198f6fd8fd87d45e2462755e"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

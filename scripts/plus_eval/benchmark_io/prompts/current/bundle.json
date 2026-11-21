@@ -1,9 +1,9 @@
 {
-  "version": 7,
+  "version": 8,
   "scope": "public development protocol and synthetic interface examples",
-  "supersedes": 6,
+  "supersedes": 7,
   "changes": [
-    "Use descriptive setting names consistently in prompts, CLI arguments and artifact directories",
+    "Use zero-shot, demo-only, interaction-only and demo&interaction consistently in prompts, CLI arguments and artifact directories",
     "Retain R10 as the main interaction budget and R1/R3/R5 as optional results"
   ]
 }

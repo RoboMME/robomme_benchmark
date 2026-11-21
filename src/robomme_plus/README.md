@@ -54,15 +54,15 @@ and **Agentic** systems that prompt frontier models to plan, act or write code. 
 
 | Setting | What it may use before testing | Maximum Plus rollouts per task |
 | --- | --- | --- |
-| Zero-shot | No Plus data: test directly, or develop only on original RoboMME | 0 |
-| Demo-only | The 50 released demonstrations, used offline | 0 |
-| Interaction-only | Simulator rollouts on provided training seeds; no released demonstrations | 10 |
-| Demo+interaction | Released demonstrations and training-seed rollouts | 10 |
+| `zero-shot` | No Plus data: test directly, or develop only on original RoboMME | 0 |
+| `demo-only` | The 50 released demonstrations, used offline | 0 |
+| `interaction-only` | Simulator rollouts on provided training seeds; no released demonstrations | 10 |
+| `demo&interaction` | Released demonstrations and training-seed rollouts | 10 |
 
-Zero-shot uses the original policy without Plus adaptation. Released training
+`zero-shot` uses the original policy without Plus adaptation. Released training
 demonstrations are recorded data for offline analysis and learning. Replaying
 their actions through the simulator counts as development interaction and is
-not permitted in the demo-only setting. Interaction budgets are
+not permitted in the `demo-only` setting. Interaction budgets are
 **at most 10 development attempts per task, across all its training seeds
 combined**. Reporting results for 1, 3 and 5 attempts is optional; the leaderboard uses 10 attempts for interaction settings. Each result evaluates all 800 test episodes.
 
@@ -108,7 +108,7 @@ During RoboMME-Plus development:
 
 - **Respect the setting.** Use released Plus demonstrations only in demo settings.
   Plus development rollouts use the provided training seeds and episode settings
-  within the per-task budget. Demo-only permits no Plus rollouts. Original
+  within the per-task budget. `demo-only` permits no Plus rollouts. Original
   RoboMME data and simulator use remains allowed in every setting.
 - **Keep testing separate.** Never use Plus test seeds, data or outcomes for development
   or policy selection. Freeze the policy and agentic framework before evaluation.

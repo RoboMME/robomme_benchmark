@@ -5,10 +5,10 @@ with 50 released training demonstrations and 800 fixed test episodes.
 
 1. **Understand the benchmark and choose a setting.** Read the
    [overview and evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol):
-   zero-shot, demo-only, interaction-only or demo+interaction. Interaction settings
+   `zero-shot`, `demo-only`, `interaction-only` or `demo&interaction`. Interaction settings
    allow at most **10 Plus development starts per task across all training seeds
    combined**. Demonstrations are offline recordings; simulator replay counts as
-   interaction and is forbidden in demo-only.
+   interaction and is forbidden in `demo-only`.
 2. **Prepare your environment and inputs.** Follow the
    [installation instructions](../../readme.md#-installation) and
    [training-data guide](plus_training_data_format.md). Record the benchmark and

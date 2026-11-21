@@ -1,0 +1,55 @@
+{
+  "method": "rax",
+  "setting": "demo&interaction",
+  "budget": 1,
+  "task": "PatternLock",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "canonical.json": "f1569af88aeead06a93090e2f92810fa167ec5066f08eed6913786aecd60da84",
+    "controller.py": "3e49a4c8ab36a4c00fa279952fb152fe83673bf73607c2af2ef13bfb7e8a77d9",
+    "geometry.py": "7147d861ce47dafa645fff8d89583e9c90443c2b5655edd70788979f3a933b12",
+    "io_utils.py": "ecc13d2c6b3adb08b09c618ed554bac98392270d0abd82171e126616299cf549",
+    "pattern.py": "5ef0037786da1c8e80eede24bbe8fdf24c9805faa33f1deaeb4db60fe26757fe",
+    "vision.py": "e4a49f0576fded480bf2873bfaf8646e35077b5acfee76f32a7f5a1c183015ca"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "canonical.json": "f1569af88aeead06a93090e2f92810fa167ec5066f08eed6913786aecd60da84",
+    "controller.py": "3e49a4c8ab36a4c00fa279952fb152fe83673bf73607c2af2ef13bfb7e8a77d9",
+    "geometry.py": "7147d861ce47dafa645fff8d89583e9c90443c2b5655edd70788979f3a933b12",
+    "io_utils.py": "ecc13d2c6b3adb08b09c618ed554bac98392270d0abd82171e126616299cf549",
+    "pattern.py": "5ef0037786da1c8e80eede24bbe8fdf24c9805faa33f1deaeb4db60fe26757fe",
+    "vision.py": "e4a49f0576fded480bf2873bfaf8646e35077b5acfee76f32a7f5a1c183015ca"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "geometry.py",
+        "functions": [
+          "_pose"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "canonical.json": "f1569af88aeead06a93090e2f92810fa167ec5066f08eed6913786aecd60da84",
+      "controller.py": "3e49a4c8ab36a4c00fa279952fb152fe83673bf73607c2af2ef13bfb7e8a77d9",
+      "geometry.py": "fd7994c928612d8b783fbb9e4a86f0d23d4d54537350879aadda6079cbd8c729",
+      "io_utils.py": "ecc13d2c6b3adb08b09c618ed554bac98392270d0abd82171e126616299cf549",
+      "pattern.py": "5ef0037786da1c8e80eede24bbe8fdf24c9805faa33f1deaeb4db60fe26757fe",
+      "vision.py": "e4a49f0576fded480bf2873bfaf8646e35077b5acfee76f32a7f5a1c183015ca"
+    },
+    "repaired_files": {
+      "canonical.json": "f1569af88aeead06a93090e2f92810fa167ec5066f08eed6913786aecd60da84",
+      "controller.py": "3e49a4c8ab36a4c00fa279952fb152fe83673bf73607c2af2ef13bfb7e8a77d9",
+      "geometry.py": "7147d861ce47dafa645fff8d89583e9c90443c2b5655edd70788979f3a933b12",
+      "io_utils.py": "ecc13d2c6b3adb08b09c618ed554bac98392270d0abd82171e126616299cf549",
+      "pattern.py": "5ef0037786da1c8e80eede24bbe8fdf24c9805faa33f1deaeb4db60fe26757fe",
+      "vision.py": "e4a49f0576fded480bf2873bfaf8646e35077b5acfee76f32a7f5a1c183015ca"
+    }
+  }
+}

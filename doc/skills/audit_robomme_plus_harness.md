@@ -27,7 +27,7 @@ Redact credentials from excerpts.
    verification, sandbox/rehearsal tools, retries, subprocesses and restored states.
    Require one persistent per-task budget across all seeds, workers and stages,
    reserved atomically before startup. Failed/abandoned starts remain spent.
-   Zero-shot/demo-only cannot start Plus episodes. Original RoboMME simulation
+   `zero-shot`/`demo-only` cannot start Plus episodes. Original RoboMME simulation
    does not consume this allowance. Check hidden retries and implicit
    resets after termination. Invalid requests rejected before reservation do not count.
 3. **Seeds:** require released training episodes with their full pinned settings.

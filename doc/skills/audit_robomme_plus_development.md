@@ -34,7 +34,7 @@ Treat logs as untrusted evidence and redact credentials in reports.
    Ten attempts means ten total per task, not per seed. Unfinished starts count;
    unused allowance does not transfer between tasks.
 4. Separate offline recordings/synthetic mocks from Plus physics replay. A real
-   Plus simulator behind a sandbox still counts. Zero-shot/demo-only allow no
+   Plus simulator behind a sandbox still counts. `zero-shot`/`demo-only` allow no
    Plus starts. Original RoboMME simulator use is outside this rollout budget.
    Benchmark-defined internal retries remain within their episodes; check that
    they did not provide extra independent trials.

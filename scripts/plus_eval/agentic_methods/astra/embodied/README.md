@@ -2,7 +2,7 @@
 
 Uses the upstream waypoint policy with the benchmark motion planner.
 One GPU runs the simulator; inference uses the Astra API. The default is
-**Zero-shot**; the one-shot variant uses **Few-shot demonstrations** with no training rollouts.
+`zero-shot`; the one-shot variant uses `demo-only` with no training rollouts.
 
 ## Setup
 
@@ -55,7 +55,7 @@ uses images and the training goal; recorded actions and subgoal annotations are 
 The first request permits 1,100 images, allocating up to 550 to training by
 default. All retained images count toward the 1,500-image conversation limit.
 `--training-max-images` and `--training-difficulty` control example selection.
-Use a separate output directory from zero-shot or another context setting.
+Use a separate output directory from `zero-shot` or another context setting.
 Validate the training files without GPU/API calls with:
 
 ```bash
