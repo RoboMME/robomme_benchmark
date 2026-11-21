@@ -1,0 +1,60 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 1,
+  "task": "BinFill",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "858056afbf263cb09047fba2ab5e1f5eb71f1c6fd7145397b4c887952b6435da",
+    "perception.py": "96100c772027125b27a084edfab9f0a01a51b11490ac90fbd09843995621efdf",
+    "rax_io.py": "bb40ce0949bc3c97492db0fc4a5d636c44aa15e06a05ae5d0400ddabc090bea7",
+    "robot.py": "3fe87720e58e72ca9346292fa402b1914ad72ea09e0274ad6c7acfb6d87a30e7"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "f9087c508f5436f1762da5e7fca21c801138a315a02ddda7eda08baa79f8198a",
+    "perception.py": "96100c772027125b27a084edfab9f0a01a51b11490ac90fbd09843995621efdf",
+    "rax_io.py": "a59de7d013ac1dfb95bec55593bb682def19fd404aabd9eb2e3b1a5d0b403ca4",
+    "robot.py": "3fe87720e58e72ca9346292fa402b1914ad72ea09e0274ad6c7acfb6d87a30e7"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "rax_io.py",
+        "functions": [
+          "parse_pose"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "controller.py": "f9087c508f5436f1762da5e7fca21c801138a315a02ddda7eda08baa79f8198a",
+      "perception.py": "96100c772027125b27a084edfab9f0a01a51b11490ac90fbd09843995621efdf",
+      "rax_io.py": "1d20f779a1926b64455caa56db2127388142dc326cc04dffda8a845e726a01c3",
+      "robot.py": "3fe87720e58e72ca9346292fa402b1914ad72ea09e0274ad6c7acfb6d87a30e7"
+    },
+    "repaired_files": {
+      "controller.py": "f9087c508f5436f1762da5e7fca21c801138a315a02ddda7eda08baa79f8198a",
+      "perception.py": "96100c772027125b27a084edfab9f0a01a51b11490ac90fbd09843995621efdf",
+      "rax_io.py": "a59de7d013ac1dfb95bec55593bb682def19fd404aabd9eb2e3b1a5d0b403ca4",
+      "robot.py": "3fe87720e58e72ca9346292fa402b1914ad72ea09e0274ad6c7acfb6d87a30e7"
+    }
+  },
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "controller.py": {
+        "evaluated_sha256": "f9087c508f5436f1762da5e7fca21c801138a315a02ddda7eda08baa79f8198a",
+        "published_sha256": "858056afbf263cb09047fba2ab5e1f5eb71f1c6fd7145397b4c887952b6435da"
+      },
+      "rax_io.py": {
+        "evaluated_sha256": "a59de7d013ac1dfb95bec55593bb682def19fd404aabd9eb2e3b1a5d0b403ca4",
+        "published_sha256": "bb40ce0949bc3c97492db0fc4a5d636c44aa15e06a05ae5d0400ddabc090bea7"
+      }
+    }
+  }
+}

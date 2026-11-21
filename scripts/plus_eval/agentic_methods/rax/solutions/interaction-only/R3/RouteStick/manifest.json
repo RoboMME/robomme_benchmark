@@ -1,0 +1,17 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 3,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "7c6c88aac5f15e7c49578ec82d2fc12d4903c384dd3177743851ea8ee898e9a5"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "7c6c88aac5f15e7c49578ec82d2fc12d4903c384dd3177743851ea8ee898e9a5"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

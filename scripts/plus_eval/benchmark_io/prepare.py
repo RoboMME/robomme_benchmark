@@ -4,14 +4,14 @@ import json
 import os
 from pathlib import Path
 
-from .protocol import Study, source_fingerprint
+from .protocol import SETTINGS, Study, setting_key, source_fingerprint
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True)
-    parser.add_argument("--method", choices=("rax", "aspire"), required=True)
-    parser.add_argument("--setting", choices=("AfD", "AfI", "AfD+I"), required=True)
+    parser.add_argument("--method", required=True, help="Your method identifier")
+    parser.add_argument("--setting", choices=SETTINGS, required=True)
     parser.add_argument("--tasks", nargs="+")
     parser.add_argument("--budget", type=int, default=10)
     parser.add_argument("--export-demos", action="store_true")
@@ -25,7 +25,7 @@ def main():
         builder = BenchmarkEnvBuilder(task, dataset="train")
         records[task] = [builder.get_episode_metadata(i) for i in range(builder.get_episode_num())]
     study = Study(args.root, method=args.method, setting=args.setting,
-                  budget=0 if args.setting == "AfD" else args.budget, records=records)
+                  budget=0 if setting_key(args.setting) in ("zero-shot", "demo-only") else args.budget, records=records)
     fingerprint = source_fingerprint(Path(robomme_plus.__file__).parent)
     path = study.root / "benchmark_source.json"
     if path.exists() and json.loads(path.read_text()) != fingerprint:

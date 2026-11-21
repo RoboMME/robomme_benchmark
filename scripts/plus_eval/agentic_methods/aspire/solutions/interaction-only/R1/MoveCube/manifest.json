@@ -1,0 +1,26 @@
+{
+  "method": "aspire",
+  "setting": "interaction-only",
+  "budget": 1,
+  "task": "MoveCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "8f56d61dbc7d5e47337eb6c94a37a608a0aec040d1a43dcc8f876fcddbcf040f"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "MoveCube.py": "2df2896512a256ef22ca527c0cc0da355e2d013de92a4e1bc93cc8cc8f338517"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "policy.py": {
+        "evaluated_sha256": "2df2896512a256ef22ca527c0cc0da355e2d013de92a4e1bc93cc8cc8f338517",
+        "published_sha256": "8f56d61dbc7d5e47337eb6c94a37a608a0aec040d1a43dcc8f876fcddbcf040f"
+      }
+    }
+  }
+}

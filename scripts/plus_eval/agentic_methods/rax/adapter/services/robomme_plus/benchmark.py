@@ -29,7 +29,7 @@ def validate_config(config):
         raise ValueError("Development uses train; formal evaluation uses test")
     if config.agent_cli != "claude" or config.agent_effort not in ("medium", "high"):
         raise ValueError("This study uses upstream LIBERO's Claude model with its pinned reasoning effort")
-    demos = s.config["setting"] != "AfI"
+    demos = s.config["setting"] != "interaction-only"
     if config.demonstration_context != ("completion_sequence" if demos else "none"):
         raise ValueError("Demonstration visibility differs from the adaptation setting")
     if len(config.exploration_seeds) > s.config["budget"]:
@@ -65,12 +65,12 @@ def task_context(config, demonstration, *, live_formal):
             "The sequence ends with the first execution observation. Front and wrist cameras are available. "
             "Native task deadlines, step budgets and outcomes are authoritative.\n\n"
             f"Setting: {setting}. Released training recordings are "
-            + ("unavailable. " if setting == "AfI" else "available as ordered visual evidence. ")
+            + ("unavailable. " if setting == "interaction-only" else "available as ordered visual evidence. ")
             + "Every simulator start, preview, rehearsal and verifier attempt consumes the same per-task budget. "
             "Use only the provided training episode indices; no task source or hidden object state. "
             "Freeze the controller before held-out evaluation; do not adapt from test results.\n"
-            + ("AfD has zero simulator attempts. Register and submit your offline-developed bundle without rehearsal.\n"
-               if setting == "AfD" else ""))
+            + ("demo-only has zero simulator attempts. Register and submit your offline-developed bundle without rehearsal.\n"
+               if setting == "demo-only" else ""))
 
 
 def refresh_workspace(config, workspace):
@@ -89,10 +89,10 @@ def fetch_demonstration(demos_root, task, kind):
 def provision_demonstration(config, target, demos_root):
     s = study()
     target = Path(target)
-    if s.config["setting"] == "AfI":
+    if s.config["setting"] == "interaction-only":
         target.mkdir(parents=True, exist_ok=True)
         if any(target.iterdir()):
-            raise ValueError("AfI demonstration directory must be empty")
+            raise ValueError("interaction-only demonstration directory must be empty")
         return dict(kind="none", image_count=0, root="runtime/demonstrations", manifest_path=None)
     from benchmark_io.demonstrations import export_task
     manifest = export_task(s, config.task, os.environ.get("ROBOMME_PLUS_DEMOS", "data/robomme_plus_train/h5"), target)

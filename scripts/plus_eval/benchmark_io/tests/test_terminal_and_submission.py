@@ -36,9 +36,9 @@ def test_nonterminal_worker_completion_is_preserved():
         lambda: pytest.fail('A running episode must not be stopped')) == (b'normal result', b'', None)
 
 
-@pytest.mark.parametrize('setting,budget', [('AfD', 0), ('AfI', 1), ('AfD+I', 1)])
+@pytest.mark.parametrize('setting,budget', [('demo-only', 0), ('interaction-only', 1), ('demo+interaction', 1)])
 @pytest.mark.parametrize('expired', [False, True])
-def test_native_submit_accepts_offline_afd_but_still_requires_interaction_rehearsal(tmp_path, monkeypatch, setting, budget, expired):
+def test_native_submit_accepts_offline_demo_only_but_still_requires_interaction_rehearsal(tmp_path, monkeypatch, setting, budget, expired):
     study = Study(tmp_path/'study', method='rax', setting=setting, budget=budget,
         records={'BinFill': [dict(seed=i, max_steps=100, control_freq=20) for i in range(3)]})
     monkeypatch.setenv('ROBOMME_PLUS_STUDY', str(study.root))
@@ -51,7 +51,7 @@ def test_native_submit_accepts_offline_afd_but_still_requires_interaction_rehear
         exploration_seeds=(0,)*budget, formal_seed=0, eval_seed=0, formal_eval_seed=1,
         sim_gpu='GPU-00000000-0000-0000-0000-000000000000', development=limits, formal=limits,
         training=limits, benchmark='robomme_plus', agent_cli='claude', agent_effort='high',
-        demonstration_context='none' if setting=='AfI' else 'completion_sequence')
+        demonstration_context='none' if setting=='interaction-only' else 'completion_sequence')
     supervisor = Supervisor(config, lambda: pytest.fail('No simulator may start during submission'),
         runner_factory=lambda *a: SimpleNamespace(preflight=lambda: None))
     frontend = ResearchFrontend(supervisor, tmp_path/'workspace')
@@ -60,7 +60,7 @@ def test_native_submit_accepts_offline_afd_but_still_requires_interaction_rehear
         source.mkdir(parents=True)
         (source/'controller.py').write_text('def main(ctx): pass\n')
         bundle, _ = supervisor.register(source, workspace_path='code/controller')
-        if setting == 'AfD':
+        if setting == 'demo-only':
             response = frontend.call('submit', {'bundle': bundle})
             assert json.loads(response['content'][0]['text'])['status'] == 'submitted'
             assert supervisor.state['submission']['bundle'] == bundle

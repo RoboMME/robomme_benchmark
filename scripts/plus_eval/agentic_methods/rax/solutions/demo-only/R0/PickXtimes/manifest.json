@@ -1,0 +1,60 @@
+{
+  "method": "rax",
+  "setting": "demo-only",
+  "budget": 0,
+  "task": "PickXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "05af5baed755a4cd8ce98cca18c1822072ac3fc4c17f645976ff2a1770977504",
+    "geom.py": "e5185e62bfc0ceacca9b98f9cca3b6a97020fd169d7ce925838b234827963a64",
+    "perception.py": "db592beb0a83171e27de181cfa3a5e1dd9136065bdec3c636c0ad8957b0c70d3",
+    "rax_io.py": "fc3383a198ca0c05b12284aae6b8f476d857ba776584b2392e71f7ba2b76f524"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "a6b75477e49867ec5a5311a82f3b72e07158f0f24600e4f26419ae69ecad2008",
+    "geom.py": "e5185e62bfc0ceacca9b98f9cca3b6a97020fd169d7ce925838b234827963a64",
+    "perception.py": "db592beb0a83171e27de181cfa3a5e1dd9136065bdec3c636c0ad8957b0c70d3",
+    "rax_io.py": "008050eb8ece9c789c0408c1c7a04d60f7039c8282e4dbc93a83e814e0fe08f7"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "rax_io.py",
+        "functions": [
+          "parse_pose"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "controller.py": "a6b75477e49867ec5a5311a82f3b72e07158f0f24600e4f26419ae69ecad2008",
+      "geom.py": "e5185e62bfc0ceacca9b98f9cca3b6a97020fd169d7ce925838b234827963a64",
+      "perception.py": "db592beb0a83171e27de181cfa3a5e1dd9136065bdec3c636c0ad8957b0c70d3",
+      "rax_io.py": "c3c58942866427873a5fbd21eb9b0466a20aa30ca874b961c3c17335d8faa22a"
+    },
+    "repaired_files": {
+      "controller.py": "a6b75477e49867ec5a5311a82f3b72e07158f0f24600e4f26419ae69ecad2008",
+      "geom.py": "e5185e62bfc0ceacca9b98f9cca3b6a97020fd169d7ce925838b234827963a64",
+      "perception.py": "db592beb0a83171e27de181cfa3a5e1dd9136065bdec3c636c0ad8957b0c70d3",
+      "rax_io.py": "008050eb8ece9c789c0408c1c7a04d60f7039c8282e4dbc93a83e814e0fe08f7"
+    }
+  },
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "controller.py": {
+        "evaluated_sha256": "a6b75477e49867ec5a5311a82f3b72e07158f0f24600e4f26419ae69ecad2008",
+        "published_sha256": "05af5baed755a4cd8ce98cca18c1822072ac3fc4c17f645976ff2a1770977504"
+      },
+      "rax_io.py": {
+        "evaluated_sha256": "008050eb8ece9c789c0408c1c7a04d60f7039c8282e4dbc93a83e814e0fe08f7",
+        "published_sha256": "fc3383a198ca0c05b12284aae6b8f476d857ba776584b2392e71f7ba2b76f524"
+      }
+    }
+  }
+}

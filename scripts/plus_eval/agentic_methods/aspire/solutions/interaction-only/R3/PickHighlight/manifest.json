@@ -1,0 +1,26 @@
+{
+  "method": "aspire",
+  "setting": "interaction-only",
+  "budget": 3,
+  "task": "PickHighlight",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "3106eef291b04a5f3780c9c53fc49091df930371f56615cd6db96fea25e772cd"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "PickHighlight.py": "2cef9f3fe7a21d99fbfa512c9090ed3a4267d57024282087f8f210b6d885ea53"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "policy.py": {
+        "evaluated_sha256": "2cef9f3fe7a21d99fbfa512c9090ed3a4267d57024282087f8f210b6d885ea53",
+        "published_sha256": "3106eef291b04a5f3780c9c53fc49091df930371f56615cd6db96fea25e772cd"
+      }
+    }
+  }
+}

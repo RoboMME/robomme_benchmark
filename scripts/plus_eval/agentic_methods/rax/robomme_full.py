@@ -133,7 +133,7 @@ def develop(args):
         exploration_seeds=tuple(i % len(study.config['records'][args.task]) for i in range(budget)),
         formal_seed=0,eval_seed=0,formal_eval_seed=1,formal_episodes=50,formal_workers=1,
         sim_gpu=gpu,development=limit,formal=limit,training=limit,workspace_mb=4096,
-        demonstration_context='none' if study.config['setting']=='AfI' else 'completion_sequence',
+        demonstration_context='none' if study.config['setting']=='interaction-only' else 'completion_sequence',
         benchmark='robomme_plus',agent_cli='claude',agent_provider='custom',agent_effort='high',
         external_perception=False,observation_profile='rgbd')
     if args.resume:
@@ -150,12 +150,12 @@ def develop(args):
         'the native API/controller contract. This is a fresh independent experiment, not a continuation '
         f'of another budget or smoke test. The TOTAL per-task simulator-start ceiling is R{budget}. '
         'Every preview, interaction, reset and rehearsal counts. Status is authoritative. '
-        'Choose your own strategy under that ceiling. AfD is offline with the released task recordings; '
-        'AfI has no expert recordings; AfD+I has recordings and the same bounded simulator tools. '
+        'Choose your own strategy under that ceiling. demo-only is offline with the released task recordings; '
+        'interaction-only has no expert recordings; demo+interaction has recordings and the same bounded simulator tools. '
         'Keep all program versions, commands, reasoning notes and evidence. Register your selected '
         'bundle and use the native submit tool to freeze it. For interaction settings, the original '
         'clean rehearsal of that exact bundle is required and consumes one of the same allowed starts. '
-        'There is no extra rehearsal allowance. AfD has the documented zero-interaction exception. '
+        'There is no extra rehearsal allowance. demo-only has the documented zero-interaction exception. '
         'Write memory/development_report.md with the submitted bundle ID and unresolved limitations. '
         'Submitting closes exploration but does not show any test outcomes. Do not run formal evaluation; '
         'the operator evaluates all 50 held-out episodes only after every task finishes development. '

@@ -1,0 +1,59 @@
+{
+  "method": "rax",
+  "setting": "demo-only",
+  "budget": 0,
+  "task": "ButtonUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "3ef6b204a45d55d688ee2a58275e1f031ec832aeb3ae177a81ae549dbe155277",
+    "ctrl.py": "b59f6c4f68edb95c3c6a10427e181aa4e4744495cdd65dfbe4cdc62caf4c7bd0",
+    "geom.py": "ba5e68f7789afc9e7f4e46bfab5f17028bdcbfbe3f8474f60eb4908db7b8d652",
+    "percep.py": "ae7de1cddad324ce809a3900efce5f8486c532edc70c871e3bfc6cf0a2c9485a",
+    "rax_io.py": "70f9c98e03d05b24e7b0c56e024c57d27b60630e711b633186a295c42c0ff2d2",
+    "task.py": "b364b2dd33b30068bb76aa81abbcb565284c5fc6462e50a2b3831c377957b12f",
+    "tracker.py": "a3ab38834154e7da8e21669ad29a9d47ffa6c02b5b2fc3a3f26008ceae196cf3"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "3ef6b204a45d55d688ee2a58275e1f031ec832aeb3ae177a81ae549dbe155277",
+    "ctrl.py": "b59f6c4f68edb95c3c6a10427e181aa4e4744495cdd65dfbe4cdc62caf4c7bd0",
+    "geom.py": "ba5e68f7789afc9e7f4e46bfab5f17028bdcbfbe3f8474f60eb4908db7b8d652",
+    "percep.py": "ae7de1cddad324ce809a3900efce5f8486c532edc70c871e3bfc6cf0a2c9485a",
+    "rax_io.py": "70f9c98e03d05b24e7b0c56e024c57d27b60630e711b633186a295c42c0ff2d2",
+    "task.py": "b364b2dd33b30068bb76aa81abbcb565284c5fc6462e50a2b3831c377957b12f",
+    "tracker.py": "a3ab38834154e7da8e21669ad29a9d47ffa6c02b5b2fc3a3f26008ceae196cf3"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "geom.py",
+        "functions": [
+          "parse_pose"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "controller.py": "3ef6b204a45d55d688ee2a58275e1f031ec832aeb3ae177a81ae549dbe155277",
+      "ctrl.py": "b59f6c4f68edb95c3c6a10427e181aa4e4744495cdd65dfbe4cdc62caf4c7bd0",
+      "geom.py": "3ac12897e7582af344e1e81b72805d2c993c22dabcd3d9d211aebb6944a60f78",
+      "percep.py": "ae7de1cddad324ce809a3900efce5f8486c532edc70c871e3bfc6cf0a2c9485a",
+      "rax_io.py": "70f9c98e03d05b24e7b0c56e024c57d27b60630e711b633186a295c42c0ff2d2",
+      "task.py": "b364b2dd33b30068bb76aa81abbcb565284c5fc6462e50a2b3831c377957b12f",
+      "tracker.py": "a3ab38834154e7da8e21669ad29a9d47ffa6c02b5b2fc3a3f26008ceae196cf3"
+    },
+    "repaired_files": {
+      "controller.py": "3ef6b204a45d55d688ee2a58275e1f031ec832aeb3ae177a81ae549dbe155277",
+      "ctrl.py": "b59f6c4f68edb95c3c6a10427e181aa4e4744495cdd65dfbe4cdc62caf4c7bd0",
+      "geom.py": "ba5e68f7789afc9e7f4e46bfab5f17028bdcbfbe3f8474f60eb4908db7b8d652",
+      "percep.py": "ae7de1cddad324ce809a3900efce5f8486c532edc70c871e3bfc6cf0a2c9485a",
+      "rax_io.py": "70f9c98e03d05b24e7b0c56e024c57d27b60630e711b633186a295c42c0ff2d2",
+      "task.py": "b364b2dd33b30068bb76aa81abbcb565284c5fc6462e50a2b3831c377957b12f",
+      "tracker.py": "a3ab38834154e7da8e21669ad29a9d47ffa6c02b5b2fc3a3f26008ceae196cf3"
+    }
+  }
+}

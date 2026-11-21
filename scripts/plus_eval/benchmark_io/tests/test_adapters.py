@@ -16,8 +16,8 @@ def records():
     return {"BinFill": [dict(seed=100+i, episode=i, max_steps=100, control_freq=20) for i in range(3)]}
 
 
-def make_study(tmp_path, setting="AfI", method="rax", budget=10):
-    return Study(tmp_path, method=method, setting=setting, budget=0 if setting=="AfD" else budget, records=records())
+def make_study(tmp_path, setting="interaction-only", method="rax", budget=10):
+    return Study(tmp_path, method=method, setting=setting, budget=0 if setting=="demo-only" else budget, records=records())
 
 
 def test_budget_atomic_and_persists_failed_attempts(tmp_path):
@@ -37,19 +37,19 @@ def test_budget_atomic_and_persists_failed_attempts(tmp_path):
 
 
 def test_settings_are_enforced_before_data_or_simulator_access(tmp_path):
-    study = make_study(tmp_path / "AfD", setting="AfD")
+    study = make_study(tmp_path / "demo-only", setting="demo-only")
     with pytest.raises(BudgetExhausted):
         study.reserve("BinFill", purpose="preview")
     with pytest.raises(PermissionError):
-        make_study(tmp_path / "AfI").require_demos()
-    make_study(tmp_path / "both", setting="AfD+I").require_demos()
+        make_study(tmp_path / "interaction-only").require_demos()
+    make_study(tmp_path / "both", setting="demo+interaction").require_demos()
     with pytest.raises(ValueError):
-        make_study(tmp_path / "AfI", budget=9)
+        make_study(tmp_path / "interaction-only", budget=9)
     with pytest.raises(ValueError):
         study.reserve("BinFill", 50, purpose="test_leak")
 
 
-def test_demo_export_denies_afi_before_opening_files(tmp_path):
+def test_demo_export_denies_interaction_only_before_opening_files(tmp_path):
     from benchmark_io.demonstrations import export_task
     study = make_study(tmp_path / "study")
     with pytest.raises(PermissionError):
@@ -59,7 +59,7 @@ def test_demo_export_denies_afi_before_opening_files(tmp_path):
 
 def test_rax_r0_configuration_and_wrong_setting_rejection(tmp_path, monkeypatch):
     from services.controller.config import Configuration, Limits
-    study = make_study(tmp_path / "study", setting="AfD")
+    study = make_study(tmp_path / "study", setting="demo-only")
     monkeypatch.setenv("ROBOMME_PLUS_STUDY", str(study.root))
     monkeypatch.setenv("RAX_ARTIFACT_ROOT", str(tmp_path))
     limit = Limits(wall_seconds=600, memory_mb=1024, cpus=1., pids=128,

@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "demo+interaction",
+  "budget": 3,
+  "task": "MoveCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "6bb0f928c78e325fd4c26cef0b8ee1708c572048c8d4224137b8a0000604fb61"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "MoveCube.py": "6bb0f928c78e325fd4c26cef0b8ee1708c572048c8d4224137b8a0000604fb61"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

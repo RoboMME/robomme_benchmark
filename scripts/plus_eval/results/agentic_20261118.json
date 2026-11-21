@@ -5,7 +5,7 @@
   "rows": [
     {
       "method": "aspire",
-      "setting": "AfD",
+      "setting": "demo-only",
       "budget": 0,
       "total": 800,
       "successes": 136,
@@ -85,7 +85,7 @@
     },
     {
       "method": "aspire",
-      "setting": "AfI",
+      "setting": "interaction-only",
       "budget": 1,
       "total": 800,
       "successes": 117,
@@ -165,7 +165,7 @@
     },
     {
       "method": "aspire",
-      "setting": "AfI",
+      "setting": "interaction-only",
       "budget": 3,
       "total": 800,
       "successes": 134,
@@ -245,7 +245,7 @@
     },
     {
       "method": "aspire",
-      "setting": "AfI",
+      "setting": "interaction-only",
       "budget": 5,
       "total": 800,
       "successes": 215,
@@ -325,7 +325,7 @@
     },
     {
       "method": "aspire",
-      "setting": "AfI",
+      "setting": "interaction-only",
       "budget": 10,
       "total": 800,
       "successes": 341,
@@ -405,7 +405,7 @@
     },
     {
       "method": "aspire",
-      "setting": "AfD+I",
+      "setting": "demo+interaction",
       "budget": 1,
       "total": 800,
       "successes": 155,
@@ -485,7 +485,7 @@
     },
     {
       "method": "aspire",
-      "setting": "AfD+I",
+      "setting": "demo+interaction",
       "budget": 3,
       "total": 800,
       "successes": 261,
@@ -565,7 +565,7 @@
     },
     {
       "method": "aspire",
-      "setting": "AfD+I",
+      "setting": "demo+interaction",
       "budget": 5,
       "total": 800,
       "successes": 252,
@@ -645,7 +645,7 @@
     },
     {
       "method": "aspire",
-      "setting": "AfD+I",
+      "setting": "demo+interaction",
       "budget": 10,
       "total": 800,
       "successes": 279,
@@ -725,7 +725,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfD",
+      "setting": "demo-only",
       "budget": 0,
       "total": 800,
       "successes": 152,
@@ -805,7 +805,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfI",
+      "setting": "interaction-only",
       "budget": 1,
       "total": 800,
       "successes": 26,
@@ -885,7 +885,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfI",
+      "setting": "interaction-only",
       "budget": 3,
       "total": 800,
       "successes": 351,
@@ -965,7 +965,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfI",
+      "setting": "interaction-only",
       "budget": 5,
       "total": 800,
       "successes": 265,
@@ -1045,7 +1045,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfI",
+      "setting": "interaction-only",
       "budget": 10,
       "total": 800,
       "successes": 312,
@@ -1125,7 +1125,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfD+I",
+      "setting": "demo+interaction",
       "budget": 1,
       "total": 800,
       "successes": 156,
@@ -1205,7 +1205,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfD+I",
+      "setting": "demo+interaction",
       "budget": 3,
       "total": 800,
       "successes": 315,
@@ -1285,7 +1285,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfD+I",
+      "setting": "demo+interaction",
       "budget": 5,
       "total": 800,
       "successes": 283,
@@ -1365,7 +1365,7 @@
     },
     {
       "method": "rax",
-      "setting": "AfD+I",
+      "setting": "demo+interaction",
       "budget": 10,
       "total": 800,
       "successes": 337,

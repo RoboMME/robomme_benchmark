@@ -1,0 +1,36 @@
+{
+  "method": "rax",
+  "setting": "demo-only",
+  "budget": 0,
+  "task": "SwingXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "CHANGELOG.md": "c1abd8da233df9aaf673d52f859ebf6c2fbc399671e52347c2b32fa3f32f8a15",
+    "controller.py": "a8aa8fddbb05b17b41e9de7958ae0f9b375d69102c917377f5d60f6ea78cf7fb",
+    "io_utils.py": "fd2e8418707c1cb6ba1ad848281dfc7971fd4ecf86182abbc963c47efba6040a",
+    "perception.py": "da9d353c67662cf694c68f354f2061d0d5cd03aa36f323d0531cfad54357861a"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "CHANGELOG.md": "127e465fae0e405afc2ed5504bfadba2d1be771fb74e7efa4c22889bd09da66c",
+    "controller.py": "99f0f8626c8c81714181ddef7cada695a1a63f6f5d39e82ca3d344aafe6c4e29",
+    "io_utils.py": "fd2e8418707c1cb6ba1ad848281dfc7971fd4ecf86182abbc963c47efba6040a",
+    "perception.py": "da9d353c67662cf694c68f354f2061d0d5cd03aa36f323d0531cfad54357861a"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "CHANGELOG.md": {
+        "evaluated_sha256": "127e465fae0e405afc2ed5504bfadba2d1be771fb74e7efa4c22889bd09da66c",
+        "published_sha256": "c1abd8da233df9aaf673d52f859ebf6c2fbc399671e52347c2b32fa3f32f8a15"
+      },
+      "controller.py": {
+        "evaluated_sha256": "99f0f8626c8c81714181ddef7cada695a1a63f6f5d39e82ca3d344aafe6c4e29",
+        "published_sha256": "a8aa8fddbb05b17b41e9de7958ae0f9b375d69102c917377f5d60f6ea78cf7fb"
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "method": "aspire",
+  "setting": "interaction-only",
+  "budget": 1,
+  "task": "BinFill",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "2a6217e25bf8d559a303cc4e08b1138ff091fc57a41a9c81dabb1f54cac2ad33"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "BinFill.py": "0aa60d8718453121877d3aef6871a9e9ab7d22aa708f723ddaa511e1a06bbda5"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "policy.py": {
+        "evaluated_sha256": "0aa60d8718453121877d3aef6871a9e9ab7d22aa708f723ddaa511e1a06bbda5",
+        "published_sha256": "2a6217e25bf8d559a303cc4e08b1138ff091fc57a41a9c81dabb1f54cac2ad33"
+      }
+    }
+  }
+}

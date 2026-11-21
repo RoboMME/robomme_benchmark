@@ -2,7 +2,7 @@
 
 This reference describes the visual export actually provided to these adapters.
 Read the supplied `manifest.json`; do not infer a format from the original dataset
-name. AfI has no released-demonstration access.
+name. interaction-only has no released-demonstration access.
 
 The manifest has `schema_version: 1`, a `task`, and a `demonstrations` list. Each
 demonstration has an `episode` index, `goal`, `control_hz`, and ordered `frames`.

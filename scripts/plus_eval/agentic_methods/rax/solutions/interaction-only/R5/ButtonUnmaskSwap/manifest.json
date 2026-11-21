@@ -1,0 +1,27 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 5,
+  "task": "ButtonUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "1db439a64c4afe9c80bfed2555d7efa8e0f8d341fb03543ad40f3440edc38158",
+    "grasp.py": "baa5bec7b4943cb2b2a610e63da2bbc0b10e5c21c7205dbfbbbb0b8ff6f38e11",
+    "percep.py": "e4f5ab8500d5ba06f44a9f33646a21335981380483caba33e5370ad7bd0a04a6",
+    "robo.py": "ade8f8c6fa2e968666d2c6c6c6478e1a5b20a56141e97068e5b5b77971df3336",
+    "tracker.py": "0be490fd229b472046638e9c6052b3ac6d1b9fe342e9a8f7c469f1ac8e24a708",
+    "tracker2.py": "997c1bf35e0a8edc175fe803bc18ced31dfb70b10bec713571a616a0bbb83154"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "1db439a64c4afe9c80bfed2555d7efa8e0f8d341fb03543ad40f3440edc38158",
+    "grasp.py": "baa5bec7b4943cb2b2a610e63da2bbc0b10e5c21c7205dbfbbbb0b8ff6f38e11",
+    "percep.py": "e4f5ab8500d5ba06f44a9f33646a21335981380483caba33e5370ad7bd0a04a6",
+    "robo.py": "ade8f8c6fa2e968666d2c6c6c6478e1a5b20a56141e97068e5b5b77971df3336",
+    "tracker.py": "0be490fd229b472046638e9c6052b3ac6d1b9fe342e9a8f7c469f1ac8e24a708",
+    "tracker2.py": "997c1bf35e0a8edc175fe803bc18ced31dfb70b10bec713571a616a0bbb83154"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

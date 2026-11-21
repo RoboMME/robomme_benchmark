@@ -1,0 +1,17 @@
+{
+  "method": "aspire",
+  "setting": "interaction-only",
+  "budget": 3,
+  "task": "VideoUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "05c77b1b8ab0dfa4650d69021b55dc4d5655a2a72e60b066a7bbfb30badef243"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "VideoUnmask.py": "05c77b1b8ab0dfa4650d69021b55dc4d5655a2a72e60b066a7bbfb30badef243"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

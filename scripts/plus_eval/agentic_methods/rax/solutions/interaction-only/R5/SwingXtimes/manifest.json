@@ -1,0 +1,25 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 5,
+  "task": "SwingXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "4d2351b0385183be785c4618fb1b0ccb63602adc83685fb1f041f58aab53052c",
+    "percep.py": "dee3f8ad167fca9e2d9f79e123d9422dd8d7fb8e989827d2fcdc4a7b46365d83",
+    "robo.py": "0235f0d07a96bed9207fe77663466b5116d31a4dc00aea3f8ecba1be330bc969",
+    "scene.py": "c933dd248d592bab5fcad6393cb0b5006b43cb4940f0f016941bfecf644f74d9",
+    "skills.py": "409ddade681ce707ce476b33c44fcddef9b3aaba9eaea738e9d38692fb6fce23"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "4d2351b0385183be785c4618fb1b0ccb63602adc83685fb1f041f58aab53052c",
+    "percep.py": "dee3f8ad167fca9e2d9f79e123d9422dd8d7fb8e989827d2fcdc4a7b46365d83",
+    "robo.py": "0235f0d07a96bed9207fe77663466b5116d31a4dc00aea3f8ecba1be330bc969",
+    "scene.py": "c933dd248d592bab5fcad6393cb0b5006b43cb4940f0f016941bfecf644f74d9",
+    "skills.py": "409ddade681ce707ce476b33c44fcddef9b3aaba9eaea738e9d38692fb6fce23"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

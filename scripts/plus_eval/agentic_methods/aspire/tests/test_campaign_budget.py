@@ -7,7 +7,7 @@ from aspire.campaign import Campaign, prepare
 from benchmark_io.protocol import Study
 
 
-def campaign(tmp_path,setting='AfI',budget=2):
+def campaign(tmp_path,setting='interaction-only',budget=2):
     study=Study(tmp_path/'study',method='aspire',setting=setting,budget=budget,
                 records={'BinFill':[dict(seed=i,max_steps=100) for i in range(3)]})
     token=tmp_path/'token';token.write_text('test-placeholder')

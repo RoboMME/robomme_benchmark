@@ -19,7 +19,7 @@ def test_cost_counts_each_cache_duration_once_and_separates_settings(tmp_path):
                cache_creation=dict(ephemeral_5m_input_tokens=100,ephemeral_1h_input_tokens=200))
     expected=(100*4.4+200*22+1000*.22+100*5.5+200*8.8)/1e6
     assert estimate(usage)['estimated_cost_usd']==pytest.approx(expected)
-    for setting in ('AfD','AfI'):
+    for setting in ('demo-only','interaction-only'):
         directory=tmp_path/setting;directory.mkdir()
         record_usage(directory,usage,complete=True,context=dict(method='aspire',setting=setting,budget=0,phase='development'))
     result=summarize(tmp_path)
@@ -49,7 +49,7 @@ def test_campaign_cannot_silently_route_ambiguous_task_to_first_task():
 
 def test_rehearsal_and_verification_share_training_ceiling_and_fail_before_reset(tmp_path):
     rows={'BinFill':[dict(seed=i,max_steps=20,control_freq=20) for i in range(3)]}
-    study=Study(tmp_path/'study',method='rax',setting='AfI',budget=3,records=rows)
+    study=Study(tmp_path/'study',method='rax',setting='interaction-only',budget=3,records=rows)
     for purpose in ('exploration','frozen_bundle_rehearsal','verification'):
         attempt=study.reserve('BinFill',purpose=purpose)
         study.finish(attempt['id'],dict(success=False))
@@ -125,14 +125,14 @@ def test_parallel_method_queues_keep_placement_status_and_relays_separate(tmp_pa
     for method,gpu,port in [('aspire','0',18177),('rax','1',18277)]:
         pipeline=Pipeline(tmp_path,[gpu],method=method,proxy_port=port)
         assert pipeline.slots.get()[0]==gpu
-        pipeline.current=dict(method=method,setting='AfD',budget=0,case='PRIVATE_PATH')
+        pipeline.current=dict(method=method,setting='demo-only',budget=0,case='PRIVATE_PATH')
         pipeline.status(phase='development')
         monkeypatch.setattr(pipeline,'launch',lambda cmd,*a,**kw:(launched.append(cmd) or SimpleNamespace(poll=lambda:None)))
-        pipeline.relay(tmp_path/method/'AfD/R0',method,'AfD',0)
+        pipeline.relay(tmp_path/method/'demo-only/R0',method,'demo-only',0)
         assert launched[-1][launched[-1].index('--port')+1]==str(port)
     report=public_progress(tmp_path)
     active=[r for r in report['rows'] if r['phase']=='development']
     assert {r['method'] for r in active}=={'aspire','rax'}
-    assert len(report['rows'])==10
-    assert report['test_trials_planned']==8000
+    assert len(report['rows'])==6
+    assert report['test_trials_planned']==4800
     assert 'PRIVATE_PATH' not in json.dumps(report)

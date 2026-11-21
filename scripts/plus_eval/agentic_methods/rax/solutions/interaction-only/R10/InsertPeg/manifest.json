@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "InsertPeg",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "boxshift.py": "35c2594fa2b6ce30e6885f271e3697454682595c2090c0cc358a9a814caeada1",
+    "controller.py": "c83488a953d84c395b8096ec966ea10616e3db8e3d65cd4690062d02fadd994f",
+    "holeloc.py": "c646487471605415dd025eab3571b5a820b74cc649f61f8c734dac8db7a4b391"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "boxshift.py": "35c2594fa2b6ce30e6885f271e3697454682595c2090c0cc358a9a814caeada1",
+    "controller.py": "c83488a953d84c395b8096ec966ea10616e3db8e3d65cd4690062d02fadd994f",
+    "holeloc.py": "c646487471605415dd025eab3571b5a820b74cc649f61f8c734dac8db7a4b391"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

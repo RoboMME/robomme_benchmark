@@ -1,0 +1,31 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 3,
+  "task": "MoveCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "dee2488b8f7b7ed28f70cd9534f30973b9c63c3cbb042c0b7782d035ed1cf9ec",
+    "demo.py": "df6f6ef5d47ef97dafbf8bb377dabc78d5a2f78ff6dd59c6c2ae40536003b55f",
+    "hook.py": "19e04c639c4f1a344e22ccd0121d4cb6582edeccd51d6c7e48c78304027e24f7",
+    "manner.py": "74a5430e740828cc45a9044d1698d28ab94025dfc4c2141522cbe431699b622e",
+    "motion.py": "c2f6c5662648006bd9d123b190770b18bdaa69c21db5d10c41229d9c10f505fe",
+    "perception.py": "7e8366a706a03c3e2bec92d656f95f6b127295e2abfbd57e14454c424e5d8e7d",
+    "pickpush.py": "1656d4661c81716ab807037cdef28fdfa8d57446b02cb664a5cb35e50417fa87",
+    "stick.py": "1708b99a05987f2f624718bc64d31c93109217846fdfac71c6982cb5198168bf"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "dee2488b8f7b7ed28f70cd9534f30973b9c63c3cbb042c0b7782d035ed1cf9ec",
+    "demo.py": "df6f6ef5d47ef97dafbf8bb377dabc78d5a2f78ff6dd59c6c2ae40536003b55f",
+    "hook.py": "19e04c639c4f1a344e22ccd0121d4cb6582edeccd51d6c7e48c78304027e24f7",
+    "manner.py": "74a5430e740828cc45a9044d1698d28ab94025dfc4c2141522cbe431699b622e",
+    "motion.py": "c2f6c5662648006bd9d123b190770b18bdaa69c21db5d10c41229d9c10f505fe",
+    "perception.py": "7e8366a706a03c3e2bec92d656f95f6b127295e2abfbd57e14454c424e5d8e7d",
+    "pickpush.py": "1656d4661c81716ab807037cdef28fdfa8d57446b02cb664a5cb35e50417fa87",
+    "stick.py": "1708b99a05987f2f624718bc64d31c93109217846fdfac71c6982cb5198168bf"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

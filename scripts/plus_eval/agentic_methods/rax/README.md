@@ -14,12 +14,11 @@ restore command during setup. Existing checkouts are left unchanged; evaluated c
 
 ## Adaptation
 
-CLI and artifact keys `AfD`, `AfI` and `AfD+I` mean **Few-shot demonstrations**,
-**Few-shot interactions** and **Few-shot demonstrations+interactions**, respectively.
-Current interaction results use budgets 5 and 10.
+Settings are `demo-only`, `interaction-only` and `demo+interaction`.
+The leaderboard uses R10; R1/R3/R5 are optional reported results.
 
 We retain LIBERO's per-task exploration → bundle registration → exact-bundle
-rehearsal → submission workflow. Rehearsals consume the same R budget. AfD allows
+rehearsal → submission workflow. Rehearsals consume the same R budget. demo-only allows
 explicit offline submission because it forbids simulator access. We add no CaP
 code, task solver or policy-selection algorithm.
 
@@ -29,7 +28,7 @@ only to a separate runtime copy:
 | Upstream area | Integration change |
 | --- | --- |
 | `services/benchmarks.py` | Register public RoboMME-Plus backend/tools |
-| `controller/config.py`, `frontend.py` | AfD zero-interaction submission, reasoning effort and budget gates |
+| `controller/config.py`, `frontend.py` | demo-only zero-interaction submission, reasoning effort and budget gates |
 | `controller/supervisor.py`, `sandbox.py` | Bounded execution and safe continuation of unstarted tests |
 | `services/artifact_io.py` | Stream large artifacts |
 | `harness/{claude,codex}_cli/auto_research.py` | Public protocol, deadline and read-only wrap-up |
@@ -47,8 +46,8 @@ The model, time limits and input sampling are implementation choices.
 | Area | Configuration |
 | --- | --- |
 | Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; development/evaluation usage and cost logged separately. |
-| Budgets | Demonstrations only: 0 starts. Interaction settings: at most 5 or 10 starts per task, developed independently. All starts, including failed setup and verification, share the budget. Archived R1/R3 solutions remain available. |
-| Training demos | AfD/AfD+I receive front/wrist RGB recordings, goals, phases and timestamps, with unlimited offline reuse. AfI receives none. |
+| Budgets | Demonstrations only: 0 starts. Interaction settings: at most 10 starts per task. Historical R1/R3/R5 studies were developed independently. All starts, including failed setup and verification, share the budget. Optional-budget solutions remain available. |
+| Training demos | demo-only/demo+interaction receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. interaction-only receives none. Simulator replay counts toward the development budget. |
 | Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
 | Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
@@ -59,7 +58,7 @@ The model, time limits and input sampling are implementation choices.
   Expiry stops the sandbox/simulator, then allows at most 120 seconds for read-only
   reporting or submission of an existing eligible bundle; no edits or rehearsals.
 - **Submission:** interaction settings retain the clean rehearsal of the exact
-  submitted bundle, charged to the same R. AfD adds offline submission with zero
+  submitted bundle, charged to the same R. demo-only adds offline submission with zero
   simulator starts. Test outcomes never return to development.
 - **Providers and transport:** optional Gemini is disabled; native coding-model
   vision and RGB-D geometry tools remain. Large artifacts are streamed, initial
@@ -93,8 +92,8 @@ published configuration on all 800 test episodes:
 
 ```bash
 python scripts/plus_eval/agentic_methods/rax/eval_plus.py \
-  --setting AfI --budget 5 \
-  --gpu 0 --output-dir "<RUN_ROOT>/rax-AfI-R5"
+  --setting interaction-only --budget 10 \
+  --gpu 0 --output-dir "<RUN_ROOT>/rax-interaction-only-R10"
 ```
 
 `--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media.
@@ -103,3 +102,6 @@ The same output directory resumes unstarted tests; use a new directory for a fre
 [Link external artifacts](../../results/README.md) to inspect
 `runs/SETTING/Rn/{development,evaluation}`. Public packet examples are in
 [`RAX.md`](../../benchmark_io/prompts/current/RAX.md).
+
+Development uses the shared [interaction accounting interface](../../../../doc/robomme_plus/agentic_development.md).
+See the [submission and audit results](<../../../../doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md>).

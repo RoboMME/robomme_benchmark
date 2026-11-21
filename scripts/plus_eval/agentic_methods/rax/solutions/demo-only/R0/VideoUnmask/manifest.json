@@ -1,0 +1,61 @@
+{
+  "method": "rax",
+  "setting": "demo-only",
+  "budget": 0,
+  "task": "VideoUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "ed5d5e98a5abb3cd6dfe5e1c66fb8de72414ef7adeb41598d2892ef4454ac3ad",
+    "geometry.py": "32ade2331fcade57ec6e438f5c39e3bf21f4c9315763a551b44c806ab1cb4dc4",
+    "io_utils.py": "3bb8e9046d514eff75de7b78bb071e3d3c19e584fcb02e2581583ca836260021",
+    "perception.py": "7f0631a8949c7afcd02681fe860d0bda67bc9082e97fbf548059d65a9bfd28b0",
+    "robot.py": "a3d091b564ceae540ebe4162b803c9c44f3a9421ba730e6e4d41949583a3e7b5"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "8b85b378bc23f8576b337cd4b69b4347252e78a039111ed09359bfe5f1e10469",
+    "geometry.py": "32ade2331fcade57ec6e438f5c39e3bf21f4c9315763a551b44c806ab1cb4dc4",
+    "io_utils.py": "3bb8e9046d514eff75de7b78bb071e3d3c19e584fcb02e2581583ca836260021",
+    "perception.py": "7f0631a8949c7afcd02681fe860d0bda67bc9082e97fbf548059d65a9bfd28b0",
+    "robot.py": "a3d091b564ceae540ebe4162b803c9c44f3a9421ba730e6e4d41949583a3e7b5"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "controller.py",
+        "functions": [
+          "analytic_models"
+        ],
+        "fix": "Accept documented camera_poses.position_m; preserve existing aliases, geometry and policy logic",
+        "verification": "<EXPERIMENT_ROOT>/operator_audits/20261117_pre_eval_interface_review/camera_candidates/rax/demo-only/R0/VideoUnmask/policy_actual_probe.json"
+      }
+    ],
+    "original_files": {
+      "controller.py": "649caae9a2a352519952534d0208f1eff74d3dc0d58b256be1bff28bb0de8921",
+      "geometry.py": "32ade2331fcade57ec6e438f5c39e3bf21f4c9315763a551b44c806ab1cb4dc4",
+      "io_utils.py": "3bb8e9046d514eff75de7b78bb071e3d3c19e584fcb02e2581583ca836260021",
+      "perception.py": "7f0631a8949c7afcd02681fe860d0bda67bc9082e97fbf548059d65a9bfd28b0",
+      "robot.py": "a3d091b564ceae540ebe4162b803c9c44f3a9421ba730e6e4d41949583a3e7b5"
+    },
+    "repaired_files": {
+      "controller.py": "8b85b378bc23f8576b337cd4b69b4347252e78a039111ed09359bfe5f1e10469",
+      "geometry.py": "32ade2331fcade57ec6e438f5c39e3bf21f4c9315763a551b44c806ab1cb4dc4",
+      "io_utils.py": "3bb8e9046d514eff75de7b78bb071e3d3c19e584fcb02e2581583ca836260021",
+      "perception.py": "7f0631a8949c7afcd02681fe860d0bda67bc9082e97fbf548059d65a9bfd28b0",
+      "robot.py": "a3d091b564ceae540ebe4162b803c9c44f3a9421ba730e6e4d41949583a3e7b5"
+    }
+  },
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "controller.py": {
+        "evaluated_sha256": "8b85b378bc23f8576b337cd4b69b4347252e78a039111ed09359bfe5f1e10469",
+        "published_sha256": "ed5d5e98a5abb3cd6dfe5e1c66fb8de72414ef7adeb41598d2892ef4454ac3ad"
+      }
+    }
+  }
+}

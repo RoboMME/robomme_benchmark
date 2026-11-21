@@ -10,27 +10,19 @@ failures, timeouts and errors remain in the denominator.
 The same settings apply to Non-Agentic policies and Agentic systems. Compare methods
 at the same setting and rollout budget, which caps simulator attempts per task on training seeds.
 
-| Setting | Released demonstrations | Rollout budget per task |
+| Setting | Released Plus demonstrations | Maximum Plus rollouts per task |
 | --- | --- | --- |
 | Zero-shot | No | 0 |
-| Few-shot demonstrations | Yes | 0 |
-| Few-shot interactions | No | 5 or 10 |
-| Few-shot demonstrations+interactions | Yes | 5 or 10 |
+| Demo-only | Yes | 0 |
+| Interaction-only | No | 10 |
+| Demo+interaction | Yes | 10 |
 
-- Use only released training demos and seeds for the chosen setting. Offline
-  demo reuse is unlimited. Every development simulator start counts toward the rollout budget,
-  including failed setup, timeouts, early stops, retries and frozen-policy rehearsal.
-  Prompt/harness tuning, debugging, verification and selection share this budget.
-- Use public observations and feedback; task-source-derived solutions, oracle
-  queries and privileged simulator information are forbidden. A task's conditioning video is a normal
-  observation in every setting, distinct from an expert training recording.
-  Task-specific prompts and strategies must come from permitted experience.
-- Freeze weights, programs, prompts, tools and libraries before testing; reset
-  adaptive memory between episodes. Test feedback cannot revise or select policies.
-  Report test-time optimization separately.
-
-The [evaluation guide](../../src/robomme_plus/README.md#evaluation-protocol) defines
-the shared interface, default variations and execution limits.
+Original RoboMME's dataset and simulator may be used freely in every setting,
+outside the Plus rollout budget. Plus demos are offline recordings; every Plus
+simulator start counts, including replay, debugging, failures and verification.
+Keep the complete development history and freeze the system before testing.
+The [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol)
+defines permitted resources, audits, reporting and execution limits.
 
 
 ## Zero-shot
@@ -46,7 +38,7 @@ or simulator adaptation.
 | [3-tier Astra](<submission/3-tier-astra-plus (eval_by_RoboMME_team).md>) | 70/800 | 8.75% |
 | [PonderPounce](<submission/ponderpounce-plus (eval_by_RoboMME_team).md>) | 20/800 | 2.50% |
 
-## Few-shot demonstrations
+## Demo-only
 
 ASPIRE and RAX can inspect the released 50 demonstrations without simulator
 interaction. One-shot Astra receives one selected training example for the task
@@ -58,28 +50,57 @@ interaction. One-shot Astra receives one selected training example for the task
 | [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md) | All 50 demos available | 136/800 | 17.00% |
 | [RAX](../../scripts/plus_eval/agentic_methods/rax/README.md) | All 50 demos available | 152/800 | 19.00% |
 
-## Few-shot interactions
+## Interaction-only
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
-| R5 | 215/800 (26.88%) | 265/800 (33.13%) |
 | R10 | 341/800 (42.63%) | 312/800 (39.00%) |
 
-## Few-shot demonstrations+interactions
+## Demo+interaction
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
-| R5 | 252/800 (31.50%) | 283/800 (35.38%) |
 | R10 | 279/800 (34.88%) | 337/800 (42.13%) |
 
-Current interaction results use R5 and R10 (5 or 10 attempts per task).
-Archived R1/R3 results and policies remain in the linked JSON files and solution
-directories; their budgets are not relabeled.
+## Optional interaction budgets
+
+R1, R3 and R5 are supplementary results. The leaderboard shows only R10 for
+interaction settings. Each historical budget was developed independently.
+
+| Setting | Budget | ASPIRE | RAX |
+| --- | --- | ---: | ---: |
+| Interaction-only | R1 | 117/800 (14.63%) | 26/800 (3.25%) |
+| Interaction-only | R3 | 134/800 (16.75%) | 351/800 (43.88%) |
+| Interaction-only | R5 | 215/800 (26.88%) | 265/800 (33.13%) |
+| Demo+interaction | R1 | 155/800 (19.38%) | 156/800 (19.50%) |
+| Demo+interaction | R3 | 261/800 (32.63%) | 315/800 (39.38%) |
+| Demo+interaction | R5 | 252/800 (31.50%) | 283/800 (35.38%) |
+
+## Agentic development audit status
+
+The [ASPIRE submission](<submission/aspire-plus (eval_by_RoboMME_team).md#development-audit>)
+and [RAX submission](<submission/rax-plus (eval_by_RoboMME_team).md#development-audit>)
+report **PASS WITHIN AUDITED SCOPE** for the historical main configurations'
+harness and development records, with disclosed log gaps and interface corrections.
+All 1,099 starts across main and optional studies reconcile with native records;
+no assigned per-task allowance was exceeded. The main configurations' 11,384 saved
+API requests were also inspected. Optional R1/R3/R5 received accounting and
+frozen-artifact checks, not a complete API-input audit.
+
+These runs used a pinned training snapshot. Ten recordings and nine execution
+limits differ from current v2, so **current-v2 equivalence remains unverified**.
+The submissions identify affected tasks and the scope of redevelopment needed
+for that claim. Renaming settings alone does not require new runs.
+
+See the [machine-readable evidence](audits/agentic_development_20261121.json) and
+[audit record format](submission/model_example_plus.md#agentic-development-audit-record).
+The [audit walkthrough](auditing.md) provides the procedure and prompts.
+These audits concern development; held-out evaluation remains the fixed test protocol.
 
 ## Per-task success rates
 
-Each cell uses 50 episodes. The tables below use the same setting and budget
-as the overall results above.
+Each cell uses 50 episodes. R5 columns are optional supplementary results.
+The method submissions also include per-task R1/R3 results.
 
 <details>
 <summary>Zero-shot</summary>
@@ -106,7 +127,7 @@ as the overall results above.
 </details>
 
 <details>
-<summary>Few-shot demonstrations</summary>
+<summary>Demo-only</summary>
 
 | Task | One-shot Astra | ASPIRE | RAX |
 |---|---:|---:|---:|
@@ -130,7 +151,7 @@ as the overall results above.
 </details>
 
 <details>
-<summary>Few-shot interactions</summary>
+<summary>Interaction-only</summary>
 
 | Task | ASPIRE R5 | ASPIRE R10 | RAX R5 | RAX R10 |
 | --- | ---: | ---: | ---: | ---: |
@@ -154,7 +175,7 @@ as the overall results above.
 </details>
 
 <details>
-<summary>Few-shot demonstrations+interactions</summary>
+<summary>Demo+interaction</summary>
 
 | Task | ASPIRE R5 | ASPIRE R10 | RAX R5 | RAX R10 |
 | --- | ---: | ---: | ---: | ---: |

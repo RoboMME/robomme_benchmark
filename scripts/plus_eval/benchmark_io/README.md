@@ -1,12 +1,20 @@
-# Shared agentic evaluation
+# Agentic development and evaluation
 
 Shared simulator I/O, budget ledger, frozen evaluation, queue and API accounting
-for [ASPIRE](../agentic_methods/aspire/README.md) and [RAX](../agentic_methods/rax/README.md).
+for agentic methods, including [ASPIRE](../agentic_methods/aspire/README.md) and [RAX](../agentic_methods/rax/README.md).
 Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol);
 [baseline settings and results](../../../doc/robomme_plus/robomme_plus_baseline_results.md) describe
 the finalized runs. [ASPIRE](../agentic_methods/aspire/README.md#adaptation) and
 [RAX](../agentic_methods/rax/README.md#adaptation) document their adaptation settings
 and runtime limits. Saved agent-facing prompts are in [`prompts/current`](prompts/current).
+
+## Integrate your own method
+
+Use the [development interface](../../../doc/robomme_plus/agentic_development.md)
+for a minimal preparation command, seed-selectable API, logging requirements and
+audits. Keep your own harness; run the simulator service outside the agent workspace.
+The [audit walkthrough](../../../doc/robomme_plus/auditing.md) provides prompts
+for the harness review and completed-development review.
 
 ## Setup
 
@@ -37,7 +45,7 @@ Credentials remain outside agent containers. Neither method uses our CaP code.
 ## Develop and evaluate
 
 Download the [final training H5 data](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5),
-revision `63cb9b5b62f5413993845c7d89b82b3bd58dc2fa`, then:
+pin the downloaded revision in your run manifest, then:
 
 ```bash
 python -m benchmark_io.prepare_unified prepare \
@@ -46,18 +54,18 @@ python -m benchmark_io.watch_unified --root "<RUN_ROOT>"
 ```
 
 Preparation pins the benchmark, 50 recordings, protocol, runtime and image
-digest without API calls or simulator starts. New studies create **10 configurations**:
-2 methods × (demonstrations only at 0; each interaction setting at 5 and 10).
-Each configuration evaluates 800 episodes: 8,000 tests across both methods.
+digest without API calls or simulator starts. New studies create **6 configurations**:
+2 methods × (demo-only at 0; each interaction setting at 10).
+Each configuration evaluates 800 episodes: 4,800 tests across both methods.
 Existing studies retain their pinned configuration list, including historical budgets.
 
-CLI keys and directory names remain stable for compatibility:
+Use these setting names in commands and directories:
 
-| Current setting | CLI/artifact key | Budget |
-| --- | --- | --- |
-| Few-shot demonstrations | `AfD` | 0 |
-| Few-shot interactions | `AfI` | 5 or 10 |
-| Few-shot demonstrations+interactions | `AfD+I` | 5 or 10 |
+| Setting | Main budget |
+| --- | --- |
+| `demo-only` | 0 |
+| `interaction-only` | 10 |
+| `demo+interaction` | 10 |
 
 Worker allocation is configurable. Evaluation requires frozen policies.
 Example `<RUN_ROOT>/schedule_policy.json` for two GPUs:
@@ -83,7 +91,7 @@ Under `METHOD/SETTING/Rn/`: `study/` contains metadata/attempts;
 `development/` contains native commands, transcripts, code and training rollouts;
 `development_api/` contains usage/cost records; `evaluation/` contains frozen
 policies, test results and logs. R0/R10 save full test media; R5 saves logs.
-Archived R1/R3 results and their original labels remain available.
+R1/R3/R5 results remain optional, with their original budgets and assignments.
 All development history is retained. `progress.json` aggregates the study.
 
 Report demo use, actual attempts and simulator steps per task, and separate

@@ -1,16 +1,15 @@
-# RoboMME-Plus public protocol v4
+# RoboMME-Plus public development protocol v7
 
-This revision follows the website's **Few-shot demonstrations**, **Few-shot
-interactions** and **Few-shot demonstrations+interactions** settings. Interaction
-budgets are 5 or 10 simulator starts per task; demonstrations-only permits none.
-Tool and artifact keys remain `AfD`, `AfI` and `AfD+I`.
+Use zero-shot, demo-only, interaction-only and demo+interaction. The main interaction budget
+is 10 starts per task across all its seeds; R1/R3/R5 are optional budgets.
+Zero-shot/demo-only permit no Plus simulator starts. Original RoboMME's dataset
+and simulator may be used freely in every setting, outside this budget.
+Use these same setting names in tools and artifact directories.
 
-Read BENCHMARK.md, DEMOS.md, your method's reference, PUBLIC_RULES.md and RUNTIME.md.
-The observation contract, native method workflow and synthetic fixtures from v3
-are unchanged. Fixtures document both cameras, RGB-D calibration, video phases,
-control limits and terminal/error fields without task scenes or expert behavior.
-They are generated through the packet serializers without starting a simulator.
+Read BENCHMARK.md, DEMOS.md, the method reference, PUBLIC_RULES.md and RUNTIME.md.
+Synthetic fixtures and the observation contract are unchanged. This revision
+uses descriptive setting names consistently with the website;
+native method workflows and fixed test evaluation are unchanged.
 
-Fresh studies pin version 4 and its file hashes. Existing studies keep their
-original prompts, assignments and source snapshots. Installation rejects changes
-to a prepared workspace; use a fresh run for the new protocol.
+Fresh studies pin v7 and its hashes. Existing studies retain their original
+prompts, assignments and source snapshots. Do not rewrite a historical run.

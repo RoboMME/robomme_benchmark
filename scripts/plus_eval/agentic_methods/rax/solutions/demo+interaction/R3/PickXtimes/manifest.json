@@ -1,0 +1,27 @@
+{
+  "method": "rax",
+  "setting": "demo+interaction",
+  "budget": 3,
+  "task": "PickXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "af77ecb435a7516b2f059c5505bf0dad6eb442e1cca53a4f07bf53f0b43b48ff",
+    "motion.py": "3282dc43586be466a5fd7048cc9be0640a488fe863bc477d331f1c61e00044b5",
+    "perception.py": "46b0146edcd23ee75bebea975efbd46880cd09e290c82fc8441af9f57920647f",
+    "scene.py": "bbfbc3bb7856a09daef8bb4aa1dc9b7d7dc9ac165d751f6732e31761921ab5a8",
+    "skills.py": "01737ab49c6728e5e72426471e85fc71cde916920dd972049385b444e7a685f0",
+    "tracker.py": "c4330cdcbed1c7fa9b4f4a282b4fd5b493fbece3c6a73571e5918524bd56fe0a"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "af77ecb435a7516b2f059c5505bf0dad6eb442e1cca53a4f07bf53f0b43b48ff",
+    "motion.py": "3282dc43586be466a5fd7048cc9be0640a488fe863bc477d331f1c61e00044b5",
+    "perception.py": "46b0146edcd23ee75bebea975efbd46880cd09e290c82fc8441af9f57920647f",
+    "scene.py": "bbfbc3bb7856a09daef8bb4aa1dc9b7d7dc9ac165d751f6732e31761921ab5a8",
+    "skills.py": "01737ab49c6728e5e72426471e85fc71cde916920dd972049385b444e7a685f0",
+    "tracker.py": "c4330cdcbed1c7fa9b4f4a282b4fd5b493fbece3c6a73571e5918524bd56fe0a"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

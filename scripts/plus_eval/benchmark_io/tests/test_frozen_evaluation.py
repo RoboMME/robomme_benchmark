@@ -10,7 +10,7 @@ from benchmark_io.evaluation import EvaluationStudy
 def frozen(tmp_path, monkeypatch):
     records = {task: [dict(seed=10+i, max_steps=100, control_freq=20) for i in range(3)]
                for task in ('BinFill', 'StopCube')}
-    study = Study(tmp_path / 'development', method='aspire', setting='AfD', budget=0, records=records)
+    study = Study(tmp_path / 'development', method='aspire', setting='demo-only', budget=0, records=records)
     class Builder:
         def __init__(self, task, dataset, action_space):
             assert dataset == 'test'
@@ -28,7 +28,7 @@ def frozen(tmp_path, monkeypatch):
     return study, evaluation
 
 
-def test_frozen_evaluation_is_separate_from_afd_development(tmp_path, monkeypatch):
+def test_frozen_evaluation_is_separate_from_demo_only_development(tmp_path, monkeypatch):
     study, evaluation = frozen(tmp_path, monkeypatch)
     assert evaluation.dataset == 'test'
     attempt = evaluation.reserve('BinFill', 0, purpose='frozen_test')

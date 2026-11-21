@@ -1,0 +1,19 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "StopCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "3f22b670eea6bd128bf0070b8780287e3cd59ee5dd8d053d90a8c2cce4430f0e",
+    "rlib.py": "ef7286cc695eb6f962e9b742f9cef09c0c3e1b1cde9ee01c2b721030ef9daf76"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "3f22b670eea6bd128bf0070b8780287e3cd59ee5dd8d053d90a8c2cce4430f0e",
+    "rlib.py": "ef7286cc695eb6f962e9b742f9cef09c0c3e1b1cde9ee01c2b721030ef9daf76"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

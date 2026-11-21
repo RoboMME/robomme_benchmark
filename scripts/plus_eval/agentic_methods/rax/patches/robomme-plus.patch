@@ -245,7 +245,7 @@ index a6d8c94..859d64a 100644
 +    if config.benchmark == 'robomme_plus' and not config.exploration_seeds:
 +        tools = [{**tool, 'description': tool['description'].replace(
 +            'freeze the exact cleanly rehearsed bundle', 'freeze the offline-developed bundle')
-+            + ' RoboMME-Plus AfD has zero simulator starts: no rehearsal is required or allowed.'}
++            + ' RoboMME-Plus demo-only has zero simulator starts: no rehearsal is required or allowed.'}
 +            if tool['name'] == 'submit' else tool for tool in tools]
      if not config.agent_formal:
          return tools
@@ -255,7 +255,7 @@ index a6d8c94..859d64a 100644
                          'then end your turn. Your work is then frozen and the formal batch runs your submitted '
                          'bundle on the held-out layouts; you do not see its result.')
 +            if config.benchmark == 'robomme_plus' and not config.exploration_seeds:
-+                return ('AfD permits no simulator starts. Register your offline-developed controller, '
++                return ('demo-only permits no simulator starts. Register your offline-developed controller, '
 +                        'then call submit with your chosen bundle; no rehearsal is required. '
 +                        'After submission, update memory/PROGRESS.md and end your turn.')
              if any(self.s._has_qualifying_rehearsal(ident, m) for ident, m in state['bundles'].items()):

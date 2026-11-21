@@ -1,10 +1,9 @@
 {
-  "version": 4,
-  "scope": "public benchmark protocol and synthetic interface examples",
-  "supersedes": 3,
+  "version": 7,
+  "scope": "public development protocol and synthetic interface examples",
+  "supersedes": 6,
   "changes": [
-    "Use Few-shot setting names and development budgets of 5 or 10 per task",
-    "Keep legacy setting keys for tool and artifact compatibility",
-    "Retain the v3 observation contract and synthetic data examples"
+    "Use descriptive setting names consistently in prompts, CLI arguments and artifact directories",
+    "Retain R10 as the main interaction budget and R1/R3/R5 as optional results"
   ]
 }

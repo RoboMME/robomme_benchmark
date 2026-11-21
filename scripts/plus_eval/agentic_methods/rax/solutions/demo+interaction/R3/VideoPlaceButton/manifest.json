@@ -1,0 +1,19 @@
+{
+  "method": "rax",
+  "setting": "demo+interaction",
+  "budget": 3,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "613d5c4db766aecdd020e988910de04b172b5a7d8ef1f39ba65f6a2c380601eb",
+    "perception.py": "04e9908c18f4a704025f6e35750538c25e0d68ae50987f650488cd89be226465"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "613d5c4db766aecdd020e988910de04b172b5a7d8ef1f39ba65f6a2c380601eb",
+    "perception.py": "04e9908c18f4a704025f6e35750538c25e0d68ae50987f650488cd89be226465"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

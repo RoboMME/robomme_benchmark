@@ -1,0 +1,19 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "BinFill",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "fa256276ce5fce99fb6a67ab4fa3daedc977f1992ca7b4fca22db71ec33c1025",
+    "lib.py": "bb7fb8db1a4c37bcfbe310cef3318f691e8435e87692029dd935218059a6c273"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "fa256276ce5fce99fb6a67ab4fa3daedc977f1992ca7b4fca22db71ec33c1025",
+    "lib.py": "bb7fb8db1a4c37bcfbe310cef3318f691e8435e87692029dd935218059a6c273"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

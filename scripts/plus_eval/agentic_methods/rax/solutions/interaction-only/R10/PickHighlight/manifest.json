@@ -1,0 +1,27 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "PickHighlight",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "0e8dc1e58770bae306fa90f8cf051aadf0554c1f900473384a3889f3d07a0e01",
+    "motion.py": "df1a1e72a8ea6d93e2428792cbcda39666b6472d7652cb84a6383a6741332543",
+    "obs.py": "2a79eea9041d5bd86b525fdb24bf6f2349f02298b8e75d0b54475e28868a7870",
+    "percept.py": "20d048fadcb6c2973c23d0d418c5f7184fcb2125ce7e3fea533b2ba39efd714d",
+    "skills.py": "dea7f2600ed5ba0d32a5f5e3f484f0fcad2611d3caa9d4b7b7e4b052a9adff94",
+    "tracker.py": "207f569ade566f9fc40495fa9e74ea64424ecd73d9f24d0b0ead6950bca228a0"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "0e8dc1e58770bae306fa90f8cf051aadf0554c1f900473384a3889f3d07a0e01",
+    "motion.py": "df1a1e72a8ea6d93e2428792cbcda39666b6472d7652cb84a6383a6741332543",
+    "obs.py": "2a79eea9041d5bd86b525fdb24bf6f2349f02298b8e75d0b54475e28868a7870",
+    "percept.py": "20d048fadcb6c2973c23d0d418c5f7184fcb2125ce7e3fea533b2ba39efd714d",
+    "skills.py": "dea7f2600ed5ba0d32a5f5e3f484f0fcad2611d3caa9d4b7b7e4b052a9adff94",
+    "tracker.py": "207f569ade566f9fc40495fa9e74ea64424ecd73d9f24d0b0ead6950bca228a0"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

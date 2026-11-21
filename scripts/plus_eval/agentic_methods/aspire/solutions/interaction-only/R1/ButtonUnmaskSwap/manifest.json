@@ -1,0 +1,26 @@
+{
+  "method": "aspire",
+  "setting": "interaction-only",
+  "budget": 1,
+  "task": "ButtonUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "af9e9af3c4432def37a27f8061c5554ecd085cb924cd109cf7ee27e46458c009"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "ButtonUnmaskSwap.py": "fcbe7276db8ee5deec9a6be1ddd2c8060c12e1905012081b36d83f2cd4fe0c2e"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "policy.py": {
+        "evaluated_sha256": "fcbe7276db8ee5deec9a6be1ddd2c8060c12e1905012081b36d83f2cd4fe0c2e",
+        "published_sha256": "af9e9af3c4432def37a27f8061c5554ecd085cb924cd109cf7ee27e46458c009"
+      }
+    }
+  }
+}

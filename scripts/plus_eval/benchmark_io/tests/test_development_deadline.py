@@ -24,7 +24,7 @@ def test_clock_is_150_minutes_and_resume_cannot_reset_it(tmp_path, monkeypatch):
 
 
 def test_expired_task_cannot_reserve_even_with_rollouts_remaining(tmp_path):
-    study = Study(tmp_path, method='rax', setting='AfI', budget=10,
+    study = Study(tmp_path, method='rax', setting='interaction-only', budget=10,
                   records={'BinFill': [dict(seed=i) for i in range(3)]})
     TaskClock(study.root, 'BinFill').start(0)
     with pytest.raises(DevelopmentExpired):

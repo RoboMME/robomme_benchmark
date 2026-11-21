@@ -1,0 +1,30 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 3,
+  "task": "PatternLock",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "1845d7227e1a24935ddbaeb0aaf46c893e181f830befc7107035310ad04549ce",
+    "geom.py": "49f83051d6425a205c08f0d4acea27683112edac814f19a5c3cf25d633264d41",
+    "perception.py": "8ab6a4fc80657c071e396c2804c2a98fb9537cfb3a65053049a0c541465e01f5"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "24897026e571e63d0f321666041bd7fddb0baec823b0449466d1494e1eff60ea",
+    "geom.py": "49f83051d6425a205c08f0d4acea27683112edac814f19a5c3cf25d633264d41",
+    "perception.py": "8ab6a4fc80657c071e396c2804c2a98fb9537cfb3a65053049a0c541465e01f5"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "controller.py": {
+        "evaluated_sha256": "24897026e571e63d0f321666041bd7fddb0baec823b0449466d1494e1eff60ea",
+        "published_sha256": "1845d7227e1a24935ddbaeb0aaf46c893e181f830befc7107035310ad04549ce"
+      }
+    }
+  }
+}

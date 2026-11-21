@@ -1,0 +1,21 @@
+{
+  "method": "rax",
+  "setting": "demo+interaction",
+  "budget": 10,
+  "task": "PatternLock",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "cc109856fe9f8c04f1a85d84b46fdbe4a38d426685aa8e101990025986ee6ec4",
+    "controller_v1.py": "a7b100d8e15cd7266b2304574c8f8670b56fd288d7cedc81e9dcdd0697884de5",
+    "perception.py": "b090de09fdeeac3da8e27aa1e1e6b1a05d23a8da935ac06f9dcbd3059274b6b7"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "cc109856fe9f8c04f1a85d84b46fdbe4a38d426685aa8e101990025986ee6ec4",
+    "controller_v1.py": "a7b100d8e15cd7266b2304574c8f8670b56fd288d7cedc81e9dcdd0697884de5",
+    "perception.py": "b090de09fdeeac3da8e27aa1e1e6b1a05d23a8da935ac06f9dcbd3059274b6b7"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+}

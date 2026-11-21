@@ -37,7 +37,7 @@ def test_solution_hash_rejects_changed_program(tmp_path):
 
 def test_worker_preserves_native_episode_field(tmp_path,monkeypatch):
     monkeypatch.setattr(solutions,'EvaluationStudy',lambda _:SimpleNamespace(attempts=lambda:[]))
-    monkeypatch.setattr(sys,'argv',['eval','--setting','AfD','--budget','0','--output-dir',str(tmp_path),
+    monkeypatch.setattr(sys,'argv',['eval','--setting','demo-only','--budget','0','--output-dir',str(tmp_path),
         '--_worker','--tasks','BinFill','--episodes','0'])
     solutions.main('aspire',lambda *a:dict(episode=0,task_success=True),tmp_path)
     assert json.loads((tmp_path/'episodes/BinFill/episode_000/result.json').read_text())['task_success']

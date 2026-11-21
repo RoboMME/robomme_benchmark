@@ -75,8 +75,8 @@ def public_frames(obs, info, *, first_step, reset=False, indices=None):
 
 
 class Episode:
-    def __init__(self, task, episode, *, study, output, action_space="joint_angle", purpose="development",
-                 builder_factory=None):
+    def __init__(self, task, episode=None, *, study, output, action_space="joint_angle", purpose="development",
+                 builder_factory=None, seed=None, policy_revision=None):
         if action_space not in ("joint_angle", "ee_pose"):
             raise ValueError("Use a one-step public action space")
         self.study, self.task = study, task
@@ -87,7 +87,12 @@ class Episode:
         self.closed, self.terminated, self.truncated = False, False, False
         self.success, self.steps = False, 0
         self.frames, self.instruction = [], ""
-        self.attempt = study.reserve(task, episode, purpose=purpose)
+        reservation = {}
+        if seed is not None:
+            reservation["seed"] = seed
+        if policy_revision is not None:
+            reservation["policy_revision"] = policy_revision
+        self.attempt = study.reserve(task, episode, purpose=purpose, **reservation)
         (self.output / "attempt.json").write_text(json.dumps(self.attempt, indent=2))
         self.full_artifacts = study.config.get("artifact_profile", "full") == "full"
         self.actions = (self.output / "actions.jsonl" if self.full_artifacts else Path(os.devnull)).open("w")
@@ -169,6 +174,7 @@ class Episode:
         self.steps = int(scalar(info.get("execution_total_control_steps"), self.steps))
         self.success = bool(scalar(info.get("success")))
         self.failure_reason = str(latest(info.get("failure_reason", "")))
+        self.error_message = str(latest(info.get("error_message", "")))
         self.current["control_step"] = self.steps
 
     def _record_frames(self, frames):

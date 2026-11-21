@@ -14,7 +14,7 @@ One-shot Embodied-Astra uses the same `gpt-6-astra` waypoint policy as Embodied-
 
 **Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
-**Setting:** Few-shot demonstrations, using a released training example as context.
+**Setting:** Demo-only, using a released training example as context.
 
 **Demo use:** One selected training episode per task, except MoveCube; RGB images and task goals.
 

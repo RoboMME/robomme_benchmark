@@ -36,7 +36,7 @@ def resolve_image(image):
 
 def main(method, evaluate, method_dir):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--setting', choices=['AfD','AfI','AfD+I'], required=True)
+    parser.add_argument('--setting', choices=['demo-only','interaction-only','demo+interaction'], required=True)
     parser.add_argument('--budget', type=int, choices=[0,1,3,5,10], required=True)
     parser.add_argument('--solutions', type=Path, default=Path(method_dir)/'solutions')
     parser.add_argument('--output-dir', type=Path, required=True)
@@ -48,8 +48,8 @@ def main(method, evaluate, method_dir):
     parser.add_argument('--artifacts', choices=['full','logs'], default='full')
     parser.add_argument('--_worker', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if (args.setting=='AfD') != (args.budget==0):
-        parser.error('AfD uses R0; interactions use R5/R10 (archived R1/R3 are also available)')
+    if (args.setting=='demo-only') != (args.budget==0):
+        parser.error('demo-only uses R0; interaction settings use R10, with R1/R3/R5 optional')
     if args.workers<1 or not args.episodes or any(i<0 or i>=50 for i in args.episodes):
         parser.error('Use positive worker counts and test episode indices 0–49')
     args.output_dir=args.output_dir.resolve();args.solutions=args.solutions.resolve()

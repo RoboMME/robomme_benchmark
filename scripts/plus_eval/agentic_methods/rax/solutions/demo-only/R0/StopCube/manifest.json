@@ -1,0 +1,69 @@
+{
+  "method": "rax",
+  "setting": "demo-only",
+  "budget": 0,
+  "task": "StopCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "836e46d88f5672697a4c1ba690dc75fc1cfead6096204fd58234b9b97e72f732",
+    "geometry.py": "b45147f368200aaa19dba11db1b837cc963a2b681fe4ee6eb9a31198b32f39e3",
+    "mcp_io.py": "8179f0e5f7c7dd9f17ef67fece23f8b0d2db94b83af5ab549a6a78e65dc613cc",
+    "metacam.py": "19f0524380783228fd4b34cdc0316df01b834a6496c5c7b4e16d3421e9f57d08",
+    "perception.py": "cc620cb216e83bfa6f1022b7d043f0c184551fe17db6699bf9071d7d272369d6",
+    "scene.py": "eb2da0cc8e1f7727a11557b11118833ec33d22d49beaf4c7dbc25353af0f7691",
+    "timing.py": "78b3085cc311cbc04bb7bb1dd2f04c4151e5a4eb2a816509a292ada5394d33d6"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "227b712cc6076de9866ee0396ac6af8d0579af9da6f7cc1470ada41abea40d8c",
+    "geometry.py": "b45147f368200aaa19dba11db1b837cc963a2b681fe4ee6eb9a31198b32f39e3",
+    "mcp_io.py": "8179f0e5f7c7dd9f17ef67fece23f8b0d2db94b83af5ab549a6a78e65dc613cc",
+    "metacam.py": "19f0524380783228fd4b34cdc0316df01b834a6496c5c7b4e16d3421e9f57d08",
+    "perception.py": "cc620cb216e83bfa6f1022b7d043f0c184551fe17db6699bf9071d7d272369d6",
+    "scene.py": "eb2da0cc8e1f7727a11557b11118833ec33d22d49beaf4c7dbc25353af0f7691",
+    "timing.py": "78b3085cc311cbc04bb7bb1dd2f04c4151e5a4eb2a816509a292ada5394d33d6"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "metacam.py",
+        "functions": [
+          "parse"
+        ],
+        "fix": "Accept documented camera_poses.position_m; preserve existing aliases, geometry and policy logic",
+        "verification": "<EXPERIMENT_ROOT>/operator_audits/20261117_pre_eval_interface_review/camera_candidates/rax/demo-only/R0/StopCube/policy_actual_probe.json"
+      }
+    ],
+    "original_files": {
+      "controller.py": "227b712cc6076de9866ee0396ac6af8d0579af9da6f7cc1470ada41abea40d8c",
+      "geometry.py": "b45147f368200aaa19dba11db1b837cc963a2b681fe4ee6eb9a31198b32f39e3",
+      "mcp_io.py": "8179f0e5f7c7dd9f17ef67fece23f8b0d2db94b83af5ab549a6a78e65dc613cc",
+      "metacam.py": "5158404c033e3f628615cf0c2e6fa00aab717c7226307062b549814e738360de",
+      "perception.py": "cc620cb216e83bfa6f1022b7d043f0c184551fe17db6699bf9071d7d272369d6",
+      "scene.py": "eb2da0cc8e1f7727a11557b11118833ec33d22d49beaf4c7dbc25353af0f7691",
+      "timing.py": "78b3085cc311cbc04bb7bb1dd2f04c4151e5a4eb2a816509a292ada5394d33d6"
+    },
+    "repaired_files": {
+      "controller.py": "227b712cc6076de9866ee0396ac6af8d0579af9da6f7cc1470ada41abea40d8c",
+      "geometry.py": "b45147f368200aaa19dba11db1b837cc963a2b681fe4ee6eb9a31198b32f39e3",
+      "mcp_io.py": "8179f0e5f7c7dd9f17ef67fece23f8b0d2db94b83af5ab549a6a78e65dc613cc",
+      "metacam.py": "19f0524380783228fd4b34cdc0316df01b834a6496c5c7b4e16d3421e9f57d08",
+      "perception.py": "cc620cb216e83bfa6f1022b7d043f0c184551fe17db6699bf9071d7d272369d6",
+      "scene.py": "eb2da0cc8e1f7727a11557b11118833ec33d22d49beaf4c7dbc25353af0f7691",
+      "timing.py": "78b3085cc311cbc04bb7bb1dd2f04c4151e5a4eb2a816509a292ada5394d33d6"
+    }
+  },
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "controller.py": {
+        "evaluated_sha256": "227b712cc6076de9866ee0396ac6af8d0579af9da6f7cc1470ada41abea40d8c",
+        "published_sha256": "836e46d88f5672697a4c1ba690dc75fc1cfead6096204fd58234b9b97e72f732"
+      }
+    }
+  }
+}

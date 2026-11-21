@@ -7,13 +7,17 @@ One episode per non-MoveCube task has an [atomic variation](../../src/robomme_pl
 H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
 [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
 
-Use these recordings in **Few-shot demonstrations** or
-**Few-shot demonstrations+interactions**, with unlimited offline reuse. Report
-the demos and modalities used. Simulator replays consume the per-task budget
-of 5 or 10 attempts; the demonstrations-only setting permits no starts. See the
+Use these recordings as offline data in **Demo-only** or
+**Demo+interaction**. Report the demos and modalities used.
+Replaying recorded actions through the simulator consumes the per-task budget
+of at most 10 attempts; demo-only permits no Plus simulator starts. See the
 [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol).
 
 ## Replay
+
+The direct command below is for dataset validation outside method development.
+During agentic development, use the [budgeted interface](agentic_development.md)
+for any simulator replay and retain its attempt record.
 
 Replay both saved joint and end-effector actions through the simulator and export
 front/wrist videos:

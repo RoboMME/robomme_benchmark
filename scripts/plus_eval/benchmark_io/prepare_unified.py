@@ -28,7 +28,7 @@ def pin_runtime(root, *, source=None):
 
 
 def pin_demonstrations(source, target, metadata):
-    """Validate seed/variation provenance before copying any released recording."""
+    """Validate complete episode metadata before copying any released recording."""
     import h5py
     source, target = Path(source), Path(target)
     rows = []
@@ -43,9 +43,10 @@ def pin_demonstrations(source, target, metadata):
         with h5py.File(recording, 'r') as h5:
             for i, row in enumerate(records):
                 saved = json.loads(h5[f'episode_{i}/setup/episode_metadata'][()].decode())
-                for key in ('seed', 'difficulty', 'variant', 'perceptual_variation', 'mechanism_variation'):
-                    if saved.get(key) != row.get(key):
-                        raise ValueError(f'{task}/{i}: stale demonstration {key}')
+                if saved != row:
+                    changed = sorted(key for key in set(saved) | set(row)
+                                     if saved.get(key) != row.get(key))
+                    raise ValueError(f'{task}/{i}: stale demonstration metadata: {", ".join(changed)}')
         with recording.open('rb') as stream:
             digest = hashlib.file_digest(stream, 'sha256').hexdigest()
         rows.append(dict(task=task, episodes=len(records), sha256=digest, file=recording.name))
@@ -58,10 +59,16 @@ def pin_demonstrations(source, target, metadata):
     return dict(files=rows, episodes=50)
 
 
-def prepare(root, demos, *, protocol=None):
+def prepare(root, demos, *, protocol=None, settings=None):
     root = Path(root).resolve()
     if root.exists():
         raise FileExistsError('Use a fresh study directory')
+    allowed = ('demo-only', 'interaction-only', 'demo+interaction')
+    if settings is not None and (not settings or len(set(settings)) != len(settings)
+                                 or not set(settings) <= set(allowed)):
+        raise ValueError('Choose distinct supported development settings')
+    selected = [dict(key=k,method=m,setting=s,budget=b) for k,m,s,b in configurations()
+                if settings is None or s in settings]
     image = IMAGE
     if not re.fullmatch(r'(?:[A-Za-z0-9_./:-]+@)?sha256:[a-f0-9]{64}', image):
         image = subprocess.check_output(['docker','image','inspect','--format={{.Id}}',image], text=True).strip()
@@ -84,12 +91,12 @@ def prepare(root, demos, *, protocol=None):
     shutil.copytree(protocol, root/'protocol', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     write(root/'runtime_policy.json', asdict(RuntimePolicy()))
     pin_runtime(root)
-    selected = [dict(key=k,method=m,setting=s,budget=b) for k,m,s,b in configurations()]
     write(root/'study_plan.json', dict(configurations=selected, development_workers=6,development_per_gpu=3,
         evaluation_workers=16,evaluation_per_gpu=8,image=image,model='us.anthropic.claude-opus-5-5',
         reasoning_effort='high',optional_gemini=False,conditioning_timestamps=512,test_trials=800*len(selected),
         test_feedback_to_development=False,independent_budgets=True,full_artifact_budgets=[0,10],
-        logs_only_budgets=[5],protocol_version=version))
+        logs_only_budgets=sorted({row['budget'] for row in selected if 0 < row['budget'] < 10}),
+        protocol_version=version))
     Queue(root).seed()
     subprocess.run([sys.executable,'-m','benchmark_io.prepare_unified','ledgers','--root',str(root)],
                    env=environment(root),check=True,cwd=REPO)
@@ -118,10 +125,12 @@ def main():
     parser.add_argument('--root',type=Path,required=True)
     parser.add_argument('--demos',type=Path,help='Directory containing the 16 released training H5 files')
     parser.add_argument('--protocol',type=Path,help='Immutable public protocol bundle')
+    parser.add_argument('--settings',nargs='+',choices=['demo-only','interaction-only','demo+interaction'],
+                        help='Development settings to prepare; default: all three')
     args = parser.parse_args()
     if args.command=='prepare':
         if args.demos is None:parser.error('prepare requires --demos')
-        prepare(args.root,args.demos,protocol=args.protocol)
+        prepare(args.root,args.demos,protocol=args.protocol,settings=args.settings)
     elif args.command=='pin-runtime':pin_runtime(args.root)
     else:ledgers(args.root)
 

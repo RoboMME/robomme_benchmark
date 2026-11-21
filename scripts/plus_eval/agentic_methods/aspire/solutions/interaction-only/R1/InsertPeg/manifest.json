@@ -1,0 +1,26 @@
+{
+  "method": "aspire",
+  "setting": "interaction-only",
+  "budget": 1,
+  "task": "InsertPeg",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "ac8fcbda08ec21e329ae0fdd656aaebfba1d515e5f0e343071028b2ec397a87c"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "InsertPeg.py": "93febc3d3f92aa4740b16ee3e41e6cd86d7c1517523e9395656b46dbb04867d7"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "policy.py": {
+        "evaluated_sha256": "93febc3d3f92aa4740b16ee3e41e6cd86d7c1517523e9395656b46dbb04867d7",
+        "published_sha256": "ac8fcbda08ec21e329ae0fdd656aaebfba1d515e5f0e343071028b2ec397a87c"
+      }
+    }
+  }
+}

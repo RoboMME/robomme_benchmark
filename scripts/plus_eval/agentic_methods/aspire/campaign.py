@@ -72,7 +72,7 @@ class Campaign:
                 development_clock=TaskClock(self.study.root, task).read(),
                 training_episode_indices=list(range(len(self.study.config['records'][task])))))
         return dict(setting=self.study.config['setting'], budget_per_task=self.study.config['budget'],
-            tasks=rows, demonstrations_available=self.study.config['setting'] != 'AfI',
+            tasks=rows, demonstrations_available=self.study.config['setting'] != 'interaction-only',
             test_access=False, simulation_workers=len(self.args.gpus))
 
     def snapshot(self):
@@ -168,7 +168,7 @@ def prepare(session):
     model, home, bridge = provision(session)
     original = UPSTREAM / '.claude/skills/iterative-debugging'
     shutil.copytree(original / 'scripts', session.workspace / '.claude/skills/iterative-debugging/scripts')
-    if session.study.config['setting'] != 'AfI':
+    if session.study.config['setting'] != 'interaction-only':
         for task in session.tasks:
             export_task(session.study, task, args.demos, session.root / 'demonstrations' / task)
     tasks = [dict(benchmark='robomme_plus', suite='robomme_plus', task_id=i, task_name=task,
@@ -204,8 +204,8 @@ only the benchmark access, budget and evaluation protocol, not your learning str
   seeds. No extra unseen training split exists. Never substitute test seeds.
   ASPIRE's original verifier criterion remains unchanged: do not claim a five-seed
   verification from three distinct seeds. Report insufficient evidence as untested;
-  do not promote unverified proposals. AfD has no simulator verification.
-- AfI has no expert recordings. AfD and AfD+I have all 50 released recordings under
+  do not promote unverified proposals. demo-only has no simulator verification.
+- interaction-only has no expert recordings. demo-only and demo+interaction have all 50 released recordings under
   /workspace/demonstrations/<TASK>/manifest.json (front/wrist RGB, goal and phase).
   Recordings are fixed evidence, not access to oracle actions or simulator code.
 - The host provides {len(args.gpus)} simulator slots, one on each assigned GPU, and
@@ -279,7 +279,7 @@ def main():
         (bridge,'/opt/bridge',True),(rpc,'/run/aspire',True),(session.published,'/workspace/published',True),
         (Path(os.environ.get('ROBOMME_CLAUDE_CLI') or shutil.which('claude') or 'claude').resolve(),'/opt/claude',True),
         (home/'settings.json','/claude-home/settings.json',True),(home/'mcp.json','/claude-home/mcp.json',True)]
-    if session.study.config['setting'] != 'AfI':
+    if session.study.config['setting'] != 'interaction-only':
         mounts.append((session.root/'demonstrations','/workspace/demonstrations',True))
     for source,target,readonly in mounts:
         command += ['--mount',f'type=bind,src={source},dst={target}'+(',readonly' if readonly else '')]

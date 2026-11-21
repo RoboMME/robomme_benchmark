@@ -7,9 +7,8 @@ not used.
 
 ## Adaptation
 
-CLI and artifact keys `AfD`, `AfI` and `AfD+I` mean **Few-shot demonstrations**,
-**Few-shot interactions** and **Few-shot demonstrations+interactions**, respectively.
-Current interaction results use budgets 5 and 10.
+Settings are `demo-only`, `interaction-only` and `demo+interaction`.
+The leaderboard uses R10; R1/R3/R5 are optional reported results.
 
 We retain the LIBERO coordinator, task workers, verifier, shared skill library,
 robot API and SAM3/Contact-GraspNet/PyRoki/cuRobo providers. Each setting/budget has
@@ -31,8 +30,8 @@ The model, time limits and input sampling are implementation choices.
 | Area | Configuration |
 | --- | --- |
 | Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; development/evaluation usage and cost logged separately. |
-| Budgets | Demonstrations only: 0 starts. Interaction settings: at most 5 or 10 starts per task, developed independently. All starts, including failed setup and verification, share the budget. Archived R1/R3 solutions remain available. |
-| Training demos | AfD/AfD+I receive front/wrist RGB recordings, goals, phases and timestamps, with unlimited offline reuse. AfI receives none. |
+| Budgets | Demonstrations only: 0 starts. Interaction settings: at most 10 starts per task. Historical R1/R3/R5 studies were developed independently. All starts, including failed setup and verification, share the budget. Optional-budget solutions remain available. |
+| Training demos | demo-only/demo+interaction receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. interaction-only receives none. Simulator replay counts toward the development budget. |
 | Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
 | Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
@@ -45,7 +44,7 @@ The model, time limits and input sampling are implementation choices.
   the coordinator reports its limitations and continues other unfinished tasks.
 - **Verification:** all worker/verifier starts share the task's R. Keep the native
   verification criterion; insufficient released seeds or budget leave a skill
-  unverified. AfD has no simulator verification. Held-out evaluation and revisits
+  unverified. demo-only has no simulator verification. Held-out evaluation and revisits
   using test feedback are disabled until the campaign is frozen.
 - **Providers and isolation:** retain SAM3, Contact-GraspNet, PyRoki and cuRobo;
   add RoboMME robot/tool registration, local SAM3 loading and bounded requests.
@@ -91,8 +90,8 @@ Evaluate a published configuration on all 800 test episodes:
 
 ```bash
 python scripts/plus_eval/agentic_methods/aspire/eval_plus.py \
-  --setting AfI --budget 5 \
-  --gpu 0 --output-dir "<RUN_ROOT>/aspire-AfI-R5"
+  --setting interaction-only --budget 10 \
+  --gpu 0 --output-dir "<RUN_ROOT>/aspire-interaction-only-R10"
 ```
 
 `--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media.
@@ -102,3 +101,6 @@ file hashes and policy provenance.
 [Link logs and rollouts](../../results/README.md) to access
 `runs/SETTING/Rn/{development,evaluation}`. Exact public data formats and synthetic
 examples are in [`ASPIRE.md`](../../benchmark_io/prompts/current/ASPIRE.md).
+
+Development uses the shared [interaction accounting interface](../../../../doc/robomme_plus/agentic_development.md).
+See the [submission and audit results](<../../../../doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md>).

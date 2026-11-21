@@ -69,7 +69,7 @@ def test_evaluation_parallelism_does_not_increase_development_workers(tmp_path):
 
 def test_queue_adopts_existing_frozen_episode_without_another_start(tmp_path, monkeypatch):
     monkeypatch.setitem(sys.modules, 'robomme_plus', SimpleNamespace())
-    case = tmp_path/'aspire/AfD/R0'
+    case = tmp_path/'aspire/demo-only/R0'
     evaluation = case/'evaluation'
     evaluation.mkdir(parents=True)
     (evaluation/'frozen_evaluation.json').write_text('{}')
@@ -89,7 +89,7 @@ def test_queue_adopts_existing_frozen_episode_without_another_start(tmp_path, mo
     monkeypatch.setattr('benchmark_io.full_study.time.sleep', finish_existing)
     pipeline = Pipeline(tmp_path, ['0'], method='aspire', eval_gpus=['0','1'], eval_workers_per_gpu=4)
     monkeypatch.setattr(pipeline,'run',lambda *a,**kw:pytest.fail('Must not relaunch a completed or live episode'))
-    rows = pipeline.aspire_evaluation(case, SimpleNamespace(config={'setting':'AfD'}), ['BinFill'], 0)
+    rows = pipeline.aspire_evaluation(case, SimpleNamespace(config={'setting':'demo-only'}), ['BinFill'], 0)
     assert len(rows) == 50
     assert sum(row['task_success'] for row in rows) == 1
     assert active_slots(tmp_path) == []

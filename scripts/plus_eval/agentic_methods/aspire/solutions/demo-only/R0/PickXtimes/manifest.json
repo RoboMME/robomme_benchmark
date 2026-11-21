@@ -1,0 +1,26 @@
+{
+  "method": "aspire",
+  "setting": "demo-only",
+  "budget": 0,
+  "task": "PickXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "9e594b7b40d55188d474cf7e4f497662d709de01282ce19430bdd885d34876ef"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "PickXtimes.py": "6a9061ee3b2603d07acfcb67b6f7c7cdf9ae672dd49d8b1bff168c2aa5bc9a4f"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "policy.py": {
+        "evaluated_sha256": "6a9061ee3b2603d07acfcb67b6f7c7cdf9ae672dd49d8b1bff168c2aa5bc9a4f",
+        "published_sha256": "9e594b7b40d55188d474cf7e4f497662d709de01282ce19430bdd885d34876ef"
+      }
+    }
+  }
+}

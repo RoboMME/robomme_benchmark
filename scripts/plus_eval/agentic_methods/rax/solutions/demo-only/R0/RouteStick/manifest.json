@@ -1,0 +1,60 @@
+{
+  "method": "rax",
+  "setting": "demo-only",
+  "budget": 0,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "1fe9c6abdb215c11a28b0e40ae32eedd7559144e358549005938f27196eef901",
+    "geometry.py": "c7af0b23a79749c1a37d3b87ac9b9bdac6a786896d89b6e0944f1edbc313e79a",
+    "mcp_io.py": "583158133661ca70b97ee60f2a30e34d82cb03822ca05878b631a25c65708529",
+    "video_parse.py": "cdd636d87712fe5ae06702fec384b196c774b176f83d52dffb2b94225f20bc0f",
+    "vision.py": "5c1169306f0fcc8ad3c713da9167306bbae787c6753a307a33da728a6226b262"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "4bc055e44da35b06a7727ff17f9736b2536fecba816d29f313f1a9050c33a788",
+    "geometry.py": "c7af0b23a79749c1a37d3b87ac9b9bdac6a786896d89b6e0944f1edbc313e79a",
+    "mcp_io.py": "583158133661ca70b97ee60f2a30e34d82cb03822ca05878b631a25c65708529",
+    "video_parse.py": "cdd636d87712fe5ae06702fec384b196c774b176f83d52dffb2b94225f20bc0f",
+    "vision.py": "5c1169306f0fcc8ad3c713da9167306bbae787c6753a307a33da728a6226b262"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "geometry.py",
+        "functions": [
+          "parse_calibration"
+        ],
+        "fix": "Accept public camera_poses.position_m; preserve all old aliases and control logic"
+      }
+    ],
+    "original_files": {
+      "controller.py": "4bc055e44da35b06a7727ff17f9736b2536fecba816d29f313f1a9050c33a788",
+      "geometry.py": "486ab3ae33198224170e9f8e8bb945d5ba1472333deb86e264aab25347533c7a",
+      "mcp_io.py": "583158133661ca70b97ee60f2a30e34d82cb03822ca05878b631a25c65708529",
+      "video_parse.py": "cdd636d87712fe5ae06702fec384b196c774b176f83d52dffb2b94225f20bc0f",
+      "vision.py": "5c1169306f0fcc8ad3c713da9167306bbae787c6753a307a33da728a6226b262"
+    },
+    "repaired_files": {
+      "controller.py": "4bc055e44da35b06a7727ff17f9736b2536fecba816d29f313f1a9050c33a788",
+      "geometry.py": "c7af0b23a79749c1a37d3b87ac9b9bdac6a786896d89b6e0944f1edbc313e79a",
+      "mcp_io.py": "583158133661ca70b97ee60f2a30e34d82cb03822ca05878b631a25c65708529",
+      "video_parse.py": "cdd636d87712fe5ae06702fec384b196c774b176f83d52dffb2b94225f20bc0f",
+      "vision.py": "5c1169306f0fcc8ad3c713da9167306bbae787c6753a307a33da728a6226b262"
+    }
+  },
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "controller.py": {
+        "evaluated_sha256": "4bc055e44da35b06a7727ff17f9736b2536fecba816d29f313f1a9050c33a788",
+        "published_sha256": "1fe9c6abdb215c11a28b0e40ae32eedd7559144e358549005938f27196eef901"
+      }
+    }
+  }
+}

@@ -10,7 +10,7 @@ Each method link below provides setup and running instructions.
 | Method | Setting | Successes (rate) |
 |---|---|---:|
 | [Embodied Astra](agentic_methods/astra/embodied/README.md) | Zero-shot | 194/800 (24.25%) |
-| [One-shot Astra](agentic_methods/astra/embodied/README.md#one-shot) | Few-shot demonstrations | 281/800 (35.13%) |
+| [One-shot Astra](agentic_methods/astra/embodied/README.md#one-shot) | Demo-only | 281/800 (35.13%) |
 | [3-tier Astra](agentic_methods/astra/three_tier/README.md) | Zero-shot | 70/800 (8.75%) |
 | [FrameSamp+Modul](non_agentic_methods/framesamp_modul/README.md) | Zero-shot | 19/800 (2.38%) |
 | [SimpleMemVLA](non_agentic_methods/simplememvla/README.md) | Zero-shot | 14/800 (1.75%) |
@@ -18,18 +18,18 @@ Each method link below provides setup and running instructions.
 
 ## Agentic adaptation
 
-The interaction settings allow at most **5 or 10 development rollouts per task**.
-ASPIRE and RAX develop each budget independently. All results use 800 test episodes.
+The interaction settings allow at most **10 development rollouts per task**.
+ASPIRE and RAX develop each budget independently. The main leaderboard uses R10;
+all results use 800 test episodes.
 
 | Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
 |---|---|---:|---:|
-| Few-shot demonstrations | 0 | 136/800 (17.00%) | 152/800 (19.00%) |
-| Few-shot interactions | 5 | 215/800 (26.88%) | 265/800 (33.13%) |
-| Few-shot interactions | 10 | 341/800 (42.63%) | 312/800 (39.00%) |
-| Few-shot demonstrations+interactions | 5 | 252/800 (31.50%) | 283/800 (35.38%) |
-| Few-shot demonstrations+interactions | 10 | 279/800 (34.88%) | 337/800 (42.13%) |
+| Demo-only | 0 | 136/800 (17.00%) | 152/800 (19.00%) |
+| Interaction-only | 10 | 341/800 (42.63%) | 312/800 (39.00%) |
+| Demo+interaction | 10 | 279/800 (34.88%) | 337/800 (42.13%) |
 
-Archived R1/R3 results remain in the JSON summaries and frozen solution bundles.
+[Optional R1/R3/R5 results](../../doc/robomme_plus/robomme_plus_baseline_results.md#optional-interaction-budgets)
+remain documented, with frozen solutions and JSON summaries.
 
 Final summaries: [model baselines](results/model_baselines.json) ·
 [ASPIRE/RAX](results/agentic_20261118.json).

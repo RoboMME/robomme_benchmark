@@ -1,0 +1,56 @@
+{
+  "method": "rax",
+  "setting": "demo+interaction",
+  "budget": 1,
+  "task": "VideoUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "21dc64f4b6ed24d1f960ac520c76eb773426af8dc566eb72ff23eec4710845a3",
+    "geom.py": "38a0dbf07c77534e7496f0aaa88ec01ee625becb3d43fa85dfff06d71544f799",
+    "obsio.py": "98c9f7ed218d63466916b717f7ada96f18eb68bea5eb76582f56b434177a0f77",
+    "percep.py": "c23cc66cc9e9990b46f8101246b1786483c540d62527fb79064f323a5276ef64",
+    "robot.py": "c375c0c2b6c494855628d698c50dced7acd5846af2d3b71851626ae6bee2d0b9",
+    "tracker.py": "0137df04bbac7dad02eb37fc6d8e71fc27535ae710bd6691b9ea154903eba4fa"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "controller.py": "21dc64f4b6ed24d1f960ac520c76eb773426af8dc566eb72ff23eec4710845a3",
+    "geom.py": "38a0dbf07c77534e7496f0aaa88ec01ee625becb3d43fa85dfff06d71544f799",
+    "obsio.py": "98c9f7ed218d63466916b717f7ada96f18eb68bea5eb76582f56b434177a0f77",
+    "percep.py": "c23cc66cc9e9990b46f8101246b1786483c540d62527fb79064f323a5276ef64",
+    "robot.py": "c375c0c2b6c494855628d698c50dced7acd5846af2d3b71851626ae6bee2d0b9",
+    "tracker.py": "0137df04bbac7dad02eb37fc6d8e71fc27535ae710bd6691b9ea154903eba4fa"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "operator_interface_correction": {
+    "kind": "operator_debug_repair",
+    "reasons": [
+      {
+        "file": "controller.py",
+        "functions": [
+          "_to_pose"
+        ],
+        "fix": "Accept documented camera_poses.position_m; preserve existing aliases, geometry and policy logic",
+        "verification": "<EXPERIMENT_ROOT>/operator_audits/20261117_pre_eval_interface_review/camera_candidates/rax/demo+interaction/R1/VideoUnmaskSwap/policy_actual_probe.json"
+      }
+    ],
+    "original_files": {
+      "controller.py": "7d501b553b9327f4470798bf0d14f2569b6e37718870fa92406f24acdc4482f2",
+      "geom.py": "38a0dbf07c77534e7496f0aaa88ec01ee625becb3d43fa85dfff06d71544f799",
+      "obsio.py": "98c9f7ed218d63466916b717f7ada96f18eb68bea5eb76582f56b434177a0f77",
+      "percep.py": "c23cc66cc9e9990b46f8101246b1786483c540d62527fb79064f323a5276ef64",
+      "robot.py": "c375c0c2b6c494855628d698c50dced7acd5846af2d3b71851626ae6bee2d0b9",
+      "tracker.py": "0137df04bbac7dad02eb37fc6d8e71fc27535ae710bd6691b9ea154903eba4fa"
+    },
+    "repaired_files": {
+      "controller.py": "21dc64f4b6ed24d1f960ac520c76eb773426af8dc566eb72ff23eec4710845a3",
+      "geom.py": "38a0dbf07c77534e7496f0aaa88ec01ee625becb3d43fa85dfff06d71544f799",
+      "obsio.py": "98c9f7ed218d63466916b717f7ada96f18eb68bea5eb76582f56b434177a0f77",
+      "percep.py": "c23cc66cc9e9990b46f8101246b1786483c540d62527fb79064f323a5276ef64",
+      "robot.py": "c375c0c2b6c494855628d698c50dced7acd5846af2d3b71851626ae6bee2d0b9",
+      "tracker.py": "0137df04bbac7dad02eb37fc6d8e71fc27535ae710bd6691b9ea154903eba4fa"
+    }
+  }
+}

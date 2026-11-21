@@ -1,0 +1,42 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 1,
+  "task": "VideoUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "README.md": "bb6601b5f1058667711c2c7498335201db0715d51aa58a393d025e01bead9ed3",
+    "controller.py": "ca1036e5460de917e2dca0e08f3ce332913f409ffc9ad5a0c17b40b59a02a1c8",
+    "vu_geom.py": "81a0962cf8ccf59c260fedae6ae26302939853e5fa06245c1259998f82842bcc",
+    "vu_io.py": "d28f3e724c17a33c4268381fc48bbe64452c6399ed627845f5f0e04c45f0d073",
+    "vu_percep.py": "c28bb30cd73ef6bacd1ee44014760070bbe3234db6da909a4e1404bb7e2d1fd4"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "README.md": "87f1eb6d79745e491c753d4955ad29ccb148ab3edea50907a3f57f06cc85cda4",
+    "controller.py": "8d1cef2fd813ac8f338a8de6b904a98220178515f455603e4a8cfc04cf6c9a20",
+    "vu_geom.py": "81a0962cf8ccf59c260fedae6ae26302939853e5fa06245c1259998f82842bcc",
+    "vu_io.py": "5eceeb82dbc3ed3dcf928a9742adc39903f619522cc9cd3045606bc966840c13",
+    "vu_percep.py": "c28bb30cd73ef6bacd1ee44014760070bbe3234db6da909a4e1404bb7e2d1fd4"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "README.md": {
+        "evaluated_sha256": "87f1eb6d79745e491c753d4955ad29ccb148ab3edea50907a3f57f06cc85cda4",
+        "published_sha256": "bb6601b5f1058667711c2c7498335201db0715d51aa58a393d025e01bead9ed3"
+      },
+      "controller.py": {
+        "evaluated_sha256": "8d1cef2fd813ac8f338a8de6b904a98220178515f455603e4a8cfc04cf6c9a20",
+        "published_sha256": "ca1036e5460de917e2dca0e08f3ce332913f409ffc9ad5a0c17b40b59a02a1c8"
+      },
+      "vu_io.py": {
+        "evaluated_sha256": "5eceeb82dbc3ed3dcf928a9742adc39903f619522cc9cd3045606bc966840c13",
+        "published_sha256": "d28f3e724c17a33c4268381fc48bbe64452c6399ed627845f5f0e04c45f0d073"
+      }
+    }
+  }
+}

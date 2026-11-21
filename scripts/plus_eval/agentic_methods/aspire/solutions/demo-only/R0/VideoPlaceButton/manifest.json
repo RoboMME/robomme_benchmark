@@ -1,0 +1,26 @@
+{
+  "method": "aspire",
+  "setting": "demo-only",
+  "budget": 0,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "c09bd7884604b2d4f9679863aa4159a719ce72e4ebcb0256b7b2d8fda26af9b5"
+  },
+  "source_experiment": "full_20261116_protocol_v2",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "source_policy_files": {
+    "VideoPlaceButton.py": "876b5241d22267467848813f487dd5601676f5bb7d3a47cfed35198e8bb16869"
+  },
+  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
+  "publication_annotations": {
+    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
+    "files": {
+      "policy.py": {
+        "evaluated_sha256": "876b5241d22267467848813f487dd5601676f5bb7d3a47cfed35198e8bb16869",
+        "published_sha256": "c09bd7884604b2d4f9679863aa4159a719ce72e4ebcb0256b7b2d8fda26af9b5"
+      }
+    }
+  }
+}
