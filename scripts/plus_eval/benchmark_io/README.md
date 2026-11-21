@@ -96,6 +96,10 @@ policies, test results and logs. R0/R10 save full test media; R5 saves logs.
 R1/R3/R5 results remain optional, with their original budgets and assignments.
 All development history is retained. `progress.json` aggregates the study.
 
+Public development archives may omit raw trajectories, images and videos while
+retaining text logs, all code revisions, attempt records and payload references.
+See the [publication requirements](../../../doc/robomme_plus/agentic_development.md#preserve-evidence).
+
 Report demo use, actual attempts and simulator steps per task, and separate
 development/evaluation API costs. Costs use provider tokens and the recorded rate
 card; missing usage is not zero cost. Frozen evaluation has zero frontier-model API cost in this setup.

@@ -84,3 +84,7 @@ Save every code revision before running it. Retain prompts, visible responses,
 commands/tool calls and outputs, child/resumed sessions, attempts/outcomes and API
 usage. Preserve failed and interrupted work. Freeze the final code with hashes;
 never edit a historical log or claim an unrecorded check was performed.
+
+Public log exports may omit raw trajectory, image and video payloads. Preserve
+text records, every code revision and attempt, and source/hash or manifest
+references for omitted payloads. Include audit results in the submission Markdown.

@@ -1,6 +1,10 @@
 # ASPIRE on RoboMME-Plus
 
-Evaluated by the RoboMME team. [Adapter and reproduction instructions](../../../scripts/plus_eval/agentic_methods/aspire/README.md) · [Frozen solutions](../../../scripts/plus_eval/agentic_methods/aspire/solutions/README.md) · [Logs and rollouts](../../../scripts/plus_eval/results/README.md).
+Evaluated by the RoboMME team.
+
+- **Code:** [Adapter and reproduction instructions](../../../scripts/plus_eval/agentic_methods/aspire/README.md) · [Frozen solutions](../../../scripts/plus_eval/agentic_methods/aspire/solutions/README.md).
+- **Development logs:** [Public archive](https://huggingface.co/datasets/Yinpei/RoboMME-plus-ASPIRE-baseline/tree/ad4a504ecfb6e5c6e2c69d97f10fd67e1f14b696/development_logs).
+- **Audit results:** [Included below](#development-audit).
 
 - **Track:** Agentic.
 - **Development model:** Claude Opus 5.5, high reasoning effort.

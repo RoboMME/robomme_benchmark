@@ -28,8 +28,9 @@ with 50 released training demonstrations and 800 fixed test episodes.
    not automatically certify compliance.
 6. **Evaluate and submit.** Run the frozen method on
    [all 800 test episodes](../../src/robomme_plus/README.md#evaluate), then use the
-   [submission template](submission/model_example_plus.md) to share results,
-   code, development history and both audit reports.
+   [submission template](submission/model_example_plus.md) to link code and
+   development logs and include both audit results at the bottom. Public
+   development logs may omit raw trajectories, images and videos.
 
 The harness and development-log audits apply to agentic development. To run an
 existing baseline, use its [setup and running instructions](../../scripts/plus_eval/README.md).

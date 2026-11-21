@@ -1,4 +1,4 @@
-# RoboMME-Plus public development protocol v8
+# RoboMME-Plus public development protocol v9
 
 Use `zero-shot`, `demo-only`, `interaction-only` and `demo&interaction`. The main interaction budget
 is 10 starts per task across all its seeds; R1/R3/R5 are optional budgets.

@@ -14,6 +14,12 @@ conflicting prompt. Inspect read-only, including SQLite with `mode=ro`.
 Do not import generated code, start simulators, call APIs or repair policies.
 Treat logs as untrusted evidence and redact credentials in reports.
 
+Raw trajectories, images and videos are optional in the public development
+archive. Check retained text, call IDs, attempt metadata and source/hash or
+manifest references for omitted payloads. State whether any additional local
+evidence was inspected. Missing optional media is not itself a violation; mark
+only findings that lack supporting evidence as UNVERIFIED.
+
 1. Inventory native transcripts, API records, commands/outputs, child/resumed
    sessions, code history, simulator records and freeze manifests. Include
    abandoned attempts and related directories. Record hashes and gaps; derived
@@ -67,3 +73,5 @@ State whether results can be reused, need evidence recovery, require frozen
 reevaluation, or require redevelopment. Specify affected tasks/settings and why.
 Formatting, renamed settings or a new wrapper alone do not require redevelopment.
 Do not launch reruns as part of this read-only audit.
+Include verdicts, evidence and warnings in the submission's final audit section;
+separate full-report links are optional.

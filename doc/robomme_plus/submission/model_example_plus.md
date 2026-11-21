@@ -4,7 +4,9 @@ Copy the template for each setting you report. Replace bracketed placeholders
 and fill in the results table. Both Non-Agentic and Agentic tracks can use any
 setting. For interaction settings, report results under a budget of at most
 10 development rollouts per task.
-Results with 1, 3 or 5 rollouts per task are optional supplementary tables and do not enter the leaderboard.
+Both `interaction-only` and `demo&interaction` may also report **1, 3 and 5
+rollouts per task** as optional results. The leaderboard uses the 10-rollout
+results. `zero-shot` and `demo-only` use zero simulator rollouts.
 
 All 50 released demonstrations are available as recorded data for offline analysis
 and learning in `demo-only` and `demo&interaction`.
@@ -18,10 +20,20 @@ success rates as percentages with two decimal places. API costs are in USD;
 report the evaluation total for all 800 episodes, and development cost separately.
 Use N/A when no paid API is used. Label estimates or incomplete costs.
 
-Submissions involving agentic development must include the
-[development audit record](#agentic-development-audit-record) for each reported
-setting and budget. An unchanged `zero-shot` system should state that no
-RoboMME-Plus development was performed.
+For submissions involving agentic development, provide:
+
+- **Code link:** the method's source, harness and frozen policy revision.
+- **Development-log link:** a public archive containing prompts, responses,
+  commands/tool calls and text outputs, every code revision, all simulator-attempt
+  records and API usage/costs, including failed and resumed work. **Raw trajectory
+  data, images and videos do not need to be uploaded.** Keep source/hash or manifest
+  references when omitting large payloads from logs.
+- **Audit results:** include the harness and development-log audit verdicts,
+  findings and warnings **at the bottom of the submission Markdown**, using the
+  [audit record](#agentic-development-audit-record). Separate report links are optional.
+
+Cover each reported setting and budget. If no agentic development was performed,
+mark development logs and audits N/A and explain this briefly.
 
 
 **Track (select one):**
@@ -36,11 +48,13 @@ Test the policy directly, or develop it only on original RoboMME, without Plus a
 
 ### [Model / framework name]
 
-[Website](WEBSITE_URL) · [Paper](PAPER_URL) · [Code](CODE_URL)
+[Website](WEBSITE_URL) · [Paper](PAPER_URL)
 
 [Briefly describe the model or agentic framework and its memory mechanism.]
 
 - **Track:** [Non-Agentic / Agentic]
+- **Code:** [Repository and frozen revision](CODE_URL)
+- **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
 - **Total evaluation API cost (USD):** [COST / N/A]
@@ -73,11 +87,13 @@ Report this if you choose `demo-only`. Adapt using released offline demonstratio
 
 ### [Model / framework name]
 
-[Website](WEBSITE_URL) · [Paper](PAPER_URL) · [Code](CODE_URL)
+[Website](WEBSITE_URL) · [Paper](PAPER_URL)
 
 [Briefly describe the model or agentic framework and its memory mechanism.]
 
 - **Track:** [Non-Agentic / Agentic]
+- **Code:** [Repository and frozen revision](CODE_URL)
+- **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
 - **Adaptation:** [BRIEF DESCRIPTION]
@@ -113,11 +129,13 @@ Report this if you choose `interaction-only`. Adapt through training-seed intera
 
 ### [Model / framework name]
 
-[Website](WEBSITE_URL) · [Paper](PAPER_URL) · [Code](CODE_URL)
+[Website](WEBSITE_URL) · [Paper](PAPER_URL)
 
 [Briefly describe the model or agentic framework and its memory mechanism.]
 
 - **Track:** [Non-Agentic / Agentic]
+- **Code:** [Repository and frozen revision](CODE_URL)
+- **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
 - **Adaptation:** [BRIEF DESCRIPTION]
@@ -147,17 +165,39 @@ Report this if you choose `interaction-only`. Adapt through training-seed intera
 | **Overall** | **All tasks** |  |  |
 
 
+<details>
+<summary>Optional results: 1, 3 and 5 rollouts per task</summary>
+
+Each result evaluates all 800 tests under its stated maximum development budget.
+
+| Budget per task | Successes / 800 | Success (%) | Development API cost (USD) | Evaluation API cost (USD) | Results and code |
+| --- | --- | --- | --- | --- | --- |
+| 1 rollout | ___/800 | ___ | ___ | ___ | [LINK] |
+| 3 rollouts | ___/800 | ___ | ___ | ___ | [LINK] |
+| 5 rollouts | ___/800 | ___ | ___ | ___ | [LINK] |
+
+**Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
+
+Link per-task results, actual attempts/steps and the frozen code revision for each
+budget. Include a matching audit verdict and evidence in the final audit section.
+Choose and freeze policies before testing; test outcomes cannot select checkpoints.
+
+</details>
+
+
 ## 4. `demo&interaction`
 
 Report this if you choose `demo&interaction`. Adapt using released offline demonstrations and training-seed interactions.
 
 ### [Model / framework name]
 
-[Website](WEBSITE_URL) · [Paper](PAPER_URL) · [Code](CODE_URL)
+[Website](WEBSITE_URL) · [Paper](PAPER_URL)
 
 [Briefly describe the model or agentic framework and its memory mechanism.]
 
 - **Track:** [Non-Agentic / Agentic]
+- **Code:** [Repository and frozen revision](CODE_URL)
+- **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
 - **Adaptation:** [BRIEF DESCRIPTION]
@@ -188,45 +228,31 @@ Report this if you choose `demo&interaction`. Adapt using released offline demon
 | **Overall** | **All tasks** |  |  |
 
 
-## Agentic development audit record
+<details>
+<summary>Optional results: 1, 3 and 5 rollouts per task</summary>
 
-Follow [How to audit](../auditing.md) for the procedure and copy-and-paste prompts.
-Include this record with each agentic development result. Link the method code,
-complete development evidence and both audit reports. One report may cover
-multiple settings or budgets if it gives a separate verdict and evidence for each.
+Each result evaluates all 800 tests under its stated maximum development budget.
 
-- **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN ID]
-- **Versions:** [BENCHMARK/PROTOCOL, TRAINING DATA AND HARNESS REVISIONS]
-- **Frozen policy:** [CODE LINK, COMMIT OR CONTENT HASHES]
-- **Development evidence:** [PROMPTS, RESPONSES, COMMANDS/TOOL CALLS AND OUTPUTS,
-  CODE HISTORY, INTERACTION LEDGER, API USAGE AND COSTS; INCLUDE CHILD/RESUMED SESSIONS]
+| Budget per task | Successes / 800 | Success (%) | Development API cost (USD) | Evaluation API cost (USD) | Results and code |
+| --- | --- | --- | --- | --- | --- |
+| 1 rollout | ___/800 | ___ | ___ | ___ | [LINK] |
+| 3 rollouts | ___/800 | ___ | ___ | ___ | [LINK] |
+| 5 rollouts | ___/800 | ___ | ___ | ___ | [LINK] |
 
-| Audit | Verdict | Report |
-| --- | --- | --- |
-| Development harness | [VERDICT] | [REPORT LINK] |
-| Development logs | [VERDICT] | [REPORT LINK] |
+**Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
-Use **PASS WITHIN AUDITED SCOPE**, **VIOLATION FOUND** or **UNVERIFIED**. If no
-report is available yet, mark it **Pending report**. A harness audit checks what
-the interface permits and enforces; a log audit checks what happened during
-development. Neither a success rate nor a code-only review proves historical compliance.
+Link per-task results, actual attempts/steps and the frozen code revision for each
+budget. Include a matching audit verdict and evidence in the final audit section.
+Choose and freeze policies before testing; test outcomes cannot select checkpoints.
 
-Each report starts with its verdict, then gives the scope, auditor/date, findings
-with evidence references, and unresolved warnings or gaps. Include per-task
-attempt counts across all training seeds, failed/incomplete starts, seed validity,
-input provenance and the mapping from code history to the frozen policy. Missing
-evidence must remain unverified. Use the
-[harness audit](../../skills/audit_robomme_plus_harness.md) and
-[development-log audit](../../skills/audit_robomme_plus_development.md).
+</details>
 
-These audits concern agentic development. The fixed test-seed evaluation protocol
-and its result tables remain separate.
 
 <details>
 <summary>Evaluation rules — apply to all four templates</summary>
 
 1. **Keep the full development history.** Save the complete process, including
-   prompts, commands, code revisions, rollouts and outcomes. Every Plus simulator
+   prompts, commands, code revisions, attempt records and outcomes. Every Plus simulator
    start counts: previews, failures, retries, demonstration replays, debugging,
    verification and model selection. Optional budgets of 1, 3 or 5 rollouts are
    totals, not additional allowances.
@@ -261,10 +287,49 @@ mean for the same setting and budget.
 
 Task-provided test demonstration videos are normal observations, not adaptation
 data. Original RoboMME data and simulator use is outside the Plus rollout budget.
-Submit this template, the code, development logs and audit reports in a pull request.
+Submit this Markdown with code/development-log links and the audit results below
+in a pull request.
 
 Reference: [evaluation guide](../../../src/robomme_plus/README.md) ·
 [baseline results and running instructions](../robomme_plus_baseline_results.md) ·
 [training data format and seed mapping](../plus_training_data_format.md).
 
 </details>
+
+## Agentic development audit record
+
+Keep this section at the **bottom of your submission**. Follow
+[How to audit](../auditing.md) for the procedure and copy-and-paste prompts.
+Include findings here for each setting and budget; external full reports are optional.
+
+- **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN ID]
+- **Versions:** [BENCHMARK/PROTOCOL, TRAINING DATA AND HARNESS REVISIONS]
+- **Frozen policy:** [CODE LINK, COMMIT OR CONTENT HASHES]
+- **Development logs:** [PUBLIC ARCHIVE LINK]
+- **Auditor / date:** [NAME, DATE; SELF-REVIEW OR INDEPENDENT REVIEW]
+- **Coverage:** [RECORDS INSPECTED; OMITTED PAYLOADS AND ANY ADDITIONAL LOCAL EVIDENCE]
+
+| Audit | Verdict | Summary of findings |
+| --- | --- | --- |
+| Development harness | [VERDICT] | [CONTROLS CHECKED AND GAPS] |
+| Development logs | [VERDICT] | [RECORDS RECONCILED AND GAPS] |
+
+Use **PASS WITHIN AUDITED SCOPE**, **VIOLATION FOUND** or **UNVERIFIED**. If an
+audit is not completed, mark it **Pending report**. A harness audit checks the
+interface; a log audit checks what happened during development.
+
+| Protocol rule | Harness finding and evidence | Development-log finding and evidence |
+| --- | --- | --- |
+| 1. Keep the full development history | [FINDING; FILE/LINE] | [FINDING; LOG/EVENT IDS] |
+| 2. Use only permitted resources | [FINDING; FILE/LINE] | [FINDING; LOG/EVENT IDS] |
+| 3. Freeze everything before evaluation | [FINDING; FILE/LINE] | [FINDING; HASHES] |
+| 4. Report resource usage | [FINDING; FILE/LINE] | [FINDING; USAGE RECORDS] |
+
+Include per-task attempt counts, failed/incomplete starts, simulator steps, seed
+validity and the mapping to saved code revisions, inline or in the linked logs.
+Raw trajectories, images and videos are optional. Identify any specific finding
+that cannot be verified from the available evidence.
+
+### Warnings and required action
+
+[MISSING EVIDENCE, DISCLOSED CORRECTIONS AND REQUIRED FIXES; OR NONE]

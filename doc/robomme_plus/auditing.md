@@ -47,6 +47,11 @@ code revisions, simulator attempts/outcomes, API usage, and child/resumed sessio
 Include failed and interrupted attempts. Supply the final frozen policy hashes
 and the harness report. Provider-hidden reasoning is not required.
 
+Public logs may omit raw trajectories, images and videos, including embedded
+media/array payloads. Keep text records, call IDs, attempt metadata and source/hash
+or manifest references for omitted payloads. State what the auditor inspected;
+optional media being absent is not itself a violation.
+
 ```text
 Use doc/skills/audit_robomme_plus_development.md to audit this saved experiment
 against src/robomme_plus/README.md#evaluation-protocol.
@@ -56,6 +61,7 @@ Setting: <SETTING>
 Plus rollout budget per task: <0 OR 10>
 Tasks and run ID: <TASKS; RUN ID>
 Complete development evidence: <LOG AND CODE-HISTORY PATHS>
+Omitted trajectory/media payloads and retained references: <MANIFEST OR NONE>
 Interaction ledger and native simulator records: <PATHS>
 Frozen policies and manifests: <PATHS>
 Harness report and audited revision: <PATH; REVISION>
@@ -68,7 +74,8 @@ replay, and trace code history to the frozen policies. Check separation from
 test feedback and reconcile resource usage. Do not import or run generated
 policies, start simulators, call model APIs, or repair the evidence.
 Write the report only. Start with the verdict, then scope, rule-by-rule evidence,
-per-task attempts and unresolved gaps. Missing evidence is UNVERIFIED, not a pass.
+per-task attempts and unresolved gaps. Public trajectory/media files are optional;
+identify any specific finding that cannot be verified from the available records.
 State whether results can be reused, need more evidence, or require new runs.
 ```
 
@@ -79,9 +86,11 @@ scope, evidence and verdict.
 
 ## 3. Submit the reports and evidence
 
-Fill the [submission template](submission/model_example_plus.md#agentic-development-audit-record)
-with links to the code, complete development record and both reports. Identify
-the auditor, date and revisions; disclose whether the audit is a self-review.
+Link the code and public development logs in the
+[submission template](submission/model_example_plus.md#agentic-development-audit-record).
+Include both audits' verdicts, findings and warnings at the **bottom of the
+submission Markdown**; separate full-report links are optional. Identify the
+auditor, date, revisions and evidence inspected, and disclose self-review.
 
 Each report should use this order:
 

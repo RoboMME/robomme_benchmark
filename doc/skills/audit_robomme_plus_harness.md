@@ -44,6 +44,9 @@ Redact credentials from excerpts.
    code history, attempts/outcomes, costs and child/resumed sessions. Link each
    run to saved code and the final frozen artifact. Provider-hidden reasoning
    is not required. Identify execution paths that bypass logging.
+   Public exports may omit raw trajectory/media payloads while retaining text,
+   call IDs, attempt metadata and source/hash or manifest references. Check that
+   this does not remove commands, code revisions or failed attempts.
 6. **Testing boundary:** ensure development cannot access Plus held-out data/results;
    freeze programs, prompts, tools and harness before testing. Keep the existing
    evaluation protocol unchanged.
@@ -63,3 +66,5 @@ Use the protocol's rule numbers: (1) Keep the full development history,
 Separate violations, enforcement weaknesses and missing evidence. State the
 smallest necessary correction and affected scope. A harness pass does not prove
 historical behavior; link the [log audit](audit_robomme_plus_development.md).
+Put the audit verdict and findings in the submission's final audit section;
+separate full-report links are optional.

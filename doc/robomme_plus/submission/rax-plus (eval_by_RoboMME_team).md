@@ -1,6 +1,10 @@
 # RAX on RoboMME-Plus
 
-Evaluated by the RoboMME team. [Adapter and reproduction instructions](../../../scripts/plus_eval/agentic_methods/rax/README.md) · [Frozen solutions](../../../scripts/plus_eval/agentic_methods/rax/solutions/README.md) · [Logs and rollouts](../../../scripts/plus_eval/results/README.md).
+Evaluated by the RoboMME team.
+
+- **Code:** [Adapter and reproduction instructions](../../../scripts/plus_eval/agentic_methods/rax/README.md) · [Frozen solutions](../../../scripts/plus_eval/agentic_methods/rax/solutions/README.md).
+- **Development logs:** [Public archive](https://huggingface.co/datasets/Yinpei/RoboMME-plus-RAX-baseline/tree/412843938abb19d0bfbf7e473c849d67dfad70e1/development_logs).
+- **Audit results:** [Included below](#development-audit).
 
 - **Track:** Agentic.
 - **Development model:** Claude Opus 5.5, high reasoning effort.

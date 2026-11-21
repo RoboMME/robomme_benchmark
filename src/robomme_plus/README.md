@@ -24,7 +24,9 @@ tests add perceptual and mechanism variations that are mostly unseen in training
 5. **Audit the saved development record** with the
    [instructions and example prompt](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record).
 6. **[Evaluate all 800 test episodes](#evaluate) and [submit results](../../doc/robomme_plus/submission/model_example_plus.md)**
-   with code, complete development logs and both audit reports for agentic development.
+   with links to code and development logs, and both audit results at the bottom
+   of the submission Markdown. Public development logs need not include raw
+   trajectories, images or videos.
 
 The two audits apply to agentic development. The
 [complete guide](../../doc/robomme_plus/README.md) links the audit skills,
@@ -72,7 +74,9 @@ combined**. Reporting results for 1, 3 and 5 attempts is optional; the leaderboa
    verification and model selection. All share the task's budget and follow its
    episode step limits. Agentic methods follow the
    [shared development interface](../../doc/robomme_plus/agentic_development.md)
-   and submit complete logs with the
+   and publish complete text logs and code history. Raw trajectories, images and
+   videos are optional in public development records; retain their source
+   references and attempt metadata. Include the
    [harness audit](../../doc/skills/audit_robomme_plus_harness.md) and
    [development-log audit](../../doc/skills/audit_robomme_plus_development.md).
 
@@ -96,8 +100,9 @@ combined**. Reporting results for 1, 3 and 5 attempts is optional; the leaderboa
 
 Evaluate all **50 test episodes per task (800 total)** with default variations
 and execution limits. Keep failures, timeouts and errors in the denominator;
-report changed test conditions separately. Submit per-task results, code,
-development logs and audits through a pull request using the
+report changed test conditions separately. Submit per-task results with links to
+code and development logs, followed by the audit results in the submission Markdown,
+through a pull request using the
 [submission template](../../doc/robomme_plus/submission/model_example_plus.md).
 See the [baseline results](../../doc/robomme_plus/robomme_plus_baseline_results.md)
 and [running instructions](../../scripts/plus_eval/README.md).
@@ -122,7 +127,7 @@ Use the [harness audit](../../doc/skills/audit_robomme_plus_harness.md) and
 to check development compliance against this protocol.
 Follow the [audit procedure and example prompts](../../doc/robomme_plus/auditing.md)
 to review the harness before development and the saved logs before submission.
-Include both audit reports and their supporting evidence in the
+Include both audits' verdicts, findings and evidence references in the final
 [agentic development audit record](../../doc/robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
 
 ## Evaluate
