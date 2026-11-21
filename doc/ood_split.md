@@ -95,22 +95,22 @@ Source code:
 - SimpleMemVLA: [OpenBMB/SimpleMemVLA](https://github.com/OpenBMB/SimpleMemVLA).
 - PonderPounce: [worv-ai/PonderPounce](https://github.com/worv-ai/PonderPounce/tree/723df35762bb641e1d520e4fa9359b98644adc21).
 
-| Task | FrameSamp+Modul | SimpleMemVLA | PonderPounce |
-|---|---:|---:|---:|
-| BinFill | 0/20 | 2/20 | 0/20 |
-| ButtonUnmask | 0/20 | 20/20 | 18/20 |
-| ButtonUnmaskSwap | 1/20 | 5/20 | 2/20 |
-| InsertPeg | 0/20 | 12/20 | 0/20 |
-| MoveCube | 13/20 | 19/20 | 11/20 |
-| PatternLock | 0/20 | 0/20 | 0/20 |
-| PickHighlight | 0/20 | 4/20 | 2/20 |
-| PickXtimes | 0/20 | 0/20 | 18/20 |
-| RouteStick | 0/20 | 10/20 | 1/20 |
-| StopCube | 0/20 | 0/20 | 0/20 |
-| SwingXtimes | 0/20 | 4/20 | 5/20 |
-| VideoPlaceButton | 5/20 | 9/20 | 9/20 |
-| VideoPlaceOrder | 4/20 | 6/20 | 4/20 |
-| VideoRepick | 0/20 | 0/20 | 7/20 |
-| VideoUnmask | 0/20 | 19/20 | 17/20 |
-| VideoUnmaskSwap | 3/20 | 2/20 | 6/20 |
-| **Overall** | 26/320 (8.1%) | 112/320 (35.0%) | 100/320 (31.2%) |
+| Task | FrameSamp+Modul | SimpleMemVLA | PonderPounce | Embodied-Astra |
+|---|---:|---:|---:| ---: |
+| BinFill | 0/20 | 2/20 | 0/20 | 20/20 |
+| ButtonUnmask | 0/20 | 20/20 | 18/20 | 19/20 |
+| ButtonUnmaskSwap | 1/20 | 5/20 | 2/20 | 17/20 |
+| InsertPeg | 0/20 | 12/20 | 0/20 | 19/20 |
+| MoveCube | 13/20 | 19/20 | 11/20 | 3/20 |
+| PatternLock | 0/20 | 0/20 | 0/20 | 20/20 |
+| PickHighlight | 0/20 | 4/20 | 2/20 | 9/20 |
+| PickXtimes | 0/20 | 0/20 | 18/20 | 20/20 |
+| RouteStick | 0/20 | 10/20 | 1/20 | 20/20 |
+| StopCube | 0/20 | 0/20 | 0/20 | 10/20 |
+| SwingXtimes | 0/20 | 4/20 | 5/20 | 19/20 |
+| VideoPlaceButton | 5/20 | 9/20 | 9/20 | 20/20 |
+| VideoPlaceOrder | 4/20 | 6/20 | 4/20 | 20/20 |
+| VideoRepick | 0/20 | 0/20 | 7/20 | 20/20 |
+| VideoUnmask | 0/20 | 19/20 | 17/20 | 14/20 |
+| VideoUnmaskSwap | 3/20 | 2/20 | 6/20 | 19/20 |
+| **Overall** | 26/320 (8.1%) | 112/320 (35.0%) | 100/320 (31.2%) | 269/320 (84.06%) |

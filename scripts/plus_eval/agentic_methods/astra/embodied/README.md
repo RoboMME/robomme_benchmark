@@ -63,3 +63,22 @@ Validate the training files without GPU/API calls with:
 ```
 
 [Link finalized rollouts](../../../results/README.md) into the ignored `runs/` directory; videos and logs remain outside Git.
+
+## Regular RoboMME OOD test split
+
+The separate [`ood_test` split](../../../../../doc/ood_split.md) contains 320
+episodes (16 tasks × 20), using regular RoboMME and its native 1,500-step limit.
+Run the same `zero-shot` policy with two workers per GPU:
+
+```bash
+"$SIM_PYTHON" scripts/plus_eval/agentic_methods/astra/embodied/run_ood_test.py \
+  --output-dir "<RUN_ROOT>/embodied-astra-ood-test" --gpus 0 1 --workers-per-gpu 2
+```
+
+The queue resumes missing episodes and updates `summary.json` and `RESULTS.md`
+every 20 seconds. `rollouts/<Task>_ep<N>/` saves videos, actions, model exchanges
+and API usage; `source/` preserves the evaluated code. A changed configuration
+requires a new run directory. Existing failures remain scored. An interrupted
+episode requires review before resuming. The 30-minute worker watchdog records
+stalled workers as infrastructure errors; it does not change the simulator limit.
+`pricing.json` uses the upstream recorded rate card and labels costs as estimates.
