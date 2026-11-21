@@ -1,5 +1,6 @@
 # RoboMME-Plus submission templates
 
+Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol).
 Copy the template for each setting you report. Replace bracketed placeholders
 and fill in the results table. Both Non-Agentic and Agentic tracks can use any
 setting. For interaction settings, report results under a budget of at most
@@ -171,18 +172,38 @@ Report this if you choose `interaction-only`. Adapt through training-seed intera
 <details>
 <summary>Optional results: 1, 3 and 5 rollouts per task</summary>
 
-Each result evaluates all 800 tests under its stated maximum development budget.
+Each budget evaluates all 800 tests. Report successes and success rates per task;
+use N/A for budgets you do not report.
 
-| Budget per task | Successes / 800 | Success (%) | Development API cost (USD) | Evaluation API cost (USD) | Results and code |
-| --- | --- | --- | --- | --- | --- |
-| 1 rollout | ___/800 | ___ | ___ | ___ | [LINK] |
-| 3 rollouts | ___/800 | ___ | ___ | ___ | [LINK] |
-| 5 rollouts | ___/800 | ___ | ___ | ___ | [LINK] |
+| Suite | Task | 1 rollout | 3 rollouts | 5 rollouts |
+| --- | --- | --- | --- | --- |
+| Counting | BinFill | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Counting | PickXtimes | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Counting | SwingXtimes | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Counting | StopCube | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Permanence | VideoUnmask | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Permanence | VideoUnmaskSwap | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Permanence | ButtonUnmask | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Permanence | ButtonUnmaskSwap | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Reference | PickHighlight | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Reference | VideoRepick | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Reference | VideoPlaceButton | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Reference | VideoPlaceOrder | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Imitation | MoveCube | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Imitation | InsertPeg | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Imitation | PatternLock | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Imitation | RouteStick | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| **Overall** | **All tasks** | **___/800 (___%)** | **___/800 (___%)** | **___/800 (___%)** |
+
+| Budget per task | Development API cost (USD) | Evaluation API cost (USD) | Results and code |
+| --- | --- | --- | --- |
+| 1 rollout | ___ | ___ | [LINK] |
+| 3 rollouts | ___ | ___ | [LINK] |
+| 5 rollouts | ___ | ___ | [LINK] |
 
 **Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
-Link per-task results, actual attempts/steps and the frozen code revision for each
-budget. Include a matching audit verdict and evidence in the final audit section.
+Link actual attempts/steps and the frozen code revision for each budget. Include a matching audit verdict and evidence in the final audit section.
 Choose and freeze policies before testing; test outcomes cannot select checkpoints.
 
 </details>
@@ -235,83 +256,48 @@ Report this if you choose `demo&interaction`. Adapt using released offline demon
 <details>
 <summary>Optional results: 1, 3 and 5 rollouts per task</summary>
 
-Each result evaluates all 800 tests under its stated maximum development budget.
+Each budget evaluates all 800 tests. Report successes and success rates per task;
+use N/A for budgets you do not report.
 
-| Budget per task | Successes / 800 | Success (%) | Development API cost (USD) | Evaluation API cost (USD) | Results and code |
-| --- | --- | --- | --- | --- | --- |
-| 1 rollout | ___/800 | ___ | ___ | ___ | [LINK] |
-| 3 rollouts | ___/800 | ___ | ___ | ___ | [LINK] |
-| 5 rollouts | ___/800 | ___ | ___ | ___ | [LINK] |
+| Suite | Task | 1 rollout | 3 rollouts | 5 rollouts |
+| --- | --- | --- | --- | --- |
+| Counting | BinFill | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Counting | PickXtimes | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Counting | SwingXtimes | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Counting | StopCube | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Permanence | VideoUnmask | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Permanence | VideoUnmaskSwap | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Permanence | ButtonUnmask | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Permanence | ButtonUnmaskSwap | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Reference | PickHighlight | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Reference | VideoRepick | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Reference | VideoPlaceButton | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Reference | VideoPlaceOrder | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Imitation | MoveCube | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Imitation | InsertPeg | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Imitation | PatternLock | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| Imitation | RouteStick | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
+| **Overall** | **All tasks** | **___/800 (___%)** | **___/800 (___%)** | **___/800 (___%)** |
+
+| Budget per task | Development API cost (USD) | Evaluation API cost (USD) | Results and code |
+| --- | --- | --- | --- |
+| 1 rollout | ___ | ___ | [LINK] |
+| 3 rollouts | ___ | ___ | [LINK] |
+| 5 rollouts | ___ | ___ | [LINK] |
 
 **Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
-Link per-task results, actual attempts/steps and the frozen code revision for each
-budget. Include a matching audit verdict and evidence in the final audit section.
+Link actual attempts/steps and the frozen code revision for each budget. Include a matching audit verdict and evidence in the final audit section.
 Choose and freeze policies before testing; test outcomes cannot select checkpoints.
 
 </details>
 
-
-<details>
-<summary>Evaluation rules — apply to all four templates</summary>
-
-1. **Keep the full development history.** Save the complete process, including
-   prompts, commands, code revisions, attempt records and outcomes. Every Plus simulator
-   start counts: previews, failures, retries, demonstration replays, debugging,
-   verification and model selection. Optional budgets of 1, 3 or 5 rollouts are
-   totals, not additional allowances.
-   The allowance covers all training seeds of a task combined, not each seed.
-   Unused attempts cannot transfer between tasks. Simulator replays of recorded
-   actions count toward this allowance.
-   Follow the official step limits. Agentic methods must retain full development
-   logs, follow the [shared development interface](../agentic_development.md),
-   and submit the [harness audit](../../skills/audit_robomme_plus_harness.md) and
-   [development-log audit](../../skills/audit_robomme_plus_development.md).
-2. **Use only permitted resources.** Adapt to Plus using released demonstrations
-   and/or training seeds, according to the setting. Do not access privileged
-   information, reverse-engineer Plus task code, use test seeds during development,
-   or handcraft task solutions from implementation details. Original RoboMME's
-   [dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) and
-   [simulator](../../../src/robomme) may be used freely in every setting.
-3. **Freeze everything before evaluation.** Finalize weights, programs, prompts,
-   tools, libraries and the harness before testing. Reset memory between test
-   episodes. Do not learn from test results or use them for policy selection.
-   Test-time optimization is outside the standard protocol; report its results
-   separately from these tables.
-4. **Report resource usage.** Include the setting, demonstrations used, rollout budget, actual
-   attempts and simulator steps per task, and separate development/evaluation API costs
-   in USD. Compare methods at the same setting and rollout budget.
-
-Use a shared model checkpoint or agentic framework across all 16 tasks. Keep
-all 800 episodes in the denominator, including failures, timeouts, model stops,
-and errors. Keep the default test variations and supplied execution limits
-(`ceil(1.5 * oracle_policy_step) + 200` control steps). Report altered test
-conditions separately. For repeated runs, report each inference seed and the
-mean for the same setting and budget.
-
-Task-provided test demonstration videos are normal observations, not adaptation
-data. Original RoboMME data and simulator use is outside the Plus rollout budget.
-Submit this Markdown with code/development-log links and the audit results below
-in a pull request.
-
-Reference: [evaluation guide](../../../src/robomme_plus/README.md) ·
-[baseline results and running instructions](../robomme_plus_baseline_results.md) ·
-[training data format and seed mapping](../plus_training_data_format.md).
-
-</details>
 
 ## Agentic development audit record
 
 Keep this section at the **bottom of your submission**. Follow
 [How to audit](../auditing.md) for the procedure and copy-and-paste prompts.
 Include findings here for each setting and budget; external full reports are optional.
-
-- **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN ID]
-- **Versions:** [BENCHMARK/PROTOCOL, TRAINING DATA AND HARNESS REVISIONS]
-- **Frozen policy:** [CODE LINK, COMMIT OR CONTENT HASHES]
-- **Development logs:** [PUBLIC ARCHIVE LINK]
-- **Auditor / date:** [NAME, DATE; SELF-REVIEW OR INDEPENDENT REVIEW]
-- **Coverage:** [RECORDS INSPECTED; OMITTED PAYLOADS AND ANY ADDITIONAL LOCAL EVIDENCE]
 
 | Audit | Verdict | Summary of findings |
 | --- | --- | --- |
@@ -322,18 +308,51 @@ Use **PASS WITHIN AUDITED SCOPE**, **VIOLATION FOUND** or **UNVERIFIED**. If an
 audit is not completed, mark it **Pending report**. A harness audit checks the
 interface; a log audit checks what happened during development.
 
-| Protocol rule | Harness finding and evidence | Development-log finding and evidence |
-| --- | --- | --- |
-| 1. Keep the full development history | [FINDING; FILE/LINE] | [FINDING; LOG/EVENT IDS] |
-| 2. Use only permitted resources | [FINDING; FILE/LINE] | [FINDING; LOG/EVENT IDS] |
-| 3. Freeze everything before evaluation | [FINDING; FILE/LINE] | [FINDING; HASHES] |
-| 4. Report resource usage | [FINDING; FILE/LINE] | [FINDING; USAGE RECORDS] |
+- **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN ID]
+- **Versions:** [BENCHMARK/PROTOCOL, TRAINING DATA AND HARNESS REVISIONS]
+- **Frozen policy:** [CODE LINK, COMMIT OR CONTENT HASHES]
+- **Development logs:** [PUBLIC ARCHIVE LINK]
+- **Auditor / date:** [NAME, DATE; SELF-REVIEW OR INDEPENDENT REVIEW]
+- **Coverage:** [RECORDS INSPECTED; OMITTED PAYLOADS AND ANY ADDITIONAL LOCAL EVIDENCE]
 
-Include per-task attempt counts, failed/incomplete starts, simulator steps, seed
-validity and the mapping to saved code revisions, inline or in the linked logs.
+For each item below, set **STATUS** to PASS, FAIL, UNVERIFIED or N/A and provide
+a short evidence reference. Check `[x]` **only for PASS**; leave `[ ]` for the other
+statuses and explain them. Any FAIL makes that audit's verdict VIOLATION FOUND;
+otherwise any UNVERIFIED makes it UNVERIFIED. A pass needs all applicable checks
+to pass. A checked box does not simply mean the check was performed.
+
+### Harness checklist
+
+- [ ] **Rule 1 — Complete text logs and code history — STATUS** · Evidence: [FILE:LINE]
+- [ ] **Rule 1 — Shared budget counts every simulator start and retry — STATUS** · Evidence: [FILE:LINE]
+- [ ] **Rule 2 — Inputs and agent access respect the setting — STATUS** · Evidence: [FILE:LINE]
+- [ ] **Rule 2 — Only released training seeds/settings are exposed — STATUS** · Evidence: [FILE:LINE]
+- [ ] **Rule 3 — Freeze and development/test separation are enforced — STATUS** · Evidence: [FILE:LINE]
+- [ ] **Rule 4 — Attempts, steps and separate API costs are recorded — STATUS** · Evidence: [FILE:LINE]
+
+### Development-log checklist
+
+- [ ] **Rule 1 — All sessions, tool records and code revisions are accounted for — STATUS** · Evidence: [LOG/EVENT IDS]
+- [ ] **Rule 1 — Starts reconcile across seeds/workers; budget respected — STATUS** · Evidence: [LEDGER/RECORD IDS]
+- [ ] **Rule 2 — Recorded inputs, source access and demo use are permitted — STATUS** · Evidence: [LOG/EVENT IDS]
+- [ ] **Rule 2 — Training seeds and full episode configurations match — STATUS** · Evidence: [METADATA/HASHES]
+- [ ] **Rule 3 — Frozen policies trace to code history; no test-feedback tuning — STATUS** · Evidence: [HASHES/EVENT IDS]
+- [ ] **Rule 4 — Per-task attempts/steps and API usage/costs reconcile — STATUS** · Evidence: [USAGE RECORDS]
+
+### Per-task accounting
+
+Include every task in scope for each reported budget. Use Unknown for unavailable
+counts rather than zero. Failed/incomplete starts are included in Starts.
+
+| Task | Budget | Starts | Failed/incomplete starts | Steps | Seed validity | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| [TASK] | [LIMIT] | [COUNT] | [COUNT] | [COUNT / UNKNOWN] | [STATUS] | [STATUS] |
+
 Raw trajectories, images and videos are optional. Identify any specific finding
 that cannot be verified from the available evidence.
 
 ### Warnings and required action
 
-[MISSING EVIDENCE, DISCLOSED CORRECTIONS AND REQUIRED FIXES; OR NONE]
+| Finding | Affected tasks/settings | Evidence | Required action |
+| --- | --- | --- | --- |
+| [GAP, VIOLATION OR DISCLOSED CORRECTION; NONE IF NONE] | [SCOPE] | [REFERENCE] | [ACTION] |

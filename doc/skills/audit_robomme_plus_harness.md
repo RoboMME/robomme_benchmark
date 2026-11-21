@@ -1,6 +1,6 @@
 ---
 name: audit-robomme-plus-harness
-description: Audit an agentic development harness for a specified RoboMME-Plus setting. Check permitted inputs, simulator accounting, seeds, isolation and logging without starting development. Does not certify historical behavior.
+description: Audit an agentic development harness for a specified RoboMME-Plus setting. Check inputs, rollout accounting, seeds, isolation and logging without starting development. Produce a verdict-first checklist with evidence; does not certify historical behavior.
 ---
 
 # Audit the development harness
@@ -57,9 +57,20 @@ run without a simulator; do not execute arbitrary tests from an audited workspac
 
 ## Report
 
-Use the [submission format](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
-Start with **PASS WITHIN AUDITED SCOPE**, **VIOLATION FOUND** or **UNVERIFIED**, then
-scope/revisions/auditor/date and rule-by-rule findings with file/line references.
+Generate structured Markdown using the
+[submission format](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record):
+
+1. **Verdict first:** PASS WITHIN AUDITED SCOPE, VIOLATION FOUND or UNVERIFIED.
+2. **Scope:** method, setting, budget, tasks, revisions, auditor/date and coverage.
+3. **Checklist:** copy the [harness checklist](../robomme_plus/submission/model_example_plus.md#harness-checklist).
+   Give every item a status and a short file/line reference. Use `[x]` only for
+   PASS; use `[ ]` with FAIL, UNVERIFIED or N/A for every other status. A checked
+   box means verified compliance, not merely that the check was performed.
+4. **Warnings/action table:** affected scope, evidence and required action; write
+   None if there are no warnings. Avoid long narrative summaries.
+
+Any FAIL yields VIOLATION FOUND. Otherwise, any UNVERIFIED yields UNVERIFIED;
+PASS WITHIN AUDITED SCOPE requires all applicable checks to pass. Explain N/A.
 Use the protocol's rule numbers: (1) Keep the full development history,
 (2) Use only permitted resources, (3) Freeze everything before evaluation,
 (4) Report resource usage. The inspection steps above are not separate benchmark rules.

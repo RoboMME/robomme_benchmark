@@ -32,8 +32,9 @@ Check shared budget enforcement, seed selection, isolation, logging and the
 development/test boundary. Original RoboMME data and simulator use is permitted.
 Inspect files without running policies, simulators or model API calls. Write
 the report only; do not modify the harness or evidence.
-Start with the verdict, then scope, rule-by-rule evidence, warnings and required
-fixes. Mark anything that cannot be established as UNVERIFIED.
+Use the submission template's structured harness checklist: verdict first, scope,
+checkbox items with PASS/FAIL/UNVERIFIED/N/A and evidence, then a warnings/action
+table. Check a box only for PASS. Mark anything not established as UNVERIFIED.
 ```
 
 Fix confirmed harness violations before development and repeat the review for
@@ -73,8 +74,9 @@ actual inputs and tool access, distinguish offline analysis from Plus simulator
 replay, and trace code history to the frozen policies. Check separation from
 test feedback and reconcile resource usage. Do not import or run generated
 policies, start simulators, call model APIs, or repair the evidence.
-Write the report only. Start with the verdict, then scope, rule-by-rule evidence,
-per-task attempts and unresolved gaps. Public trajectory/media files are optional;
+Write the report only. Use the structured development-log checklist: verdict first,
+scope, checkbox items with status/evidence, per-task accounting and warnings/action
+tables. Check a box only for PASS. Public trajectory/media files are optional;
 identify any specific finding that cannot be verified from the available records.
 State whether results can be reused, need more evidence, or require new runs.
 ```
@@ -96,8 +98,15 @@ Each report should use this order:
 
 1. **Verdict:** PASS WITHIN AUDITED SCOPE, VIOLATION FOUND or UNVERIFIED.
 2. **Scope:** method, setting, budget, tasks, run ID, revisions and coverage.
-3. **Findings:** the protocol's four numbered rules, with file/line or event references.
-4. **Warnings and action:** missing evidence, corrections and any required reruns.
+3. **Checklist:** PASS/FAIL/UNVERIFIED/N/A and evidence for every required check.
+4. **Per-task accounting:** required for the development-log audit.
+5. **Warnings/action table:** missing evidence, corrections and any required reruns.
+
+Use the template's [harness checklist](submission/model_example_plus.md#harness-checklist)
+or [development-log checklist](submission/model_example_plus.md#development-log-checklist).
+A checked box means PASS. Leave other boxes unchecked and state FAIL, UNVERIFIED
+or N/A explicitly. Any FAIL makes the verdict VIOLATION FOUND; otherwise any
+UNVERIFIED makes it UNVERIFIED. A pass requires all applicable checks to pass.
 
 For example:
 
@@ -108,15 +117,22 @@ For example:
 **Auditor / date:** <name, date, self-review or independent review>
 **Coverage:** <files and records inspected; exclusions>
 
-| Protocol rule | Finding | Evidence | Status |
-| --- | --- | --- | --- |
-| 1. Keep the full development history | ... | <file:line / event ID> | ... |
-| 2. Use only permitted resources | ... | ... | ... |
-| 3. Freeze everything before evaluation | ... | ... | ... |
-| 4. Report resource usage | ... | ... | ... |
+## Checklist
+
+- [ ] **<Rule number and check> — <STATUS>** · Evidence: <file:line / event ID>
+- [ ] **<Next check> — <STATUS>** · Evidence: <file:line / event ID>
+
+## Per-task accounting (development-log audit)
+
+| Task | Budget | Starts | Failed/incomplete starts | Steps | Seed validity | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| <task> | <limit> | <count> | <count> | <count or Unknown> | <status> | <status> |
 
 ## Warnings and required action
-<Gaps, disclosed corrections, reuse decision and required fixes or reruns>
+
+| Finding | Affected scope | Evidence | Required action |
+| --- | --- | --- | --- |
+| <gap or violation; None if none> | <tasks/settings> | <reference> | <action> |
 ```
 
 A report cannot certify unobserved behavior. Resolve violations and essential

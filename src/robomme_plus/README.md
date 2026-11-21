@@ -173,7 +173,9 @@ MoveCube ball/cue methods allow two trials; other methods allow one. A retry res
 that episode's scene and execution budget internally.
 
 Only `status == "success"` counts as success. Include failures, timeouts and errors
-in the denominator. Keep oracle subgoals and test metadata out of policy inputs.
+in the denominator. Use a shared model checkpoint or agentic framework across all
+16 tasks. For repeated runs, report each inference seed and the mean for the same
+setting and budget. Keep oracle subgoals and test metadata out of policy inputs.
 Report each evaluation setting and interaction budget separately using the
 [submission template](../../doc/robomme_plus/submission/model_example_plus.md).
 

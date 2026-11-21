@@ -1,6 +1,6 @@
 ---
 name: audit-robomme-plus-development
-description: Audit saved RoboMME-Plus agentic development evidence. Reconcile simulator attempts, permitted inputs, code history and frozen policies for a specified setting and budget. Report gaps and violations without rerunning or repairing the experiment.
+description: Audit saved RoboMME-Plus agentic development evidence. Reconcile attempts, inputs, code history and frozen policies for a specified setting and budget. Produce a verdict-first checklist and per-task accounting without rerunning or repairing the experiment.
 ---
 
 # Audit development records
@@ -56,10 +56,24 @@ only findings that lack supporting evidence as UNVERIFIED.
 
 ## Report and reuse decision
 
-Use **PASS WITHIN AUDITED SCOPE**, **VIOLATION FOUND** or **UNVERIFIED** first,
-then scope/revisions/auditor/date, coverage and findings with event IDs or file/line
-references. Include per-task allowance, reconciled starts, failed/incomplete
-starts, seed validity and verdict. Link the
+Generate structured Markdown using the
+[submission format](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record):
+
+1. **Verdict first:** PASS WITHIN AUDITED SCOPE, VIOLATION FOUND or UNVERIFIED.
+2. **Scope:** method, setting, budget, tasks, run ID, revisions, auditor/date and coverage.
+3. **Checklist:** copy the [development-log checklist](../robomme_plus/submission/model_example_plus.md#development-log-checklist).
+   Give every item a status and a short event ID or file/line reference. Use `[x]`
+   only for PASS; use `[ ]` with FAIL, UNVERIFIED or N/A for every other status.
+   A checked box means verified compliance, not merely that the check was performed.
+4. **Per-task accounting table:** budget, reconciled starts, failed/incomplete
+   starts, simulator steps, seed validity and status for every task in scope.
+   Use Unknown for unavailable counts, never zero; account for each reported budget.
+5. **Warnings/action table:** affected tasks/settings, evidence and required action;
+   write None if there are no warnings. Avoid long narrative summaries.
+
+Any FAIL yields VIOLATION FOUND. Otherwise, any UNVERIFIED yields UNVERIFIED;
+PASS WITHIN AUDITED SCOPE requires all applicable checks to pass. Explain N/A.
+Link the
 [harness audit](audit_robomme_plus_harness.md), without treating it as proof of use.
 Map findings to the protocol's four rules: development history, permitted
 resources, freeze before evaluation, and resource usage, in that order.
