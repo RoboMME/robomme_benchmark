@@ -48,11 +48,12 @@ Test the policy directly, or develop it only on original RoboMME, without Plus a
 
 ### [Model / framework name]
 
-[Website](WEBSITE_URL) · [Paper](PAPER_URL)
-
 [Briefly describe the model or agentic framework and its memory mechanism.]
 
 - **Track:** [Non-Agentic / Agentic]
+- **Paper:** [Paper](PAPER_URL) / N/A
+- **Website:** [Project website](WEBSITE_URL) / N/A
+- **Blog:** [Blog post](BLOG_URL) / N/A
 - **Code:** [Repository and frozen revision](CODE_URL)
 - **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
@@ -87,11 +88,12 @@ Report this if you choose `demo-only`. Adapt using released offline demonstratio
 
 ### [Model / framework name]
 
-[Website](WEBSITE_URL) · [Paper](PAPER_URL)
-
 [Briefly describe the model or agentic framework and its memory mechanism.]
 
 - **Track:** [Non-Agentic / Agentic]
+- **Paper:** [Paper](PAPER_URL) / N/A
+- **Website:** [Project website](WEBSITE_URL) / N/A
+- **Blog:** [Blog post](BLOG_URL) / N/A
 - **Code:** [Repository and frozen revision](CODE_URL)
 - **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
@@ -129,11 +131,12 @@ Report this if you choose `interaction-only`. Adapt through training-seed intera
 
 ### [Model / framework name]
 
-[Website](WEBSITE_URL) · [Paper](PAPER_URL)
-
 [Briefly describe the model or agentic framework and its memory mechanism.]
 
 - **Track:** [Non-Agentic / Agentic]
+- **Paper:** [Paper](PAPER_URL) / N/A
+- **Website:** [Project website](WEBSITE_URL) / N/A
+- **Blog:** [Blog post](BLOG_URL) / N/A
 - **Code:** [Repository and frozen revision](CODE_URL)
 - **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
@@ -191,11 +194,12 @@ Report this if you choose `demo&interaction`. Adapt using released offline demon
 
 ### [Model / framework name]
 
-[Website](WEBSITE_URL) · [Paper](PAPER_URL)
-
 [Briefly describe the model or agentic framework and its memory mechanism.]
 
 - **Track:** [Non-Agentic / Agentic]
+- **Paper:** [Paper](PAPER_URL) / N/A
+- **Website:** [Project website](WEBSITE_URL) / N/A
+- **Blog:** [Blog post](BLOG_URL) / N/A
 - **Code:** [Repository and frozen revision](CODE_URL)
 - **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
