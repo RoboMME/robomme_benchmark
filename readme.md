@@ -82,7 +82,7 @@ uv run scripts/dataset_replay.py --h5-data-dir <your_downloaded_data_dir>
 ```
 
 For the 50-episode RoboMME-Plus training split, see the
-[RoboMME-Plus data and replay guide](doc/robomme_plus/plus_training_data_format.md#replay).
+[RoboMME-Plus data and replay guide](doc/robomme_plus/plus_training_data_format.md#dataset-replay).
 
 ### 📊 Evaluation
 

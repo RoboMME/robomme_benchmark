@@ -8,16 +8,12 @@ H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.
 [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
 
 Use these recordings as offline data in `demo-only` or
-`demo&interaction`.
+`demo&interaction` settings.
 
-## Replay
+## Dataset Replay
 
-The direct command below is for dataset validation outside method development.
-During agentic development, use the [budgeted interface](agentic_development.md)
-for any simulator replay and retain its attempt record.
-
-Replay both saved joint and end-effector actions through the simulator and export
-front/wrist videos:
+Replay the saved joint and end-effector actions to check the training data and
+export front/wrist videos:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 .venv/bin/python scripts/plus_eval/dataset_replay.py \
@@ -25,7 +21,7 @@ CUDA_VISIBLE_DEVICES=0 .venv/bin/python scripts/plus_eval/dataset_replay.py \
 ```
 
 Omit `--tasks` and `--episodes` to replay all 50 training episodes in both action
-spaces (100 replays). Use `--action-space joint_angle` or `--action-space ee_pose`
+spaces. Use `--action-space joint_angle` or `--action-space ee_pose`
 to check only one format. Videos are saved to
 `runs/plus_dataset_replay/<Task>/episode_<k>_<action_space>.mp4` at the recorded control rate;
 demonstration frames have a red border. The script checks episode metadata and
