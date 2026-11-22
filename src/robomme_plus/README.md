@@ -185,16 +185,29 @@ Package and environment IDs are `robomme_plus` and `RoboMME-Plus/<Task>-v0`.
 
 ## Task changes
 
-RoboMME-Plus increases memory and control demands within the original task
-families. Medium and hard levels introduce more complex sequences, scene changes
-and execution conditions.
+Medium and hard levels increase memory and control demands through more complex
+sequences, motion, occlusion and geometry. This qualitative overview may be used
+in a general prompt; do not recover exact parameters from Plus task code
+([rule 2](#evaluation-protocol)).
 
-| Task family | General changes |
-| --- | --- |
-| Counting | Longer sequences and more variable event dynamics. |
-| Permanence | More demanding tracking through changes in visibility. |
-| Reference | More complex associations between earlier observations and current actions. |
-| Imitation | More varied demonstrations and physical execution conditions. |
+| Task | RoboMME setup | RoboMME-Plus changes | Success rules beyond the language goal |
+| --- | --- | --- | --- |
+| **BinFill** | Collect cubes | More objects and moving scenes at higher difficulty. | — |
+| **PickXtimes** | Repeat pick-and-place cycles | More repetitions and moving targets. | Release the object and retreat upward after placement. |
+| **SwingXtimes** | Repeat target visits | More repetitions and variable target motion. | Visits count after target dodges settle. |
+| **StopCube** | Stop an object on a requested pass | Longer sequences and more varied motion. | — |
+| **VideoUnmask** | Track objects under covers | More objects, occlusion and distractors. | — |
+| **ButtonUnmask** | Reveal and track hidden objects | More objects, occlusion and distractors. | Press the button within the early deadline. |
+| **VideoUnmaskSwap** | Track objects under moving covers | More complex motion and occlusion. | — |
+| **ButtonUnmaskSwap** | Reveal and track objects under moving covers | More complex motion and occlusion. | Press both buttons before pickup and within the early deadline. |
+| **PickHighlight** | Remember highlighted objects | More objects, shorter cues and more rearrangements. | Avoid wrong-object pickups through the final button press. |
+| **VideoRepick** | Retrieve a previously demonstrated object | More varied object motion and visibility. | — |
+| **VideoPlaceButton** | Place using a demonstrated target | More targets and scene changes to track. | Release the object and retreat upward after placement. |
+| **VideoPlaceOrder** | Recall a placement from a sequence | Longer sequences and more target motion. | Release the object and retreat upward after placement. |
+| **MoveCube** | Reproduce a manipulation method | A broader range of methods and execution conditions. | Use the demonstrated tool and method. |
+| **InsertPeg** | Reproduce an insertion | More varied geometry and tighter tolerances. | Use the demonstrated peg end and box side. |
+| **PatternLock** | Reproduce a drawn pattern | More complex patterns and varied tool/target geometry. | Keep the stick near vertical; prolonged gaps in valid drawing fail. |
+| **RouteStick** | Reproduce a drawn route | More complex paths and varied tool/obstacle layouts. | Prolonged gaps in valid drawing fail. |
 
 **Mechanism variations** change scene behavior and responses to actions.
 **Perceptual variations** change appearance and sensing conditions. Testing covers
