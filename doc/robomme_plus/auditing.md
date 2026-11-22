@@ -19,8 +19,8 @@ The skills define the checks and report format.
 
 ## Hard requirements
 
-PASS requires H1–H7 and the required evidence R1–R3 below to pass, or be N/A with
-a reason. Otherwise conclude FAIL, distinguishing a breach from missing evidence.
+PASS requires H1–H7 to pass and R1–R3 to be PASS, WARN or N/A with a reason.
+Any FAIL or GAP blocks PASS; distinguish a breach from missing evidence.
 The harness audit checks enforcement and logging; the log audit checks the saved record.
 
 | ID | Requirement | Protocol rule |
@@ -39,13 +39,21 @@ and separate development/evaluation API costs; R3 diffs for human corrections
 optional uploads; their absence alone is not a gap. Code history, required text
 logs, development attempt metadata and outcomes must remain.
 
+API costs may be rough estimates. Missing usage after a logged provider timeout
+or service error is **WARN**, provided the estimate's basis and uncertainty are
+disclosed. Unknown usage is not zero. This exception does not relax rollout,
+code-history or access requirements.
+
 ## 1. Review the harness
 
 Point to the harness directory containing its source, configuration and prompts.
-Its README or manifests can reference inputs stored elsewhere.
+Its README or manifests can reference inputs stored elsewhere. Here is a prompt example.
 
 ```text
-Use doc/skills/audit_robomme_plus_harness.md to audit the harness for <METHOD> in the <SETTING> setting with a per-task rollout budget of <BUDGET>, using the source and configuration in <HARNESS_DIR>. Save the review to <REPORT_PATH>.
+Use doc/skills/audit_robomme_plus_harness.md to audit the harness for <METHOD>
+in the <SETTING> setting with a per-task rollout budget of <BUDGET>, using
+the source and configuration in <HARNESS_DIR>.
+Save the review to <REPORT_PATH>.
 ```
 
 Fix every FAIL before development and re-review the changed code. A harness PASS
@@ -55,7 +63,7 @@ shows what the interface enforces, not what a later agent did.
 
 Point to one study's [complete evidence](agentic_development.md#preserve-evidence)
 directory. Its README or manifests can reference shared inputs and results.
-Review the saved harness revision used by that study.
+Review the saved harness revision used by that study. Here is a prompt example.
 
 Use Codex or Claude Code with the following prompt example to audit your development logs.
 

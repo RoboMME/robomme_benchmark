@@ -8,7 +8,8 @@ settings. Results with other rollout budgets are optional.
 
 Report success rates as percentages with two decimal places. Report API costs in
 USD, development and evaluation separately; use N/A when no paid API is used.
-For estimates, rounding to the nearest $10 is sufficient. Identify missing usage; incomplete required records block an audit PASS.
+For estimates, rounding to the nearest $10 is sufficient. Disclose missing usage
+from provider errors as a warning; see the [audit record](#agentic-development-audit-record).
 Leave evaluation scores and costs PENDING until team verification is complete.
 
 ## What to submit
@@ -328,8 +329,8 @@ report links are optional.
 - **Coverage:** [RECORDS INSPECTED; OMITTED PAYLOADS AND ANY ADDITIONAL LOCAL EVIDENCE]
 - **Agent-visible documentation:** [FILES AND REVISIONS FROM THE PROTOCOL'S ALLOWLIST]
 
-Each audit concludes **PASS** only if H1–H7 and R1–R3 are PASS or N/A with a reason;
-any FAIL or GAP blocks PASS. Distinguish breaches from missing evidence.
+Each audit concludes **PASS** only if H1–H7 pass and R1–R3 are PASS, WARN or N/A
+with a reason. Any FAIL or GAP blocks PASS. Distinguish breaches from missing evidence.
 Check `[x]` only when an item passes in both audits.
 The [hard requirements](../auditing.md#hard-requirements) define H1–H7; the
 skills give the checks.
@@ -348,9 +349,12 @@ skills give the checks.
 
 A GAP makes the audit FAIL. Development trajectories, images and videos are
 optional uploads; retain source/hash references when omitting them.
+API costs may be rough estimates: missing usage after a logged provider timeout
+or service error is WARN when the estimate's basis and uncertainty are disclosed.
+Keep unknown token usage unknown, not zero.
 
 - [ ] **R1 — Complete logs and code history** · Harness: [PASS/GAP] · Logs: [PASS/GAP] · Evidence: [REFS]
-- [ ] **R2 — Resource usage recorded and reconciled** · Harness: [PASS/GAP] · Logs: [PASS/GAP] · Evidence: [REFS]
+- [ ] **R2 — Resource usage recorded and reconciled** · Harness: [PASS/WARN/GAP] · Logs: [PASS/WARN/GAP] · Evidence: [REFS]
 - [ ] **R3 — Human corrections disclosed with diffs** · Harness: [PASS/GAP/N/A] · Logs: [PASS/GAP/N/A] · Evidence: [REFS]
 
 ### Per-task accounting
@@ -366,4 +370,4 @@ counts rather than zero. Failed/incomplete starts are included in Starts.
 
 | Finding | Affected tasks/settings | Evidence | Required action |
 | --- | --- | --- | --- |
-| [FAIL, GAP OR DISCLOSED CORRECTION; NONE IF NONE] | [SCOPE] | [REFERENCE] | [ACTION] |
+| [FAIL, GAP, WARNING OR DISCLOSED CORRECTION; NONE IF NONE] | [SCOPE] | [REFERENCE] | [ACTION] |

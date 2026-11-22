@@ -9,7 +9,10 @@
         "timeout": 79
       },
       "success_rate": 0.2425,
-      "method": "embodied-astra"
+      "method": "embodied-astra",
+      "evaluation_api_cost_usd": 760,
+      "evaluation_api_cost_approximate": true,
+      "evaluation_api_cost_basis": "Maintainer-provided rounded estimate for the final 800-episode evaluation, as reported on the RoboMME-Plus website; excludes local GPU compute."
     },
     {
       "counts": {
@@ -18,7 +21,10 @@
         "timeout": 38
       },
       "success_rate": 0.35125,
-      "method": "embodied-astra-fs"
+      "method": "embodied-astra-fs",
+      "evaluation_api_cost_usd": 2100,
+      "evaluation_api_cost_approximate": true,
+      "evaluation_api_cost_basis": "Maintainer-provided rounded estimate for the final 800-episode evaluation, as reported on the RoboMME-Plus website; excludes local GPU compute."
     },
     {
       "counts": {
@@ -27,7 +33,10 @@
         "success": 70
       },
       "success_rate": 0.0875,
-      "method": "3-tier-astra"
+      "method": "3-tier-astra",
+      "evaluation_api_cost_usd": 840,
+      "evaluation_api_cost_approximate": true,
+      "evaluation_api_cost_basis": "Maintainer-provided rounded estimate for the final 800-episode evaluation, as reported on the RoboMME-Plus website; excludes local GPU compute."
     },
     {
       "counts": {

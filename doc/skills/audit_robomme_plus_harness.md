@@ -43,14 +43,20 @@ runtime oracle access.
 
 ## Required evidence
 
-Report PASS, GAP or N/A with a reason. Any GAP makes the audit FAIL.
+Report PASS, WARN, GAP or N/A with a reason. A GAP blocks PASS; a WARN does not.
 Check logging capability here; the final log audit checks the captured records.
 
 | ID | Item | Check |
 | --- | --- | --- |
 | R1 | Complete logs and code history | Capture of prompts, visible responses, commands and outputs, code revisions saved before runs, development attempts/outcomes and child/resumed sessions; any path that bypasses logging. Development exports may omit raw trajectories, images and videos, but must retain code history, required text logs, attempt metadata and outcomes. Provider-hidden reasoning is not required. |
-| R2 | Resource usage | Per-task starts and steps, and separate development/evaluation API usage and costs, are recorded. |
+| R2 | Resource usage | Per-task starts and steps reconcile; development/evaluation API costs have separate estimates and a stated basis. |
 | R3 | Human corrections | Operator edits are captured with diffs. |
+
+Missing API usage after a recorded provider timeout or service error is **WARN**
+when the request/error records are retained and a rough cost estimate with its
+uncertainty is reported. Exact billing is not required. Keep unknown token usage
+unknown; do not count it as zero. This exception does not cover missing rollout
+accounting, code history or unlogged API activity.
 
 Check agent-visible documents against protocol rule 2's allowlist, including
 linked-file access. Check time or compute limits only when
@@ -62,8 +68,9 @@ benchmark rules.
 Write a Markdown report at the requested destination using the audit record.
 Keep this method/setting/budget separate from other reviews. Include:
 
-1. **Conclusion:** PASS only if H1–H7 and R1–R3 are PASS or N/A with a reason;
-   any FAIL or GAP blocks PASS. Distinguish breaches from missing evidence.
+1. **Conclusion:** PASS only if H1–H7 pass and R1–R3 are PASS, WARN or N/A with
+   a reason; any FAIL or GAP blocks PASS. List warnings separately and distinguish
+   breaches from missing evidence.
 2. **Scope:** method, setting, budget, tasks, revisions, auditor (or assistant
    model and version), date, coverage and agent-visible documentation.
 3. **H1–H7 and R1–R3:** checkboxes, status and a short file/line reference for each;

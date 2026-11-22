@@ -56,7 +56,10 @@ One-shot Astra receives one selected training example for the task
 
 ## Agentic development audit status
 
-Current R10 scores and per-task results are below. The [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>) and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>) submissions include the returned harness and development audits, with incomplete reviews marked PENDING. See the [audit procedure](auditing.md).
+The current R10 runs passed the follow-up harness and development audits, with
+warnings disclosed in the [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
+and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
+submissions. See the [audit procedure](auditing.md).
 
 ## Per-task success rates
 

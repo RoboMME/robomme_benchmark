@@ -1,0 +1,57 @@
+{
+  "conclusion": "PASS",
+  "markdown": "# RAX \u00b7 Hybrid \u00b7 R10 \u2014 harness audit\n\n**Conclusion: PASS, with the warnings below.** No benchmark-rule breach was established. Required accounting and freezing checks are supported by the original records and supplemental evidence.\n\n- **Scope:** `r10_20261121`, all 16 tasks; at most ten starts per task across its training seeds. All 800 tests are included.\n- **Auditor/date:** Codex (GPT-6 family), 2026-11-22; follow-up self-review, not an independent certification. Earlier reports are retained in the study archive.\n- **Versions:** frozen runtime manifest SHA-256 `29eb56530feaa42c022993970687a3d8b9a46cbf6da437ed63092e84a9699fae`; benchmark source manifest SHA-256 `01b96e2565ba99a1ce8e9613f2db1139d66ebb115e51e93bf0a45da7c4a385b7`. The evidence index records the audit-skill hashes and all policy freeze manifests remain in the study.\n- **Earlier harness review:** the prepared harness passed on 2026-11-21 (`<STUDY_ROOT>/audit/harness_audit.md`). This follow-up checks the deployed records; it does not substitute that preflight for evidence of actual behavior.\n- **Evidence roots:** `<STUDY_ROOT>` = `r10_20261121`; `<CASE_ROOT>` = this method/setting/R10 directory; `<AUDIT_ROOT>` = `reaudit_20261122`. Native archived `demo&interaction` denotes public Hybrid.\n- **Coverage:** every development ledger/native outcome pair, 3,799 history events, 1,662 referenced history objects, every frozen manifest and all 800 saved test policies. Structural checks cover all tasks; semantic review targets prompts, boundaries, corrections and flagged events. No claim is made to have manually read every repeated log byte or inspected optional media.\n- **Method:** read-only study inspection. No simulator was started, policy executed or development/evaluation API called. Native logs, weights, policies, ledgers and results were not changed.\n- **Agent-visible documents:** the saved public protocol bundle, native method instructions, SDK/interface material and setting-allowed observations/demos. No other Plus task implementation or test results are allowed.\n\n## Checklist\n\n- [x] **H1 \u2014 PASS.** The frozen trusted observation translator exposes RGB-D, calibration, robot state, goals and public terminal feedback; no object poses, oracle actions or subgoals. See <STUDY_ROOT>/runtime_source/benchmark_io/episode.py:52 and the method adapter.\n- [x] **H2 \u2014 PASS.** All 16 saved launches use the verified immutable image, network=none, a read-only root and explicit mounts. The complete seven-layer/package inventory and launch review resolve the former image-inspection gap. No forbidden read was observed in the inspected logs. See <AUDIT_ROOT>/evidence/image_inventory.json and launch_isolation.json.\n- [x] **H3 \u2014 PASS.** Actual public protocol documents and native method prompts are allowed interface guidance; task measurements arise in agent-authored code after permitted inputs. No operator task-code disclosures were established. See <STUDY_ROOT>/protocol/ and saved initial workspace/history records.\n- [x] **H4 \u2014 PASS.** All 121 development starts use released training episode/seed records. Test data is host-only and excluded from agent mounts; test execution requires the operator-only frozen capability. See <CASE_ROOT>/study/study.json and <AUDIT_ROOT>/evidence/native_accounting.json.\n- [x] **H5 \u2014 PASS.** 121 ledger starts reconcile one-to-one with native resets/outcomes and saved code revisions; every task is at or below ten starts, including failures and rehearsals. The shared ledger reserves before construction; no hidden reset or direct simulator path was found. Charged steps: 70,547. See native_accounting.json and reconciliation.json.\n- [x] **H6 \u2014 PASS.** Released offline demonstrations are provided in this setting. Simulator verification and rehearsal still use the shared per-task ledger.\n- [x] **H7 \u2014 PASS.** All frozen policy/runtime hashes verify, all 800 saved test policy copies match, and each freeze predates its test starts. No test-driven revision/selection was found. The saved Docker image content identity and per-task bundles are also verified.\n- [x] **R1 \u2014 PASS.** 3,799 hook events and 1,662 referenced task-local history objects verified. Native attempt records and code revisions reconcile. Any hook without a matching post-hook is reconciled to the native CLI rejection result; no development call remains unexplained. See recovered_gaps.json. The original audits provide the broader native-transcript/API review for previously completed cases.\n- [x] **R2 \u2014 PASS.** Development starts/steps reconcile. Approximate development API cost: $100; frozen evaluation paid API cost: $0. All development API cost records are complete. 5 missing native test step totals are reconstructed as zero policy steps from surviving startup evidence; original rows are unchanged.\n- [x] **R3 \u2014 PASS.** Human interface, provider-port and scheduling changes remain disclosed with before/after source and patches. No generated-policy operator edits were established for this case. See <STUDY_ROOT>/audit/.\n\n## Cost estimate\n\nDevelopment: **approximately $100**; evaluation: **$0 paid API cost**. Local compute is excluded. The recorded priced subtotal is $103.73.\nThe estimate uses the archived rate card and saved usage. For interrupted provider requests, an allowance based on the mean complete-request cost is added before rounding to $10; this is an estimate, not reconstructed token usage or an invoice. Frozen execution uses local providers and no paid model calls.\n\n## Warnings and required action\n\n| Warning | Evidence / scope | Action |\n| --- | --- | --- |\n| Interrupted/rejected tools | Two commands were rejected by the native CLI safety check before execution; their terminal rejection records survive in agent_stdout.jsonl. | Retain inputs, code revisions and interruption/rejection evidence. Do not invent outputs or charge rejected commands as rollouts. |\n| Failed test startup records | BinFill/11, ButtonUnmaskSwap/11, PickXtimes/10, PickXtimes/11, VideoRepick/10: native CUDA OOM killed setup before policy execution. Zero policy control steps are reconstructed from setup timing, empty flushed action/MCP traces and the frozen control flow. | Keep original unfinished ledger rows and the recovery supplement. These episodes remain failures in the 800-test denominator. |\n| Charged-step totals | 6 development attempts crossed their step ceiling through the benchmark\u2019s 100-step action-error penalty, without extra motion or further policy actions. | Report charged steps as recorded; these are not additional rollouts. |\n| Infrastructure error summary | Native simulator logs identify 6 CUDA-OOM test startups; the old top-level aggregator reported zero infrastructure errors. | The public metadata now records these startup errors. Keep all failed test outcomes and the original logs; no score changes. See startup_oom.json. |\n\n**Reuse decision:** retain the current frozen policies and all 800 evaluation outcomes. No redevelopment or reevaluation is required by this review. Preserve the supplements, original interruptions/errors and earlier audit reports. Scores are unchanged.\n\n**Evidence index:** `doc/robomme_plus/audits/current/evidence/reaudit_summary.json` records hashes for the full local supplements; the development-log release must include those supplements alongside the original evidence.\n",
+  "checks": [
+    {
+      "id": "H1",
+      "status": "PASS",
+      "evidence": "The frozen trusted observation translator exposes RGB-D, calibration, robot state, goals and public terminal feedback; no object poses, oracle actions or subgoals. See <STUDY_ROOT>/runtime_source/benchmark_io/episode.py:52 and the method adapter."
+    },
+    {
+      "id": "H2",
+      "status": "PASS",
+      "evidence": "All 16 saved launches use the verified immutable image, network=none, a read-only root and explicit mounts. The complete seven-layer/package inventory and launch review resolve the former image-inspection gap. No forbidden read was observed in the inspected logs. See <AUDIT_ROOT>/evidence/image_inventory.json and launch_isolation.json."
+    },
+    {
+      "id": "H3",
+      "status": "PASS",
+      "evidence": "Actual public protocol documents and native method prompts are allowed interface guidance; task measurements arise in agent-authored code after permitted inputs. No operator task-code disclosures were established. See <STUDY_ROOT>/protocol/ and saved initial workspace/history records."
+    },
+    {
+      "id": "H4",
+      "status": "PASS",
+      "evidence": "All 121 development starts use released training episode/seed records. Test data is host-only and excluded from agent mounts; test execution requires the operator-only frozen capability. See <CASE_ROOT>/study/study.json and <AUDIT_ROOT>/evidence/native_accounting.json."
+    },
+    {
+      "id": "H5",
+      "status": "PASS",
+      "evidence": "121 ledger starts reconcile one-to-one with native resets/outcomes and saved code revisions; every task is at or below ten starts, including failures and rehearsals. The shared ledger reserves before construction; no hidden reset or direct simulator path was found. Charged steps: 70,547. See native_accounting.json and reconciliation.json."
+    },
+    {
+      "id": "H6",
+      "status": "PASS",
+      "evidence": "Released offline demonstrations are provided in this setting. Simulator verification and rehearsal still use the shared per-task ledger."
+    },
+    {
+      "id": "H7",
+      "status": "PASS",
+      "evidence": "All frozen policy/runtime hashes verify, all 800 saved test policy copies match, and each freeze predates its test starts. No test-driven revision/selection was found. The saved Docker image content identity and per-task bundles are also verified."
+    },
+    {
+      "id": "R1",
+      "status": "PASS",
+      "evidence": "3,799 hook events and 1,662 referenced task-local history objects verified. Native attempt records and code revisions reconcile. Any hook without a matching post-hook is reconciled to the native CLI rejection result; no development call remains unexplained. See recovered_gaps.json. The original audits provide the broader native-transcript/API review for previously completed cases."
+    },
+    {
+      "id": "R2",
+      "status": "PASS",
+      "evidence": "Development starts/steps reconcile. Approximate development API cost: $100; frozen evaluation paid API cost: $0. All development API cost records are complete. 5 missing native test step totals are reconstructed as zero policy steps from surviving startup evidence; original rows are unchanged."
+    },
+    {
+      "id": "R3",
+      "status": "PASS",
+      "evidence": "Human interface, provider-port and scheduling changes remain disclosed with before/after source and patches. No generated-policy operator edits were established for this case. See <STUDY_ROOT>/audit/."
+    }
+  ],
+  "evaluation_api_cost_usd": 0
+}

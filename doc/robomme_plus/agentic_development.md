@@ -96,7 +96,7 @@ Save every code revision **before** running it, and keep:
 - the ledger: `study.json`, `attempts.sqlite3` and `benchmark_source.json` in the
   study root, plus each rollout's `attempt.json`, `outcome.json` and `events.jsonl`;
 - frozen policy/harness manifests;
-- development API usage and costs.
+- development API usage, estimated costs and any provider errors that leave usage unknown.
 
 **Publish** the development text records and code history, and link runnable frozen
 code in the submission. **Development trajectories, images and videos are optional

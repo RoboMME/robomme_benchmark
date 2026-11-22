@@ -104,11 +104,13 @@
       },
       "summary_sha256": "e737d3eb3a6104b476109c962fc030f5ccab10d2c9fa1f384033f67a18bce7e9",
       "source_setting": "interaction-only",
-      "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
+      "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
       "audits": {
-        "harness": "FAIL",
-        "development": "FAIL"
-      }
+        "harness": "PASS",
+        "development": "PASS"
+      },
+      "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
+      "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json"
     },
     {
       "method": "rax",
@@ -203,7 +205,7 @@
         "VideoUnmaskSwap": 7
       },
       "training_starts_total": 123,
-      "infrastructure_errors": 0,
+      "infrastructure_errors": 6,
       "development_api_cost_usd": 90,
       "pending_usage_requests": 0,
       "incomplete_requests": 0,
@@ -228,11 +230,14 @@
       },
       "summary_sha256": "195ed6f7d8c19c71bd1bed68861e967fa6c6853d717205cc020d32463908e907",
       "source_setting": "interaction-only",
-      "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
+      "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
       "audits": {
-        "harness": "FAIL",
-        "development": "PENDING"
-      }
+        "harness": "PASS",
+        "development": "PASS"
+      },
+      "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
+      "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json",
+      "infrastructure_error_basis": "Confirmed native CUDA-OOM startup logs; other formal execution errors are not automatically classified as infrastructure."
     },
     {
       "method": "aspire",
@@ -337,11 +342,13 @@
       },
       "summary_sha256": "cce0fc689a78b357655b61238f7c37686368f24090fee09e97c3c87c14374f96",
       "source_setting": "demo&interaction",
-      "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
+      "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
       "audits": {
-        "harness": "PENDING",
-        "development": "PENDING"
-      }
+        "harness": "PASS",
+        "development": "PASS"
+      },
+      "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
+      "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json"
     },
     {
       "method": "rax",
@@ -436,7 +443,7 @@
         "VideoUnmaskSwap": 7
       },
       "training_starts_total": 121,
-      "infrastructure_errors": 0,
+      "infrastructure_errors": 6,
       "development_api_cost_usd": 100,
       "pending_usage_requests": 0,
       "incomplete_requests": 0,
@@ -461,11 +468,14 @@
       },
       "summary_sha256": "985737a8edf81530d9c4797b58306c892bdf04bcda1ea1c512a336450ba932eb",
       "source_setting": "demo&interaction",
-      "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
+      "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
       "audits": {
-        "harness": "PENDING",
-        "development": "PENDING"
-      }
+        "harness": "PASS",
+        "development": "PASS"
+      },
+      "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
+      "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json",
+      "infrastructure_error_basis": "Confirmed native CUDA-OOM startup logs; other formal execution errors are not automatically classified as infrastructure."
     }
   ]
 }

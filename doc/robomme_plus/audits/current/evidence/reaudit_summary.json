@@ -1,0 +1,130 @@
+{
+  "review": "2026-11-22 follow-up self-review",
+  "study": "r10_20261121",
+  "cost_rule": "Logged provider timeouts/service errors with a disclosed rough USD estimate are WARN, not GAP; exact unknown usage is never replaced in native records.",
+  "prior_harness": "The 2026-11-21 prepared-harness audit recorded PASS for both methods and settings. Its original report remains in <STUDY_ROOT>/audit/harness_audit.md.",
+  "coverage": "All four cases, all 64 task/setting combinations, every development ledger/native outcome pair, all 3200 saved test policies and every referenced audit-history object; targeted semantic source/log review. No new simulator start, policy execution or development/evaluation API call.",
+  "evidence": {
+    "startup_oom.json": "b885744ac78dba4d0fa757ef0ba2fb5852b6355e75cff73c19c67d9e891e51a9",
+    "native_accounting.json": "09a8e0c46c2b7e9bce4be2397e5f24f1035f8d1aa8ba250151a18d4fe89afc03",
+    "reconciliation.json": "38f34810ba08f0ce2c4654eb213045590485bb834714fa0dea171cd35d71d160",
+    "recovered_gaps.json": "cb652b8f4bfdee014286fba25e9d40dbbcbd3b4c369be4cb6fee01463e48f526",
+    "baseline_cost_estimates.json": "34f3d1aa594aed28e338efb217ed6f1b4e8f6339d068320c7b3b8e1f665afd51",
+    "provider_continuity.json": "8683e271e26ac2da192aefa699ad855a8007719134ad3f51b3453e6dd89e019b",
+    "image_inventory.json": "3054193d23915714903b67cff7d7d581b1c2f76a244370a7ace1126c03c563b3",
+    "launch_isolation.json": "fbfeae35029930a1df6e9e9a91d4a9d4a975438dd84398d127970009fdad9f2d",
+    "image_archive_metadata.json": "a2b47ce8d2f5e1cd7da6acdfbe946af967da489159adb4a0b73b259bb6daf4ce",
+    "image_identity.json": "781f0711bc0e2c58735c17fbaeb2a9398f349429c2f9721074b6204a1aad5045"
+  },
+  "versions": {
+    "runtime_source_manifest_sha256": "29eb56530feaa42c022993970687a3d8b9a46cbf6da437ed63092e84a9699fae",
+    "benchmark_source_manifest_sha256": "01b96e2565ba99a1ce8e9613f2db1139d66ebb115e51e93bf0a45da7c4a385b7",
+    "audit_skills_sha256": {
+      "harness": "f81e214a1197083bc69b146f31dd63bbf5480dbc5836c4e0841083549b2330ea",
+      "development": "2d266026b7c77cb85707df67b16b68849b3646a4fd4c485f8a6fc85045470909"
+    }
+  },
+  "container": {
+    "id": "sha256:d143d08aeca8a1791548cbdf2a3a0bd252222ea067868fc58c4cc09116c77f0b",
+    "layers": 7,
+    "entries": 34820,
+    "packages": 44,
+    "forbidden_name_leads": 0
+  },
+  "providers": {
+    "process_identities_verified": 8,
+    "vendor_commits": [
+      {
+        "name": "sam3",
+        "commit": "6fe87d64a5beb9084923d7a9e002741178635b09",
+        "matches_frozen_lock": true,
+        "tracked_changes": "",
+        "tracked_files": 504,
+        "files_changed_since_start": []
+      },
+      {
+        "name": "contact_graspnet_pytorch",
+        "commit": "da3dcfb2f53e43b186083ee4a9d1e232f73efc98",
+        "matches_frozen_lock": true,
+        "tracked_changes": "",
+        "tracked_files": 166,
+        "files_changed_since_start": []
+      },
+      {
+        "name": "curobo",
+        "commit": "a35a708ecfbb26eb9ab2d7ef22c65919c4fae4a9",
+        "matches_frozen_lock": true,
+        "tracked_changes": "",
+        "tracked_files": 882,
+        "files_changed_since_start": []
+      }
+    ],
+    "runtime_files_checked": 39188,
+    "runtime_files_changed_since_start": 0,
+    "weights": [
+      {
+        "sha256": "9999e2341ceef5e136daa386eecb55cb414446a00ac2b55eb2dfd2f7c3cf8c9e",
+        "size": 3450062241,
+        "ctime": 1794700371.297837,
+        "mtime": 1794700371.297837
+      },
+      {
+        "sha256": "39fc3439d5814043ba64e0715c127c2e8aca6ea376c22614e11af1bc89317762",
+        "size": 26628146,
+        "ctime": 1793482045.1755087,
+        "mtime": 1793482045.1755087
+      }
+    ],
+    "limitation": "Supplemental inspection after testing, not a newly claimed pre-test manifest. Current hashes, pre-start filesystem change times, retained process identities and frozen dependency commits jointly support continuity. No model was loaded or called for this inspection."
+  },
+  "cases": {
+    "aspire/interaction-only/R10": {
+      "conclusion": "PASS",
+      "warnings": 3,
+      "starts": 157,
+      "charged_steps": 55389,
+      "test_policy_matches": 800,
+      "cost_estimate_usd": 160,
+      "incomplete_api_requests": 1,
+      "recovered_test_startups": 0,
+      "recorded_tool_interruptions": 2,
+      "recorded_tool_rejections": 0
+    },
+    "aspire/demo&interaction/R10": {
+      "conclusion": "PASS",
+      "warnings": 3,
+      "starts": 134,
+      "charged_steps": 61702,
+      "test_policy_matches": 800,
+      "cost_estimate_usd": 160,
+      "incomplete_api_requests": 2,
+      "recovered_test_startups": 0,
+      "recorded_tool_interruptions": 1,
+      "recorded_tool_rejections": 0
+    },
+    "rax/interaction-only/R10": {
+      "conclusion": "PASS",
+      "warnings": 2,
+      "starts": 123,
+      "charged_steps": 57207,
+      "test_policy_matches": 800,
+      "cost_estimate_usd": 90,
+      "incomplete_api_requests": 0,
+      "recovered_test_startups": 4,
+      "recorded_tool_interruptions": 0,
+      "recorded_tool_rejections": 0
+    },
+    "rax/demo&interaction/R10": {
+      "conclusion": "PASS",
+      "warnings": 4,
+      "starts": 121,
+      "charged_steps": 70547,
+      "test_policy_matches": 800,
+      "cost_estimate_usd": 100,
+      "incomplete_api_requests": 0,
+      "recovered_test_startups": 5,
+      "recorded_tool_interruptions": 0,
+      "recorded_tool_rejections": 2
+    }
+  }
+}

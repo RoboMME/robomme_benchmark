@@ -35,7 +35,7 @@ controls the robot directly.
    training-data links above.
 2. **Build and audit the harness:** use the
    [development interface](../../doc/robomme_plus/agentic_development.md) and run the
-   [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness) before development.
+   [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness) before development to make sure your framework obey the rules.
 3. **Develop and freeze:** retain every code/prompt revision, command, output and
    rollout record, including failed or interrupted work. Freeze the complete method
    before testing.
@@ -114,7 +114,8 @@ are optional under rule 5.
 
 4. **Report resource usage.** Include the setting, demonstrations used, rollout
    budget, actual rollouts and simulator steps per task, and development/evaluation
-   API costs separately in USD. Compare methods under the same setting and budget.
+   API costs separately in USD. Rough cost estimates are sufficient; disclose
+   missing usage from provider errors. Compare methods under the same setting and budget.
 
 5. **Optional smaller budgets.** For budget R, use an independent run capped at R
    attempts per task or extract checkpoints from a 10-attempt run; state which.
