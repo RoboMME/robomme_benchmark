@@ -185,63 +185,17 @@ Package and environment IDs are `robomme_plus` and `RoboMME-Plus/<Task>-v0`.
 
 ## Task changes
 
-Easy, medium and hard differ in counts, motion, occlusion and tool geometry.
-This summary is qualitative; do not recover exact parameters
-from Plus task code ([rule 2](#evaluation-protocol)).
+RoboMME-Plus increases memory and control demands within the original task
+families. Medium and hard levels introduce more complex sequences, scene changes
+and execution conditions.
 
-| Task | RoboMME setup | RoboMME-Plus changes |
-| --- | --- | --- |
-| **BinFill** | Collect **1–5 cubes** | More cubes. Medium/hard add a moving conveyor; hard requires all three colors. |
-| **PickXtimes** | **1–5** pick-and-place cycles | More cycles. Medium/hard move the target; hard uses a larger, faster path. |
-| **SwingXtimes** | **1–3** swing cycles; no target dodges | More cycles. At medium/hard the target can dodge during visits. |
-| **StopCube** | Stop on pass **2–5**; one trajectory type | Later stopping passes and several trajectory types. Medium moves faster; hard varies speed within and across passes and shrinks the target. |
-| **VideoUnmask** | **3, 5 or 15 containers**; **1–2 goals** | More containers and goals. Medium/hard add an occluding board and empty covers. |
-| **ButtonUnmask** | **3, 5 or 15 containers**; **1–2 goals** | More containers and goals. Medium/hard add occlusion and empty covers; hard adds central distractors. |
-| **VideoUnmaskSwap** | **3–4 containers**; **1–2 goals** | More containers and goals, moving independently. Medium/hard add an occluding board. |
-| **ButtonUnmaskSwap** | **3–4 containers**; **1–2 goals** | More containers and goals. Medium/hard add occlusion; hard has faster container traffic. |
-| **PickHighlight** | **3–6 objects**; **1–3 goals**; **90-frame** highlights | More objects and goals with shorter highlights. Higher levels rearrange larger groups more often. |
-| **VideoRepick** | **3 or 15 cubes**; **1 goal** | Varied object counts; still one goal. Medium/hard exchange moving objects' destinations; hard adds an occluding board. |
-| **VideoPlaceButton** | **3–4 target rings**; **1 demonstrated cube** | More rings, swapped more often at medium/hard; hard demonstrates two cubes. |
-| **VideoPlaceOrder** | **4 rings**; **2–4 placements**; request **1st–4th** | More rings and placements, with later placements requested. Medium/hard swap rings more often; hard tracks two cubes. |
-| **MoveCube** | **3 manipulation methods** | **5 methods**, with a subset available in each phase. |
-| **InsertPeg** | **34 mm hole**; **20 mm peg**; no hole shift | Tighter clearance at higher levels; the hole is offset on its face. |
-| **PatternLock** | **2–8 nodes**; **3×3–5×5 grids**; **10 cm** stick | More nodes at higher levels and a shorter execution stick at medium/hard. Medium/hard also shift, rotate and rescale the grid and tilt the tool mount. |
-| **RouteStick** | **2–7 segments**; **10 cm** drawing stick | Curved routes and a shorter execution stick at medium/hard. Medium/hard change the route layout; hard can move obstacle boards. |
-
-**Success rules** beyond the language goal:
-
-PickXtimes and VideoPlace require releasing the object and retreating upward.
-SwingXtimes credits visits after dodges settle; PickHighlight rejects wrong-object
-pickups through the final button press.
-
-ButtonUnmask and ButtonUnmaskSwap require their button presses within an early
-deadline; ButtonUnmaskSwap needs both buttons, before pickup. Missing a deadline
-fails the task. Exact deadlines are in the [public timing rules](../../scripts/plus_eval/benchmark_io/prompts/current/PUBLIC_RULES.md).
-
-MoveCube requires the demonstrated tool and method; InsertPeg requires the
-demonstrated peg end and box side.
-
-PatternLock requires the stick to stay close to vertical. Both drawing tasks fail
-after a long period without valid drawing, within the overall execution budget.
-
-**Mechanism variations** add the following changes to selected episodes, beyond
-their difficulty level. They are enabled by default.
-
-| Task(s) | Additional mechanism change |
+| Task family | General changes |
 | --- | --- |
-| BinFill | Closely spaced conveyor neighbors at the original speed. |
-| PickXtimes | Target pauses, speed changes and forward/reverse dodges during placement. |
-| SwingXtimes | Larger, faster target orbits that continue after dodges. |
-| StopCube | Relocated route and target, pauses, reversals and changing speed. |
-| VideoUnmask, ButtonUnmask | Visible cube shuffles before stationary covers hide them. |
-| VideoUnmaskSwap | Visible cube shuffles, followed by mixed container motion and recurring swaps. |
-| ButtonUnmaskSwap | Visible cube shuffles before covering; training includes faster container motion. |
-| VideoRepick | Motion patterns transferred from other tasks, with recurring swaps. |
-| VideoPlaceButton, VideoPlaceOrder | Alternating ring gathering/spreading and global swaps. |
-| PatternLock | Neighbor-node activation, longer contact holds, smaller targets, or combinations. |
-| RouteStick | Longer contact holds to activate targets. |
+| Counting | Longer sequences and more variable event dynamics. |
+| Permanence | More demanding tracking through changes in visibility. |
+| Reference | More complex associations between earlier observations and current actions. |
+| Imitation | More varied demonstrations and physical execution conditions. |
 
-**Perceptual variations** change textures, object appearance, lighting and, in
-selected test episodes, depth/calibration noise or visual clutter. They preserve
-task mechanics. Training exposes individual factors; testing includes held-out
-factors and combinations. Episode metadata selects both variation types.
+**Mechanism variations** change scene behavior and responses to actions.
+**Perceptual variations** change appearance and sensing conditions. Testing covers
+a broader range of conditions and combinations than the small training set.
