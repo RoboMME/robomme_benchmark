@@ -55,7 +55,7 @@ python -m benchmark_io.watch_unified --root "<RUN_ROOT>"
 
 Preparation pins the benchmark, 50 recordings, protocol, runtime and image
 digest without API calls or simulator starts. New studies create **6 configurations**:
-2 methods × (`demo-only` at 0; each interaction setting at 10).
+2 methods × (`Demo-only` at 0; each interaction setting at 10).
 Each configuration evaluates 800 episodes: 4,800 tests across both methods.
 Use `--settings interaction-only hybrid --budgets 10` to develop the four released configurations.
 
@@ -63,8 +63,8 @@ Use these public setting names:
 
 | Setting | Main budget |
 | --- | --- |
-| `demo-only` | 0 |
-| `interaction-only` | 10 |
+| `Demo-only` | 0 |
+| `Interaction-only` | 10 |
 | `Hybrid` | 10 |
 
 Use `--setting hybrid` in commands. Saved development ledgers preserve their original identifiers.

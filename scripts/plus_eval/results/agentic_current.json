@@ -107,7 +107,7 @@
       "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
       "audits": {
         "harness": "FAIL",
-        "development": "PENDING"
+        "development": "FAIL"
       }
     },
     {
@@ -230,7 +230,7 @@
       "source_setting": "interaction-only",
       "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
       "audits": {
-        "harness": "PENDING",
+        "harness": "FAIL",
         "development": "PENDING"
       }
     },

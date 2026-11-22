@@ -2,7 +2,7 @@
 
 Uses the upstream waypoint policy with the benchmark motion planner.
 One GPU runs the simulator; inference uses the Astra API. The default is
-`zero-shot`; the one-shot variant uses `demo-only` with no training rollouts.
+`Zero-shot`; the one-shot variant uses `Demo-only` with no training rollouts.
 
 ## Setup
 
@@ -55,7 +55,7 @@ uses images and the training goal; recorded actions and subgoal annotations are 
 The first request permits 1,100 images, allocating up to 550 to training by
 default. All retained images count toward the 1,500-image conversation limit.
 `--training-max-images` and `--training-difficulty` control example selection.
-Use a separate output directory from `zero-shot` or another context setting.
+Use a separate output directory from `Zero-shot` or another context setting.
 Validate the training files without GPU/API calls with:
 
 ```bash
@@ -68,7 +68,7 @@ Validate the training files without GPU/API calls with:
 
 The separate [`ood_test` split](../../../../../doc/ood_split.md) contains 320
 episodes (16 tasks × 20), using regular RoboMME and its native 1,500-step limit.
-Run the same `zero-shot` policy with two workers per GPU:
+Run the same `Zero-shot` policy with two workers per GPU:
 
 ```bash
 "$SIM_PYTHON" scripts/plus_eval/agentic_methods/astra/embodied/run_ood_test.py \

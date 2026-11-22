@@ -26,7 +26,7 @@ criteria.
 
 [RoboMME-Plus](../src/robomme_plus/README.md) evaluates memory generalization and
 adaptation with changed task mechanisms and perceptual variations. Its 50 training
-demos and 800 test episodes support `zero-shot`, `demo-only`, `interaction-only`
+demos and 800 test episodes support `Zero-shot`, `Demo-only`, `Interaction-only`
 and `Hybrid`. Interaction settings allow at most 10 starts per task
 across all training seeds combined; R1/R3/R5 results are optional. It is separate
 from `ood_test`.

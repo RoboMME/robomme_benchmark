@@ -14,7 +14,7 @@ One-shot Embodied-Astra uses the same `gpt-6-astra` waypoint policy as Embodied-
 
 **Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
-**Setting:** `demo-only`, using a released training example as context.
+**Setting:** `Demo-only`, using a released training example as context.
 
 **Demo use:** One selected training episode per task, except MoveCube; RGB images and task goals.
 
@@ -52,7 +52,7 @@ Success rates are percentages on the RoboMME-Plus V2 test split. Only simulator 
 
 - **Adaptation:** one medium training example for each of 15 tasks. InsertPeg uses training episode 1; MoveCube receives no training example.
 - **Example format:** front and wrist images are paired side by side, with demonstration/execution phase labels and the training goal. The context includes RGB images and the goal; recorded actions and subgoal annotations are excluded.
-- **Current episode:** the same front-camera history, current wrist view, robot state, camera calibration, and `lr_note` prompt as the `zero-shot` policy.
+- **Current episode:** the same front-camera history, current wrist view, robot state, camera calibration, and `lr_note` prompt as the `Zero-shot` policy.
 - **Image budget:** 1,100 images in the initial request, with up to 550 allocated to the example, and 1,500 images across the conversation. No gradient updates or RoboMME-Plus checkpoint training are performed.
 
 ### Reproduce

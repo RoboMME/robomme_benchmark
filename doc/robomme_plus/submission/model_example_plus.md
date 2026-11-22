@@ -48,7 +48,7 @@ development. Disclose self-reviews.
 - [ ] Agentic Track: systems using pretrained foundation models for planning, action, or coding.
 
 
-## 1. `zero-shot`
+## 1. `Zero-shot`
 
 Test the policy directly, or develop it only on original RoboMME, without Plus adaptation.
 
@@ -87,7 +87,7 @@ Test the policy directly, or develop it only on original RoboMME, without Plus a
 | **Overall** | **All tasks** | **___/800** |  |
 
 
-## 2. `demo-only`
+## 2. `Demo-only`
 
 Adapt using released offline demonstrations, without Plus simulator interactions.
 
@@ -129,7 +129,7 @@ Adapt using released offline demonstrations, without Plus simulator interactions
 | **Overall** | **All tasks** | **___/800** |  |
 
 
-## 3. `interaction-only`
+## 3. `Interaction-only`
 
 Adapt through training-seed interactions, without released offline demonstrations.
 

@@ -14,8 +14,8 @@ python -m benchmark_io.prepare --root runs/my_agent/interaction-only \
   --method my_agent --setting interaction-only --budget 10
 ```
 
-Use `--setting zero-shot`, `demo-only`, `interaction-only` or `hybrid`
-(`Hybrid` in the public tables). `zero-shot` and `demo-only` are fixed at 0 starts.
+Use `--setting zero-shot`, `--setting demo-only`, `--setting interaction-only`
+or `--setting hybrid`. `Zero-shot` and `Demo-only` are fixed at 0 starts.
 `--budget` is the total **per task across all its training seeds, workers and
 sessions**: 10 for the leaderboard, or a smaller budget for optional results. Preparation
 pins the training metadata and benchmark source hashes without starting a simulator.
@@ -66,9 +66,6 @@ demo settings only.
 
 The ledger commits before simulator construction, so failed setup, zero-action
 previews, early stops, timeouts, retries and frozen-policy rehearsals all count.
-Requests rejected before reservation do not. An exhausted budget blocks
-construction. Benchmark-defined retries within an episode, such as MoveCube's,
-remain part of that episode.
 
 For a complete example, see ASPIRE's isolated worker,
 [`aspire/isolated.py`](../../scripts/plus_eval/agentic_methods/aspire/isolated.py):

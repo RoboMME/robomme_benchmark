@@ -14,7 +14,7 @@ FrameSamp+Modul is the RoboMME perceptual-memory baseline. It samples historical
 
 **Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
-**Setting:** `zero-shot`.
+**Setting:** `Zero-shot`.
 
 **Demo use:** No released RoboMME-Plus training demonstrations.
 

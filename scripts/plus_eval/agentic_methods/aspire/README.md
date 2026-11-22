@@ -7,7 +7,7 @@ not used.
 
 ## Adaptation
 
-The released policies cover `interaction-only` and `Hybrid`, each with at most
+The released policies cover `Interaction-only` and `Hybrid`, each with at most
 10 development rollouts per task.
 
 We retain the LIBERO coordinator, task workers, verifier, shared skill library,
@@ -30,8 +30,8 @@ The model, time limits and input sampling are implementation choices.
 | Area | Configuration |
 | --- | --- |
 | Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; development/evaluation usage and cost logged separately. |
-| Budgets | `demo-only`: 0 starts. Interaction settings: at most 10 starts per task. All starts, including failed setup and verification, share the budget. |
-| Training demos | `demo-only`/`Hybrid` receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. `interaction-only` receives none. Simulator replay counts toward the development budget. |
+| Budgets | `Demo-only`: 0 starts. Interaction settings: at most 10 starts per task. All starts, including failed setup and verification, share the budget. |
+| Training demos | `Demo-only`/`Hybrid` receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. `Interaction-only` receives none. Simulator replay counts toward the development budget. |
 | Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
 | Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
@@ -45,7 +45,7 @@ The model, time limits and input sampling are implementation choices.
   the coordinator reports its limitations and continues other unfinished tasks.
 - **Verification:** all worker/verifier starts share the task's R. Keep the native
   verification criterion; insufficient released seeds or budget leave a skill
-  unverified. `demo-only` has no simulator verification. Held-out evaluation and revisits
+  unverified. `Demo-only` has no simulator verification. Held-out evaluation and revisits
   using test feedback are disabled until the campaign is frozen.
 - **Providers and isolation:** retain SAM3, Contact-GraspNet, PyRoki and cuRobo;
   add RoboMME robot/tool registration, local SAM3 loading and bounded requests.

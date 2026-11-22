@@ -11,16 +11,16 @@ Compare both tracks under the same setting and per-task rollout budget.
 
 | Setting | Released Plus demonstrations | Maximum Plus rollouts per task |
 | --- | --- | --- |
-| `zero-shot` | No | 0 |
-| `demo-only` | Yes | 0 |
-| `interaction-only` | No | 10 |
+| `Zero-shot` | No | 0 |
+| `Demo-only` | Yes | 0 |
+| `Interaction-only` | No | 10 |
 | `Hybrid` | Yes | 10 |
 
 See the [evaluation protocol](../../src/robomme_plus/README.md#evaluation-protocol)
 for permitted inputs, rollout accounting, audits and reporting.
 
 
-## `zero-shot`
+## `Zero-shot`
 
 These baselines use their pretrained models without RoboMME-Plus training demos
 or simulator adaptation.
@@ -33,7 +33,7 @@ or simulator adaptation.
 | [3-tier Astra](<submission/3-tier-astra-plus (eval_by_RoboMME_team).md>) | 70/800 | 8.75% |
 | [PonderPounce](<submission/ponderpounce-plus (eval_by_RoboMME_team).md>) | 20/800 | 2.50% |
 
-## `demo-only`
+## `Demo-only`
 
 One-shot Astra receives one selected training example for the task
 (medium when labelled; episode 1 for InsertPeg), and none for MoveCube.
@@ -42,7 +42,7 @@ One-shot Astra receives one selected training example for the task
 |---|---|---:|---:|
 | [One-shot Embodied Astra](<submission/one-shot-embodied-astra-plus (eval_by_RoboMME_team).md>) | One selected example per task | 281/800 | 35.13% |
 
-## `interaction-only`
+## `Interaction-only`
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
@@ -63,7 +63,7 @@ Current R10 scores and per-task results are below. The [ASPIRE](<submission/aspi
 Each cell uses 50 episodes. ASPIRE/RAX report only the current R10 runs.
 
 <details>
-<summary><code>zero-shot</code></summary>
+<summary><code>Zero-shot</code></summary>
 
 | Task | Embodied Astra | FrameSamp+Modul | SimpleMemVLA | 3-tier Astra | PonderPounce |
 |---|---:|---:|---:|---:|---:|
@@ -87,7 +87,7 @@ Each cell uses 50 episodes. ASPIRE/RAX report only the current R10 runs.
 </details>
 
 <details>
-<summary><code>demo-only</code></summary>
+<summary><code>Demo-only</code></summary>
 
 | Task | One-shot Astra |
 |---|---:|
@@ -110,7 +110,7 @@ Each cell uses 50 episodes. ASPIRE/RAX report only the current R10 runs.
 </details>
 
 <details>
-<summary><code>interaction-only</code> · R10</summary>
+<summary><code>Interaction-only</code> · R10</summary>
 
 | Task | ASPIRE | RAX |
 | --- | ---: | ---: |

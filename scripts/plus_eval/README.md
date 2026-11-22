@@ -9,12 +9,12 @@ Each method link below provides setup and running instructions.
 
 | Method | Setting | Successes (rate) |
 |---|---|---:|
-| [Embodied Astra](agentic_methods/astra/embodied/README.md) | `zero-shot` | 194/800 (24.25%) |
-| [One-shot Astra](agentic_methods/astra/embodied/README.md#one-shot) | `demo-only` | 281/800 (35.13%) |
-| [3-tier Astra](agentic_methods/astra/three_tier/README.md) | `zero-shot` | 70/800 (8.75%) |
-| [FrameSamp+Modul](non_agentic_methods/framesamp_modul/README.md) | `zero-shot` | 19/800 (2.38%) |
-| [SimpleMemVLA](non_agentic_methods/simplememvla/README.md) | `zero-shot` | 14/800 (1.75%) |
-| [PonderPounce](non_agentic_methods/ponderpounce/README.md) | `zero-shot` | 20/800 (2.50%) |
+| [Embodied Astra](agentic_methods/astra/embodied/README.md) | `Zero-shot` | 194/800 (24.25%) |
+| [One-shot Astra](agentic_methods/astra/embodied/README.md#one-shot) | `Demo-only` | 281/800 (35.13%) |
+| [3-tier Astra](agentic_methods/astra/three_tier/README.md) | `Zero-shot` | 70/800 (8.75%) |
+| [FrameSamp+Modul](non_agentic_methods/framesamp_modul/README.md) | `Zero-shot` | 19/800 (2.38%) |
+| [SimpleMemVLA](non_agentic_methods/simplememvla/README.md) | `Zero-shot` | 14/800 (1.75%) |
+| [PonderPounce](non_agentic_methods/ponderpounce/README.md) | `Zero-shot` | 20/800 (2.50%) |
 
 ## Agentic adaptation
 
@@ -23,7 +23,7 @@ training seeds. The packaged solutions and results cover the current R10 runs.
 
 | Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
 |---|---|---:|---:|
-| `interaction-only` | 10 | 302/800 (37.75%) | 370/800 (46.25%) |
+| `Interaction-only` | 10 | 302/800 (37.75%) | 370/800 (46.25%) |
 | `Hybrid` | 10 | 342/800 (42.75%) | 326/800 (40.75%) |
 
 The submissions include the [ASPIRE](<../../doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)

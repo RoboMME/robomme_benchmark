@@ -24,7 +24,7 @@ The harness audit checks enforcement and logging; the log audit checks the saved
 | H2 | **No Plus task code:** package source (except the allowlisted README) and other methods' Plus solutions are unreachable from agents and never read | 2 |
 | H3 | **No task-code details in prompts:** prompts, skills and notes contain no exact task parameters, thresholds or success criteria beyond the public documentation | 2 |
 | H4 | **No test data:** only released training seeds with their pinned settings; no test seeds, metadata or results | 2, 3 |
-| H5 | **Rollout budget:** at most the budget per task across all seeds, workers and sessions, counting every start | 1 |
+| H5 | **Rollout budget:** at most the budget per task across all seeds, workers and sessions, counting every start | 1, 5 |
 | H6 | **Demonstrations only in demo settings** | 2 |
 | H7 | **Frozen before testing:** frozen hashes predate the first test episode; no test-feedback tuning or selection | 3 |
 
@@ -67,6 +67,6 @@ Copy the [audit record](submission/model_example_plus.md#agentic-development-aud
 to the bottom of your submission and fill it in from both audits. Keep failed and
 interrupted records, and disclose human corrections rather than removing them.
 
-The [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#development-audit>)
-and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md#development-audit>)
-audits predate this format but show the evidence expected for each check.
+The [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
+and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
+submissions include the returned audit reports and their current status.

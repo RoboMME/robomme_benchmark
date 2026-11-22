@@ -1,13 +1,12 @@
 # RoboMME-Plus training data
 
-The v2 training split contains **50 successful episodes, 57,056 frames at 20 Hz**:
+The training split contains **50 successful episodes, 57,056 frames at 20 Hz**:
 one easy, medium and hard episode for 15 tasks, and five MoveCube methods.
-One episode per non-MoveCube task has an [atomic variation](../../src/robomme_plus/README.md#task-changes):
-13 appearance changes and 2 mechanism changes. The other 35 episodes have no added variation flags.
+Some episodes include perceptual or mechanism variation.
 H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
 [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
 
-Use these recordings as offline data in `demo-only` or
+Use these recordings as offline data in `Demo-only` or
 `Hybrid` settings.
 
 ## Dataset Replay
@@ -48,12 +47,6 @@ LeRobot `meta/source_episodes.json` maps global episode indices back to these ro
   shifted one frame relative to H5. The first execution observation matches the
   final reset observation.
 - Positions use metres, angles radians, quaternions `wxyz`, and extrinsic `xyz` Euler angles.
-- VideoPlace recordings include release and an upward gripper retreat.
-- Some MoveCube recordings retain settling frames after first success. A public
-  evaluator replay stops at first success.
-
-PatternLock and RouteStick show the demo's final activated target for two control
-steps (0.1 s). Execution keeps its original success checks without an added wait.
 
 ## H5
 
