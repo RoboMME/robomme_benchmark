@@ -4,60 +4,56 @@
   <img src="../../assets/RoboMME-Plus-logo-v2.png" alt="RoboMME-Plus" width="640">
 </p>
 
-RoboMME-Plus tests whether robot memory skills transfer when task conditions
-change, and how much new experience helps policies adapt. It retains RoboMME's
-16 tasks across Counting, Permanence, Reference and Imitation, with more objects,
-repetitions, continuous motion, occlusion and limited correction. The 800 held-out
-tests add perceptual and mechanism variations that are mostly unseen in training.
+RoboMME-Plus tests memory generalization and adaptation across RoboMME's 16 tasks
+in Counting, Permanence, Reference and Imitation. Tasks add objects, repetitions,
+motion, occlusion and limited correction. The 800 held-out tests include perceptual
+and mechanism variations that are mostly unseen in training.
 
 ## Getting started
 
 ### Fine-tuned policies or direct model control
 
-If your method fine-tunes a robot policy or calls a frontier model with a general
-prompt to control the robot, such as Embodied Astra, follow this path.
-These methods do not need development audits.
+For fine-tuning a robot policy or calling a frontier model with a general prompt
+to control the robot (e.g., Embodied Astra). Development audits are not required.
 
 1. **Choose a setting** and follow the [evaluation protocol](#evaluation-protocol).
-2. **Install and prepare inputs:** follow [installation](../../readme.md#-installation)
+2. **Install and prepare data:** follow [installation](../../readme.md#-installation)
    and the [training-data guide](../../doc/robomme_plus/plus_training_data_format.md).
-   Fine-tune or configure your method using only the inputs allowed by your setting;
-   see the [baseline instructions](../../scripts/plus_eval/README.md) for examples.
-3. **Freeze and submit:** fix the policy, prompt and inference code before testing.
-   Provide runnable code and [evaluation instructions](#evaluate) using the
+   Use only data allowed by your setting; see the [baseline instructions](../../scripts/plus_eval/README.md).
+3. **Freeze and submit:** fix the policy, prompt and inference code. Provide
+   runnable code and [evaluation instructions](#evaluate) using the
    [submission template](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
 
 ### Agentic development
 
-If your method uses agents to develop task solutions from demonstrations or
-rollouts, learns task-specific prompts from rollout feedback, or uses
-self-improving agents, follow this path. Examples include ASPIRE and RAX.
-This development requires both a harness audit and a development-log audit,
-even if the final solution controls the robot directly.
+For agents developing task solutions from demonstrations or rollouts, learning
+task-specific prompts, or improving themselves (e.g., ASPIRE and RAX). A harness
+audit and a development-log audit are required, even if the final solution
+controls the robot directly.
 
-1. **Choose a setting and prepare inputs** using the protocol, installation and
+1. **Choose a setting and prepare data** using the protocol, installation and
    training-data links above.
 2. **Build and audit the harness:** use the
    [development interface](../../doc/robomme_plus/agentic_development.md) and run the
    [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness) before development.
-3. **Develop and save the full history:** retain every solution and prompt revision,
-   commands, outputs and rollout records, including failed and interrupted work.
-   Freeze the final policies, prompts, tools, libraries and harness before testing.
+3. **Develop and freeze:** retain every code/prompt revision, command, output and
+   rollout record, including failed or interrupted work. Freeze the complete method
+   before testing.
 4. **Audit and submit:** run the
    [development-log audit](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record).
-   Submit runnable frozen code, development logs and both audit reports using the
+   Include frozen code, development logs and both audit reports in the
    [submission template](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
 
-For both paths, the RoboMME team evaluates all 800 test episodes for verification.
-See the [complete guide](../../doc/robomme_plus/README.md) for further instructions
-and submission examples.
+The RoboMME team verifies submissions on all 800 tests and updates the leaderboard.
+The [complete guide](../../doc/robomme_plus/README.md) links further instructions and examples.
 
 ## Splits and training data
 
 - **Train:** 50 successful episodes: easy/medium/hard for 15 tasks, plus one example
   for each of MoveCube's five methods. All recordings use 20 Hz control.
 - **Test:** 800 episodes, 50 per task. Tiered tasks have 10 easy, 15 medium and
-  25 hard episodes; MoveCube has 10 per method. Train/test seeds are disjoint within each task.
+  25 hard episodes; MoveCube has 10 per method. Train/test seeds are disjoint within
+  each task. Test seeds cannot be used during training.
 - **Downloads:** [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
   [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
 
@@ -69,12 +65,8 @@ The [data guide](../../doc/robomme_plus/plus_training_data_format.md) describes 
 
 ## Evaluation protocol
 
-Choose a setting before development. These rules apply to both tracks.
-**Agentic development** uses agents to create or improve policies, code, prompts,
-skills or memory from Plus demonstrations or training rollouts. This includes
-learning task-specific prompts and agent self-improvement, and requires full
-development logs and both audits. Standard fine-tuning or direct control with a
-general prompt alone does not require these audits.
+Choose a setting before development. These rules apply to both tracks;
+audit requirements follow the [development approach](#getting-started).
 
 | Setting | What it may use before testing | Maximum Plus rollouts per task |
 | --- | --- | --- |
@@ -83,23 +75,23 @@ general prompt alone does not require these audits.
 | `Interaction-only` | Simulator rollouts on provided training seeds; no released demonstrations | 10 |
 | `Hybrid` | Released demonstrations and training-seed rollouts | 10 |
 
-Demonstrations are offline recordings. Replaying their actions in the simulator
-counts as interaction and is forbidden in `Demo-only`. The interaction budget is
-**at most 10 attempts per task across all its training seeds combined**.
-The leaderboard uses this budget; smaller budgets are optional under rule 5.
+Demonstrations are offline recordings; simulator replay counts as interaction
+and is forbidden in `Demo-only`. The interaction leaderboard allows **at most
+10 attempts per task across all its training seeds combined**. Smaller budgets
+are optional under rule 5.
 
 1. **Count rollouts and keep the full history.** Every Plus simulator start counts,
    including previews, failed setup, retries, demonstration replays, debugging,
-   verification and model selection. All share the per-task budget and episode
-   step limits. Agentic development uses the
+   verification and model selection. Respect the per-task budget and episode step
+   limits. Agentic development uses the
    [shared development interface](../../doc/robomme_plus/agentic_development.md),
    publishes complete text logs and code history, and includes the
    [harness](../../doc/skills/audit_robomme_plus_harness.md) and
    [development-log](../../doc/skills/audit_robomme_plus_development.md) audits.
 
-2. **Use only permitted resources.** Use released demonstrations and training seeds
-   as allowed by the setting. Do not use privileged information, reverse-engineer
-   Plus task code or handcraft solutions from implementation details. Agents may read
+2. **Use only permitted resources.** Use the setting's allowed data and training
+   seeds. Do not use privileged information, reverse-engineer Plus task code or
+   handcraft solutions from implementation details. Allowed Plus documentation is
    this README, the [training-data format](../../doc/robomme_plus/plus_training_data_format.md),
    the [development interface](../../doc/robomme_plus/agentic_development.md), and
    the Markdown files in the [public prompt bundle](../../scripts/plus_eval/benchmark_io/prompts/current/README.md).
@@ -107,9 +99,8 @@ The leaderboard uses this budget; smaller budgets are optional under rule 5.
    (including installed source, variations, scoring and simulator internals),
    test seeds/metadata/results, other methods' Plus solutions, baseline results,
    submissions and audit evidence inaccessible to developing agents.
-   **Access to forbidden resources is a violation.** Agent prompts, skills and
-   notes must not reveal task parameters, thresholds or success criteria beyond
-   the allowed public docs. List agent-visible documents in the audit.
+   Prompts, skills and notes must not reveal task parameters, thresholds or success
+   criteria beyond the allowed docs. List agent-visible documents in the audit.
    Original RoboMME's
    [dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) and
    [simulator](../robomme) may be used freely in every setting, outside the Plus
@@ -127,34 +118,24 @@ The leaderboard uses this budget; smaller budgets are optional under rule 5.
 
 5. **Optional smaller budgets.** For budget R, use an independent run capped at R
    attempts per task or extract checkpoints from a 10-attempt run; state which.
-   Save each task's checkpoint after at most R attempts and **before its (R+1)th
-   start**. Offline revisions from those attempts are allowed, including saving
-   immediately after an attempt. Tasks may freeze at different times. Keep exact
-   code and dependency versions, including shared components; none may use
+   Save each checkpoint after at most R attempts and **before that task's (R+1)th
+   start**. Offline revisions and saving immediately after an attempt are allowed.
+   Tasks may freeze at different times. Keep exact code and dependency versions,
+   including shared components; none may use
    experience beyond the reported per-task budget. Another task's later start
    alone does not invalidate a saved checkpoint.
 
 Evaluate all **50 test episodes per task (800 total)** with default variations
-and execution limits. Keep failures, timeouts and errors in the denominator;
-report changed test conditions separately. Submit through a pull request using the
-[submission template](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
-Provide runnable frozen code and the development evidence required above;
-development trajectories, images and videos are optional uploads. The RoboMME
-team verifies results and updates the leaderboard after reviewing the submission.
-See the [baseline results](../../doc/robomme_plus/robomme_plus_baseline_results.md)
-and [running instructions](../../scripts/plus_eval/README.md).
+and execution limits. Only `status == "success"` counts as success; failures,
+timeouts and errors stay in the denominator. Report changed test conditions separately.
+Submit by pull request with runnable frozen code and the required development
+evidence; development trajectories, images and videos are optional uploads.
+See the [baseline results](../../doc/robomme_plus/robomme_plus_baseline_results.md).
 
 ### Guidance for coding agents
 
-During RoboMME-Plus development:
-
-- **Respect the setting.** Use released Plus demonstrations only in demo settings,
-  and Plus rollouts only on the provided training seeds within the per-task budget.
-  Original RoboMME data and simulator remain allowed in every setting.
-- **Keep testing separate.** Never use Plus test seeds, data, results or task source
-  for development or policy selection. Freeze the policy and framework before evaluation.
-- **Preserve audit evidence** as listed in the
-  [development interface](../../doc/robomme_plus/agentic_development.md#preserve-evidence).
+Follow rules 1–5 above and the [evidence checklist](../../doc/robomme_plus/agentic_development.md#preserve-evidence).
+Use the [audit walkthrough](../../doc/robomme_plus/auditing.md) for review prompts and report formats.
 
 ## Evaluate
 
@@ -162,8 +143,7 @@ Recoverable setup errors retry at most three times with the same episode setting
 Budgeted agent development uses one attempt per reserved rollout. Policy execution
 is not retried automatically; successful reset info reports `reset_attempts`.
 
-Follow the [installation](../../readme.md#-installation) and
-[baseline running instructions](../../scripts/plus_eval/README.md), or use your own policy:
+Use a [baseline runner](../../scripts/plus_eval/README.md) or your own policy:
 
 ```python
 from robomme_plus import BenchmarkEnvBuilder
@@ -198,17 +178,10 @@ Preserve reset demonstration frames. Construct a new environment for each episod
 MoveCube ball/cue methods allow two trials; other methods allow one. A retry resets
 that episode's scene and execution budget internally.
 
-Only `status == "success"` counts as success. Include failures, timeouts and errors
-in the denominator. Use a shared model checkpoint or agentic framework across all
-16 tasks. For repeated runs, report each inference seed and the mean for the same
-setting and budget. Keep oracle subgoals and test metadata out of policy inputs.
-Report each evaluation setting and interaction budget separately using the
-[submission template](../../doc/robomme_plus/submission/model_example_plus.md).
-
-Published dataset URLs and recording format identifiers retain their original
-names. Use `robomme_plus` and `RoboMME-Plus/<Task>-v0` in code.
-
-
+Use a shared model checkpoint or agentic framework across all 16 tasks. For repeated
+runs, report each inference seed and the mean for the same setting and budget.
+Keep oracle subgoals and test metadata out of policy inputs.
+Package and environment IDs are `robomme_plus` and `RoboMME-Plus/<Task>-v0`.
 
 ## Task changes
 
