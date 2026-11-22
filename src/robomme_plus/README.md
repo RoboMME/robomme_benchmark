@@ -12,32 +12,45 @@ tests add perceptual and mechanism variations that are mostly unseen in training
 
 ## Getting started
 
-**Who needs audits?** Agentic development requires both audits: agents generating
-or improving task solutions from Plus demonstrations or training rollouts. This
-includes task-specific prompts learned from rollouts and self-improving agents.
-Standard policy fine-tuning and direct control with fixed prompts, such as
-Embodied Astra, do not require these audits unless they also use such development.
+### Fine-tuned policies or direct model control
 
-1. **Choose your setting** using the [evaluation protocol](#evaluation-protocol) below.
+If your method fine-tunes a robot policy or calls a frontier model with a general
+prompt to control the robot, such as Embodied Astra, follow this path.
+These methods do not need development audits.
+
+1. **Choose a setting** and follow the [evaluation protocol](#evaluation-protocol).
 2. **Install and prepare inputs:** follow [installation](../../readme.md#-installation)
    and the [training-data guide](../../doc/robomme_plus/plus_training_data_format.md).
-3. **Set up the method:** refer to the [baseline instructions](../../scripts/plus_eval/README.md)
-   or integrate your own agent with the [development interface](../../doc/robomme_plus/agentic_development.md).
-   For agentic development, first run the
-   [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness).
-4. **Develop and freeze** the final policy, prompts, tools and harness. Agentic
-   development must retain every solution revision and its logs, including failed
-   and interrupted work.
-5. **Prepare runnable frozen code** with installation and [evaluation instructions](#evaluate).
-   The RoboMME team evaluates all 800 test episodes for verification.
-6. **Submit:** follow [What to submit](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
-   For agentic development, include the
-   [development-log audit](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record).
+   Fine-tune or configure your method using only the inputs allowed by your setting;
+   see the [baseline instructions](../../scripts/plus_eval/README.md) for examples.
+3. **Freeze and submit:** fix the policy, prompt and inference code before testing.
+   Provide runnable code and [evaluation instructions](#evaluate) using the
+   [submission template](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
 
-All methods follow the [evaluation protocol](#evaluation-protocol), whether or not
-they require audits.
-The [complete guide](../../doc/robomme_plus/README.md) links the audit skills,
-ASPIRE/RAX setup and submission examples.
+### Agentic development
+
+If your method uses agents to develop task solutions from demonstrations or
+rollouts, learns task-specific prompts from rollout feedback, or uses
+self-improving agents, follow this path. Examples include ASPIRE and RAX.
+This development requires both a harness audit and a development-log audit,
+even if the final solution controls the robot directly.
+
+1. **Choose a setting and prepare inputs** using the protocol, installation and
+   training-data links above.
+2. **Build and audit the harness:** use the
+   [development interface](../../doc/robomme_plus/agentic_development.md) and run the
+   [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness) before development.
+3. **Develop and save the full history:** retain every solution and prompt revision,
+   commands, outputs and rollout records, including failed and interrupted work.
+   Freeze the final policies, prompts, tools, libraries and harness before testing.
+4. **Audit and submit:** run the
+   [development-log audit](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record).
+   Submit runnable frozen code, development logs and both audit reports using the
+   [submission template](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
+
+For both paths, the RoboMME team evaluates all 800 test episodes for verification.
+See the [complete guide](../../doc/robomme_plus/README.md) for further instructions
+and submission examples.
 
 ## Splits and training data
 
@@ -60,8 +73,8 @@ Choose a setting before development. These rules apply to both tracks.
 **Agentic development** uses agents to create or improve policies, code, prompts,
 skills or memory from Plus demonstrations or training rollouts. This includes
 learning task-specific prompts and agent self-improvement, and requires full
-development logs and both audits. Standard fine-tuning or fixed-prompt direct
-control alone does not require these audits.
+development logs and both audits. Standard fine-tuning or direct control with a
+general prompt alone does not require these audits.
 
 | Setting | What it may use before testing | Maximum Plus rollouts per task |
 | --- | --- | --- |

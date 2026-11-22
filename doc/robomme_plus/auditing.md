@@ -3,8 +3,8 @@
 [Agentic development](../../src/robomme_plus/README.md#evaluation-protocol) needs
 two audits: **the harness before development** and **the saved development logs**.
 This includes agent-generated solutions, task-specific prompts learned from
-rollouts, and self-improving agents. Standard fine-tuning or fixed-prompt direct
-control, such as Embodied Astra, does not require these audits unless it also
+rollouts, and self-improving agents. Standard fine-tuning or direct control with
+a general prompt, such as Embodied Astra, does not require these audits unless it also
 uses agentic development.
 
 Review the logs before submission; complete test-dependent checks using the
