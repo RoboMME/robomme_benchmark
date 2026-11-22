@@ -1,0 +1,60 @@
+--- a/harness/claude_cli/auto_research.py
++++ b/harness/claude_cli/auto_research.py
+@@ -227,6 +227,7 @@
+         (deployed['claude_home']/'settings.json', '/claude-home/settings.json', True),
+         (deployed['claude_home']/'mcp.json', '/claude-home/mcp.json', True),
+         *published_mounts(config, deployed),
++        *deployed.get('audit_mounts', []),
+         (relay_directory, '/run/agent-relay', True), (deployed['bridge'], '/opt/agent/container_bridge.py', True),
+         (deployed['claude'], '/opt/claude/claude', True)]
+     for source, destination, readonly in mounts:
+--- a/harness/codex_cli/workspace_storage.py
++++ b/harness/codex_cli/workspace_storage.py
+@@ -91,6 +91,9 @@
+ 
+ 
+ def provision(root, image, megabytes):
++    if os.environ.get("ROBOMME_RAX_DIRECTORY_STORAGE") == "1":
++        from directory_storage import provision as local_provision
++        return local_provision(root, image, megabytes)
+     root = Path(root).resolve()
+     if not root.is_relative_to(artifact_root()) or any(c in str(root) for c in ',\n'):
+         raise ValueError(f'Storage must be a private trial directory under {artifact_root()}')
+@@ -116,6 +119,9 @@
+ def inspect(root):
+     root = Path(root).resolve()
+     metadata = json.loads((root/'agent-storage.json').read_text())
++    if metadata.get('backend') == 'directory':
++        from directory_storage import inspect as local_inspect
++        return local_inspect(root, metadata)
+     target = root/'agent-storage'
+     result = {**metadata, 'mounted': mounted(target)}
+     if result['mounted']:
+@@ -129,6 +135,9 @@
+     """Fail closed if either writable mount escaped the capped filesystem."""
+     root = Path(root).resolve()
+     status = inspect(root)
++    if status.get('backend') == 'directory':
++        from directory_storage import validate as local_validate
++        return local_validate(root, megabytes, workspace, home, status)
+     target = root/'agent-storage'
+     backing = root/'agent-storage.ext4'
+     if (not status['mounted'] or status['workspace_mb'] != megabytes or
+@@ -145,6 +154,8 @@
+ def unmount(root):
+     root = Path(root).resolve()
+     metadata = inspect(root)
++    if metadata.get('backend') == 'directory':
++        return
+     if metadata['mounted']:
+         # No lazy/forced unmount: a live agent must not lose its storage mount.
+         helper(root, metadata['image'], 'unmount')
+@@ -153,6 +164,8 @@
+ def remount(root):
+     root = Path(root).resolve()
+     metadata = inspect(root)
++    if metadata.get('backend') == 'directory':
++        return
+     if not metadata['mounted']:
+         helper(root, metadata['image'], 'mount')
+         if not mounted(root/'agent-storage'):

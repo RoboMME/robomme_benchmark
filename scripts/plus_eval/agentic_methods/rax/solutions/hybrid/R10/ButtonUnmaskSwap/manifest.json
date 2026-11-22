@@ -1,0 +1,34 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "ButtonUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "053f5f3f1b96a656dc878564591b06273d2310f9d38bfbb8c2b830d891385623",
+    "core.py": "4dba70664e21fe33a33bd6d34752a34275f81b6ecd0f0e3e51ebb9e8ca7d574f",
+    "geom.py": "b8b9a6aa4c37721f53bdc84fa1fa7487829e040e791d497b1384ac8730203e9d",
+    "motion.py": "c3b857b9435966f88ca1966002541e19433370bc01efa20ccfa441c4d3ea60fa",
+    "percep.py": "7174ce91d6401cc03cd5a52eca2455767bee62f0fbd9f251d36ad7a7277d16da",
+    "pick.py": "b5831ad81eae5253fb4e5edeeb8106052d0dd8fd86cfa768066aac2b842c2fbe",
+    "tracker.py": "56a9a45460712e3b87322c1830641494726a9e67ab27de6fe5e4f46a1c768718"
+  },
+  "source_policy_files": {
+    "controller.py": "053f5f3f1b96a656dc878564591b06273d2310f9d38bfbb8c2b830d891385623",
+    "core.py": "4dba70664e21fe33a33bd6d34752a34275f81b6ecd0f0e3e51ebb9e8ca7d574f",
+    "geom.py": "b8b9a6aa4c37721f53bdc84fa1fa7487829e040e791d497b1384ac8730203e9d",
+    "motion.py": "c3b857b9435966f88ca1966002541e19433370bc01efa20ccfa441c4d3ea60fa",
+    "percep.py": "7174ce91d6401cc03cd5a52eca2455767bee62f0fbd9f251d36ad7a7277d16da",
+    "pick.py": "b5831ad81eae5253fb4e5edeeb8106052d0dd8fd86cfa768066aac2b842c2fbe",
+    "tracker.py": "56a9a45460712e3b87322c1830641494726a9e67ab27de6fe5e4f46a1c768718"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "09c1f8191fe69ee9a14f74a505b75f6dd5f951221b96f423f0c8866a13226744",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "9b6f9e2ef2a7454c982d984b892d2eb7da9ff28be9e5ab1ff0e7c2fbd6569a06"
+  }
+}

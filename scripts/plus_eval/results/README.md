@@ -2,11 +2,14 @@
 
 - [Result tables and interpretation](../../../doc/robomme_plus/robomme_plus_baseline_results.md)
 - [Model baseline summaries](model_baselines.json)
-- [ASPIRE/RAX counts by setting and task](agentic_20261118.json)
-- Audited submissions: [ASPIRE](<../../../doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md>) · [RAX](<../../../doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md>)
+- [ASPIRE/RAX counts by setting and task](agentic_current.json)
+- Submissions and audit records: [ASPIRE](<../../../doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md>) · [RAX](<../../../doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md>)
 - Frozen programs: [ASPIRE](../agentic_methods/aspire/solutions), [RAX](../agentic_methods/rax/solutions)
 
-Connect an existing study without copying its videos or logs:
+ASPIRE/RAX use the current `r10_20261121` study. Its new public log archive is
+pending upload; the previous archive links have been removed.
+
+Connect that study without copying its videos or logs:
 
 ```bash
 PYTHONPATH=scripts/plus_eval python -m benchmark_io.artifacts --study "<RUN_ROOT>"

@@ -8,7 +8,7 @@ H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.
 [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
 
 Use these recordings as offline data in `demo-only` or
-`demo&interaction` settings.
+`Hybrid` settings.
 
 ## Dataset Replay
 

@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 
-from .full_study import Pipeline, REPO, IMAGE, alive, write
+from .full_study import Pipeline, REPO, IMAGE, alive, write, provider_stack_health
 from .protocol import Study
 from .evaluation import EvaluationStudy
 from .runtime_policy import RuntimePolicy, configured
@@ -75,11 +75,12 @@ class Queue:
                                (f'evaluate/{key}/{task}/{episode:03d}','evaluate',key,task,episode))
             db.execute('UPDATE cases SET ready=1 WHERE key=?',(key,))
 
-    def next_job(self, kind):
+    def next_job(self, kind, excluded_methods=()):
         if kind=='evaluate' and not evaluation_gate(self.root)['enabled']:
             return None
         excluded = evaluation_excluded_cases(self.root) if kind=='evaluate' else []
         exclusion = ('AND c.key NOT IN ('+','.join('?' for _ in excluded)+') ') if excluded else ''
+        methods = ('AND c.method NOT IN ('+','.join('?' for _ in excluded_methods)+') ') if excluded_methods else ''
         indices = evaluation_episode_indices(self.root) if kind=='evaluate' else None
         if indices == []:
             return None
@@ -92,9 +93,9 @@ class Queue:
                   "active ON active.case_key=c.key ") if kind=='evaluate' else ''
         with self.connect() as db:
             row=db.execute('SELECT j.*,c.method,c.setting,c.budget,c.ordinal FROM jobs j JOIN cases c ON c.key=j.case_key '
-                +active+"WHERE j.state='queued' AND j.kind=? "+('AND c.ready=1 ' if kind=='evaluate' else '')+exclusion+subset+
+                +active+"WHERE j.state='queued' AND j.kind=? "+('AND c.ready=1 ' if kind=='evaluate' else '')+exclusion+methods+subset+
                 ('ORDER BY COALESCE(active.count,0),c.dispatched,c.ordinal,j.episode,j.task ' if kind=='evaluate' else 'ORDER BY c.ordinal ')+
-                'LIMIT 1',(kind,*excluded,*(indices or []))).fetchone()
+                'LIMIT 1',(kind,*excluded,*excluded_methods,*(indices or []))).fetchone()
             return dict(row) if row else None
 
     def mark_dispatched(self,key):
@@ -135,8 +136,13 @@ def environment(root):
         env.update(ROBOMME_AGENTIC_CODE=str(code),ROBOMME_AGENTIC_REPO=str(REPO),
                    PYTHONPATH=':'.join(map(str,[root/'benchmark/src',code,code/'rax',code/'aspire/ASPIRE/src'])))
     plan = root/'study_plan.json'
+    provider_base = 23110
     if plan.exists():
-        env['ROBOMME_AGENTIC_IMAGE'] = json.loads(plan.read_text())['image']
+        settings = json.loads(plan.read_text())
+        env['ROBOMME_AGENTIC_IMAGE'] = settings['image']
+        provider_base = settings.get('provider_port_base', provider_base)
+    if type(provider_base) is not int or not 1024 <= provider_base <= 65427:
+        raise ValueError('Invalid provider port base for two GPUs')
     token = root/'runtime/private/relay-token'
     if token.exists():
         env['ROBOMME_AGENTIC_TOKEN_FILE'] = str(token)
@@ -147,13 +153,18 @@ def environment(root):
         if not protocol.is_relative_to(root) or not (protocol/'bundle.json').is_file():
             raise ValueError('Invalid future development protocol selection')
     env.update(ROBOMME_AGENTIC_RUNTIME_POLICY=str(root/'runtime_policy.json'),
-               ROBOMME_AGENTIC_PROMPTS=str(protocol),ROBOMME_AGENTIC_PROVIDER_BASE='23110')
+               ROBOMME_AGENTIC_PROMPTS=str(protocol),ROBOMME_AGENTIC_PROVIDER_BASE=str(provider_base))
     return env
 
 
 class CasePipeline(Pipeline):
     def __init__(self,root,job):
-        super().__init__(root,[job['gpu']],method=job['method'],proxy_port=24100+job['ordinal'],
+        policy_path = Path(root)/'schedule_policy.json'
+        policy = json.loads(policy_path.read_text()) if policy_path.exists() else {}
+        slots = policy.get('development_task_workers', {}).get(job['method'], 1)
+        if type(slots) is not int or not 1 <= slots <= 8:
+            raise ValueError('development_task_workers must be in 1..8 per case')
+        super().__init__(root,[job['gpu']]*slots,method=job['method'],proxy_port=24100+job['ordinal'],
                          eval_gpus=['0','1'],eval_workers_per_gpu=evaluation_slots(root)[1],lane='development')
         self.state_root=Path(root)/job['case_key']/'development_job'
         self.state_root.mkdir(parents=True,exist_ok=True)
@@ -343,9 +354,11 @@ class Scheduler:
         running=self.queue.jobs('running')+self.queue.jobs('starting')
         development_total, development_per_gpu = development_slots(self.root)
         evaluation_total, evaluation_by_gpu = evaluation_placement(self.root)
+        provider_health={}
         for kind,capacity in [('develop',development_total),('evaluate',evaluation_total)]:
+            excluded_methods=[]
             while sum(j['kind']==kind for j in running)<capacity:
-                job=self.queue.next_job(kind)
+                job=self.queue.next_job(kind,excluded_methods=excluded_methods)
                 if not job or not self.admit(job,running):break
                 counts={gpu:sum(j['kind']==kind and j['gpu']==gpu for j in running) for gpu in ('0','1')}
                 limits = {g: development_per_gpu for g in counts} if kind=='develop' else evaluation_by_gpu
@@ -353,6 +366,16 @@ class Scheduler:
                 # physics; only new dispatches are subject to the new placement.
                 choices=[gpu for gpu in counts if counts[gpu]<limits[gpu]]
                 if not choices:break
+                if kind=='evaluate' and job['method']=='aspire':
+                    for gpu in choices:
+                        if gpu not in provider_health:
+                            provider_health[gpu]=provider_stack_health(int(self.env['ROBOMME_AGENTIC_PROVIDER_BASE']),gpu)
+                    choices=[gpu for gpu in choices if all(provider_health[gpu].values())]
+                    write(self.root/'runtime/provider_dispatch_health.json',dict(updated=time.time(),gpus=provider_health))
+                    if not choices:
+                        # RAX has no dependency on these services and can still run.
+                        excluded_methods.append('aspire')
+                        continue
                 available=[]
                 for candidate in choices:
                     try:

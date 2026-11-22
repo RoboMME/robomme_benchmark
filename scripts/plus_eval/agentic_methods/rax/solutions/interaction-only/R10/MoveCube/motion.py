@@ -1,173 +1,128 @@
-"""Motion + observation helpers for RoboMME MoveCube (RAX ctx API)."""
-import base64, io, json, time
+"""Closed-loop motion primitives over robomme_step."""
+import json, math
 import numpy as np
 from scipy.spatial.transform import Rotation as Rot
-from PIL import Image
 
 LOG = []
+
 
 def log(*a):
     s = " ".join(str(x) for x in a)
     LOG.append(s)
     print(s, flush=True)
 
-def _meta(result):
-    for b in result.get("content", []):
-        if b.get("type") == "text":
-            try:
-                return json.loads(b["text"])
-            except Exception:
-                pass
-    return {}
-
-def decode_images(result, meta):
-    """Return dict {(camera, kind): np.array} from MCP image blocks."""
-    out = {}
-    blocks = result.get("content", [])
-    for att in meta.get("attachments", []):
-        i = att.get("content_index")
-        if i is None or i >= len(blocks):
-            continue
-        b = blocks[i]
-        data = b.get("data")
-        if not data:
-            continue
-        img = Image.open(io.BytesIO(base64.b64decode(data)))
-        if att["kind"] == "depth":
-            arr = np.array(img).astype(np.float32) * 0.001
-        else:
-            arr = np.array(img.convert("RGB"))
-        out[(att["camera"], att["kind"])] = arr
-    return out
 
 class Robot:
     def __init__(self, ctx):
         self.ctx = ctx
         self.state = None
-        self.step_id = 0
         self.ended = False
         self.complete = False
-        self.remaining = None
+        self.step_id = 0
+        self.remaining = 10 ** 6
         self.last_meta = None
-        self.ik_errors = 0
-        self.penalty_flag = False
+
+    def _meta(self, reply):
+        return json.loads(reply["content"][0]["text"])
 
     def observe(self):
-        r = self.ctx.call("robomme_observe")
-        m = _meta(r)
-        self.last_meta = m
-        self._upd(m)
-        imgs = decode_images(r, m)
-        return m, imgs
-
-    def _upd(self, m):
-        if "state" in m and m["state"]:
-            self.state = np.array(m["state"], dtype=float)
-        if "step_id" in m:
-            self.step_id = m["step_id"]
-        lim = m.get("episode_limits") or {}
+        from perc import decode
+        reply = self.ctx.call("robomme_observe")
+        meta, imgs = decode(reply)
+        self.state = np.array(meta["state"], float)
+        self.step_id = meta.get("step_id", self.step_id)
+        self.last_meta = meta
+        lim = meta.get("episode_limits") or {}
         if "remaining_episode_steps" in lim:
             self.remaining = lim["remaining_episode_steps"]
-        if m.get("episode_ended"):
+        if meta.get("episode_ended"):
             self.ended = True
-        for s in m.get("steps", []) or []:
-            if isinstance(s, dict):
-                if s.get("task_complete"):
-                    self.complete = True
-                if s.get("episode_ended"):
-                    self.ended = True
-        if m.get("task_complete"):
-            self.complete = True
-        tr = m.get("transition") or {}
-        if isinstance(tr, dict):
-            if tr.get("task_complete"):
-                self.complete = True
-            if tr.get("episode_ended"):
-                self.ended = True
+        return meta, imgs
 
     def step(self, rows):
         if self.ended:
             return None
         rows = [[float(np.clip(v, -1, 1)) for v in r] for r in rows]
-        if self.remaining is not None:
-            rows = rows[:max(0, self.remaining)]
+        rows = rows[: max(0, min(100, self.remaining))]
         if not rows:
+            self.ended = True
             return None
-        before = self.step_id
-        r = self.ctx.call("robomme_step", actions=rows)
-        m = _meta(r)
-        self.last_meta = m
-        self._upd(m)
-        adv = self.step_id - before
-        if adv > len(rows) + 2:
-            self.ik_errors += 1
-            self.penalty_flag = True
-            log("PENALTY: step advanced", adv, "for", len(rows), "rows; total ik errors", self.ik_errors)
-        return m
+        reply = self.ctx.call("robomme_step", actions=rows)
+        meta = self._meta(reply)
+        self.state = np.array(meta["state"], float)
+        self.step_id = meta.get("step_id", self.step_id)
+        lim = meta.get("episode_limits") or {}
+        if "remaining_episode_steps" in lim:
+            self.remaining = lim["remaining_episode_steps"]
+        for s in meta.get("steps", []) or []:
+            if s.get("task_complete"):
+                self.complete = True
+            if s.get("episode_ended"):
+                self.ended = True
+        if meta.get("task_complete"):
+            self.complete = True
+        if meta.get("episode_ended"):
+            self.ended = True
+        self.last_meta = meta
+        return meta
 
-    # ---------- geometry ----------
+    # --- pose helpers
     def pos(self):
         return self.state[:3].copy()
 
-    def rot(self):
-        return Rot.from_rotvec(self.state[3:6])
+    def R(self):
+        return Rot.from_rotvec(self.state[3:6]).as_matrix()
+
+    def yaw(self):
+        R = self.R()
+        return math.atan2(R[1, 0], R[0, 0])
 
     def grip_open(self):
         return float(self.state[6] + self.state[7])
 
-    def yaw(self):
-        """Yaw of the gripper relative to the default top-down orientation Rx(pi)."""
-        R = self.rot() * Rot.from_rotvec([np.pi, 0, 0]).inv()
-        return float(R.as_euler("xyz")[2])
+
+def wrap(a):
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
 
 def target_rot(yaw):
-    return Rot.from_euler("z", yaw) * Rot.from_rotvec([np.pi, 0, 0])
+    # gripper pointing down (x-axis rotated by yaw), same as reset orientation (-pi,0,0) at yaw 0
+    return Rot.from_euler("z", yaw) * Rot.from_rotvec([math.pi, 0, 0])
 
-def tilt_rot(yaw, plate_angle, theta):
-    """Top-down grasp at yaw, then tilt by theta about z x a (a = plate direction): theta>0 = tip down."""
-    a = np.array([np.cos(plate_angle), np.sin(plate_angle), 0.0])
-    k = np.cross([0, 0, 1.0], a)
-    return Rot.from_rotvec(k * theta) * target_rot(yaw)
 
-def move_to(rb, pos, yaw=None, grip=-1.0, tol=0.004, rtol=0.03, max_steps=150,
-            vmax=0.02, wmax=0.12, chunk=3, settle=True, rot=None):
-    """Closed-loop move of TCP to world pos (and yaw). Returns final error."""
-    pos = np.asarray(pos, dtype=float)
+def move_to(rb, xyz, yaw=None, grip=-1.0, tol=0.004, max_steps=150, vmax=1.0, chunk=4, rtol=0.03):
+    """Closed-loop move of TCP to xyz with given yaw (keep pointing down)."""
+    xyz = np.asarray(xyz, float)
     used = 0
-    err = 1.0
-    rb.penalty_flag = False
     while used < max_steps and not rb.ended:
-        if rb.penalty_flag:
-            log("move_to abort on penalty; target", np.round(pos, 3))
-            break
         p = rb.pos()
-        dp = pos - p
-        if rot is not None:
-            dr = (rot * rb.rot().inv()).as_rotvec()
-        elif yaw is not None:
-            Re = target_rot(yaw) * rb.rot().inv()
-            dr = Re.as_rotvec()
+        dp = xyz - p
+        Rc = Rot.from_rotvec(rb.state[3:6])
+        if yaw is None:
+            yaw_t = rb.yaw()
         else:
-            dr = np.zeros(3)
-        err = float(np.linalg.norm(dp))
-        rerr = float(np.linalg.norm(dr))
-        if err < tol and rerr < rtol:
-            break
-        n_lin = int(np.ceil(err / vmax))
-        n_rot = int(np.ceil(rerr / wmax))
-        n = max(1, n_lin, n_rot)
-        k = min(chunk, n)
+            yaw_t = yaw
+        Rt = target_rot(yaw_t)
+        drot = (Rt * Rc.inv()).as_rotvec()
+        if np.linalg.norm(dp) < tol and np.linalg.norm(drot) < rtol:
+            return True
         rows = []
-        for i in range(k):
-            # per-step delta: fraction of the remaining error (re-measured each chunk)
-            v = dp / n
-            w = dr / n
-            rows.append([v[0] / 0.05, v[1] / 0.05, v[2] / 0.05,
-                         w[0] / 0.5, w[1] / 0.5, w[2] / 0.5, grip])
+        n = chunk
+        for k in range(n):
+            frac = 1.0 / max(1, n - k) if False else 1.0
+            a = np.clip(dp / 0.05, -vmax, vmax)
+            # do not overshoot: scale for remaining distance assuming it is executed
+            r = np.clip(drot / 0.5, -1, 1)
+            rows.append(list(a) + list(r) + [grip])
+            dp = dp - a * 0.05
+            drot = drot - r * 0.5
+            if np.linalg.norm(dp) < tol * 0.5 and np.linalg.norm(drot) < rtol * 0.5:
+                break
         rb.step(rows)
-        used += k
-    return err
+        used += len(rows)
+    return False
+
 
 def hold(rb, n, grip):
     rows = [[0, 0, 0, 0, 0, 0, grip]] * n
-    return rb.step(rows)
+    rb.step(rows)

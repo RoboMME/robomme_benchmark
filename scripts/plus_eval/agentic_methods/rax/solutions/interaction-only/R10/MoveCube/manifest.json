@@ -5,21 +5,26 @@
   "task": "MoveCube",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "4b19bb728a467502c3ff192b15f1849cb5ee9441308200a193d501bbb5477084",
-    "geom.py": "744912ca1e62affcf32815ddc4daaac7164d270aa21bc7ddc9cf8e95e4edba05",
-    "motion.py": "390783baa0fccc76c9199c9ce75f23e320e397c445a5e16da4694053452c3e6a",
-    "perception.py": "8ff8b5c9b839e8c13285eb7e0e4b59a3503c401d1173cfd6c50454a3ea0d20dd",
-    "video.py": "92ec903a545611a3eeb81819ce3d2e47c6eb5627b9489b1e533372badbb66c21"
+    "controller.py": "357af79602a0005303eb957d728f354a5a2c1b45be757602eb0a705a24408704",
+    "motion.py": "b52029a6b13b92afc2c132ba16fdcc43f814defb08b3e437b86f96921311140e",
+    "perc.py": "9f5a74cbe4140b4d08f2fc9c5306c00f0593b39d7354c989b8096fefd519880e",
+    "scene.py": "55dba1007f3a9720ecf438b688a35341958702309bd5e824179bdb1b896cb315",
+    "tooluse.py": "b396e8ed7a07c34500dc8d97a59980f92b4ef69db571397f20498c0c5fdeff9d"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "357af79602a0005303eb957d728f354a5a2c1b45be757602eb0a705a24408704",
+    "motion.py": "b52029a6b13b92afc2c132ba16fdcc43f814defb08b3e437b86f96921311140e",
+    "perc.py": "9f5a74cbe4140b4d08f2fc9c5306c00f0593b39d7354c989b8096fefd519880e",
+    "scene.py": "55dba1007f3a9720ecf438b688a35341958702309bd5e824179bdb1b896cb315",
+    "tooluse.py": "b396e8ed7a07c34500dc8d97a59980f92b4ef69db571397f20498c0c5fdeff9d"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "00dbd7d88afee5faea2bb73063bb68e7f25af606a6febc4cbd6345c2b2417bc8",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "4b19bb728a467502c3ff192b15f1849cb5ee9441308200a193d501bbb5477084",
-    "geom.py": "744912ca1e62affcf32815ddc4daaac7164d270aa21bc7ddc9cf8e95e4edba05",
-    "motion.py": "390783baa0fccc76c9199c9ce75f23e320e397c445a5e16da4694053452c3e6a",
-    "perception.py": "8ff8b5c9b839e8c13285eb7e0e4b59a3503c401d1173cfd6c50454a3ea0d20dd",
-    "video.py": "92ec903a545611a3eeb81819ce3d2e47c6eb5627b9489b1e533372badbb66c21"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "53ccaa901822001a309573ee0bf4cac82e26bbf4e1f4b6677e3faf53d1779e8d"
+  }
 }

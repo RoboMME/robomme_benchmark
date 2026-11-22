@@ -1,767 +1,605 @@
+# v03 — memory/perception: detect cubes in BOTH front and wrist cameras and keep a list of
+# distinct cube objects per colour (3D merge); ignore fixtures visible before any cube
+# appears (e.g. a coloured button base); language parser handles "all ... <colour> cubes"
+# (unmask every remembered cube of that colour); container localization picks the first
+# camera whose view of the target is not occluded (front, then wrist); button from either camera.
+# v02 — perception: return to the start (home) joints before localizing each container so the
+# arm does not occlude the front view; reject implausible container rectangles (robot / slivers);
+# ignore colour clusters lying on the table plane (glints).
+# v01 — perception: hue-band cube colours; grasp: container yaw from min-area rectangle,
+# mid-body grasp height, longer close, grip verification with one re-localized retry.
+# (derived from v00 — ButtonUnmask initial program.)
+# Strategy (all hypotheses from one snapshot; the scene at step 0 shows only a button):
+#   1. Parse the colour order from get_task_context().language.
+#   2. Press the button quickly (deadline: before control step 90) with closed fingers,
+#      using per-tick joint-interpolated step() commands from public IK solutions.
+#   3. Retreat to the start joints and WATCH the front camera tick by tick, remembering where
+#      each coloured cube was last seen (pixel colour classes + public depth/calibration).
+#   4. For each colour in order: segment the covering container at the remembered pixel,
+#      grasp it top-down, lift it, scan (diagnostic), lower it back and release.
 import math
 
-# ButtonUnmask v03 -- two-camera, per-instance cube memory; button found in either camera.
-# Changes vs v02 (episode 1 failure modes):
-#   * button: candidates from BOTH cameras (front can be occluded by a tall distractor), score
-#     floor 0.1, accepted only with button-like 3D geometry; missing button => press skipped =>
-#     native termination at control step 89.
-#   * memory: connected colour components per colour (several cubes can share a colour, and the goal
-#     can say "all containers hiding green cubes"), from BOTH cameras every 2 ticks, each component
-#     projected to robot_base with its own pixels' depth, then fused into 3D instances.
-#   * goal parsing: ordered colour clauses; "all"/"<colour> cubes" selects every instance.
+report = {"events": [], "scans": []}
+ctx = get_task_context()
+lang = str(ctx.language)
+report["language"] = lang
+state0 = get_robot_state()
+base_frame = state0.base_frame
+emb = state0.embodiment
+home_q = [float(v) for v in state0.joint_positions["primary"]]
+down_q = [float(v) for v in state0.end_effector_poses["primary"].quaternion_wxyz]
 
-report = {"errors": []}
-END = {"ended": False}
-TRACK_EVERY = 2
-SETTLE_TICKS = 25
-MAX_WAIT_TICK = 320
-MIN_BLOB = 6           # sampled pixels at stride 2 (~24 image pixels)
-SAME_INSTANCE_M = 0.03
-CAMS = ("front", "wrist")
+COLOR_WORDS = ["red", "green", "blue", "yellow", "purple", "orange", "pink", "white", "black", "cyan"]
 
-SAT_COLORS = ("red", "green", "blue", "purple", "yellow", "orange", "pink", "cyan")
-COLOR_WORDS = SAT_COLORS + ("white", "black", "gray", "grey", "brown")
+# ---------------- language ----------------
+words = lang.lower().replace(",", " ").replace(".", " ").split()
+order = []
+goals = []
+for i, word in enumerate(words):
+    if word in COLOR_WORDS and i + 1 < len(words) and words[i + 1].startswith("cube"):
+        plural = words[i + 1] == "cubes" or ("all" in words[max(0, i - 4):i])
+        order.append(word)
+        goals.append({"color": word, "all": plural})
+report["order"] = order
+report["goals"] = goals
+
+# ---------------- low-level stepping ----------------
+tick = {"n": 0, "done": False, "term": None}
 
 
-def err(where, exc):
-    if len(report["errors"]) < 40:
-        report["errors"].append(where + ": " + str(exc)[:300])
+def send(q, grip):
+    cmd = None
+    try:
+        cmd = ArmCommand("joint_position", [float(v) for v in q], gripper_position=float(grip), embodiment=emb)
+    except TypeError:
+        cmd = ArmCommand("joint_position", [float(v) for v in q], gripper_position=float(grip))
+    res = step(RobotAction(arms={"primary": cmd}))
+    tick["n"] = tick["n"] + 1
+    term = False
+    trunc = False
+    try:
+        term = bool(res.terminated)
+    except Exception:
+        term = False
+    try:
+        trunc = bool(res.truncated)
+    except Exception:
+        trunc = False
+    if term or trunc:
+        tick["done"] = True
+        tick["term"] = {"terminated": term, "truncated": trunc, "tick": tick["n"]}
+    return res
+
+
+def current_q():
+    return [float(v) for v in get_robot_state().joint_positions["primary"]]
+
+
+def servo(q_target, ticks, grip, settle=0, scan_every=0):
+    q0 = current_q()
+    for k in range(1, ticks + 1):
+        if tick["done"]:
+            return False
+        a = float(k) / float(ticks)
+        q = [q0[j] + a * (q_target[j] - q0[j]) for j in range(7)]
+        send(q, grip)
+        if scan_every > 0 and k % scan_every == 0 and not tick["done"]:
+            scan("servo")
+    for k in range(settle):
+        if tick["done"]:
+            return False
+        send(q_target, grip)
+    return not tick["done"]
+
+
+def qmul(a, b):
+    return [
+        a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+        a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+        a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+        a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0],
+    ]
+
+
+def yaw_quat(phi):
+    return qmul([math.cos(phi / 2.0), 0.0, 0.0, math.sin(phi / 2.0)], down_q)
+
+
+def ik(pos, seed=None, quat=None):
+    if seed is None:
+        seed = current_q()
+    if quat is None:
+        quat = down_q
+    res = solve_ik(Pose((float(pos[0]), float(pos[1]), float(pos[2])), quat, base_frame), seed_joints=seed)
+    if not res.ok:
+        return None
+    return [float(v) for v in res.joint_positions]
+
+
+def ee_pos():
+    return [round(float(v), 4) for v in get_robot_state().end_effector_poses["primary"].position]
+
+
+def log(name, extra=None):
+    entry = {"ev": name, "tick": tick["n"]}
+    try:
+        entry["ee"] = ee_pos()
+    except Exception:
+        pass
+    if extra is not None:
+        entry["x"] = extra
+    report["events"].append(entry)
+
+
+# ---------------- geometry ----------------
+def quat_to_rot(qw, qx, qy, qz):
+    return [
+        [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qw * qz), 2 * (qx * qz + qw * qy)],
+        [2 * (qx * qy + qw * qz), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qw * qx)],
+        [2 * (qx * qz - qw * qy), 2 * (qy * qz + qw * qx), 1 - 2 * (qx * qx + qy * qy)],
+    ]
+
+
+def cam_model(cam):
+    K = cam.intrinsics
+    pose = cam.camera_pose
+    q = [float(v) for v in pose.quaternion_wxyz]
+    return {
+        "fx": float(K[0][0]), "fy": float(K[1][1]), "cx": float(K[0][2]), "cy": float(K[1][2]),
+        "R": quat_to_rot(q[0], q[1], q[2], q[3]),
+        "t": [float(v) for v in pose.position],
+    }
+
+
+def pix_to_base(model, u, v, d):
+    xc = (u - model["cx"]) / model["fx"] * d
+    yc = (v - model["cy"]) / model["fy"] * d
+    zc = d
+    R = model["R"]
+    t = model["t"]
+    return [R[i][0] * xc + R[i][1] * yc + R[i][2] * zc + t[i] for i in range(3)]
+
+
+def classify(r, g, b):
+    mx = max(r, g, b)
+    mn = min(r, g, b)
+    d = mx - mn
+    if mx < 50 or d < 0.45 * mx:
+        return None
+    if mx == r:
+        hue = (60.0 * (g - b) / d) % 360.0
+    elif mx == g:
+        hue = 60.0 * (b - r) / d + 120.0
+    else:
+        hue = 60.0 * (r - g) / d + 240.0
+    if hue >= 340.0 or hue < 12.0:
+        return "red"
+    if hue < 28.0:
+        return None  # wooden table band
+    if hue < 50.0:
+        return "orange"
+    if hue < 75.0:
+        return "yellow"
+    if hue < 165.0:
+        return "green"
+    if hue < 200.0:
+        return "cyan"
+    if hue < 255.0:
+        return "blue"
+    if hue < 320.0:
+        return "purple"
+    return "pink"
+
+
+memory = {}
+fixtures = []
+seen_any = {"v": False, "last_tick": -1, "first_tick": -1}
+
+
+def scan_camera(obs, cam_name):
+    cam = obs.cameras[cam_name]
+    try:
+        rgb = cam.rgb.tolist()
+        dep = cam.depth_m.tolist()
+    except Exception:
+        rgb = cam.rgb
+        dep = cam.depth_m
+    model = cam_model(cam)
+    h = len(rgb)
+    w = len(rgb[0])
+    clusters = []
+    for v in range(0, h, 2):
+        row = rgb[v]
+        drow = dep[v]
+        for u in range(0, w, 2):
+            px = row[u]
+            c = classify(int(px[0]), int(px[1]), int(px[2]))
+            if c is None:
+                continue
+            d = float(drow[u])
+            if d <= 0.12 or d > 3.0:
+                continue
+            p = pix_to_base(model, u, v, d)
+            if p[2] > 0.12 or p[2] < -0.02:
+                continue
+            placed = False
+            for cl in clusters:
+                if cl["c"] == c and abs(cl["su"] / cl["n"] - u) < 12 and abs(cl["sv"] / cl["n"] - v) < 12:
+                    cl["su"] += u
+                    cl["sv"] += v
+                    cl["sx"] += p[0]
+                    cl["sy"] += p[1]
+                    cl["sz"] += p[2]
+                    cl["zmax"] = max(cl["zmax"], p[2])
+                    cl["n"] += 1
+                    placed = True
+                    break
+            if not placed:
+                clusters.append({"c": c, "su": u, "sv": v, "sx": p[0], "sy": p[1], "sz": p[2], "zmax": p[2], "n": 1})
+    found = []
+    for cl in clusters:
+        if cl["n"] < 5 or cl["zmax"] < 0.01:
+            continue
+        n = float(cl["n"])
+        found.append({
+            "c": cl["c"], "n": cl["n"], "cam": cam_name,
+            "uv": [round(cl["su"] / n, 1), round(cl["sv"] / n, 1)],
+            "xyz": [round(cl["sx"] / n, 4), round(cl["sy"] / n, 4), round(cl["sz"] / n, 4)],
+            "zmax": round(cl["zmax"], 4),
+        })
+    return found
+
+
+def near_xy(a, b, r):
+    return (a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) < r * r
+
+
+def is_fixture(f):
+    for fx in fixtures:
+        if fx["c"] == f["c"] and near_xy(fx["xyz"], f["xyz"], 0.05):
+            return True
+    if button is not None and near_xy([button["x"], button["y"]], f["xyz"], 0.045):
+        return True
+    return False
+
+
+def scan(tag, learn=True):
+    obs = get_observation()
+    found = []
+    for cam_name in ("front", "wrist"):
+        try:
+            found = found + scan_camera(obs, cam_name)
+        except Exception as exc:
+            report["events"].append({"ev": "scan_error", "cam": cam_name, "err": str(exc)})
+    if tag == "start":
+        for f in found:
+            fixtures.append(f)
+        report["fixtures"] = found
+        return []
+    found = [f for f in found if not is_fixture(f)]
+    summary = sorted([(f["c"], f["cam"][0], f["n"], f["xyz"][0], f["xyz"][1]) for f in found])
+    sig = [(x[0], x[1], x[2] // 6) for x in summary]
+    lastsig = report["scans"][-1]["sig"] if report["scans"] else None
+    if sig != lastsig and len(report["scans"]) < 120:
+        report["scans"].append({"tick": tick["n"], "tag": tag, "found": summary, "sig": sig})
+    if found:
+        if not seen_any["v"]:
+            seen_any["first_tick"] = tick["n"]
+        seen_any["v"] = True
+        seen_any["last_tick"] = tick["n"]
+    if not learn:
+        return found
+    for f in found:
+        objs = memory.get(f["c"])
+        if objs is None:
+            objs = []
+            memory[f["c"]] = objs
+        match = None
+        for o in objs:
+            if near_xy(o["xyz"], f["xyz"], 0.04):
+                match = o
+                break
+        if match is None:
+            objs.append({"xyz": f["xyz"], "n": f["n"], "cam": f["cam"], "first": tick["n"], "last": tick["n"], "hits": 1, "zmax": f["zmax"]})
+        else:
+            match["last"] = tick["n"]
+            match["hits"] += 1
+            if f["n"] > match["n"] or (f["cam"] == "front" and match["cam"] != "front" and f["n"] >= 10):
+                match["xyz"] = f["xyz"]
+                match["n"] = f["n"]
+                match["cam"] = f["cam"]
+                match["zmax"] = f["zmax"]
+    return found
 
 
 def quantile(values, fraction):
-    ordered = sorted(float(v) for v in values)
+    ordered = sorted(float(value) for value in values)
     if not ordered:
         return None
     return ordered[int((len(ordered) - 1) * fraction)]
 
 
-def fl(seq):
-    return [float(v) for v in seq]
-
-
-def r3(seq):
-    return [round(float(v), 4) for v in seq]
-
-
-def dist2(a, b):
-    return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
-
-
-def hue_sat(r, g, b):
-    mx = max(r, g, b)
-    mn = min(r, g, b)
-    if mx < 60 or mx == mn:
-        return None, 0.0
-    d = float(mx - mn)
-    sat = d / float(mx)
-    if mx == r:
-        h = 60.0 * (((g - b) / d) % 6.0)
-    elif mx == g:
-        h = 60.0 * (((b - r) / d) + 2.0)
-    else:
-        h = 60.0 * (((r - g) / d) + 4.0)
-    return h, sat
-
-
-def cube_color(r, g, b):
-    """Saturated cube colours; the wooden table (hue ~18-26, sat <= 0.75) maps to None."""
-    h, sat = hue_sat(r, g, b)
-    if h is None or sat < 0.6:
-        return None
-    if h < 10 or h >= 345:
-        return "red"
-    if 30 <= h < 45:
-        return "orange" if sat > 0.78 else None
-    if 45 <= h < 72:
-        return "yellow"
-    if 85 <= h < 160:
-        return "green"
-    if 170 <= h < 200:
-        return "cyan"
-    if 205 <= h < 255:
-        return "blue"
-    if 262 <= h < 305:
-        return "purple"
-    if 305 <= h < 345:
-        return "pink"
-    return None
-
-
-def color_components(rgb, stride=2):
-    """Connected components (8-neighbour on the stride grid) per saturated colour."""
-    try:
-        rows = rgb.tolist()
-    except Exception:
-        rows = [[list(px) for px in row] for row in rgb]
-    labels = {}
-    for y in range(0, len(rows), stride):
-        row = rows[y]
-        for x in range(0, len(row), stride):
-            px = row[x]
-            c = cube_color(int(px[0]), int(px[1]), int(px[2]))
-            if c is not None:
-                labels[(x, y)] = c
-    seen = set()
-    comps = []
-    for key in labels:
-        if key in seen:
-            continue
-        c = labels[key]
-        stack = [key]
-        seen.add(key)
-        pix = []
-        while stack:
-            p = stack.pop()
-            pix.append(p)
-            for dx in (-stride, 0, stride):
-                for dy in (-stride, 0, stride):
-                    q = (p[0] + dx, p[1] + dy)
-                    if q in labels and q not in seen and labels[q] == c:
-                        seen.add(q)
-                        stack.append(q)
-        if len(pix) >= MIN_BLOB:
-            comps.append({"color": c, "pix": pix})
-    return comps
-
-
-def quat_matrix(q):
-    w, x, y, z = q[0], q[1], q[2], q[3]
-    return [[1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
-            [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
-            [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]]
-
-
-def pixels_to_base(cam, pix):
-    """Median robot_base point of the given pixels (public depth, intrinsics, camera_pose; OpenCV axes)."""
-    depth = cam.depth_m
-    k = cam.intrinsics
-    fx = float(k[0][0])
-    fy = float(k[1][1])
-    cx = float(k[0][2])
-    cy = float(k[1][2])
-    rm = quat_matrix(fl(cam.camera_pose.quaternion_wxyz))
-    pos = fl(cam.camera_pose.position)
-    step_n = max(1, len(pix) // 30)
-    xs = []
-    ys = []
-    zs = []
-    for i in range(0, len(pix), step_n):
-        u = pix[i][0]
-        v = pix[i][1]
-        d = float(depth[v][u])
-        if d < 0.05 or d > 3.0:
-            continue
-        pc = [(u - cx) * d / fx, (v - cy) * d / fy, d]
-        xs.append(pos[0] + rm[0][0] * pc[0] + rm[0][1] * pc[1] + rm[0][2] * pc[2])
-        ys.append(pos[1] + rm[1][0] * pc[0] + rm[1][1] * pc[1] + rm[1][2] * pc[2])
-        zs.append(pos[2] + rm[2][0] * pc[0] + rm[2][1] * pc[1] + rm[2][2] * pc[2])
-    if len(xs) < 3:
-        return None
-    return [quantile(xs, 0.5), quantile(ys, 0.5), quantile(zs, 0.5)]
-
-
-# ------------------------------------------------------------------ memory of cube sightings
-TRACK = {"tick": 0, "last_any": None, "log": []}
-INST = []   # {"color", "first", "last", "hits", "pts": [[x,y,z],...], "cams": {cam: hits}}
-
-
-def inst_xyz(inst):
-    pts = inst["pts"]
-    return [quantile([p[0] for p in pts], 0.5), quantile([p[1] for p in pts], 0.5),
-            quantile([p[2] for p in pts], 0.5)]
-
-
-def track(force=False):
-    tick = TRACK["tick"]
-    if not force and tick % TRACK_EVERY != 0:
-        return
-    try:
-        ob = get_observation()
-    except Exception as exc:
-        err("track obs", exc)
-        return
-    logged = {}
-    for camname in CAMS:
-        try:
-            cam = ob.cameras[camname]
-            comps = color_components(cam.rgb, 2)
-        except Exception as exc:
-            err("track " + camname, exc)
-            continue
-        for comp in comps:
-            TRACK["last_any"] = tick
-            try:
-                xyz = pixels_to_base(cam, comp["pix"])
-            except Exception as exc:
-                err("project", exc)
-                xyz = None
-            if xyz is None:
-                continue
-            if xyz[2] < -0.01 or xyz[2] > 0.07:
-                continue
-            best = None
-            for inst in INST:
-                if inst["color"] != comp["color"]:
-                    continue
-                d = dist2(inst_xyz(inst), xyz)
-                if d < SAME_INSTANCE_M and (best is None or d < best[0]):
-                    best = [d, inst]
-            if best is None:
-                inst = {"color": comp["color"], "first": tick, "last": tick, "hits": 0, "pts": [],
-                        "cams": {}}
-                INST.append(inst)
-            else:
-                inst = best[1]
-            inst["last"] = tick
-            inst["hits"] = inst["hits"] + 1
-            inst["cams"][camname] = inst["cams"].get(camname, 0) + 1
-            inst["pts"].append(xyz)
-            if len(inst["pts"]) > 40:
-                inst["pts"] = inst["pts"][-40:]
-            logged[camname + ":" + comp["color"]] = logged.get(camname + ":" + comp["color"], 0) + 1
-    if tick % 10 == 0 or force:
-        TRACK["log"].append({"tick": tick, "vis": logged})
-
-
-def is_ended(res):
-    flag = False
-    try:
-        flag = bool(res.terminated) or bool(res.truncated)
-    except Exception:
-        pass
-    if flag:
-        END["ended"] = True
-    return flag
-
-
-def tick_to(target, grip):
-    st = get_robot_state()
-    res = step(RobotAction(arms={"primary": ArmCommand(
-        mode="joint_position", target=list(target), gripper_position=grip,
-        embodiment=st.embodiment)}))
-    TRACK["tick"] = TRACK["tick"] + 1
-    if is_ended(res):
-        return False
-    track()
-    return True
-
-
-def joint_path(q_from, q_to, max_delta):
-    biggest = max(abs(q_to[i] - q_from[i]) for i in range(7))
-    n = max(1, int(math.ceil(biggest / max_delta)))
-    path = []
-    for k in range(1, n + 1):
-        t = k / float(n)
-        s = 0.5 - 0.5 * math.cos(math.pi * t)
-        path.append([q_from[i] + s * (q_to[i] - q_from[i]) for i in range(7)])
-    return path
-
-
-def run_path(path, grip):
-    for q in path:
-        if not tick_to(q, grip):
-            return False
-    return True
-
-
-def current_q():
-    return fl(get_robot_state().joint_positions["primary"])
-
-
-def yaw_quat(yaw):
-    # Rz(yaw) * q_down where q_down = (0, -1, 0, 0) (wxyz) is the start pose's top-down hand.
-    return (0.0, -math.cos(yaw / 2.0), -math.sin(yaw / 2.0), 0.0)
-
-
-# ------------------------------------------------------------------ Phase 0: read the episode
-ctx = get_task_context()
-goal = str(ctx.language)
-report["goal"] = goal
-try:
-    meta = dict(robomme_plus.get_task_metadata())
-    report["max_steps"] = meta.get("max_steps")
-except Exception as exc:
-    err("metadata", exc)
-try:
-    report["video_len"] = len(robomme_plus.get_conditioning_video())
-except Exception as exc:
-    err("video", exc)
-
-
-def parse_goal(text):
-    """Ordered [colour, take_all] requests from the goal sentence."""
-    low = text.lower()
-    hits = []
-    for c in COLOR_WORDS:
-        start = 0
-        while True:
-            pos = low.find(c, start)
-            if pos < 0:
-                break
-            before = low[pos - 1] if pos > 0 else " "
-            after = low[pos + len(c)] if pos + len(c) < len(low) else " "
-            if not before.isalpha() and not after.isalpha():
-                hits.append([pos, c])
-            start = pos + len(c)
-    hits = sorted(hits)
-    out = []
-    prev_end = 0
-    for h in hits:
-        pos = h[0]
-        c = h[1]
-        clause = low[prev_end:pos]
-        tail = low[pos + len(c):pos + len(c) + 7]
-        take_all = (" all " in (" " + clause + " ")) or tail.startswith(" cubes")
-        out.append([c, take_all])
-        prev_end = pos + len(c)
-    return out
-
-
-REQUESTS = parse_goal(goal)
-report["requests"] = REQUESTS
-
-state0 = get_robot_state()
-q_home = fl(state0.joint_positions["primary"])
-down_quat = fl(state0.end_effector_poses["primary"].quaternion_wxyz)
-base = state0.base_frame
-report["start"] = {"ee": r3(state0.end_effector_poses["primary"].position), "quat": r3(down_quat)}
-
-
-# ------------------------------------------------------------------ Phase A: press the button
-def button_candidates(camera):
-    out = []
-    found = segment_text(camera, "button")
-    if not found.ok:
-        return out
-    for cand in found.segmentations[:4]:
-        if float(cand.score) < 0.1:
-            continue
-        cloud = mask_to_point_cloud(cand, camera, target_frame=base)
-        pts = cloud.points
-        if len(pts) < 10:
-            continue
-        xs = [float(p[0]) for p in pts]
-        ys = [float(p[1]) for p in pts]
-        zs = [float(p[2]) for p in pts]
-        top = quantile(zs, 0.95)
-        span = max(quantile(xs, 0.95) - quantile(xs, 0.05), quantile(ys, 0.95) - quantile(ys, 0.05))
-        entry = {"cam": camera, "score": round(float(cand.score), 3), "top": round(top, 4),
-                 "span": round(span, 4), "n": len(pts)}
-        if span > 0.08 or top < 0.012 or top > 0.07:
-            entry["rejected"] = True
-            out.append(entry)
-            continue
-        try:
-            box = cand.box_xyxy
-            if box is not None:
-                bu = int(round((float(box[0]) + float(box[2])) / 2.0))
-                bv = int(round((float(box[1]) + float(box[3])) / 2.0))
-                cam = get_observation().cameras[camera]
-                mine = pixels_to_base(cam, [(bu + du, bv + dv) for du in (-1, 0, 1) for dv in (-1, 0, 1)])
-                if mine is not None:
-                    entry["proj_err"] = round(dist2(mine, (quantile(xs, 0.5), quantile(ys, 0.5))), 4)
-        except Exception as exc:
-            err("proj check", exc)
-        topx = [xs[i] for i in range(len(zs)) if zs[i] >= top - 0.012]
-        topy = [ys[i] for i in range(len(zs)) if zs[i] >= top - 0.012]
-        entry["x"] = quantile(topx, 0.5)
-        entry["y"] = quantile(topy, 0.5)
-        out.append(entry)
-    return out
-
-
-press = {}
+# ---------------- 1. button ----------------
 button = None
-bcands = []
-for camname in CAMS:
-    try:
-        bcands = bcands + button_candidates(camname)
-    except Exception as exc:
-        err("button " + camname, exc)
-for c in bcands:
-    if c.get("rejected"):
+best = None
+for bcam in ("front", "wrist"):
+    seg = segment_text(bcam, "button")
+    if not seg.ok:
         continue
-    if button is None or c["score"] > button["score"]:
-        button = c
-press["candidates"] = bcands
-press["button"] = button
-# My pixel projection is trusted per camera only if it agrees with the harness point cloud
-# of the same button mask (front was checked in episode 0; wrist is checked here, every episode).
-wrist_ok = False
-for c in bcands:
-    if c["cam"] == "wrist" and c.get("proj_err") is not None and c["proj_err"] < 0.03:
-        wrist_ok = True
-CAMS = ("front", "wrist") if wrist_ok else ("front",)
-report["tracking_cams"] = list(CAMS)
-track(force=True)
+    for cand in seg.segmentations[:6]:
+        try:
+            cloud = mask_to_point_cloud(cand, bcam, target_frame=base_frame)
+            pts = cloud.points
+            if len(pts) < 10:
+                continue
+            zs = [float(p[2]) for p in pts]
+            xs = [float(p[0]) for p in pts]
+            ys = [float(p[1]) for p in pts]
+            span = max(max(xs) - min(xs), max(ys) - min(ys))
+            if span > 0.12 or quantile(zs, 0.5) > 0.15 or quantile(xs, 0.5) < 0.15:
+                continue
+            score = float(cand.score)
+            if best is None or score > best["score"]:
+                best = {"score": score, "x": quantile(xs, 0.5), "y": quantile(ys, 0.5),
+                        "top": quantile(zs, 0.95), "n": len(pts)}
+        except Exception as exc:
+            continue
+button = best
+report["button"] = button
+scan("start")
 
+pressed = False
 if button is not None:
-    try:
-        pre_pose = Pose((button["x"], button["y"], button["top"] + 0.07), tuple(down_quat), base)
-        press_pose = Pose((button["x"], button["y"], button["top"] - 0.025), tuple(down_quat), base)
-        ik_pre = solve_ik(pre_pose, seed_joints=q_home)
-        ik_press = solve_ik(press_pose, seed_joints=fl(ik_pre.joint_positions)) if ik_pre.ok else None
-        press["ik"] = [bool(ik_pre.ok), bool(ik_press.ok) if ik_press is not None else False]
-        if ik_press is not None and ik_press.ok:
-            q_pre = fl(ik_pre.joint_positions)
-            q_press = fl(ik_press.joint_positions)
-            ok = run_path(joint_path(q_home, q_pre, 0.07), 0.0)
-            if ok:
-                ok = run_path(joint_path(current_q(), q_press, 0.03), 0.0)
-            if ok:
-                ok = run_path([q_press for k in range(5)], 0.0)
-                st = get_robot_state()
-                press["ee_at_press"] = r3(st.end_effector_poses["primary"].position)
-                press["tick_at_press"] = TRACK["tick"]
-            if ok:
-                ok = run_path(joint_path(current_q(), q_pre, 0.05), 0.0)
-            if ok:
-                ok = run_path(joint_path(current_q(), q_home, 0.07), 0.0)
-            press["tick_home"] = TRACK["tick"]
-    except Exception as exc:
-        err("press", exc)
-report["press"] = press
+    above = ik((button["x"], button["y"], button["top"] + 0.06), home_q)
+    press = ik((button["x"], button["y"], button["top"] - 0.02), above if above is not None else home_q)
+    report["ik_button"] = {"above": above is not None, "press": press is not None}
+    if above is not None and press is not None:
+        servo(above, 28, 0.0, settle=2, scan_every=4)
+        log("above_button")
+        servo(press, 10, 0.0, settle=6)
+        log("pressed_bottom")
+        servo(above, 8, 0.0, settle=1)
+        log("button_released")
+        pressed = True
+report["pressed"] = pressed
 
-# ------------------------------------------------------------------ Phase B: wait for covering
-wait = {"start": TRACK["tick"]}
-try:
-    while not END["ended"] and TRACK["tick"] < MAX_WAIT_TICK:
-        wanted = [r[0] for r in REQUESTS if r[0] in SAT_COLORS]
-        seen_all = all(any(i["color"] == c and i["hits"] >= 2 for i in INST) for c in wanted)
-        last_any = TRACK["last_any"]
-        quiet = last_any is not None and TRACK["tick"] - last_any >= SETTLE_TICKS
-        if seen_all and quiet:
+# ---------------- 2. watch ----------------
+servo(home_q, 20, 0.0, settle=2, scan_every=2)
+log("home_after_press")
+hidden_streak = 0
+watch_ticks = 0
+while watch_ticks < 260 and not tick["done"]:
+    send(home_q, 0.0)
+    watch_ticks += 1
+    found = scan("watch")
+    visible_targets = [f for f in found if f["c"] in order]
+    if all([c in memory for c in order]) or watch_ticks > 150:
+        if visible_targets:
+            hidden_streak = 0
+        else:
+            hidden_streak += 1
+        if hidden_streak >= 20:
             break
-        if not tick_to(q_home, 1.0):
-            break
-except Exception as exc:
-    err("wait", exc)
-wait["end"] = TRACK["tick"]
-report["wait"] = wait
-MEMORY = [i for i in INST if i["hits"] >= 2]
-report["instances"] = [{"color": i["color"], "xyz": r3(inst_xyz(i)), "first": i["first"], "last": i["last"],
-                        "hits": i["hits"], "cams": i["cams"]} for i in INST]
-report["track_log"] = TRACK["log"]
+log("watch_end", {"watch_ticks": watch_ticks, "seen": seen_any})
+report["memory"] = memory
+
+# ---------------- 3. unmask in order ----------------
+def base_to_pix(model, p):
+    R = model["R"]
+    t = model["t"]
+    d = [p[0] - t[0], p[1] - t[1], p[2] - t[2]]
+    xc = R[0][0] * d[0] + R[1][0] * d[1] + R[2][0] * d[2]
+    yc = R[0][1] * d[0] + R[1][1] * d[1] + R[2][1] * d[2]
+    zc = R[0][2] * d[0] + R[1][2] * d[1] + R[2][2] * d[2]
+    if zc <= 0.01:
+        return None
+    return [model["fx"] * xc / zc + model["cx"], model["fy"] * yc / zc + model["cy"]]
 
 
-# ------------------------------------------------------------------ Phase C: find containers
-def rect_yaw(xs, ys):
-    """Yaw (rad, in [0, pi/2)) of the min-area bounding rectangle of the top-face points."""
+def fit_rect(pts):
+    """Minimum-area rectangle (3-degree search, 3/97 % quantiles) over XY of points."""
     best = None
     for k in range(30):
-        a = k * (math.pi / 2.0) / 30.0
-        ca = math.cos(a)
-        sa = math.sin(a)
-        us = [xs[i] * ca + ys[i] * sa for i in range(len(xs))]
-        vs = [-xs[i] * sa + ys[i] * ca for i in range(len(xs))]
-        du = quantile(us, 0.99) - quantile(us, 0.01)
-        dv = quantile(vs, 0.99) - quantile(vs, 0.01)
-        area = du * dv
-        if best is None or area < best[0]:
-            best = [area, a, du, dv]
-    return best[1], best[2], best[3]
+        th = math.radians(3.0 * k)
+        c = math.cos(th)
+        sn = math.sin(th)
+        a = [p[0] * c + p[1] * sn for p in pts]
+        b = [-p[0] * sn + p[1] * c for p in pts]
+        alo = quantile(a, 0.03)
+        ahi = quantile(a, 0.97)
+        blo = quantile(b, 0.03)
+        bhi = quantile(b, 0.97)
+        area = (ahi - alo) * (bhi - blo)
+        if best is None or area < best["area"]:
+            am = 0.5 * (alo + ahi)
+            bm = 0.5 * (blo + bhi)
+            best = {"area": area, "th": th, "da": ahi - alo, "db": bhi - blo,
+                    "cx": am * c - bm * sn, "cy": am * sn + bm * c}
+    return best
 
 
-def find_containers(camera):
-    out = []
-    for prompt in ("white box", "cube", "container"):
+def container_from_cloud(cloud, gx, gy, radius):
+    pts = []
+    for p in cloud.points:
+        x = float(p[0])
+        y = float(p[1])
+        z = float(p[2])
+        if z > 0.012 and (x - gx) * (x - gx) + (y - gy) * (y - gy) < radius * radius:
+            pts.append([x, y, z])
+    if len(pts) < 30:
+        return None
+    rect = fit_rect(pts)
+    rect["top"] = quantile([p[2] for p in pts], 0.97)
+    rect["n"] = len(pts)
+    return rect
+
+
+def view_clear(cam, p):
+    model = cam_model(cam)
+    uv = base_to_pix(model, p)
+    if uv is None:
+        return None
+    u = int(round(uv[0]))
+    v = int(round(uv[1]))
+    if u < 2 or v < 2 or u > 253 or v > 253:
+        return None
+    R = model["R"]
+    t = model["t"]
+    d = [p[0] - t[0], p[1] - t[1], p[2] - t[2]]
+    zc = R[0][2] * d[0] + R[1][2] * d[1] + R[2][2] * d[2]
+    seen = float(cam.depth_m[v][u])
+    return {"uv": [uv[0], uv[1]], "clear": seen > zc - 0.07, "seen": round(seen, 3), "expect": round(zc, 3)}
+
+
+def locate_container(gx, gy, gz):
+    obs = get_observation()
+    target = [gx, gy, gz + 0.02]
+    tried = []
+    for cam_name in ("front", "wrist"):
+        vc = view_clear(obs.cameras[cam_name], target)
+        tried.append({"cam": cam_name, "view": vc})
+        if vc is None or not vc["clear"]:
+            continue
+        found = []
         try:
-            found = segment_text(camera, prompt)
+            segp = segment_points(cam_name, [[vc["uv"][0], vc["uv"][1]]])
+            if segp.ok:
+                for cand in segp.segmentations[:3]:
+                    cloud = mask_to_point_cloud(cand, cam_name, target_frame=base_frame)
+                    rect = container_from_cloud(cloud, gx, gy, 0.06)
+                    if rect is not None:
+                        rect["src"] = cam_name
+                        found.append(rect)
         except Exception as exc:
-            err("seg " + prompt, exc)
-            continue
-        if not found.ok:
-            continue
-        for cand in found.segmentations[:16]:
-            if float(cand.score) < 0.15 or cand.box_xyxy is None:
-                continue
-            box = [float(v) for v in cand.box_xyxy]
-            if (box[2] - box[0]) > 70 or (box[3] - box[1]) > 70:
-                continue
-            dup = False
-            for o in out:
-                ob = o["box"]
-                ix = max(0.0, min(box[2], ob[2]) - max(box[0], ob[0]))
-                iy = max(0.0, min(box[3], ob[3]) - max(box[1], ob[1]))
-                inter = ix * iy
-                area = (box[2] - box[0]) * (box[3] - box[1])
-                if inter > 0.5 * area:
-                    dup = True
-                    break
-            if dup:
-                continue
-            try:
-                cloud = mask_to_point_cloud(cand, camera, target_frame=base)
-                pts = cloud.points
-                if len(pts) < 20:
-                    continue
-                zs = [float(p[2]) for p in pts]
-                top = quantile(zs, 0.95)
-                txs = [float(pts[i][0]) for i in range(len(pts)) if zs[i] >= top - 0.008]
-                tys = [float(pts[i][1]) for i in range(len(pts)) if zs[i] >= top - 0.008]
-                if len(txs) < 10:
-                    continue
-                yaw, du, dv = rect_yaw(txs, tys)
-                cx = (quantile(txs, 0.03) + quantile(txs, 0.97)) / 2.0
-                cy = (quantile(tys, 0.03) + quantile(tys, 0.97)) / 2.0
-                out.append({"box": box, "score": round(float(cand.score), 3), "prompt": prompt,
-                            "x": cx, "y": cy, "top": top, "yaw": yaw, "du": du, "dv": dv, "n": len(pts)})
-            except Exception as exc:
-                err("container cloud", exc)
-    return out
-
-
-def depth_containers(camname):
-    """Containers from the wrist depth alone (SAM returns at most five masks per prompt, and there
-    can be eight containers). Points above the button/cube height are bucketed on a 0.8 cm XY grid,
-    4-connected cells form one object; tall objects (distractor pillars) are rejected."""
-    cam = get_observation().cameras[camname]
-    try:
-        depth = cam.depth_m.tolist()
-    except Exception:
-        depth = cam.depth_m
-    k = cam.intrinsics
-    fx = float(k[0][0])
-    fy = float(k[1][1])
-    cx0 = float(k[0][2])
-    cy0 = float(k[1][2])
-    rm = quat_matrix(fl(cam.camera_pose.quaternion_wxyz))
-    pos = fl(cam.camera_pose.position)
-    cell = 0.008
-    cells = {}
-    for v in range(0, len(depth)):
-        row = depth[v]
-        for u in range(0, len(row)):
-            d = float(row[u])
-            if d < 0.05 or d > 3.0:
-                continue
-            a = (u - cx0) * d / fx
-            b = (v - cy0) * d / fy
-            z = pos[2] + rm[2][0] * a + rm[2][1] * b + rm[2][2] * d
-            if z < CONTAINER_MIN_Z or z > 0.35:
-                continue
-            x = pos[0] + rm[0][0] * a + rm[0][1] * b + rm[0][2] * d
-            y = pos[1] + rm[1][0] * a + rm[1][1] * b + rm[1][2] * d
-            key = (int(math.floor(x / cell)), int(math.floor(y / cell)))
-            lst = cells.get(key)
-            if lst is None:
-                lst = []
-                cells[key] = lst
-            lst.append((x, y, z))
-    seen = set()
-    out = []
-    rejected = []
-    for key in cells:
-        if key in seen:
-            continue
-        seen.add(key)
-        stack = [key]
-        pts = []
-        while stack:
-            kk = stack.pop()
-            pts = pts + cells[kk]
-            for nb in ((kk[0] + 1, kk[1]), (kk[0] - 1, kk[1]), (kk[0], kk[1] + 1), (kk[0], kk[1] - 1)):
-                if nb in cells and nb not in seen:
-                    seen.add(nb)
-                    stack.append(nb)
-        if len(pts) < 40:
-            continue
-        zs = [p[2] for p in pts]
-        zmax = quantile(zs, 0.98)
-        top = quantile(zs, 0.9)
-        txs = [p[0] for p in pts if p[2] >= top - 0.008]
-        tys = [p[1] for p in pts if p[2] >= top - 0.008]
-        if len(txs) < 25:
-            continue
-        yaw, du, dv = rect_yaw(txs, tys)
-        c = {"x": (quantile(txs, 0.03) + quantile(txs, 0.97)) / 2.0,
-             "y": (quantile(tys, 0.03) + quantile(tys, 0.97)) / 2.0,
-             "top": top, "yaw": yaw, "du": du, "dv": dv, "n": len(pts), "score": 1.0,
-             "prompt": "depth", "box": [0.0, 0.0, 0.0, 0.0], "zmax": zmax}
-        if zmax > 0.11 or not (0.025 < max(du, dv) < 0.09):
-            rejected.append({"x": round(c["x"], 3), "y": round(c["y"], 3), "zmax": round(zmax, 3),
-                             "du": round(du, 3), "dv": round(dv, 3), "n": len(pts)})
-            continue
-        out.append(c)
-    report["depth_rejected"] = rejected[:12]
-    return out
-
-
-CONTAINER_MIN_Z = 0.045
-containers = []
-if not END["ended"]:
-    raw = []
-    try:
-        raw = depth_containers("wrist")
-    except Exception as exc:
-        err("depth containers", exc)
-    report["n_depth_containers"] = len(raw)
-    for c in raw:
-        c["cam"] = "wrist-depth"
-    for c in find_containers("wrist"):
-        c["cam"] = "wrist"
-        near = False
-        for o in raw:
-            if math.sqrt((c["x"] - o["x"]) ** 2 + (c["y"] - o["y"]) ** 2) < 0.03:
-                near = True
-                break
-        if not near:
-            raw.append(c)
-    for c in find_containers("front"):
-        c["cam"] = "front"
-        near = False
-        for o in raw:
-            if math.sqrt((c["x"] - o["x"]) ** 2 + (c["y"] - o["y"]) ** 2) < 0.03:
-                near = True
-                break
-        if not near:
-            raw.append(c)
-    containers = raw
-    if button is not None:
-        containers = [c for c in containers
-                      if math.sqrt((c["x"] - button["x"]) ** 2 + (c["y"] - button["y"]) ** 2) > 0.035]
-    containers = [c for c in containers
-                  if 0.025 < max(c["du"], c["dv"]) < 0.11 and 0.03 < c["top"] < 0.12]
-report["containers"] = [{"x": round(c["x"], 4), "y": round(c["y"], 4), "top": round(c["top"], 4),
-                         "yaw_deg": round(math.degrees(c["yaw"]), 1), "du": round(c["du"], 4),
-                         "dv": round(c["dv"], 4), "score": c["score"], "prompt": c["prompt"], "cam": c["cam"],
-                         "box": [round(v, 1) for v in c["box"]]} for c in containers]
-
-
-# ------------------------------------------------------------------ Phase D: lift in goal order
-def choose_yaw(c, others):
-    best = None
-    for base_yaw in (c["yaw"], c["yaw"] + math.pi / 2.0):
-        yaw = base_yaw
-        while yaw > math.pi / 2.0:
-            yaw -= math.pi
-        while yaw <= -math.pi / 2.0:
-            yaw += math.pi
-        ax = -math.sin(yaw)
-        ay = math.cos(yaw)
-        clearance = 1.0
-        for o in others:
-            for sgn in (1.0, -1.0):
-                fx = c["x"] + sgn * 0.055 * ax
-                fy = c["y"] + sgn * 0.055 * ay
-                d = math.sqrt((fx - o["x"]) ** 2 + (fy - o["y"]) ** 2)
-                if d < clearance:
-                    clearance = d
-        score = clearance - 0.01 * abs(yaw)
-        if best is None or score > best[0]:
-            best = [score, yaw, clearance]
-    return best[1], best[2]
-
-
-def move(pose_xyz, yaw, tol, steps):
-    res = move_to_pose(Pose(tuple(pose_xyz), yaw_quat(yaw), base), tolerance=tol, max_steps=steps)
-    is_ended(res)
-    return res
-
-
-# Build the ordered target list: one instance per singular request, every instance for "all".
-targets = []
-taken = []
-for req in REQUESTS:
-    color = req[0]
-    cands = [i for i in MEMORY if i["color"] == color and not (i in taken)]
-    if not cands:
-        targets.append({"color": color, "xyz": None})
-        continue
-    if req[1]:
-        for i in cands:
-            taken.append(i)
-            targets.append({"color": color, "xyz": inst_xyz(i)})
-    else:
+            tried.append({"cam": cam_name, "err": str(exc)})
         best = None
-        for i in cands:
-            if best is None or i["hits"] > best["hits"]:
-                best = i
-        taken.append(best)
-        targets.append({"color": color, "xyz": inst_xyz(best)})
-report["targets"] = [{"color": t["color"], "xyz": r3(t["xyz"]) if t["xyz"] else None} for t in targets]
+        for rect in found:
+            if min(rect["da"], rect["db"]) > 0.075 or max(rect["da"], rect["db"]) > 0.11:
+                continue
+            if min(rect["da"], rect["db"]) < 0.03 or rect["top"] > 0.15 or rect["top"] < 0.03:
+                continue
+            dist = math.sqrt((rect["cx"] - gx) ** 2 + (rect["cy"] - gy) ** 2)
+            rect["dist"] = dist
+            if dist > 0.04:
+                continue
+            if best is None or dist < best["dist"]:
+                best = rect
+        if best is not None:
+            best["tried"] = len(tried)
+            return best, tried
+    return None, tried
+
+
+def gripper_yaw(rect):
+    th = rect["th"]
+    phi = th if rect["db"] <= rect["da"] else th + math.pi / 2.0
+    square = abs(rect["da"] - rect["db"]) < 0.012
+    options = [phi + k * math.pi / 2.0 for k in range(-4, 5)] if square else [phi + k * math.pi for k in range(-2, 3)]
+    best = None
+    for o in options:
+        if o > -math.pi / 2.0 - 1e-6 and o <= math.pi / 2.0 + 1e-6:
+            if best is None or abs(o) < abs(best):
+                best = o
+    return best
+
 
 picks = []
-used = []
-if not END["ended"] and containers:
-    try:
-        r0 = open_gripper()
-        is_ended(r0)
-    except Exception as exc:
-        err("open", exc)
-    for gi in range(len(targets)):
-        if END["ended"]:
+targets = []
+for goal in goals:
+    objs = memory.get(goal["color"])
+    if objs is None or len(objs) == 0:
+        targets.append({"color": goal["color"], "obj": None})
+        continue
+    ranked = sorted(objs, key=lambda o: -(o["hits"] * 1000 + o["n"]))
+    chosen = ranked if goal["all"] else ranked[:1]
+    for o in chosen:
+        targets.append({"color": goal["color"], "obj": o})
+report["targets"] = targets
+for tgt in targets:
+    if tick["done"]:
+        break
+    color = tgt["color"]
+    info = {"color": color, "attempts": []}
+    item = tgt["obj"]
+    if item is None:
+        info["error"] = "colour never seen"
+        picks.append(info)
+        continue
+    info["remembered"] = item
+    gx = item["xyz"][0]
+    gy = item["xyz"][1]
+    gz = item["xyz"][2]
+    for attempt in range(2):
+        if tick["done"]:
             break
-        tgt = targets[gi]
-        last = gi == len(targets) - 1
-        entry = {"color": tgt["color"]}
-        picks.append(entry)
-        if tgt["xyz"] is None:
-            entry["skip"] = "no remembered position"
+        att = {}
+        servo(home_q, 20, 1.0, settle=2)
+        if tick["done"]:
+            break
+        rect, tried = locate_container(gx, gy, gz)
+        att["tried"] = tried
+        if rect is None:
+            att["error"] = "container not localized"
+            cx = gx
+            cy = gy
+            top = item["zmax"] + 0.035
+            phi = 0.0
+        else:
+            att["rect"] = {k: (round(v, 4) if k not in ("src", "tried") else v) for k, v in rect.items()}
+            cx = rect["cx"]
+            cy = rect["cy"]
+            top = rect["top"]
+            phi = gripper_yaw(rect)
+        quat = yaw_quat(phi)
+        att["phi_deg"] = round(math.degrees(phi), 1)
+        grasp_z = max(0.5 * top, 0.02)
+        q_pre = ik((cx, cy, top + 0.07), None, quat)
+        q_grasp = ik((cx, cy, grasp_z), q_pre, quat)
+        q_lift = ik((cx, cy, top + 0.12), q_grasp, quat)
+        if q_pre is None or q_grasp is None or q_lift is None:
+            att["error"] = "ik failed"
+            info["attempts"].append(att)
             continue
-        best = None
-        for ci in range(len(containers)):
-            if ci in used:
-                continue
-            d = dist2((containers[ci]["x"], containers[ci]["y"]), tgt["xyz"])
-            if best is None or d < best[0]:
-                best = [d, ci]
-        if best is None:
-            entry["skip"] = "no container left"
-            continue
-        used.append(best[1])
-        c = containers[best[1]]
-        others = [containers[k] for k in range(len(containers)) if k != best[1]]
-        yaw, clearance = choose_yaw(c, others)
-        entry["container"] = best[1]
-        entry["match_dist"] = round(best[0], 4)
-        entry["yaw_deg"] = round(math.degrees(yaw), 1)
-        entry["clearance"] = round(clearance, 4)
-        grasp_z = max(c["top"] - 0.025, 0.015)
-        try:
-            res = move((c["x"], c["y"], c["top"] + 0.09), yaw, 0.015, 150)
-            entry["above"] = [bool(res.ok), int(res.steps_executed)]
-            if END["ended"]:
+        servo(q_pre, 25, 1.0, settle=4)
+        servo(q_grasp, 14, 1.0, settle=5)
+        log("at_grasp_" + color)
+        for k in range(18):
+            if tick["done"]:
                 break
-            res = move((c["x"], c["y"], grasp_z), yaw, 0.01, 80)
-            entry["descend"] = [bool(res.ok), int(res.steps_executed)]
-            if END["ended"]:
+            send(q_grasp, 0.0)
+        if tick["done"]:
+            info["attempts"].append(att)
+            break
+        att["grip_closed"] = round(float(get_robot_state().gripper_positions["primary"]), 3)
+        servo(q_lift, 20, 0.0, settle=6)
+        log("lifted_" + color)
+        if tick["done"]:
+            info["attempts"].append(att)
+            break
+        grip = float(get_robot_state().gripper_positions["primary"])
+        att["grip_lifted"] = round(grip, 3)
+        att["scan_lifted"] = [f for f in scan("lifted_" + color, False) if f["c"] == color]
+        held = grip > 0.03
+        att["held"] = held
+        q_down = ik((cx, cy, grasp_z + 0.008), q_lift, quat)
+        if held and q_down is not None:
+            servo(q_down, 18, 0.0, settle=3)
+        for k in range(8):
+            if tick["done"]:
                 break
-            res = close_gripper()
-            is_ended(res)
-            entry["close"] = [bool(res.ok), int(res.steps_executed)]
-            entry["grip_closed"] = round(float(get_robot_state().gripper_positions["primary"]), 3)
-            if END["ended"]:
-                break
-            res = move((c["x"], c["y"], c["top"] + 0.10), yaw, 0.015, 100)
-            entry["lift"] = [bool(res.ok), int(res.steps_executed)]
-            if END["ended"]:
-                break
-            st = get_robot_state()
-            entry["grip_lifted"] = round(float(st.gripper_positions["primary"]), 3)
-            entry["ee_lifted"] = r3(st.end_effector_poses["primary"].position)
-            q = current_q()
-            run_path([q for k in range(6)], 0.0)
-            if END["ended"] or last:
-                break
-            res = move((c["x"], c["y"], grasp_z + 0.005), yaw, 0.015, 100)
-            entry["lower"] = [bool(res.ok), int(res.steps_executed)]
-            if END["ended"]:
-                break
-            res = open_gripper()
-            is_ended(res)
-            if END["ended"]:
-                break
-            res = move((c["x"], c["y"], c["top"] + 0.09), yaw, 0.02, 80)
-            entry["retreat"] = [bool(res.ok), int(res.steps_executed)]
-        except Exception as exc:
-            err("pick " + tgt["color"], exc)
+            send(current_q(), 1.0)
+        servo(q_pre, 14, 1.0, settle=2)
+        log("released_" + color)
+        info["attempts"].append(att)
+        if held:
+            break
+    picks.append(info)
+
 report["picks"] = picks
-report["ended"] = END["ended"]
-report["ticks"] = TRACK["tick"]
+report["term"] = tick["term"]
+report["ticks"] = tick["n"]
 try:
-    report["final_t"] = float(get_robot_state().timestamp_s)
+    report["final_meta"] = dict(get_task_context().metadata)
 except Exception:
     pass
-
 result = report

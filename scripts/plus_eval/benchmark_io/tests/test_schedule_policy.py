@@ -4,7 +4,7 @@ from benchmark_io.unified_study import Queue, configurations
 import pytest
 
 
-@pytest.mark.parametrize('total,per_gpu', [(0,9),(19,10),(18,8),(True,9),(18,9.0)])
+@pytest.mark.parametrize('total,per_gpu', [(0,9),(25,13),(18,8),(True,9),(18,9.0)])
 def test_evaluation_slots_reject_invalid_limits(tmp_path,total,per_gpu):
     write(tmp_path/'schedule_policy.json',dict(evaluation_workers_total=total,evaluation_workers_per_gpu=per_gpu))
     with pytest.raises(ValueError,match='evaluation concurrency'):
@@ -12,7 +12,7 @@ def test_evaluation_slots_reject_invalid_limits(tmp_path,total,per_gpu):
 
 
 @pytest.mark.parametrize('limits', [{'0':15}, {'0':15,'1':3,'2':1}, {'0':15,'1':True},
-    {'0':15,'1':-1}, {'0':19,'1':0}, {'0':14,'1':3}, [15,3]])
+    {'0':15,'1':-1}, {'0':25,'1':0}, {'0':14,'1':3}, [15,3]])
 def test_evaluation_placement_rejects_invalid_gpu_maps(tmp_path, limits):
     write(tmp_path/'schedule_policy.json',dict(evaluation_workers_total=18,evaluation_workers_by_gpu=limits))
     with pytest.raises(ValueError,match='evaluation concurrency'):
@@ -25,6 +25,27 @@ def test_gpu_limits_reload_and_allow_draining_a_device_completely(tmp_path):
     assert evaluation_placement(tmp_path)==(18,{'0':15,'1':3})
     write(tmp_path/'schedule_policy.json',dict(evaluation_workers_total=18,evaluation_workers_by_gpu={'0':18,'1':0}))
     assert evaluation_placement(tmp_path)==(18,{'0':18,'1':0})
+    write(tmp_path/'schedule_policy.json',dict(evaluation_workers_total=20,evaluation_workers_by_gpu={'0':10,'1':10}))
+    assert evaluation_placement(tmp_path)==(20,{'0':10,'1':10})
+
+
+def test_scheduler_override_does_not_change_episode_worker_runtime(tmp_path):
+    from benchmark_io.unified_study import environment
+    from benchmark_io.watch_unified import scheduler_environment
+    import os
+    study = tmp_path/'study'
+    (study/'runtime_source').mkdir(parents=True)
+    scheduler = tmp_path/'operator'
+    (scheduler/'benchmark_io').mkdir(parents=True)
+    (scheduler/'benchmark_io/unified_study.py').write_text('')
+    worker_env = environment(study)
+    override = scheduler_environment(study, scheduler)
+    assert override['PYTHONPATH'].split(os.pathsep)[0] == str(scheduler)
+    assert override['PYTHONPATH'].split(os.pathsep)[1:] == worker_env['PYTHONPATH'].split(os.pathsep)
+    assert environment(study) == worker_env
+    assert scheduler_environment(study) == worker_env
+    with pytest.raises(ValueError, match='Scheduler code'):
+        scheduler_environment(study, tmp_path/'missing')
 
 
 def freeze(queue, key):

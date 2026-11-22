@@ -5,15 +5,22 @@
   "task": "StopCube",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "3f22b670eea6bd128bf0070b8780287e3cd59ee5dd8d053d90a8c2cce4430f0e",
-    "rlib.py": "ef7286cc695eb6f962e9b742f9cef09c0c3e1b1cde9ee01c2b721030ef9daf76"
+    "controller.py": "8bde86a579bd272f422713c0091c0d1e95286d8eca2bb2b43caf1316a19b2b16",
+    "presser.py": "76f58741d429fce5a2a2ce8a9fee36c76a42738856f4fd2a4a6c518164affb6d",
+    "sclib.py": "3d5826d2af28e10b01ebbc29bd8e9db206b8013abadfb96649b7bec8f28c6443"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "8bde86a579bd272f422713c0091c0d1e95286d8eca2bb2b43caf1316a19b2b16",
+    "presser.py": "76f58741d429fce5a2a2ce8a9fee36c76a42738856f4fd2a4a6c518164affb6d",
+    "sclib.py": "3d5826d2af28e10b01ebbc29bd8e9db206b8013abadfb96649b7bec8f28c6443"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "a18da237b4dbcf008cb437d427fbc668aefdf2df6fd2a4d84259f336c66dfec1",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "3f22b670eea6bd128bf0070b8780287e3cd59ee5dd8d053d90a8c2cce4430f0e",
-    "rlib.py": "ef7286cc695eb6f962e9b742f9cef09c0c3e1b1cde9ee01c2b721030ef9daf76"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "4840ba5c4c3c1a21da7ac26338fd54fbd5c163d3988449f658456499b5266a2a"
+  }
 }

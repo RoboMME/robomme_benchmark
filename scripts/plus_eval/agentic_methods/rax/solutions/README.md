@@ -1,19 +1,16 @@
-# Frozen RoboMME-Plus solutions
+# Frozen RAX R10 policies
 
-The archive contains nine configurations, 16 tasks each: `demo-only/R0`, `interaction-only/R1,R3,R5,R10`,
-`demo&interaction/R1,R3,R5,R10`. [index.json](index.json) lists all 144 selections.
+32 evaluated task policies: `interaction-only/R10/` and `hybrid/R10/`, each with
+16 tasks. These are exact copies from the current `r10_20261121` evaluation.
+`manifest.json` records source and published hashes; `index.json` lists the selections.
+Only interpreter caches are omitted. Original development history is retained externally.
 
-Use R10 for the main interaction results; R1/R3/R5 are optional.
+Run from the repository root:
 
-Executable policy logic matches the full evaluation. Each task's `manifest.json`
-records published file hashes, evaluated source hashes and policy provenance.
-`publication_annotations` records setting-name edits to comments, docstrings and
-documentation; Python logic was checked for AST equivalence. RAX also
-includes the portable native runner settings. `runtime_policy.json` records the
-shared execution limits. Development histories remain in the external run logs.
+```bash
+python scripts/plus_eval/agentic_methods/rax/eval_plus.py \
+  --setting hybrid --budget 10 --gpu 0 --output-dir "<RUN_ROOT>/rax-hybrid-R10"
+```
 
-See [the method README](../README.md#run-and-inspect) for evaluation commands.
-
-Generated Python bytecode is excluded from the distributable files. When present
-in an evaluated bundle, its original hash remains in `source_policy_files`;
-`omitted_generated_files` records the exclusion. Executable policy logic is unchanged.
+Use `--setting interaction-only` for the other setting, `--tasks TASK --episodes 0 1`
+for a subset, and `--artifacts logs` to omit videos. See the [adapter README](../README.md).

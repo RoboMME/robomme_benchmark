@@ -5,15 +5,20 @@
   "task": "BinFill",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "fa256276ce5fce99fb6a67ab4fa3daedc977f1992ca7b4fca22db71ec33c1025",
-    "lib.py": "bb7fb8db1a4c37bcfbe310cef3318f691e8435e87692029dd935218059a6c273"
+    "controller.py": "268b119af46ba860cc0b3e8aed13b9517354edbb0a1b5e83d400455d01852264",
+    "lib.py": "81acc21399c5c8e94e28fdfff937605ca0568468ef4db1f77aec0e45c10fc252"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "268b119af46ba860cc0b3e8aed13b9517354edbb0a1b5e83d400455d01852264",
+    "lib.py": "81acc21399c5c8e94e28fdfff937605ca0568468ef4db1f77aec0e45c10fc252"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "000dff9b44a637ff6f1fd1c1c2a613dff13d0db67189a85336e05cab09715b2c",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "fa256276ce5fce99fb6a67ab4fa3daedc977f1992ca7b4fca22db71ec33c1025",
-    "lib.py": "bb7fb8db1a4c37bcfbe310cef3318f691e8435e87692029dd935218059a6c273"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "ab5a56e33a16705f3667fc8a6e95f32149fc672eca4d1aafce18fdba8bb0e747"
+  }
 }

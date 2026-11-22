@@ -1,0 +1,30 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "fd90fe8073eb85bfd68b49fdc5abb13dc98b0d07570536e1fda7c46b3bb7c5ba",
+    "geom.py": "714649c3841649d8e2e3a847d6f564fe9726067490219449797497e6350532c9",
+    "perception.py": "ad4934d50af2eb1f89dbb32f1f24713c7deb918dfc67c78d3ff8cac7b571cd3c",
+    "warp.py": "d7975c8ccab2fe07e69dd01fc2cb65d22810397395477e1029c93752f0bbd729",
+    "yawplan.py": "0691785c64d623ddf485b8430bb0beaa5eec8af3b386ef66b9f74becc71e457a"
+  },
+  "source_policy_files": {
+    "controller.py": "fd90fe8073eb85bfd68b49fdc5abb13dc98b0d07570536e1fda7c46b3bb7c5ba",
+    "geom.py": "714649c3841649d8e2e3a847d6f564fe9726067490219449797497e6350532c9",
+    "perception.py": "ad4934d50af2eb1f89dbb32f1f24713c7deb918dfc67c78d3ff8cac7b571cd3c",
+    "warp.py": "d7975c8ccab2fe07e69dd01fc2cb65d22810397395477e1029c93752f0bbd729",
+    "yawplan.py": "0691785c64d623ddf485b8430bb0beaa5eec8af3b386ef66b9f74becc71e457a"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "aaee702e56fe13000e07f61ddafcb205d3c2f3dccaa8edd4a1f33420684e49b5",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "e0e39b120d06847e68d68e6a86c218b10021e8901b4b9c62dc3618cbfdc6a626"
+  }
+}

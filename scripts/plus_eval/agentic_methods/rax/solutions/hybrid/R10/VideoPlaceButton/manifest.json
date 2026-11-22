@@ -1,0 +1,38 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "analysis.py": "7185d94e3cb5a81f1682af7836ff127e0d779bfff5743dcf3459cd6b8bdc970f",
+    "controller.py": "c6f7640a81b540751cf765ae45a9a40428e8bef981bc9f8d19ed1be083f8bfe7",
+    "geom.py": "0c3928dd05ae82395c8f91ffaae350caad2082e9891bbd2e616115fdf2be9abc",
+    "live.py": "1cd653f2f14d88171ff85ab61905f39e489eaff12379e377593dbd5cb18d7d5a",
+    "motion.py": "528f868a4e9bcf5810780c850f56ad9c2da49463d8ca37ed2c89beed2acc9304",
+    "perm.py": "d743068022bb989f0b1603a49231e50c9b463d4aeb41dfcf548ae6eae77ddb1e",
+    "seqload.py": "f4ec9693de0b9ad6c96543b974b513cdc0db3c96c40b2381997838118aa8b366",
+    "swaps.py": "4e6c4e6b931c9e5d1ab99a7fa0634b14f98719876805118c0ecba37b8a50e148",
+    "vision.py": "3b16c7273c78ec4ea8b415c1f59f6a9327c64d15750d1f8c9070b529164e204d"
+  },
+  "source_policy_files": {
+    "analysis.py": "7185d94e3cb5a81f1682af7836ff127e0d779bfff5743dcf3459cd6b8bdc970f",
+    "controller.py": "c6f7640a81b540751cf765ae45a9a40428e8bef981bc9f8d19ed1be083f8bfe7",
+    "geom.py": "0c3928dd05ae82395c8f91ffaae350caad2082e9891bbd2e616115fdf2be9abc",
+    "live.py": "1cd653f2f14d88171ff85ab61905f39e489eaff12379e377593dbd5cb18d7d5a",
+    "motion.py": "528f868a4e9bcf5810780c850f56ad9c2da49463d8ca37ed2c89beed2acc9304",
+    "perm.py": "d743068022bb989f0b1603a49231e50c9b463d4aeb41dfcf548ae6eae77ddb1e",
+    "seqload.py": "f4ec9693de0b9ad6c96543b974b513cdc0db3c96c40b2381997838118aa8b366",
+    "swaps.py": "4e6c4e6b931c9e5d1ab99a7fa0634b14f98719876805118c0ecba37b8a50e148",
+    "vision.py": "3b16c7273c78ec4ea8b415c1f59f6a9327c64d15750d1f8c9070b529164e204d"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "c75ea3ea3cb72e5e67b9584fa8a0df55919038e391454a06a93107f6c6d55628",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "b643489fbfd04e364166578d48b2a1dc4f67626f4f34f69b96a89c507342fce3"
+  }
+}

@@ -1,945 +1,818 @@
-# v05 - PickHighlight: v04 + (a) lost-track re-acquisition: a cube blob not explained by any
-# track is given to the nearest lost track (a pairwise swap hidden by the arm leaves exactly that
-# signature), (b) leave home only right after a swap ended (or when the measured quiet gap still
-# covers a full excursion), (c) faster excursions (press ~50, pick ~60 ticks) so an excursion fits
-# the quiet gap (ep1: swaps every ~100 ticks, quiet gap ~64), (d) per-tick tracked gripper close/open,
-# (e) skip/postpone a target whose track is lost or ambiguous at departure.
-# v04 - PickHighlight: v03 + IK branch selection (cube 4-fold yaw symmetry) + robust pick-cycle /
-# tick-budget scheduling. v03 succeeded on ep0, but one pick took 186 ticks (IK jumped branch on a
-# 6 cm descent) and the inflated cycle estimate then cost a 400-tick wait.
-# v03 - PickHighlight: watch-and-track program synchronised with the periodic swaps.
-# v02 (ep0) showed: (a) its disc detector counted 0 white pixels although the observation RGB had
-# the discs (depth/height gate too strict), (b) swaps recur periodically (~every 140 ticks,
-# ~38 ticks long) for the whole episode. v03 gates disc pixels by height < 3 cm (invalid depth ->
-# table plane), measures the swap period at home, and only leaves home for a press or one
-# pick when the predicted quiet window is long enough.
-# Evidence from v01 (ep0 video): white discs appear under some cubes ~0.5 s into the episode
-# for ~2.2 s, then cubes swap positions pairwise in ~2 s events (two events seen, 7 s apart).
-# Lifting a non-highlighted cube terminates the episode as failure.
-# Strategy: hold still at home (the arm is outside the front view), track every cube each
-# control tick from front RGB-D (height above the observed table plane), record which tracks
-# get a white disc, keep tracking through swaps until the scene is quiet, then press the
-# button, pick + replace every highlighted track (moving by IK + per-tick joint interpolation
-# so tracking continues during motion), and press the button again.
-# Public API only; no hardcoded world coordinates or pixels.
+# v03_fast_pick_rest_model — robomme_plus PickHighlight (from v02)
+# v02 failed seed 2 (short static gaps): actions overran into shuffles and one target track went
+# stale. v03: (1) shuffle timing model = REST interval (shuffle end -> next start) + duration,
+# learned only from shuffles whose start was watched from home ("clean"); anchored on the last
+# observed shuffle end, so a late-detected start after an overrun no longer skews predictions;
+# (2) faster pick: lower stand-off/lift, no wrist refine, release at lift height, straight home;
+# press returns home directly; (3) track repair: tracks without pixel support are re-matched
+# one-to-one to unclaimed cube blobs; (4) geometry fallback (snap to blob / segment_text box).
+# No probe-measured coordinate/size/colour/timing is used as a constant.
 import math
 
-CAM = "front"
-report = {"stage": "start", "errors": []}
+CAM = "wrist"
+RING_ON = 0.5            # ring white fraction that counts as "lit"
+HIGHLIGHT_DELTA = 0.45   # max-min ring fraction for a cube to count as highlighted
+OFF_TICKS = 30           # ticks with no lit ring before we accept "highlight over"
+STATIC_WINDOW = 10       # ticks over which motion is measured
+STATIC_PX = 0.5          # max centroid motion (px) over STATIC_WINDOW to count as static
+PRE_Z = 0.03             # pre-grasp stand-off above the cube top (m)
+LIFT_Z = 0.04            # lift height above the cube top (m)
+PRESS_ABOVE = 0.08       # stand-off above the button top (m)
+PRESS_DEPTH = 0.02       # commanded depth below the measured button top (m)
 
 
-def note_error(where, err):
-    if len(report["errors"]) < 40:
-        report["errors"].append(where + ": " + str(err)[:300])
+# ---------------------------------------------------------------- pure-python vision helpers
+def classify_frame(rows, table_chroma):
+    tr = table_chroma[0]
+    tg = table_chroma[1]
+    cube_px = []
+    white_px = []
+    y = 0
+    for row in rows:
+        x = 0
+        for px in row:
+            r = px[0]
+            g = px[1]
+            b = px[2]
+            hi = max(r, g, b)
+            lo = min(r, g, b)
+            if lo > 185 and hi - lo < 35:
+                white_px.append((x, y))
+            elif hi - lo >= 25:
+                s = r + g + b
+                cr = r / s - tr
+                cg = g / s - tg
+                if cr * cr + cg * cg > 0.0009:
+                    cube_px.append((x, y))
+            x += 1
+        y += 1
+    return cube_px, white_px
 
 
-def to_list(arr):
-    try:
-        return arr.tolist()
-    except Exception:
-        out = []
-        for row in arr:
-            out.append([v for v in row])
-        return out
+def median_chroma(rows, stride):
+    crs = []
+    cgs = []
+    for y in range(0, len(rows), stride):
+        row = rows[y]
+        for x in range(0, len(row), stride):
+            px = row[x]
+            s = px[0] + px[1] + px[2] + 1
+            crs.append(px[0] / s)
+            cgs.append(px[1] / s)
+    crs.sort()
+    cgs.sort()
+    return (crs[len(crs) // 2], cgs[len(cgs) // 2])
 
 
-def quantile(values, fraction):
-    ordered = sorted(float(v) for v in values)
-    if not ordered:
-        return None
-    return ordered[int((len(ordered) - 1) * fraction)]
-
-
-def mat_from_quat(q):
-    w, x, y, z = float(q[0]), float(q[1]), float(q[2]), float(q[3])
-    return [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]]
-
-
-def cam_model(obs, cam):
-    c = obs.cameras[cam]
-    K = to_list(c.intrinsics)
-    pose = c.camera_pose
-    return {"fx": float(K[0][0]), "fy": float(K[1][1]), "cx": float(K[0][2]),
-            "cy": float(K[1][2]), "R": mat_from_quat(pose.quaternion_wxyz),
-            "t": [float(v) for v in pose.position]}
-
-
-def project(m, u, v, d):
-    xc = (u + 0.5 - m["cx"]) / m["fx"] * d
-    yc = (v + 0.5 - m["cy"]) / m["fy"] * d
-    R = m["R"]
-    t = m["t"]
-    return (R[0][0] * xc + R[0][1] * yc + R[0][2] * d + t[0],
-            R[1][0] * xc + R[1][1] * yc + R[1][2] * d + t[1],
-            R[2][0] * xc + R[2][1] * yc + R[2][2] * d + t[2])
-
-
-def res_info(res):
-    d = {}
-    try:
-        d["ok"] = bool(res.ok)
-        d["status"] = str(res.status)
-        d["steps"] = int(res.steps_executed)
-    except Exception:
-        pass
-    return d
-
-
-def is_terminal(res):
-    try:
-        return bool(res.terminated) or bool(res.truncated)
-    except Exception:
-        return False
-
-
-# ---------------- metadata ----------------
-context = get_task_context()
-state0 = get_robot_state()
-base_frame = state0.base_frame
-embodiment = state0.embodiment
-report["language"] = context.language
-max_steps = 2000
-try:
-    max_steps = int(robomme_plus.get_task_metadata()["max_steps"])
-except Exception as err:
-    note_error("meta", err)
-report["max_steps"] = max_steps
-home_quat = [float(v) for v in state0.end_effector_poses["primary"].quaternion_wxyz]
-home_joints = [float(v) for v in state0.joint_positions["primary"]]
-flags = {"terminal": False, "tick": 0, "cycle": 80}
-
-
-def yaw_quat(delta_deg):
-    a = math.radians(delta_deg) / 2.0
-    w1, x1, y1, z1 = math.cos(a), 0.0, 0.0, math.sin(a)
-    w2, x2, y2, z2 = home_quat
-    return [w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2]
-
-
-# ---------------- initial full-frame detection ----------------
-obs0 = get_observation()
-M = cam_model(obs0, CAM)
-dep0 = to_list(obs0.cameras[CAM].depth_m)
-H = len(dep0)
-W = len(dep0[0])
-zs = []
-for v in range(0, H, 8):
-    for u in range(0, W, 8):
-        d = float(dep0[v][u])
-        if d > 0.05 and d < 3.0:
-            zs.append(project(M, u, v, d)[2])
-table_z = quantile(zs, 0.5)
-report["table_z"] = table_z
-
-
-def plane_point(u, v):
-    """Intersect the pixel ray with the observed table plane (used when depth is invalid)."""
-    r = project(M, u, v, 1.0)
-    t0 = M["t"]
-    dz = r[2] - t0[2]
-    if abs(dz) < 1e-6:
-        return None
-    s = (table_z - t0[2]) / dz
-    if s <= 0:
-        return None
-    return (t0[0] + (r[0] - t0[0]) * s, t0[1] + (r[1] - t0[1]) * s, table_z)
-
-
-def height_points(dep, u0, v0, u1, v1, stride, hmin, hmax):
-    out = []
-    for v in range(max(0, v0), min(H, v1), stride):
-        drow = dep[v]
-        for u in range(max(0, u0), min(W, u1), stride):
-            d = float(drow[u])
-            if d <= 0.05 or d >= 3.0:
-                continue
-            p = project(M, u, v, d)
-            h = p[2] - table_z
-            if h < hmin or h > hmax:
-                continue
-            if p[0] < 0.05 or p[0] > 1.0 or abs(p[1]) > 0.6:
-                continue
-            out.append((p[0], p[1], p[2], u, v))
-    return out
-
-
-def components(pts, cell):
-    cells = {}
-    for i in range(len(pts)):
-        key = (int(math.floor(pts[i][0] / cell)), int(math.floor(pts[i][1] / cell)))
-        if key in cells:
-            cells[key].append(i)
-        else:
-            cells[key] = [i]
+def components(pixels, width):
+    occupied = set()
+    for p in pixels:
+        occupied.add(p[1] * width + p[0])
     seen = set()
     comps = []
-    for key in cells:
+    for p in pixels:
+        key = p[1] * width + p[0]
         if key in seen:
             continue
-        stack = [key]
         seen.add(key)
-        members = []
-        while stack:
+        stack = [key]
+        comp = []
+        while len(stack) > 0:
             k = stack.pop()
-            members.extend(cells[k])
-            for dx in (-1, 0, 1):
-                for dy in (-1, 0, 1):
-                    nk = (k[0] + dx, k[1] + dy)
-                    if nk in cells and nk not in seen:
+            cx = k % width
+            cy = k // width
+            comp.append((cx, cy))
+            for nk in (k - 1, k + 1, k - width, k + width):
+                if nk in occupied and nk not in seen:
+                    nx = nk % width
+                    if abs(nx - cx) <= 1:
                         seen.add(nk)
                         stack.append(nk)
-        comps.append(members)
+        comps.append(comp)
     return comps
 
 
-def extent(pts, members, axis):
-    vals = [pts[i][axis] for i in members]
-    return quantile(vals, 0.97) - quantile(vals, 0.03)
+def centroid(pts):
+    sx = 0.0
+    sy = 0.0
+    for p in pts:
+        sx += p[0]
+        sy += p[1]
+    n = max(1, len(pts))
+    return (sx / n, sy / n)
 
 
-def top_center(pts, members):
-    zmax = quantile([pts[i][2] for i in members], 0.97)
-    top = [i for i in members if pts[i][2] >= zmax - 0.008]
-    if len(top) < 3:
-        top = members
-    return [quantile([pts[i][0] for i in top], 0.5), quantile([pts[i][1] for i in top], 0.5), zmax, top]
-
-
-def split_members(pts, members):
-    xs = [pts[i][0] for i in members]
-    ys = [pts[i][1] for i in members]
-    mx = sum(xs) / len(xs)
-    my = sum(ys) / len(ys)
-    sxx = sum((x - mx) * (x - mx) for x in xs)
-    syy = sum((y - my) * (y - my) for y in ys)
-    sxy = sum((xs[k] - mx) * (ys[k] - my) for k in range(len(xs)))
-    ang = 0.5 * math.atan2(2 * sxy, sxx - syy)
-    ax = math.cos(ang)
-    ay = math.sin(ang)
-    proj = sorted(((pts[i][0] - mx) * ax + (pts[i][1] - my) * ay, i) for i in members)
-    span = proj[-1][0] - proj[0][0]
-    k = int(round(span / 0.045))
-    if k < 2:
-        return [members]
-    if k > 4:
-        k = 4
-    lo = proj[0][0]
-    groups = [[] for g in range(k)]
-    for val, i in proj:
-        g = int((val - lo) / (span / k + 1e-9))
-        if g >= k:
-            g = k - 1
-        groups[g].append(i)
-    return [g for g in groups if g]
-
-
-# button from SAM (prompt "button"), refined with height points near it
-button = None
-for prompt in ("button", "round button", "white button"):
-    try:
-        loc = localize_object(prompt, camera_name=CAM, target_frame=base_frame)
-    except Exception as err:
-        note_error("button_loc", err)
-        continue
-    if loc.ok and len(loc.point_cloud.points) >= 10:
-        p = loc.geometry.pose.position
-        button = {"prompt": prompt, "x": float(p[0]), "y": float(p[1]), "z": float(p[2])}
-        break
-report["button_sam"] = button
-
-full_pts = height_points(dep0, 0, 0, W, H, 1, 0.012, 0.15)
-objects = []
-for comp in components(full_pts, 0.01):
-    if len(comp) < 12:
-        continue
-    parts = [comp]
-    if extent(full_pts, comp, 0) > 0.065 or extent(full_pts, comp, 1) > 0.065:
-        parts = split_members(full_pts, comp)
-    for part in parts:
-        if len(part) < 12:
-            continue
-        tc = top_center(full_pts, part)
-        objects.append({"x": tc[0], "y": tc[1], "top": tc[2], "h": tc[2] - table_z,
-                        "xe": extent(full_pts, part, 0), "ye": extent(full_pts, part, 1),
-                        "n": len(part),
-                        "u0": min(full_pts[i][3] for i in part), "u1": max(full_pts[i][3] for i in part),
-                        "v0": min(full_pts[i][4] for i in part), "v1": max(full_pts[i][4] for i in part)})
-
-# button refinement: the cap top = height points within 4 cm of SAM center
-if button is not None:
-    near = [p for p in full_pts if (p[0] - button["x"]) ** 2 + (p[1] - button["y"]) ** 2 < 0.04 ** 2]
-    if len(near) >= 5:
-        bz = quantile([p[2] for p in near], 0.97)
-        cap = [p for p in near if p[2] >= bz - 0.006]
-        button["top"] = bz
-        button["cx"] = quantile([p[0] for p in cap], 0.5)
-        button["cy"] = quantile([p[1] for p in cap], 0.5)
-    else:
-        button["top"] = button["z"] + 0.005
-        button["cx"] = button["x"]
-        button["cy"] = button["y"]
-
-tracks = []
-for o in objects:
-    if button is not None and (o["x"] - button["x"]) ** 2 + (o["y"] - button["y"]) ** 2 < 0.045 ** 2:
-        continue
-    if o["h"] < 0.02 or o["h"] > 0.08:
-        continue
-    if o["xe"] > 0.09 or o["ye"] > 0.09 or o["xe"] < 0.015 or o["ye"] < 0.015:
-        continue
-    tracks.append({"id": len(tracks), "x": o["x"], "y": o["y"], "top": o["top"], "vx": 0.0, "vy": 0.0,
-                   "white": 0, "lost": 0, "picked": False, "x0": o["x"], "y0": o["y"],
-                   "u0": o["u0"], "u1": o["u1"], "v0": o["v0"], "v1": o["v1"]})
-report["objects"] = [{k: (round(v, 4) if k in ("x", "y", "top", "h", "xe", "ye") else v) for k, v in o.items()}
-                     for o in objects]
-report["n_tracks"] = len(tracks)
-
-roi = [W, H, 0, 0]
-for t in tracks:
-    roi[0] = min(roi[0], t["u0"])
-    roi[1] = min(roi[1], t["v0"])
-    roi[2] = max(roi[2], t["u1"])
-    roi[3] = max(roi[3], t["v1"])
-roi = [max(0, roi[0] - 30), max(0, roi[1] - 30), min(W, roi[2] + 31), min(H, roi[3] + 31)]
-report["roi"] = roi
-
-hl = {"peak": 0, "on_tick": None, "off_tick": None, "low_run": 0, "frames": 0}
-motion = {"last_motion_tick": None, "events": [], "in_event": False, "n_motion_ticks": 0, "enabled": False,
-          "enabled_since": None}
-reacq_log = []
-work = [0.0, 0.0, 0.0, 0.0]
-if tracks:
-    work = [min(t["x"] for t in tracks) - 0.08, max(t["x"] for t in tracks) + 0.08,
-            min(t["y"] for t in tracks) - 0.08, max(t["y"] for t in tracks) + 0.08]
-
-
-def track_frame(obs):
-    """Update every track from one observation; also accumulate highlight-disc evidence."""
-    tick = flags["tick"]
-    dep = to_list(obs.cameras[CAM].depth_m)
-    rgb = None
-    need_rgb = hl["off_tick"] is None
-    if need_rgb:
-        rgb = to_list(obs.cameras[CAM].rgb)
-    pts = height_points(dep, roi[0], roi[1], roi[2], roi[3], 2, 0.012, 0.09)
-    keep = []
-    for comp in components(pts, 0.01):
-        if extent(pts, comp, 0) > 0.13 or extent(pts, comp, 1) > 0.13:
-            continue  # the arm, not a cube
-        keep.extend(comp)
-    # point-level assignment to the nearest predicted track
-    assigned = [[] for t in tracks]
-    preds = [(t["x"] + t["vx"], t["y"] + t["vy"]) for t in tracks]
-    for i in keep:
-        p = pts[i]
-        best = None
-        bd = 0.04 * 0.04
-        for k in range(len(tracks)):
-            dx = p[0] - preds[k][0]
-            dy = p[1] - preds[k][1]
-            dd = dx * dx + dy * dy
-            if dd < bd:
-                bd = dd
-                best = k
-        if best is not None:
-            assigned[best].append(i)
-    moved = 0.0
-    for k in range(len(tracks)):
-        t = tracks[k]
-        if len(assigned[k]) >= 4:
-            tc = top_center(pts, assigned[k])
-            nvx = tc[0] - t["x"]
-            nvy = tc[1] - t["y"]
-            step_len = math.sqrt(nvx * nvx + nvy * nvy)
-            if step_len > moved and t["lost"] == 0:
-                moved = step_len
-            t["vx"] = 0.5 * t["vx"] + 0.5 * nvx
-            t["vy"] = 0.5 * t["vy"] + 0.5 * nvy
-            t["x"] = tc[0]
-            t["y"] = tc[1]
-            t["top"] = tc[2]
-            t["lost"] = 0
-        else:
-            t["x"] = preds[k][0]
-            t["y"] = preds[k][1]
-            t["vx"] = 0.5 * t["vx"]
-            t["vy"] = 0.5 * t["vy"]
-            t["lost"] += 1
-    # re-acquisition: cube-sized blobs of unassigned points go to the nearest lost track
-    lost_ids = [k for k in range(len(tracks)) if tracks[k]["lost"] >= 2]
-    # only with the arm parked at home (out of view) for a few ticks: no gripper blobs
-    es = motion["enabled_since"]
-    if lost_ids and motion["enabled"] and es is not None and tick - es >= 2:
-        used = set()
-        for k in range(len(tracks)):
-            for i in assigned[k]:
-                used.add(i)
-        free = [pts[i] for i in keep if i not in used]
-        if len(free) >= 6:
-            for comp in components(free, 0.01):
-                if len(comp) < 6 or not lost_ids:
-                    continue
-                ex = extent(free, comp, 0)
-                ey = extent(free, comp, 1)
-                if ex > 0.07 or ey > 0.07 or (ex < 0.012 and ey < 0.012):
-                    continue
-                tc = top_center(free, comp)
-                if tc[2] - table_z < 0.025 or tc[2] - table_z > 0.06:
-                    continue
-                if tc[0] < work[0] or tc[0] > work[1] or tc[1] < work[2] or tc[1] > work[3]:
-                    continue
-                if button is not None and (tc[0] - button["x"]) ** 2 + (tc[1] - button["y"]) ** 2 < 0.05 ** 2:
-                    continue
-                near_track = False
-                for t2 in tracks:
-                    if t2["lost"] == 0 and (t2["x"] - tc[0]) ** 2 + (t2["y"] - tc[1]) ** 2 < 0.03 ** 2:
-                        near_track = True
-                if near_track:
-                    continue
-                best = None
-                for k in lost_ids:
-                    dd = (tracks[k]["x"] - tc[0]) ** 2 + (tracks[k]["y"] - tc[1]) ** 2
-                    if dd < 0.4 * 0.4 and (best is None or dd < best[0]):
-                        best = (dd, k)
-                if best is None:
-                    continue
-                t = tracks[best[1]]
-                reacq_log.append([tick, t["id"], round(t["x"], 3), round(t["y"], 3), round(tc[0], 3),
-                                  round(tc[1], 3), t["lost"]])
-                t["x"] = tc[0]
-                t["y"] = tc[1]
-                t["top"] = tc[2]
-                t["vx"] = 0.0
-                t["vy"] = 0.0
-                t["lost"] = 0
-                t["reacq"] = t.get("reacq", 0) + 1
-                lost_ids = [k for k in lost_ids if k != best[1]]
-    if moved > 0.003 and motion["enabled"]:
-        motion["n_motion_ticks"] += 1
-        motion["last_motion_tick"] = tick
-        if not motion["in_event"]:
-            motion["in_event"] = True
-            es = motion["enabled_since"]
-            clean = es is not None and tick - es >= 3
-            motion["events"].append([tick, tick, clean, False])
-        else:
-            motion["events"][-1][1] = tick
-    elif motion["in_event"] and motion["last_motion_tick"] is not None and tick - motion["last_motion_tick"] > 3:
-        motion["in_event"] = False
-        if motion["enabled"] and motion["events"]:
-            motion["events"][-1][3] = True  # end observed from home
-    # highlight discs: white, flat (table height) pixels near a track, away from the button
-    if need_rgb:
-        counts = [0 for t in tracks]
-        total = 0
-        for v in range(roi[1], roi[3], 2):
-            crow = rgb[v]
-            drow = dep[v]
-            for u in range(roi[0], roi[2], 2):
-                c = crow[u]
-                lo = min(c[0], c[1], c[2])
-                if lo < 200 or max(c[0], c[1], c[2]) - lo > 30:
-                    continue
-                d = float(drow[u])
-                if d <= 0.05 or d >= 3.0:
-                    p = plane_point(u, v)
-                else:
-                    p = project(M, u, v, d)
-                if p is None or p[2] - table_z > 0.03:
-                    continue
-                if button is not None and (p[0] - button["x"]) ** 2 + (p[1] - button["y"]) ** 2 < 0.05 ** 2:
-                    continue
-                best = None
-                bd = 0.06 * 0.06
-                for k in range(len(tracks)):
-                    dx = p[0] - tracks[k]["x"]
-                    dy = p[1] - tracks[k]["y"]
-                    dd = dx * dx + dy * dy
-                    if dd < bd:
-                        bd = dd
-                        best = k
-                if best is not None:
-                    counts[best] += 1
-                    total += 1
-        if total >= 15:
-            if hl["on_tick"] is None:
-                hl["on_tick"] = tick
-            hl["frames"] += 1
-            for k in range(len(tracks)):
-                tracks[k]["white"] += counts[k]
-            if total > hl["peak"]:
-                hl["peak"] = total
-                hl["peak_counts"] = counts
-            hl["low_run"] = 0
-        elif hl["on_tick"] is not None:
-            hl["low_run"] += 1
-            if hl["low_run"] >= 3:
-                hl["off_tick"] = tick
-
-
-def obs_of(res):
-    try:
-        o = res.observation
-        if o is not None:
-            return o
-    except Exception:
-        pass
-    return get_observation()
-
-
-def tick_hold(grip):
-    st = get_robot_state()
-    r = step(RobotAction(arms={"primary": ArmCommand(
-        mode="joint_position", target=[float(v) for v in st.joint_positions["primary"]],
-        gripper_position=grip, embodiment=embodiment)}))
-    flags["tick"] += 1
-    if is_terminal(r):
-        flags["terminal"] = True
-        return r
-    try:
-        track_frame(obs_of(r))
-    except Exception as err:
-        note_error("track", err)
-    return r
-
-
-def step_joints(target, grip):
-    r = step(RobotAction(arms={"primary": ArmCommand(
-        mode="joint_position", target=target, gripper_position=grip, embodiment=embodiment)}))
-    flags["tick"] += 1
-    if is_terminal(r):
-        flags["terminal"] = True
-        return r
-    try:
-        track_frame(obs_of(r))
-    except Exception as err:
-        note_error("track", err)
-    return r
-
-
-motion_log = []
-
-
-def move_joints_tracked(q1, grip, tag, max_dq=0.045, settle=4):
-    st = get_robot_state()
-    q0 = [float(v) for v in st.joint_positions["primary"]]
-    dq = max(abs(q1[k] - q0[k]) for k in range(7))
-    n = max(1, int(dq / max_dq) + 1)
-    for i in range(1, n + settle + 1):
-        a = min(1.0, float(i) / n)
-        target = [q0[k] + (q1[k] - q0[k]) * a for k in range(7)]
-        step_joints(target, grip)
-        if flags["terminal"]:
-            break
-    motion_log.append({"tag": tag, "ticks": n + settle, "t": flags["tick"]})
-
-
-def best_ik(pos, yaw_deg):
-    """IK for a top-down pose; the cube is 4-fold symmetric, so try yaw, yaw+-90, yaw+180 and
-    keep the solution with the smallest joint change (prefer the requested yaw if it is small)."""
-    st = get_robot_state()
-    q0 = [float(v) for v in st.joint_positions["primary"]]
-    best = None
-    for off in (0, 90, -90, 180):
-        yaw = yaw_deg + off
-        try:
-            ik = solve_ik(Pose(pos, yaw_quat(yaw), base_frame), seed_joints=st.joint_positions["primary"])
-        except Exception as err:
-            note_error("ik", err)
-            continue
-        if not ik.ok:
-            continue
-        q1 = [float(v) for v in ik.joint_positions]
-        dq = max(abs(q1[k] - q0[k]) for k in range(7))
-        if off == 0 and dq < 0.6:
-            return (dq, yaw, q1)
-        if best is None or dq < best[0]:
-            best = (dq, yaw, q1)
-    return best
-
-
-def move_top_down(pos, yaw_deg, grip, tag, max_dq=0.045, settle=4):
-    """Top-down move with branch selection; returns the yaw actually used."""
-    sol = best_ik(pos, yaw_deg)
-    if sol is None:
-        move_pose_tracked(pos, yaw_quat(yaw_deg), grip, tag, max_dq, settle)
-        return yaw_deg
-    move_joints_tracked(sol[2], grip, tag, max_dq, settle)
-    motion_log[-1]["yaw"] = sol[1]
-    motion_log[-1]["dq"] = round(sol[0], 3)
-    try:
-        ee = get_robot_state().end_effector_poses["primary"].position
-        motion_log[-1]["err"] = round(math.sqrt(sum((float(ee[k]) - pos[k]) ** 2 for k in range(3))), 4)
-    except Exception:
-        pass
-    return sol[1]
-
-
-def move_pose_tracked(pos, quat, grip, tag, max_dq=0.045, settle=4):
-    st = get_robot_state()
-    ik = solve_ik(Pose(pos, quat, base_frame), seed_joints=st.joint_positions["primary"])
-    if not ik.ok:
-        note_error("ik_" + tag, "ik failed; fallback move_to_pose")
-        r = move_to_pose(Pose(pos, quat, base_frame), tolerance=0.01, max_steps=150)
-        flags["tick"] += 1
-        if is_terminal(r):
-            flags["terminal"] = True
-        motion_log.append({"tag": tag, "fallback": res_info(r)})
-        return
-    q1 = [float(v) for v in ik.joint_positions]
-    move_joints_tracked(q1, grip, tag, max_dq, settle)
-    try:
-        ee = get_robot_state().end_effector_poses["primary"].position
-        motion_log[-1]["err"] = round(math.sqrt(sum((float(ee[k]) - pos[k]) ** 2 for k in range(3))), 4)
-    except Exception:
-        pass
-
-
-def grip_ticks(g, tag, n_max=8):
-    """Hold the arm, command the gripper for up to n_max ticks (tracked), stop once it settles."""
-    st = get_robot_state()
-    q = [float(v) for v in st.joint_positions["primary"]]
-    prev = None
-    first = None
-    n = 0
-    for k in range(n_max):
-        step_joints(q, g)
-        n += 1
-        if flags["terminal"]:
-            break
-        try:
-            cur = float(get_robot_state().gripper_positions["primary"])
-        except Exception:
-            cur = None
-        if first is None:
-            first = cur
-        if cur is not None and g > 0.5 and cur >= 0.97:
-            break
-        if (k >= 3 and cur is not None and prev is not None and abs(cur - prev) < 0.01
-                and first is not None and abs(cur - first) > 0.12):
-            break
-        prev = cur
-    try:
-        motion_log.append({"tag": tag, "ticks": n, "t": flags["tick"],
-                           "grip": round(float(get_robot_state().gripper_positions["primary"]), 3)})
-        return
-    except Exception:
-        pass
-    motion_log.append({"tag": tag, "ticks": n, "t": flags["tick"]})
-
-
-def gripper_call(fn, tag):
-    r = fn()
-    motion_log.append({"tag": tag, "info": res_info(r)})
-    if is_terminal(r):
-        flags["terminal"] = True
-    try:
-        flags["tick"] += int(r.steps_executed)
-    except Exception:
-        pass
-    try:
-        track_frame(get_observation())
-    except Exception as err:
-        note_error("track_g", err)
-
-
-def enable_motion(on):
-    if on and not motion["enabled"]:
-        motion["enabled_since"] = flags["tick"]
-    if not on:
-        motion["enabled_since"] = None
-        if motion["in_event"] and motion["events"]:
-            motion["events"][-1][2] = False
-        motion["in_event"] = False
-    motion["enabled"] = on
-
-
-def watch(quiet_needed, cap_ticks, need_highlight_end, grip):
-    start = flags["tick"]
-    enable_motion(True)
-    while not flags["terminal"] and flags["tick"] - start < cap_ticks:
-        tick_hold(grip)
-        if need_highlight_end and hl["off_tick"] is None:
-            # highlight not yet over (or not yet seen): keep watching; give up waiting for an
-            # unseen highlight after 200 ticks
-            if hl["on_tick"] is None and flags["tick"] - start > 200:
-                need_highlight_end = False
-            continue
-        last = motion["last_motion_tick"]
-        ref = last if last is not None else start
-        if hl["off_tick"] is not None and hl["off_tick"] > ref:
-            ref = hl["off_tick"]
-        if flags["tick"] - ref >= quiet_needed and not motion["in_event"]:
-            break
-    return flags["tick"] - start
-
-
-def swap_events():
-    return [e for e in motion["events"] if e[1] - e[0] >= 12]
-
-
-def swap_period():
-    ev = [e for e in swap_events() if e[2]]
-    if len(ev) < 2:
-        return None
-    diffs = sorted(ev[k + 1][0] - ev[k][0] for k in range(len(ev) - 1) if ev[k + 1][0] - ev[k][0] < 260)
-    if not diffs:
-        return None
-    return diffs[len(diffs) // 2]
-
-
-def quiet_gap():
-    """Median quiet gap (end of a swap -> start of the next) over cleanly observed pairs."""
-    ev = swap_events()
-    gaps = []
-    for k in range(len(ev) - 1):
-        if ev[k][3] and ev[k + 1][2] and ev[k + 1][0] - ev[k][1] < 200:
-            gaps.append(ev[k + 1][0] - ev[k][1])
-    if not gaps:
-        return None
-    gaps = sorted(gaps)
-    return gaps[0] if len(gaps) < 3 else gaps[len(gaps) // 2]
-
-
-def quiet_left():
-    """Predicted quiet ticks left, if the last swap end was observed from home."""
-    ev = swap_events()
-    gap = quiet_gap()
-    if gap is None or not ev or motion["in_event"] or not motion["enabled"]:
-        return None
-    last = ev[-1]
-    if not last[3]:
-        return None
-    return gap - (flags["tick"] - last[1])
-
-
-def wait_for_window(need, cap_ticks):
-    """At home, tracking: go now if the observed quiet time left covers `need`; otherwise wait
-    for the next swap to end and go right after it (the longest available window)."""
-    start = flags["tick"]
-    enable_motion(True)
-    seen_event = False
-    while not flags["terminal"] and flags["tick"] - start < cap_ticks:
-        left = quiet_left()
-        if left is not None and left >= need:
-            return [left, flags["tick"] - start, "fits"]
-        if motion["in_event"]:
-            seen_event = True
-        elif seen_event:
-            return [left, flags["tick"] - start, "after_swap"]
-        tick_hold(get_grip())
-    return [quiet_left(), flags["tick"] - start, "cap"]
-
-
-def get_grip():
-    try:
-        g = float(get_robot_state().gripper_positions["primary"])
-        return 1.0 if g > 0.5 else 0.0
-    except Exception:
-        return 1.0
-
-
-def press_button(tag):
-    if button is None:
-        note_error("press", "no button")
-        return
-    bx, by, bt = button["cx"], button["cy"], button["top"]
-    if get_grip() > 0.5:
-        grip_ticks(0.0, tag + "_close", 6)
-    if flags["terminal"]:
-        return
-    move_pose_tracked([bx, by, bt + 0.05], home_quat, 0.0, tag + "_above", max_dq=0.08, settle=2)
-    if flags["terminal"]:
-        return
-    move_pose_tracked([bx, by, bt - 0.012], home_quat, 0.0, tag + "_down", max_dq=0.04, settle=5)
-    if flags["terminal"]:
-        return
-    try:
-        motion_log[-1]["ee_z"] = round(float(get_robot_state().end_effector_poses["primary"].position[2]), 4)
-    except Exception:
-        pass
-    move_pose_tracked([bx, by, bt + 0.05], home_quat, 0.0, tag + "_up", max_dq=0.06, settle=1)
-    if flags["terminal"]:
-        return
-    move_joints_tracked(home_joints, 0.0, tag + "_home", max_dq=0.08, settle=1)
-
-
-def snapshot(tag):
-    report.setdefault("snapshots", []).append(
-        {"tag": tag, "tick": flags["tick"],
-         "tracks": [[t["id"], round(t["x"], 3), round(t["y"], 3), t["lost"]] for t in tracks]})
-
-
-# ---------------- 1) watch highlight + swaps at home ----------------
-report["stage"] = "watch1"
-try:
-    snapshot("init")
-    start1 = flags["tick"]
-    watch(5, 260, True, 1.0)
-    while not flags["terminal"] and len(swap_events()) < 2 and flags["tick"] - start1 < 420:
-        watch(6, 60, False, 1.0)
-    snapshot("after_watch1")
-    report["period_after_watch1"] = swap_period()
-except Exception as err:
-    note_error("watch1", err)
-
-highlighted = []
-mx = max([t["white"] for t in tracks]) if tracks else 0
-for t in tracks:
-    if mx > 0 and t["white"] >= max(6, 0.35 * mx):
-        highlighted.append(t)
-report["highlight"] = {"on": hl["on_tick"], "off": hl["off_tick"], "peak": hl["peak"],
-                       "frames": hl["frames"], "peak_counts": hl.get("peak_counts"),
-                       "white": [t["white"] for t in tracks],
-                       "ids": [t["id"] for t in highlighted]}
-
-# ---------------- 2) first press ----------------
-report["stage"] = "press1"
-report["gap_after_watch1"] = quiet_gap()
-try:
-    if not flags["terminal"]:
-        report["window_press1"] = wait_for_window(55, 260)
-        enable_motion(False)
-        t_before = flags["tick"]
-        press_button("press1")
-        report["press1_ticks"] = flags["tick"] - t_before
-    if not flags["terminal"]:
-        grip_ticks(1.0, "open_after_press1", 6)
-    snapshot("after_press1")
-    if not highlighted and hl["on_tick"] is not None and not flags["terminal"]:
-        mx = max([t["white"] for t in tracks]) if tracks else 0
-        for t in tracks:
-            if mx > 0 and t["white"] >= max(6, 0.35 * mx):
-                highlighted.append(t)
-        report["highlight_late"] = [t["id"] for t in highlighted]
-except Exception as err:
-    note_error("press1", err)
-
-
-def ambiguous(t):
-    if t["lost"] > 0:
-        return True
-    for t2 in tracks:
-        if t2 is not t and (t2["x"] - t["x"]) ** 2 + (t2["y"] - t["y"]) ** 2 < 0.025 ** 2:
+def touches_border(comp, width, height):
+    for p in comp:
+        if p[0] <= 0 or p[1] <= 0 or p[0] >= width - 1 or p[1] >= height - 1:
             return True
     return False
 
 
-# ---------------- 3) pick + replace each highlighted cube ----------------
-report["stage"] = "picks"
-pick_log = []
-cycles = []
-flags["cycle"] = 62
-attempts = 0
-try:
-    while not flags["terminal"] and attempts < 3 * len(highlighted) + 2:
-        todo = [h for h in highlighted if not h["picked"]]
-        if not todo:
-            break
-        attempts += 1
-        remaining = len(todo)
-        per = swap_period()
-        cap = 260 if per is None else per + 40
-        spare = max_steps - flags["tick"] - remaining * (flags["cycle"] + 10) - 90
-        if spare < 40:
-            cap = 0
-        entry_window = wait_for_window(flags["cycle"], cap)
-        if flags["terminal"]:
-            break
-        # first unambiguous target (keep list order otherwise)
-        t = None
-        for h in todo:
-            if not ambiguous(h):
-                t = h
-                break
-        if t is None:
-            report.setdefault("ambiguous_waits", []).append([flags["tick"], [h["id"] for h in todo]])
-            if spare < 40:
-                t = todo[0]
+def kmeans_split(pts, k):
+    c0 = centroid(pts)
+    far = pts[0]
+    best = -1.0
+    for p in pts:
+        d = (p[0] - c0[0]) ** 2 + (p[1] - c0[1]) ** 2
+        if d > best:
+            best = d
+            far = p
+    centers = [(far[0] * 1.0, far[1] * 1.0)]
+    while len(centers) < k:
+        best = -1.0
+        far = pts[0]
+        for p in pts:
+            d = min((p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 for c in centers)
+            if d > best:
+                best = d
+                far = p
+        centers.append((far[0] * 1.0, far[1] * 1.0))
+    for it in range(8):
+        groups = [[] for c in centers]
+        for p in pts:
+            bi = 0
+            bd = None
+            for i in range(len(centers)):
+                d = (p[0] - centers[i][0]) ** 2 + (p[1] - centers[i][1]) ** 2
+                if bd is None or d < bd:
+                    bd = d
+                    bi = i
+            groups[bi].append(p)
+        new_centers = []
+        for i in range(len(centers)):
+            if len(groups[i]) > 0:
+                new_centers.append(centroid(groups[i]))
             else:
-                tick_hold(get_grip())
-                continue
-        enable_motion(False)
-        x, y, top = t["x"], t["y"], t["top"]
-        t_start = flags["tick"]
-        entry = {"id": t["id"], "xy": [round(x, 4), round(y, 4)], "top": round(top, 4),
-                 "lost": t["lost"], "reacq": t.get("reacq", 0), "tick": flags["tick"], "window": entry_window}
-        if get_grip() < 0.5:
-            grip_ticks(1.0, "open_" + str(t["id"]), 6)
-        if flags["terminal"]:
+                new_centers.append(centers[i])
+        centers = new_centers
+    return centers
+
+
+def init_tracks(cube_px, width, height):
+    comps = []
+    for c in components(cube_px, width):
+        if len(c) >= 8 and not touches_border(c, width, height):
+            comps.append(c)
+    if len(comps) == 0:
+        return [], 0.0
+    areas = sorted(len(c) for c in comps)
+    med = areas[len(areas) // 2]
+    tracks = []
+    for c in comps:
+        if len(c) < 0.35 * med:
+            continue
+        k = int(round(len(c) / med))
+        if k <= 1:
+            tracks.append(centroid(c))
+        else:
+            for cen in kmeans_split(c, k):
+                tracks.append(cen)
+    return tracks, float(med)
+
+
+def update_tracks(tracks, cube_px, gate, min_count):
+    groups = [[] for t in tracks]
+    g2 = gate * gate
+    for p in cube_px:
+        bi = -1
+        bd = g2
+        for i in range(len(tracks)):
+            dx = p[0] - tracks[i][0]
+            dy = p[1] - tracks[i][1]
+            d = dx * dx + dy * dy
+            if d < bd:
+                bd = d
+                bi = i
+        if bi >= 0:
+            groups[bi].append(p)
+    out = []
+    counts = []
+    for i in range(len(tracks)):
+        counts.append(len(groups[i]))
+        if len(groups[i]) >= min_count:
+            out.append(centroid(groups[i]))
+        else:
+            out.append(tracks[i])
+    return out, counts
+
+
+def ring_fractions(tracks, white_px, r_in, r_out):
+    counts = [0 for t in tracks]
+    a2 = r_in * r_in
+    b2 = r_out * r_out
+    for p in white_px:
+        for i in range(len(tracks)):
+            dx = p[0] - tracks[i][0]
+            dy = p[1] - tracks[i][1]
+            d = dx * dx + dy * dy
+            if d >= a2 and d <= b2:
+                counts[i] += 1
+    area = 3.14159 * (b2 - a2)
+    return [c / area for c in counts]
+
+
+# ---------------------------------------------------------------- geometry helpers
+def quantile(values, fraction):
+    ordered = sorted(float(v) for v in values)
+    if len(ordered) == 0:
+        return None
+    return ordered[int((len(ordered) - 1) * fraction)]
+
+
+def qmul(a, b):
+    return (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+            a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+            a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+            a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0])
+
+
+def yaw_quat(base_quat, yaw):
+    qz = (math.cos(yaw / 2.0), 0.0, 0.0, math.sin(yaw / 2.0))
+    return qmul(qz, base_quat)
+
+
+def box_fit(points_xy):
+    """Min-area rectangle by brute force over 2-degree steps (trimmed extents).
+    Returns (cx, cy, ex, ey, angle_rad) with angle in [0, pi/2)."""
+    best = None
+    for k in range(45):
+        a = k * math.pi / 90.0
+        ca = math.cos(a)
+        sa = math.sin(a)
+        us = []
+        vs = []
+        for p in points_xy:
+            us.append(p[0] * ca + p[1] * sa)
+            vs.append(-p[0] * sa + p[1] * ca)
+        u0 = quantile(us, 0.03)
+        u1 = quantile(us, 0.97)
+        v0 = quantile(vs, 0.03)
+        v1 = quantile(vs, 0.97)
+        area = (u1 - u0) * (v1 - v0)
+        if best is None or area < best[0]:
+            uc = (u0 + u1) / 2.0
+            vc = (v0 + v1) / 2.0
+            best = (area, uc * ca - vc * sa, uc * sa + vc * ca, u1 - u0, v1 - v0, a)
+    return (best[1], best[2], best[3], best[4], best[5])
+
+
+def cube_from_cloud(points):
+    zs = [float(p[2]) for p in points]
+    z_top = quantile(zs, 0.95)
+    top = []
+    for p in points:
+        if float(p[2]) > z_top - 0.012:
+            top.append((float(p[0]), float(p[1])))
+    if len(top) < 6:
+        return None
+    cx, cy, ex, ey, ang = box_fit(top)
+    yaw = ang
+    if yaw > math.pi / 4.0:
+        yaw = yaw - math.pi / 2.0
+    side = (ex + ey) / 2.0
+    return {"x": cx, "y": cy, "z_top": z_top, "side": side, "ex": ex, "ey": ey,
+            "yaw": yaw, "n": len(points)}
+
+
+# ---------------------------------------------------------------- robot helpers
+context = get_task_context()
+state0 = get_robot_state()
+base = state0.base_frame
+emb = state0.embodiment
+home_joints = [float(v) for v in state0.joint_positions["primary"]]
+q_down = tuple(float(v) for v in state0.end_effector_poses["primary"].quaternion_wxyz)
+meta = robomme_plus.get_task_metadata()
+max_steps = int(meta["max_steps"])
+
+report = {"task": context.language, "max_steps": max_steps, "events": [], "errors": [],
+          "track_log": [], "picks": [], "presses": []}
+clock = {"ticks": 0, "over": False}
+
+
+def note(msg):
+    report["events"].append([clock["ticks"], msg])
+
+
+def check_end(res):
+    try:
+        if bool(res.terminated) or bool(res.truncated):
+            clock["over"] = True
+            note("episode ended (terminated=" + str(res.terminated) + ")")
+    except Exception:
+        pass
+
+
+def count_steps(res):
+    try:
+        clock["ticks"] += int(res.steps_executed)
+    except Exception:
+        pass
+
+
+def hold_tick(gripper):
+    res = step(RobotAction(arms={"primary": ArmCommand(
+        "joint_position", home_joints, gripper_position=gripper, embodiment=emb)}))
+    clock["ticks"] += 1
+    check_end(res)
+    return res
+
+
+def move(position, quat, tol, steps, label):
+    if clock["over"]:
+        return None
+    res = move_to_pose(Pose(tuple(position), tuple(quat), base), tolerance=tol, max_steps=steps)
+    count_steps(res)
+    check_end(res)
+    entry = {"label": label, "ok": bool(res.ok), "steps": 0}
+    try:
+        entry["steps"] = int(res.steps_executed)
+        entry["status"] = str(res.status)
+    except Exception:
+        pass
+    report["events"].append([clock["ticks"], entry])
+    return res
+
+
+def gripper_now():
+    try:
+        return float(get_robot_state().gripper_positions["primary"])
+    except Exception:
+        return None
+
+
+def cloud_at_pixel(px, py):
+    """segment_points at a wrist pixel -> base-frame cloud of the top mask (bounded)."""
+    seg = segment_points(CAM, [[int(round(px)), int(round(py))]])
+    if not seg.ok or len(seg.segmentations) == 0:
+        return None
+    for cand in seg.segmentations[:3]:
+        pc = mask_to_point_cloud(cand, CAM, target_frame=base)
+        pts = pc.points
+        if len(pts) < 6:
+            continue
+        xs = [float(p[0]) for p in pts]
+        ys = [float(p[1]) for p in pts]
+        span = max(quantile(xs, 0.95) - quantile(xs, 0.05), quantile(ys, 0.95) - quantile(ys, 0.05))
+        if span < 0.12:
+            return pts
+    return None
+
+
+# ---------------------------------------------------------------- tracking state
+MOVE_PX = 0.3        # per-tick centroid motion that counts as "moving"
+END_STILL = 3        # consecutive still ticks that end a shuffle
+MARGIN = 2           # ticks of slack kept before a predicted shuffle start
+PRESS_TICKS = 10     # joint-target ticks spent pushing the button
+S = {"tracks": [], "vel": [], "episodes": [], "lit_active": False, "off_run": 0,
+     "baseline_white": set(), "width": 0, "height": 0, "white_px": [],
+     "shuffles": [], "moving": False, "still": 0, "cur_start": None, "watch_since": 0,
+     "repairs": []}
+
+
+def observe_tick(res, label):
+    rows = res.observation.cameras[CAM].rgb.tolist()
+    cube_px, white_px = classify_frame(rows, table_chroma)
+    bw = S["baseline_white"]
+    w = S["width"]
+    new_white = []
+    for p in white_px:
+        if (p[1] * w + p[0]) not in bw:
+            new_white.append(p)
+    S["white_px"] = white_px
+    old = S["tracks"]
+    pred = []
+    for i in range(len(old)):
+        pred.append((old[i][0] + S["vel"][i][0], old[i][1] + S["vel"][i][1]))
+    new, counts = update_tracks(pred, cube_px, gate, min_count)
+    speed = 0.0
+    vel = []
+    for i in range(len(old)):
+        dx = new[i][0] - old[i][0]
+        dy = new[i][1] - old[i][1]
+        vel.append((0.7 * dx, 0.7 * dy))
+        speed = max(speed, math.sqrt(dx * dx + dy * dy))
+    S["tracks"] = new
+    S["vel"] = vel
+    fr = ring_fractions(new, new_white, 1.4 * rad, 1.9 * rad)
+    t = clock["ticks"]
+    if max(fr) > RING_ON:
+        S["off_run"] = 0
+        if not S["lit_active"]:
+            S["lit_active"] = True
+            S["episodes"].append({"start": t, "end": t, "frames": 0,
+                                  "lit_counts": [0 for k in new], "label": label})
+            note("highlight on (" + label + ")")
+        ep = S["episodes"][len(S["episodes"]) - 1]
+        ep["frames"] += 1
+        ep["end"] = t
+        for i in range(len(new)):
+            if fr[i] > RING_ON:
+                ep["lit_counts"][i] += 1
+    else:
+        S["off_run"] += 1
+        if S["off_run"] >= 3:
+            S["lit_active"] = False
+    if speed > MOVE_PX:
+        S["still"] = 0
+        if not S["moving"]:
+            S["moving"] = True
+            S["cur_start"] = t
+            note("shuffle start (" + label + ")")
+    else:
+        S["still"] += 1
+        if S["moving"] and S["still"] >= END_STILL:
+            S["moving"] = False
+            dur = t - END_STILL - S["cur_start"]
+            known = 0
+            for s in S["shuffles"]:
+                if s[2]:
+                    known = max(known, s[1] - s[0])
+            if dur >= max(5, 0.5 * known):
+                clean = (S["cur_start"] - S["watch_since"]) >= 3
+                S["shuffles"].append([S["cur_start"], t - END_STILL, clean])
+                note("shuffle end (" + label + ", clean=" + str(clean) + ")")
+                repair_tracks(cube_px, "shuffle end")
+            else:
+                note("short motion ignored (" + label + ", " + str(dur) + " ticks)")
+    if t % 5 == 0:
+        report["track_log"].append([t, label, round(speed, 2), [round(f, 2) for f in fr],
+                                    [[round(q[0], 1), round(q[1], 1)] for q in new]])
+
+
+def watch_until(stop_fn, max_ticks, label):
+    start = clock["ticks"]
+    while clock["ticks"] - start < max_ticks and clock["ticks"] < hard_limit and not clock["over"]:
+        res = hold_tick(1.0)
+        if clock["over"]:
             break
-        yaw = move_top_down([x, y, top + 0.05], 0.0, 1.0, "pre_" + str(t["id"]), max_dq=0.08, settle=1)
-        if flags["terminal"]:
+        observe_tick(res, label)
+        if stop_fn():
+            return True
+    return False
+
+
+def repair_tracks(cube_px, label):
+    """Tracks with no blob nearby are re-matched (one-to-one) to blobs no track claims."""
+    blobs, area = init_tracks(cube_px, S["width"], S["height"])
+    tr = S["tracks"]
+    pairs = []
+    for i in range(len(tr)):
+        for j in range(len(blobs)):
+            d = math.sqrt((tr[i][0] - blobs[j][0]) ** 2 + (tr[i][1] - blobs[j][1]) ** 2)
+            pairs.append((d, i, j))
+    pairs.sort()
+    t_used = set()
+    b_used = set()
+    for pr in pairs:
+        if pr[0] > gate:
             break
-        # re-read the target after the transit (it may have moved while we travelled)
-        if t["lost"] == 0 and (t["x"] - x) ** 2 + (t["y"] - y) ** 2 > 0.01 ** 2:
-            entry["moved_during_transit"] = [round(t["x"], 4), round(t["y"], 4)]
-            x, y, top = t["x"], t["y"], t["top"]
-            yaw = move_top_down([x, y, top + 0.05], yaw, 1.0, "pre2_" + str(t["id"]), max_dq=0.06, settle=1)
-            if flags["terminal"]:
+        if pr[1] in t_used or pr[2] in b_used:
+            continue
+        t_used.add(pr[1])
+        b_used.add(pr[2])
+    lost = [i for i in range(len(tr)) if i not in t_used]
+    free = [j for j in range(len(blobs)) if j not in b_used]
+    if len(lost) == 0 or len(free) == 0:
+        return
+    moves = []
+    for pr in pairs:
+        if pr[1] in lost and pr[2] in free and pr[1] not in t_used and pr[2] not in b_used:
+            t_used.add(pr[1])
+            b_used.add(pr[2])
+            tr[pr[1]] = blobs[pr[2]]
+            S["vel"][pr[1]] = (0.0, 0.0)
+            moves.append([pr[1], round(pr[0], 1)])
+    S["tracks"] = tr
+    S["repairs"].append([clock["ticks"], label, moves, len(lost), len(free)])
+
+
+def reassociate(label):
+    if clock["over"]:
+        return
+    res = hold_tick(1.0)
+    if clock["over"]:
+        return
+    rows = res.observation.cameras[CAM].rgb.tolist()
+    cube_px, white_px = classify_frame(rows, table_chroma)
+    old = S["tracks"]
+    new, counts = update_tracks(old, cube_px, 3.0 * rad, min_count)
+    shift = 0.0
+    for i in range(len(old)):
+        shift = max(shift, math.sqrt((new[i][0] - old[i][0]) ** 2 + (new[i][1] - old[i][1]) ** 2))
+    S["tracks"] = new
+    S["vel"] = [(0.0, 0.0) for t in new]
+    S["white_px"] = white_px
+    S["still"] = 0
+    S["watch_since"] = clock["ticks"]
+    repair_tracks(cube_px, label)
+    report["events"].append([clock["ticks"], {"reassociate": label, "max_shift_px": round(shift, 1)}])
+
+
+def go_joints(joints, label):
+    if clock["over"]:
+        return False
+    for attempt in range(2):
+        r = move_to_joints(joints, tolerance=0.01, max_steps=120)
+        count_steps(r)
+        check_end(r)
+        if clock["over"]:
+            return False
+        if bool(r.ok):
+            report["events"].append([clock["ticks"], {"joints": label, "ok": True}])
+            return True
+    report["events"].append([clock["ticks"], {"joints": label, "ok": False}])
+    return False
+
+
+def transit(position, quat, label):
+    """Fast free-space transit: IK then joint servo; falls back to move_to_pose."""
+    if clock["over"]:
+        return
+    ik = solve_ik(Pose(tuple(position), tuple(quat), base))
+    if bool(ik.ok):
+        if go_joints([float(v) for v in ik.joint_positions], label):
+            return
+    move(position, quat, 0.01, 150, label + " (pose fallback)")
+
+
+def current_targets():
+    if len(S["episodes"]) == 0:
+        return []
+    ep = S["episodes"][len(S["episodes"]) - 1]
+    out = []
+    for i in range(len(ep["lit_counts"])):
+        if ep["lit_counts"][i] >= 0.5 * max(1, ep["frames"]):
+            out.append(i)
+    return out
+
+
+def locate_track(i):
+    px = S["tracks"][i][0]
+    py = S["tracks"][i][1]
+    entry = {"track": i, "px": [round(px, 1), round(py, 1)]}
+    try:
+        pts = cloud_at_pixel(px, py)
+        if pts is not None:
+            geo = cube_from_cloud(pts)
+            if geo is not None:
+                entry["geo"] = geo
+    except Exception as exc:
+        entry["error"] = str(exc)
+    if "geo" in entry:
+        return entry
+    # fallback: segment_text candidates whose box contains the track pixel
+    try:
+        seg = segment_text(CAM, "cube")
+        if seg.ok:
+            for cand in seg.segmentations[:5]:
+                b = cand.box_xyxy
+                if b is None:
+                    continue
+                if px >= b[0] - 1 and px <= b[2] + 1 and py >= b[1] - 1 and py <= b[3] + 1:
+                    pc = mask_to_point_cloud(cand, CAM, target_frame=base)
+                    if len(pc.points) >= 6:
+                        geo = cube_from_cloud(pc.points)
+                        if geo is not None and geo["side"] < 0.12:
+                            entry["geo"] = geo
+                            entry["source"] = "segment_text box"
+                            break
+    except Exception as exc:
+        entry["error2"] = str(exc)
+    return entry
+
+
+def locate_button():
+    found = None
+    try:
+        best = None
+        for c in components(S["white_px"], S["width"]):
+            if len(c) >= 0.5 * med_area and not touches_border(c, S["width"], S["height"]):
+                if best is None or len(c) > len(best):
+                    best = c
+        if best is not None:
+            bc = centroid(best)
+            report["button_px"] = [round(bc[0], 1), round(bc[1], 1), len(best)]
+            pts = cloud_at_pixel(bc[0], bc[1])
+            if pts is not None:
+                found = {"x": quantile([float(p[0]) for p in pts], 0.5),
+                         "y": quantile([float(p[1]) for p in pts], 0.5),
+                         "z_top": quantile([float(p[2]) for p in pts], 0.95), "n": len(pts)}
+    except Exception as exc:
+        report["errors"].append("button: " + str(exc))
+    if found is None:
+        try:
+            loc = localize_object("button", camera_name=CAM, target_frame=base)
+            if loc.ok and len(loc.point_cloud.points) >= 6:
+                pts = loc.point_cloud.points
+                found = {"x": quantile([float(p[0]) for p in pts], 0.5),
+                         "y": quantile([float(p[1]) for p in pts], 0.5),
+                         "z_top": quantile([float(p[2]) for p in pts], 0.95), "n": len(pts),
+                         "source": "localize_object"}
+        except Exception as exc:
+            report["errors"].append("button fallback: " + str(exc))
+    return found
+
+
+def press_button(button, label, return_home):
+    if button is None or clock["over"]:
+        return
+    t0 = clock["ticks"]
+    r = close_gripper()
+    count_steps(r)
+    check_end(r)
+    above = (button["x"], button["y"], button["z_top"] + PRESS_ABOVE)
+    transit(above, q_down, label + " above")
+    ik = solve_ik(Pose((button["x"], button["y"], button["z_top"] - PRESS_DEPTH), q_down, base))
+    if bool(ik.ok):
+        target = [float(v) for v in ik.joint_positions]
+        for k in range(PRESS_TICKS):
+            if clock["over"]:
                 break
-        yaw = move_top_down([x, y, top - 0.02], yaw, 1.0, "desc_" + str(t["id"]), max_dq=0.05, settle=2)
-        if flags["terminal"]:
-            break
-        grip_ticks(0.0, "close_" + str(t["id"]), 8)
-        if flags["terminal"]:
-            break
-        try:
-            entry["grip_closed"] = round(float(get_robot_state().gripper_positions["primary"]), 3)
-        except Exception:
-            pass
-        yaw = move_top_down([x, y, top + 0.03], yaw, 0.0, "lift_" + str(t["id"]), max_dq=0.05, settle=2)
-        if flags["terminal"]:
-            break
-        try:
-            entry["grip_lifted"] = round(float(get_robot_state().gripper_positions["primary"]), 3)
-        except Exception:
-            pass
-        yaw = move_top_down([x, y, top - 0.012], yaw, 0.0, "lower_" + str(t["id"]), max_dq=0.05, settle=1)
-        if flags["terminal"]:
-            break
-        grip_ticks(1.0, "release_" + str(t["id"]), 6)
-        if flags["terminal"]:
-            break
-        t["picked"] = True
-        move_joints_tracked(home_joints, 1.0, "home_" + str(t["id"]), max_dq=0.08, settle=1)
-        entry["done_tick"] = flags["tick"]
-        entry["cycle_ticks"] = flags["tick"] - t_start
-        cycles.append(flags["tick"] - t_start + 2)
-        srt = sorted(cycles)
-        flags["cycle"] = min(95, max(45, srt[len(srt) // 2]))
-        pick_log.append(entry)
-except Exception as err:
-    note_error("picks", err)
-report["picks"] = pick_log
+            rs = step(RobotAction(arms={"primary": ArmCommand(
+                "joint_position", target, gripper_position=0.0, embodiment=emb)}))
+            clock["ticks"] += 1
+            check_end(rs)
+    else:
+        move((button["x"], button["y"], button["z_top"] - 0.005), q_down, 0.004, 25, label + " press")
+    report["events"].append([clock["ticks"], {"press": label, "ik_ok": bool(ik.ok)}])
+    if return_home:
+        go_joints(home_joints, label + " home")
+    else:
+        move(above, q_down, 0.015, 60, label + " retreat")
+    report["presses"].append([label, t0, clock["ticks"]])
+    return clock["ticks"] - t0
 
-# ---------------- 4) final press ----------------
-report["stage"] = "press2"
+
+def pick_cube(entry, return_home):
+    t0 = clock["ticks"]
+    pick = {"track": entry["track"], "px": entry["px"], "t0": t0}
+    report["picks"].append(pick)
+    if "geo" not in entry:
+        pick["skipped"] = "no geometry"
+        return 0
+    geo = entry["geo"]
+    pick["geo_home"] = geo
+    r = open_gripper()
+    count_steps(r)
+    check_end(r)
+    q = yaw_quat(q_down, geo["yaw"])
+    transit((geo["x"], geo["y"], geo["z_top"] + PRE_Z), q, "pre")
+    if clock["over"]:
+        return clock["ticks"] - t0
+    grasp_z = geo["z_top"] - 0.5 * geo["side"]
+    move((geo["x"], geo["y"], grasp_z), q, 0.008, 100, "descend")
+    if clock["over"]:
+        return clock["ticks"] - t0
+    r = close_gripper()
+    count_steps(r)
+    check_end(r)
+    pick["gripper_closed"] = gripper_now()
+    move((geo["x"], geo["y"], geo["z_top"] + LIFT_Z), q, 0.015, 120, "lift")
+    if clock["over"]:
+        return clock["ticks"] - t0
+    pick["gripper_lifted"] = gripper_now()
+    r = open_gripper()          # release at lift height: the cube drops back onto its spot
+    count_steps(r)
+    check_end(r)
+    if return_home:
+        go_joints(home_joints, "pick home")
+    pick["ticks"] = clock["ticks"] - t0
+    return clock["ticks"] - t0
+
+
+def shuffle_model():
+    """REST (end -> next start) and duration, learned from shuffles whose start was watched."""
+    sh = S["shuffles"]
+    if len(sh) < 2:
+        return None
+    rests = []
+    for k in range(1, len(sh)):
+        if sh[k][2]:
+            rests.append(sh[k][0] - sh[k - 1][1])
+    durs = [s[1] - s[0] for s in sh if s[2]]
+    if len(rests) == 0 or len(durs) == 0:
+        return None
+    return {"rest": min(rests), "duration": max(durs), "last_end": sh[len(sh) - 1][1],
+            "period": min(rests) + max(durs)}
+
+
+def next_shuffle_start(model, t):
+    if model is None:
+        return None
+    n = model["last_end"] + model["rest"]
+    while n <= t:
+        n += model["period"]
+    return n
+
+
+def wait_next_shuffle(model, label):
+    """Hold at home until a shuffle has started and ended (or a generous timeout)."""
+    count0 = len(S["shuffles"])
+    limit = 0.25 * max_steps
+    if model is not None:
+        limit = next_shuffle_start(model, clock["ticks"]) - clock["ticks"] + model["duration"] + 30
+
+    def done():
+        return len(S["shuffles"]) > count0
+    return watch_until(done, int(limit), label)
+
+
+# ---------------------------------------------------------------- main
+hard_limit = max_steps - 5
 try:
-    if not flags["terminal"] and highlighted:
-        report["window_press2"] = wait_for_window(55, 200)
-        enable_motion(False)
-        press_button("press2")
-    k = 0
-    while not flags["terminal"] and k < 20:
-        tick_hold(0.0)
-        k += 1
-except Exception as err:
-    note_error("press2", err)
+    obs = get_observation()
+    rows = obs.cameras[CAM].rgb.tolist()
+    S["height"] = len(rows)
+    S["width"] = len(rows[0])
+    table_chroma = median_chroma(rows, 4)
+    cube_px, white_px = classify_frame(rows, table_chroma)
+    for p in white_px:
+        S["baseline_white"].add(p[1] * S["width"] + p[0])
+    S["white_px"] = white_px
+    tracks, med_area = init_tracks(cube_px, S["width"], S["height"])
+    report["n_tracks"] = len(tracks)
+    report["median_cube_area_px"] = med_area
+    if len(tracks) == 0:
+        raise ValueError("no cubes found in the wrist view")
+    S["tracks"] = tracks
+    S["vel"] = [(0.0, 0.0) for t in tracks]
+    rad = math.sqrt(med_area / math.pi)
+    gate = 2.2 * rad
+    min_count = max(3, int(0.3 * med_area))
 
-report["motion_events"] = motion["events"]
-report["quiet_gap"] = quiet_gap()
-report["reacq"] = reacq_log
-report["swap_period"] = swap_period()
-report["n_motion_ticks"] = motion["n_motion_ticks"]
-report["motions"] = motion_log
-report["terminal"] = flags["terminal"]
-report["ticks"] = flags["tick"]
-snapshot("final")
-report["stage"] = "done"
+    # 1) watch: highlight, then two shuffles (learn period and duration at runtime)
+    def two_shuffles():
+        return len(S["shuffles"]) >= 2 and not S["moving"]
+    watch_until(two_shuffles, int(0.3 * max_steps), "learn")
+    model = shuffle_model()
+    report["shuffle_model"] = model
+    targets = current_targets()
+    report["targets"] = targets
+    button = locate_button()
+    report["button"] = button
+
+    # 2) schedule: press1, picks, press2 — one action per static gap
+    actions = [["press", None]]
+    for i in targets:
+        actions.append(["pick", i])
+    est = {"press": None, "pick": None}
+    report["schedule"] = []
+    k = 0
+    guard = 0
+    while k < len(actions) and not clock["over"] and clock["ticks"] < hard_limit and guard < 40:
+        guard += 1
+        kind = actions[k][0]
+        last = (k == len(actions) - 1)
+        t = clock["ticks"]
+        nxt = next_shuffle_start(model, t)
+        avail = None
+        if nxt is not None:
+            avail = nxt - t - MARGIN
+        need = est[kind]
+        fits = True
+        if avail is not None:
+            gap_start = (t - model["last_end"]) <= END_STILL + 3
+            fits = gap_start or (need is not None and need <= avail)
+        report["schedule"].append([t, kind, actions[k][1], avail, need, fits])
+        if not fits:
+            wait_next_shuffle(model, "wait")
+            model2 = shuffle_model()
+            if model2 is not None:
+                model = model2
+            continue
+        if kind == "press":
+            used = press_button(button, "press1", True)
+        else:
+            entry = locate_track(actions[k][1])
+            used = pick_cube(entry, not last)
+        if used is not None and not last and (est[kind] is None or used > est[kind]):
+            est[kind] = used
+        k += 1
+        if last or clock["over"]:
+            break
+        reassociate("after " + kind)
+        wait_next_shuffle(model, "after " + kind)
+        model2 = shuffle_model()
+        if model2 is not None:
+            model = model2
+    report["estimates"] = est
+
+    # 3) final press (no tracking needed afterwards)
+    press_button(button, "press2", False)
+    for t in range(10):
+        if clock["over"]:
+            break
+        st = get_robot_state()
+        rs = step(RobotAction(arms={"primary": ArmCommand(
+            "joint_position", st.joint_positions["primary"], gripper_position=0.0, embodiment=emb)}))
+        clock["ticks"] += 1
+        check_end(rs)
+except Exception as exc:
+    report["errors"].append("main: " + str(exc))
+report["episodes"] = S["episodes"]
+report["shuffles"] = S["shuffles"]
+report["repairs"] = S["repairs"]
+report["final_tracks"] = [[round(t[0], 1), round(t[1], 1)] for t in S["tracks"]]
+report["ticks"] = clock["ticks"]
 result = report

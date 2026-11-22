@@ -14,15 +14,15 @@ restore command during setup. Existing checkouts are left unchanged; evaluated c
 
 ## Adaptation
 
-Settings are `demo-only`, `interaction-only` and `demo&interaction`.
-The leaderboard uses R10; R1/R3/R5 are optional reported results.
+The released policies cover `interaction-only` and `Hybrid`, each with at most
+10 development rollouts per task.
 
 We retain LIBERO's per-task exploration → bundle registration → exact-bundle
 rehearsal → submission workflow. Rehearsals consume the same R budget. `demo-only` allows
 explicit offline submission because it forbids simulator access. We add no CaP
 code, task solver or policy-selection algorithm.
 
-Runtime integration patches cover eight upstream Python files in [`patches/robomme-plus.patch`](patches/robomme-plus.patch), applied
+Runtime integration patches cover nine upstream Python files in [`patches/`](patches), applied
 only to a separate runtime copy:
 
 | Upstream area | Integration change |
@@ -32,10 +32,11 @@ only to a separate runtime copy:
 | `controller/supervisor.py`, `sandbox.py` | Bounded execution and safe continuation of unstarted tests |
 | `services/artifact_io.py` | Stream large artifacts |
 | `harness/{claude,codex}_cli/auto_research.py` | Public protocol, deadline and read-only wrap-up |
+| `harness/codex_cli/workspace_storage.py` | Local directory workspaces without loop-device mounts |
 
 `adapter/` contains the simulator backend and native skill references.
 `robomme_full.py` drives development; `eval_plus.py` runs frozen test policies.
-`solutions/` contains all 144 evaluated task bundles under settings, R and task,
+`solutions/` contains 32 current R10 task bundles under `interaction-only/R10` and `hybrid/R10`,
 with hashes, portable runner settings and policy provenance.
 `upstream.json` pins source and patches.
 
@@ -46,8 +47,8 @@ The model, time limits and input sampling are implementation choices.
 | Area | Configuration |
 | --- | --- |
 | Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; development/evaluation usage and cost logged separately. |
-| Budgets | `demo-only`: 0 starts. Interaction settings: at most 10 starts per task. Historical R1/R3/R5 studies were developed independently. All starts, including failed setup and verification, share the budget. Optional-budget solutions remain available. |
-| Training demos | `demo-only`/`demo&interaction` receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. `interaction-only` receives none. Simulator replay counts toward the development budget. |
+| Budgets | `demo-only`: 0 starts. Interaction settings: at most 10 starts per task. All starts, including failed setup and verification, share the budget. |
+| Training demos | `demo-only`/`Hybrid` receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. `interaction-only` receives none. Simulator replay counts toward the development budget. |
 | Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
 | Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
@@ -65,7 +66,7 @@ The model, time limits and input sampling are implementation choices.
   videos sampled, and terminal/timeout handling uses the public simulator result.
 
 Published `solutions/` contain the evaluated policies. Each task's `manifest.json`
-records its source selection, evaluated hashes and interface-adjustment provenance.
+records the source run, exact evaluated file hashes and benchmark fingerprint.
 
 ### Runtime limits
 
@@ -84,6 +85,10 @@ These limits apply to development and testing without extending simulator step
 limits. Timeouts count as unsuccessful tests. The queue's 48-hour job cap and
 30-minute idle watchdog do not extend the per-task development deadline.
 Clocks, commands, transcripts and API usage are retained in run artifacts.
+Tool hooks also save host-owned command/results and code snapshots in each task's
+`audit/history/`; simulator attempts record the workspace revision. Frozen
+evaluation verifies the pinned harness/protocol and policy files. Workspace size
+is checked at launch/resume; directory storage has no block-device quota.
 
 ## Run and inspect
 
@@ -96,7 +101,7 @@ python scripts/plus_eval/agentic_methods/rax/eval_plus.py \
   --gpu 0 --output-dir "<RUN_ROOT>/rax-interaction-only-R10"
 ```
 
-`--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media.
+Use `--setting hybrid` for Hybrid. `--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media.
 The same output directory resumes unstarted tests; use a new directory for a fresh run.
 
 [Link external artifacts](../../results/README.md) to inspect

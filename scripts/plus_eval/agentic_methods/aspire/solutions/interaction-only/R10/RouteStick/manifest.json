@@ -5,22 +5,15 @@
   "task": "RouteStick",
   "evaluation_episodes": 50,
   "policy_files": {
-    "policy.py": "8e8ecb0f76a01f20eec5590a452def8d193dfe390b8e8a12d585425e56221eda"
+    "policy.py": "d2fa82548b23d50685285fa77c70721836b3abf85c89e36a2e41bf55ce1b6aac"
   },
-  "source_experiment": "full_20261116_protocol_v2",
-  "test_feedback_to_development": false,
-  "status": "frozen_policy",
   "source_policy_files": {
-    "RouteStick.py": "d27652b658c957f809e63fef58152f0d1acf4d8dbc16affc4e2ccc7bb872b832"
+    "RouteStick.py": "d2fa82548b23d50685285fa77c70721836b3abf85c89e36a2e41bf55ce1b6aac"
   },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
-  "publication_annotations": {
-    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
-    "files": {
-      "policy.py": {
-        "evaluated_sha256": "d27652b658c957f809e63fef58152f0d1acf4d8dbc16affc4e2ccc7bb872b832",
-        "published_sha256": "8e8ecb0f76a01f20eec5590a452def8d193dfe390b8e8a12d585425e56221eda"
-      }
-    }
-  }
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "af1fd98dde91910aa4e850862f48805d31cc7d240f2f37a1edf4f554c94c51d1",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy"
 }

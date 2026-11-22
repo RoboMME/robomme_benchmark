@@ -4,11 +4,11 @@ Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-
 Copy one section per setting you report and replace the bracketed placeholders.
 Either track may use any setting. Each result covers all **800 test episodes
 (16 tasks × 50)**. The leaderboard uses 10 rollouts per task for interaction
-settings; 1, 3 and 5 rollouts are optional.
+settings. Results with other rollout budgets are optional.
 
 Report success rates as percentages with two decimal places. Report API costs in
 USD, development and evaluation separately; use N/A when no paid API is used.
-Label estimates and identify missing usage; incomplete required records block an audit PASS.
+For estimates, rounding to the nearest $10 is sufficient. Identify missing usage; incomplete required records block an audit PASS.
 Leave evaluation scores and costs PENDING until team verification is complete.
 
 ## What to submit
@@ -172,12 +172,12 @@ Adapt through training-seed interactions, without released offline demonstration
 
 
 <details>
-<summary>Optional results: 1, 3 and 5 rollouts per task</summary>
+<summary>Optional results: other rollout budgets per task</summary>
 
-Each budget evaluates all 800 tests. Report successes and success rates per task;
-use N/A for budgets you do not report.
+Each budget evaluates all 800 tests. Replace [N] with each budget you report (fewer than 10 rollouts per task; the ASPIRE and RAX references use 1, 3 and 5), and
+report successes and success rates per task. Remove unused columns.
 
-| Suite | Task | 1 rollout | 3 rollouts | 5 rollouts |
+| Suite | Task | [N] rollouts | [N] rollouts | [N] rollouts |
 | --- | --- | --- | --- | --- |
 | Counting | BinFill | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
 | Counting | PickXtimes | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
@@ -205,15 +205,19 @@ use N/A for budgets you do not report.
 
 **Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
+Both are valid: run an independent experiment capped at R attempts per task, or
+extract checkpoints from a 10-attempt development run.
 For each budget, link the usage log and frozen code revision and add a matching
-audit below. A saved checkpoint for budget R must be frozen before **any** task's
-(R+1)th start, so components shared across tasks cannot carry later experience.
-Test outcomes cannot select checkpoints.
+audit below. Select each task's R checkpoint after at most R attempts and before
+**that task's** (R+1)th start. It may include offline revisions using the preceding
+attempts' feedback, or be saved immediately after an attempt. Tasks can freeze
+independently; preserve the checkpoint's dependency versions and audit shared
+components against the same per-task budget. Test outcomes cannot select checkpoints.
 
 </details>
 
 
-## 4. `demo&interaction`
+## 4. `Hybrid`
 
 Adapt using released offline demonstrations and training-seed interactions.
 
@@ -257,12 +261,12 @@ Adapt using released offline demonstrations and training-seed interactions.
 
 
 <details>
-<summary>Optional results: 1, 3 and 5 rollouts per task</summary>
+<summary>Optional results: other rollout budgets per task</summary>
 
-Each budget evaluates all 800 tests. Report successes and success rates per task;
-use N/A for budgets you do not report.
+Each budget evaluates all 800 tests. Replace [N] with each budget you report (fewer than 10 rollouts per task; the ASPIRE and RAX references use 1, 3 and 5), and
+report successes and success rates per task. Remove unused columns.
 
-| Suite | Task | 1 rollout | 3 rollouts | 5 rollouts |
+| Suite | Task | [N] rollouts | [N] rollouts | [N] rollouts |
 | --- | --- | --- | --- | --- |
 | Counting | BinFill | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
 | Counting | PickXtimes | ___/50 (___%) | ___/50 (___%) | ___/50 (___%) |
@@ -290,10 +294,14 @@ use N/A for budgets you do not report.
 
 **Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
+Both are valid: run an independent experiment capped at R attempts per task, or
+extract checkpoints from a 10-attempt development run.
 For each budget, link the usage log and frozen code revision and add a matching
-audit below. A saved checkpoint for budget R must be frozen before **any** task's
-(R+1)th start, so components shared across tasks cannot carry later experience.
-Test outcomes cannot select checkpoints.
+audit below. Select each task's R checkpoint after at most R attempts and before
+**that task's** (R+1)th start. It may include offline revisions using the preceding
+attempts' feedback, or be saved immediately after an attempt. Tasks can freeze
+independently; preserve the checkpoint's dependency versions and audit shared
+components against the same per-task budget. Test outcomes cannot select checkpoints.
 
 </details>
 

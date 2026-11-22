@@ -1,729 +1,590 @@
+# v00_initial — ButtonUnmaskSwap
+# Goal (from get_task_context().language): press every button once (before the published
+# press deadline), then pick up the containers hiding the named cubes, in the stated order.
+# Strategy:
+#   1. Tick 0 (no time passes for perception): localize the named cubes and the buttons.
+#   2. Drive the arm only with one-tick joint steps so the front camera can be read after
+#      EVERY tick; a pure-Python 3D tracker follows every white container on the table
+#      (front RGB-D -> robot_base points, height band, Voronoi/k-means update seeded by
+#      constant-velocity predictions). Each named cube is bound to the container that lands
+#      on it.
+#   3. Press the buttons, park at home, keep tracking until containers stop moving.
+#   4. Pick each target container (yaw from its top footprint), lift, put it back, next.
+# Every pose/geometry is derived from perception at runtime; constants are generic
+# tolerances, bands, and step limits.
 import math
 
-# v05 -- from v04 (ep1 fail at the red lift: while the pressing hand hid the red container,
-#  its LOST track coasted next to another container and captured it by k-means; the true red
-#  container re-emerged as an unclaimed orphan). v05: (a) lost tracks never take points by
-#  k-means -- they re-attach only through orphan-cluster recovery (cap 0.15 m); (b) during
-#  the presses the hand exclusion is a 0.12 x 0.24 m box aligned with the finger axis
-#  instead of a 0.13 m disc, so nearby containers stay visible; (c) faster high transits.
-# v04 -- from v03 (ep1 still failed: a container hidden behind the front-view pillar at the
-#  drop was never tracked, and recovery jumps of up to 0.3 m swapped identities). v04 fuses
-#  the top-face points of BOTH cameras each tick: the wrist camera, held at the home pose,
-#  looks straight down, so the pillar cannot hide a container top; each camera is
-#  back-projected with its own live pose, so the tracker stays in one metric frame even
-#  while the wrist moves during the presses. Recovery jumps are capped at 0.12 m.
-# v03 -- from v02 (ep0 success, ep1 fail). ep1 had a tall gray occluding pillar: a static
-#  track latched onto it and containers passing behind it / under the pressing hand lost
-#  identity (green track captured by the hand). v03 adds: (a) static tall white structure
-#  observed at t0 (before the containers drop) excluded by xy footprint; (b) hand exclusion
-#  radius 0.13 m (Panda hand is ~0.2 m wide); (c) lost-track recovery: a track without
-#  points is re-attached to the nearest orphan top-face cluster (identity by elimination);
-#  (d) two tracks closer than 3 cm -> the weaker is declared lost.
-# v02 -- ButtonUnmaskSwap. Fixes v01's two failure modes on ep0:
-#  (tracking) 2D white-blob k-means let tracks merge onto one container and get captured
-#  by the white robot arm -> v02 tracks containers in METRIC table coordinates using only
-#  the back-projected TOP-FACE points of white pixels (live depth); top faces of
-#  equal-height containers never overlap, and the arm/buttons fall outside the height band.
-#  Tracks coast with their velocity while occluded, and a track never takes points
-#  nearer to another track.
-#  (grasp) v01 blue grasp closed on air (gripper 0.0) at a centroid between two
-#  containers -> grasp at the tracked top-face centroid, fingers yawed to the
-#  container faces (4-fold orientation of top-face points), verify the gripper did not
-#  close fully, retry once from a fresh observation.
+COLORS = ["red", "green", "blue", "yellow", "purple", "orange", "black", "white",
+          "pink", "brown", "gray", "grey", "cyan"]
+CAM = "front"
+WHITE_MIN = 140          # container pixels: bright ...
+WHITE_SPREAD = 45        # ... and unsaturated (wood is orange, cubes are saturated)
+BAND_LO = 0.045          # above button caps / cubes / table
+BAND_HI = 0.16           # below the parked/transiting arm links
+ROI_STRIDE = 2
+GATE = 0.06              # metres; a point joins a track only within this radius
+EE_EXCLUDE = 0.12        # ignore points this close (XY) to a low end effector
+X_MIN = 0.22             # in front of the robot pedestal (pedestal itself is in the band)
+X_MAX = 0.95
+Y_ABS = 0.45
+MAX_DQ = 0.06            # rad per tick for self-generated joint interpolation
 
-R = {"errors": [], "events": [], "trk_log": [], "recoveries": []}
-result = R
-COLORS = ["red", "blue", "green", "yellow", "purple", "orange", "pink", "white", "black",
-          "brown", "gray", "grey", "cyan", "magenta"]
-TICKS = {"n": 0}
-STATE = {"ended": False}
-PRESS_AT = 100          # start pressing at this tick (v01: presses at 129/149 registered fine)
-QUIET_TICKS = 20
-STRIDE = 2
+report = {"events": [], "errors": []}
+S = {"ended": False, "tick": 0, "grip": 1.0, "tracks": [], "track_ok": False,
+     "last_pts": [], "speed_hist": [], "obs": None}
 
 
-def err(tag, e):
-    R["errors"].append("[t%d] %s: %s" % (TICKS["n"], tag, str(e)[:300]))
+def log(msg):
+    report["events"].append([S["tick"], msg])
 
 
-def ev(msg):
-    R["events"].append("[t%d] %s" % (TICKS["n"], msg))
+# ---------------------------------------------------------------- language
+context = get_task_context()
+lang = str(context.language)
+report["language"] = lang
+low = lang.lower().replace(",", " ").replace(".", " ")
+words = low.split()
+pick_part = low
+if "then" in words:
+    pick_part = low[low.index("then"):]
+order = []
+for w in pick_part.split():
+    if w in COLORS and w not in order:
+        order.append(w)
+n_buttons = 1
+if "both" in words or "two" in words:
+    n_buttons = 2
+if "three" in words:
+    n_buttons = 3
+report["order"] = order
+report["n_buttons"] = n_buttons
+
+state0 = get_robot_state()
+base_frame = state0.base_frame
+embodiment = state0.embodiment
+home_q = [float(v) for v in state0.joint_positions["primary"]]
+home_quat = [float(v) for v in state0.end_effector_poses["primary"].quaternion_wxyz]
+try:
+    max_steps_total = int(robomme_plus.get_task_metadata()["max_steps"])
+except Exception:
+    max_steps_total = 1000
+report["max_steps"] = max_steps_total
 
 
-def is_term(r):
-    t = False
-    try:
-        t = bool(r.terminated)
-    except Exception:
-        pass
-    try:
-        t = t or bool(r.truncated)
-    except Exception:
-        pass
-    return t
-
-
-def qrot(q):
-    w, x, y, z = float(q[0]), float(q[1]), float(q[2]), float(q[3])
+# ---------------------------------------------------------------- geometry helpers
+def quat_to_rot(q):
+    w, x, y, z = q
+    n = math.sqrt(w * w + x * x + y * y + z * z)
+    w, x, y, z = w / n, x / n, y / n, z / n
     return [[1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
             [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
             [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]]
 
 
-def qmul(a, b):
-    return [a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
-            a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
-            a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
-            a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]]
+def quat_mul(a, b):
+    aw, ax, ay, az = a
+    bw, bx, by, bz = b
+    return [aw * bw - ax * bx - ay * by - az * bz,
+            aw * bx + ax * bw + ay * bz - az * by,
+            aw * by - ax * bz + ay * bw + az * bx,
+            aw * bz + ax * by - ay * bx + az * bw]
 
 
-def white(px):
-    mn = min(px[0], px[1], px[2])
-    mx = max(px[0], px[1], px[2])
-    return mn > 100 and mx - mn < 45
+def quantile(values, fraction):
+    ordered = sorted(float(v) for v in values)
+    if not ordered:
+        return None
+    return ordered[int((len(ordered) - 1) * fraction)]
 
 
-try:
-    ctx = get_task_context()
-    lang = str(ctx.language)
-    R["language"] = lang
-    tm = robomme_plus.get_task_metadata()
-    max_steps = 480
+obs0 = get_observation()
+cam0 = obs0.cameras[CAM]
+K = cam0.intrinsics
+FX, FY, CX, CY = float(K[0][0]), float(K[1][1]), float(K[0][2]), float(K[1][2])
+RC = quat_to_rot([float(v) for v in cam0.camera_pose.quaternion_wxyz])
+TC = [float(v) for v in cam0.camera_pose.position]
+IMG_H = len(cam0.rgb)
+IMG_W = len(cam0.rgb[0])
+report["camera_frame"] = str(cam0.camera_pose.frame)
+
+
+def row_list(arr, v):
+    row = arr[v]
     try:
-        max_steps = int(tm["max_steps"])
-    except Exception as e:
-        err("max_steps", e)
-    R["max_steps"] = max_steps
+        return row.tolist()
+    except Exception:
+        return [row[i] for i in range(len(row))]
 
-    words = lang.lower().replace(",", " ").replace(".", " ").split()
-    order = []
-    for i in range(1, len(words)):
-        if words[i] in ("cube", "cubes", "block") and words[i - 1] in COLORS:
-            if words[i - 1] not in order:
-                order.append(words[i - 1])
-    n_buttons = 2 if ("both" in words or "two" in words or "buttons" in words) else 1
-    R["order"] = order
-    R["n_buttons_goal"] = n_buttons
 
-    obs = get_observation()
-    st = get_robot_state()
-    base = st.base_frame
-    EMB = st.embodiment
-    fcam = obs.cameras["front"]
-    K = [[float(v) for v in row] for row in fcam.intrinsics.tolist()]
-    FX, FY, CX, CY = K[0][0], K[1][1], K[0][2], K[1][2]
-    CP = [float(v) for v in fcam.camera_pose.position]
-    RM = qrot(fcam.camera_pose.quaternion_wxyz)
-    rgb0 = fcam.rgb.tolist()
-    dep0 = fcam.depth_m.tolist()
-    H = len(rgb0)
-    W = len(rgb0[0])
+def container_points(obs):
+    """White, unsaturated front-camera pixels projected to robot_base, kept in the height band."""
+    cam = obs.cameras[CAM]
+    rgb = cam.rgb
+    dep = cam.depth_m
+    ee = obs.robot_state.end_effector_poses["primary"].position
+    ex, ey, ez = float(ee[0]), float(ee[1]), float(ee[2])
+    exclude_ee = ez < 0.30
+    pts = []
+    v = 0
+    while v < IMG_H:
+        rrow = row_list(rgb, v)
+        drow = None
+        u = 0
+        while u < IMG_W:
+            p = rrow[u]
+            r, g, b = p[0], p[1], p[2]
+            mn = min(r, g, b)
+            if mn > WHITE_MIN and max(r, g, b) - mn < WHITE_SPREAD:
+                if drow is None:
+                    drow = row_list(dep, v)
+                zc = float(drow[u])
+                if zc > 0.05:
+                    xc = (u - CX) * zc / FX
+                    yc = (v - CY) * zc / FY
+                    X = RC[0][0] * xc + RC[0][1] * yc + RC[0][2] * zc + TC[0]
+                    Y = RC[1][0] * xc + RC[1][1] * yc + RC[1][2] * zc + TC[1]
+                    Z = RC[2][0] * xc + RC[2][1] * yc + RC[2][2] * zc + TC[2]
+                    if BAND_LO < Z < BAND_HI and X_MIN < X < X_MAX and -Y_ABS < Y < Y_ABS:
+                        if not (exclude_ee and (X - ex) ** 2 + (Y - ey) ** 2 < EE_EXCLUDE ** 2):
+                            pts.append((X, Y, Z))
+            u += ROI_STRIDE
+        v += ROI_STRIDE
+    return pts
 
-    def backproject(u, v, dep):
-        xc = (u - CX) * dep / FX
-        yc = (v - CY) * dep / FY
-        zc = dep
-        return [CP[0] + RM[0][0] * xc + RM[0][1] * yc + RM[0][2] * zc,
-                CP[1] + RM[1][0] * xc + RM[1][1] * yc + RM[1][2] * zc,
-                CP[2] + RM[2][0] * xc + RM[2][1] * yc + RM[2][2] * zc]
 
-    q0 = [float(v) for v in st.joint_positions["primary"]]
-    quat0 = [float(v) for v in st.end_effector_poses["primary"].quaternion_wxyz]
-    zax = qrot(quat0)
-    down_quat = quat0 if zax[2][2] < -0.9 else [0.0, 1.0, 0.0, 0.0]
-    hand_y = qrot(down_quat)
-    FINGER_YAW = math.atan2(hand_y[1][1], hand_y[0][1])   # finger closing axis in base xy
-    R["finger_yaw_deg"] = round(math.degrees(FINGER_YAW), 1)
-
-    def rgb_color_ok(px, color):
-        r, g, b = px[0], px[1], px[2]
-        if color == "red":
-            return r > 120 and r > g + 50 and r > b + 50
-        if color == "green":
-            return g > 90 and g > r + 30 and g > b + 30
-        if color == "blue":
-            return b > 90 and b > r + 30 and b > g + 20
-        if color == "yellow":
-            return r > 120 and g > 120 and b < min(r, g) - 50
-        return True
-
-    # ---- cubes named in the goal (t0, before the containers drop) ----
-    cubes = {}
-    for color in order:
-        found = None
-        try:
-            s = segment_text("front", color + " cube")
-            if s.ok:
-                for c in s.segmentations[:5]:
-                    if c.box_xyxy is None:
-                        continue
-                    b = [float(v) for v in c.box_xyxy]
-                    if b[2] - b[0] > 40 or b[3] - b[1] > 40:
-                        continue
-                    u = int((b[0] + b[2]) / 2.0)
-                    v = int((b[1] + b[3]) / 2.0)
-                    if rgb_color_ok(rgb0[v][u], color):
-                        p = backproject(u + 0.5, v + 0.5, float(dep0[v][u]))
-                        found = {"px": [u, v], "xyz": [round(p[0], 4), round(p[1], 4), round(p[2], 4)],
-                                 "score": round(float(c.score), 3)}
-                        break
-        except Exception as e:
-            err("cube " + color, e)
-        cubes[color] = found
-    R["cubes"] = cubes
-
-    # ---- buttons (3D gate: raised base plate, small footprint) ----
-    buttons = []
-    try:
-        s = segment_text("front", "button")
-        if s.ok:
-            for c in s.segmentations[:5]:
-                try:
-                    pc = mask_to_point_cloud(c, "front", target_frame=base)
-                    pts = pc.points.tolist()
-                    if len(pts) < 10:
-                        continue
-                    n = len(pts)
-                    xs = sorted([p[0] for p in pts])
-                    ys = sorted([p[1] for p in pts])
-                    zs = sorted([p[2] for p in pts])
-                    xsp = xs[int(0.95 * (n - 1))] - xs[int(0.05 * (n - 1))]
-                    ysp = ys[int(0.95 * (n - 1))] - ys[int(0.05 * (n - 1))]
-                    zlo = zs[int(0.05 * (n - 1))]
-                    zhi = zs[int(0.95 * (n - 1))]
-                    info = {"xyz": [xs[n // 2], ys[n // 2]], "top": zhi, "zlo": zlo,
-                            "score": round(float(c.score), 3), "span": [round(xsp, 3), round(ysp, 3)]}
-                    if xsp > 0.08 or ysp > 0.08 or zlo < 0.010 or zhi - zlo > 0.06:
-                        continue
-                    dup = False
-                    for bb in buttons:
-                        if abs(bb["xyz"][0] - info["xyz"][0]) < 0.03 and abs(bb["xyz"][1] - info["xyz"][1]) < 0.03:
-                            dup = True
-                    if not dup:
-                        buttons.append(info)
-                except Exception as e:
-                    err("button cand", e)
-    except Exception as e:
-        err("buttons", e)
-    R["buttons"] = buttons
-
-    # ---- metric top-face tracker ----
-    STATIC = {}
-    TR = {"init": False, "ztop": None, "last_motion": -1, "frozen": False, "init_tick": -1}
-    tracks = []
-    ARM = {"xy": None, "box": False}
-
-    def cam_params(c):
-        k = [[float(v) for v in row] for row in c.intrinsics.tolist()]
-        return {"fx": k[0][0], "fy": k[1][1], "cx": k[0][2], "cy": k[1][2],
-                "p": [float(v) for v in c.camera_pose.position], "R": qrot(c.camera_pose.quaternion_wxyz)}
-
-    FRONT0 = cam_params(fcam)
-
-    def white_points(rgb, dep, cp=None):
-        if cp is None:
-            cp = FRONT0
-        cfx, cfy, ccx, ccy, cpp, crm = cp["fx"], cp["fy"], cp["cx"], cp["cy"], cp["p"], cp["R"]
-        pts = []
-        for v in range(0, H, STRIDE):
-            row = rgb[v]
-            drow = dep[v]
-            for u in range(0, W, STRIDE):
-                if not white(row[u]):
-                    continue
-                d = float(drow[u])
-                if d < 0.05 or d > 3.0:
-                    continue
-                xc = (u + 0.5 - ccx) * d / cfx
-                yc = (v + 0.5 - ccy) * d / cfy
-                p = [cpp[0] + crm[0][0] * xc + crm[0][1] * yc + crm[0][2] * d,
-                     cpp[1] + crm[1][0] * xc + crm[1][1] * yc + crm[1][2] * d,
-                     cpp[2] + crm[2][0] * xc + crm[2][1] * yc + crm[2][2] * d]
-                if p[2] < 0.02 or p[2] > 0.15:
-                    continue
-                if p[0] * p[0] + p[1] * p[1] < 0.2 * 0.2:
-                    continue   # robot's own base/links near the base-frame origin
-                near_b = False
-                for bb in buttons:
-                    if (p[0] - bb["xyz"][0]) ** 2 + (p[1] - bb["xyz"][1]) ** 2 < 0.03 * 0.03:
-                        near_b = True
-                if near_b:
-                    continue
-                if ARM["xy"] is not None:
-                    if ARM["box"]:
-                        # pressing: hand axis-aligned (fingers along base y) -> box footprint
-                        if abs(p[0] - ARM["xy"][0]) < 0.06 and abs(p[1] - ARM["xy"][1]) < 0.12:
-                            continue
-                    elif (p[0] - ARM["xy"][0]) ** 2 + (p[1] - ARM["xy"][1]) ** 2 < 0.13 * 0.13:
-                        continue
-                if (int(math.floor(p[0] / 0.01)), int(math.floor(p[1] / 0.01))) in STATIC:
-                    continue
-                pts.append(p)
-        return pts
-
-    def all_points(ob):
-        pts = []
-        for cn in ("front", "wrist"):
-            try:
-                c = ob.cameras[cn]
-                pts = pts + white_points(c.rgb.tolist(), c.depth_m.tolist(), cam_params(c))
-            except Exception as e:
-                err("pts " + cn, e)
-        return pts
-
-    # static tall white structure at t0 (no containers yet): xy cells holding white points
-    # higher than 5 cm (cubes/buttons are ~3.5 cm), dilated by one 1-cm cell
-    try:
-        raw0 = all_points(obs)
-        cells = {}
-        for p in raw0:
-            if p[2] > 0.05:
-                cells[(int(math.floor(p[0] / 0.01)), int(math.floor(p[1] / 0.01)))] = True
-        for k in cells:
+def grid_clusters(pts, cell=0.01, min_pts=6):
+    """Connected components over a 1 cm XY occupancy grid."""
+    cells = {}
+    for p in pts:
+        key = (int(math.floor(p[0] / cell)), int(math.floor(p[1] / cell)))
+        if key in cells:
+            cells[key].append(p)
+        else:
+            cells[key] = [p]
+    seen = set()
+    clusters = []
+    for key in cells:
+        if key in seen:
+            continue
+        stack = [key]
+        seen.add(key)
+        members = []
+        while stack:
+            k = stack.pop()
+            members.extend(cells[k])
             for dx in (-1, 0, 1):
                 for dy in (-1, 0, 1):
-                    STATIC[(k[0] + dx, k[1] + dy)] = True
-        R["static_cells"] = len(STATIC)
-        R["white_t0_pts"] = len(raw0)
-    except Exception as e:
-        err("static map", e)
+                    nb = (k[0] + dx, k[1] + dy)
+                    if nb in cells and nb not in seen:
+                        seen.add(nb)
+                        stack.append(nb)
+        if len(members) >= min_pts:
+            sx = sum(m[0] for m in members) / len(members)
+            sy = sum(m[1] for m in members) / len(members)
+            clusters.append({"x": sx, "y": sy, "n": len(members)})
+    return clusters
 
-    def top_band(pts):
-        zt = TR["ztop"]
-        return [p for p in pts if zt - 0.016 <= p[2] <= zt + 0.02]
 
-    def grid_components(pts, cell):
-        occ = {}
-        for p in pts:
-            k = (int(math.floor(p[0] / cell)), int(math.floor(p[1] / cell)))
-            if k not in occ:
-                occ[k] = []
-            occ[k].append(p)
-        seen = {}
-        comps = []
-        for k in occ:
-            if k in seen:
-                continue
-            seen[k] = True
-            stack = [k]
-            comp = []
-            while len(stack) > 0:
-                cur = stack.pop()
-                comp = comp + occ[cur]
-                for dx in (-1, 0, 1):
-                    for dy in (-1, 0, 1):
-                        nk = (cur[0] + dx, cur[1] + dy)
-                        if nk in occ and nk not in seen:
-                            seen[nk] = True
-                            stack.append(nk)
-            comps.append(comp)
-        return comps
+def track_update(pts):
+    tracks = S["tracks"]
+    if not tracks:
+        return
+    preds = []
+    for t in tracks:
+        preds.append((t["x"] + t["vx"], t["y"] + t["vy"]))
+    sums = [[0.0, 0.0, 0] for t in tracks]
+    assign = []
+    g2 = GATE * GATE
+    for p in pts:
+        best = -1
+        bd = g2
+        for i in range(len(preds)):
+            dx = p[0] - preds[i][0]
+            dy = p[1] - preds[i][1]
+            d = dx * dx + dy * dy
+            if d < bd:
+                bd = d
+                best = i
+        assign.append(best)
+        if best >= 0:
+            s = sums[best]
+            s[0] += p[0]
+            s[1] += p[1]
+            s[2] += 1
+    for i in range(len(tracks)):
+        t = tracks[i]
+        s = sums[i]
+        if s[2] >= 6:
+            nx = s[0] / s[2]
+            ny = s[1] / s[2]
+            t["vx"] = 0.6 * t["vx"] + 0.4 * (nx - t["x"])
+            t["vy"] = 0.6 * t["vy"] + 0.4 * (ny - t["y"])
+            t["x"] = nx
+            t["y"] = ny
+            t["n"] = s[2]
+            t["miss"] = 0
+        else:
+            t["x"] = preds[i][0]
+            t["y"] = preds[i][1]
+            t["vx"] *= 0.8
+            t["vy"] *= 0.8
+            t["n"] = s[2]
+            t["miss"] += 1
+    S["last_pts"] = pts
+    S["last_assign"] = assign
+    # Late-landing containers: unassigned points that form a compact cluster become a new
+    # track, but only early in the episode (later, unassigned points are arm/noise).
+    if S["tick"] < 40:
+        free = [pts[i] for i in range(len(pts)) if assign[i] < 0]
+        if len(free) >= 15:
+            for c in grid_clusters(free, min_pts=15):
+                tracks.append({"x": c["x"], "y": c["y"], "vx": 0.0, "vy": 0.0, "n": c["n"], "miss": 0})
+                log("spawned track %d at %.3f %.3f" % (len(tracks) - 1, c["x"], c["y"]))
 
-    def kmeans_xy(pts, cents, iters):
-        for it in range(iters):
-            acc = [[0.0, 0.0, 0] for c in cents]
-            for p in pts:
-                bi = 0
-                bd = None
-                for i in range(len(cents)):
-                    d = (p[0] - cents[i][0]) ** 2 + (p[1] - cents[i][1]) ** 2
-                    if bd is None or d < bd:
-                        bd = d
-                        bi = i
-                acc[bi][0] += p[0]
-                acc[bi][1] += p[1]
-                acc[bi][2] += 1
-            for i in range(len(cents)):
-                if acc[i][2] > 0:
-                    cents[i] = [acc[i][0] / acc[i][2], acc[i][1] / acc[i][2]]
-        return cents
 
-    def init_tracks(pts):
-        zs = sorted([p[2] for p in pts])
-        TR["ztop"] = zs[int(0.93 * (len(zs) - 1))]
-        top = top_band(pts)
-        comps = [c for c in grid_components(top, 0.01) if len(c) >= 6]
-        if len(comps) == 0:
-            return False
-        sizes = sorted([len(c) for c in comps])
-        unit = sizes[len(sizes) // 2]
-        for c in comps:
-            k = max(1, int(round(len(c) / float(unit))))
-            mx = sum([p[0] for p in c]) / len(c)
-            my = sum([p[1] for p in c]) / len(c)
-            if k == 1:
-                cents = [[mx, my]]
-            else:
-                xs = sorted([p[0] for p in c])
-                ys = sorted([p[1] for p in c])
-                cents = []
-                for i in range(k):
-                    f = (i + 0.5) / k
-                    if xs[-1] - xs[0] >= ys[-1] - ys[0]:
-                        cents.append([xs[int(f * (len(xs) - 1))], my])
-                    else:
-                        cents.append([mx, ys[int(f * (len(ys) - 1))]])
-                cents = kmeans_xy(c, cents, 8)
-            for cc in cents:
-                tracks.append({"id": len(tracks), "c": cc, "v": [0.0, 0.0], "n": 0, "lost": 0})
-        R["ztop"] = round(TR["ztop"], 4)
-        R["init_unit"] = unit
-        R["init_tracks"] = [[t["id"], round(t["c"][0], 4), round(t["c"][1], 4)] for t in tracks]
-        return True
+def observe(obs):
+    """Called after every tick with the step's observation."""
+    S["obs"] = obs
+    if S.get("skip_tracking"):
+        return
+    pts = container_points(obs)
+    if not S["track_ok"]:
+        init_tracks(pts)
+        return
+    track_update(pts)
+    sp = 0.0
+    for t in S["tracks"]:
+        sp = max(sp, math.sqrt(t["vx"] ** 2 + t["vy"] ** 2))
+    S["speed_hist"].append(round(sp, 5))
+    if S["tick"] % 10 == 0:
+        snap = [[round(t["x"], 3), round(t["y"], 3), t["n"]] for t in S["tracks"]]
+        report.setdefault("track_log", []).append([S["tick"], snap])
 
-    def update_tracks(top):
-        pred = [[t["c"][0] + t["v"][0], t["c"][1] + t["v"][1]] for t in tracks]
-        cents = [[p[0], p[1]] for p in pred]
-        cnt = [0 for t in tracks]
-        live = [t["lost"] < 3 for t in tracks]   # v05: lost tracks never capture points by k-means
-        for it in range(2):
-            acc = [[0.0, 0.0, 0] for t in tracks]
-            for p in top:
-                bi = -1
-                bd = 0.032 * 0.032
-                for i in range(len(cents)):
-                    if not live[i]:
-                        continue
-                    d = (p[0] - cents[i][0]) ** 2 + (p[1] - cents[i][1]) ** 2
-                    if d < bd:
-                        bd = d
-                        bi = i
-                if bi >= 0:
-                    acc[bi][0] += p[0]
-                    acc[bi][1] += p[1]
-                    acc[bi][2] += 1
-            for i in range(len(tracks)):
-                cnt[i] = acc[i][2]
-                if acc[i][2] >= 5:
-                    cents[i] = [acc[i][0] / acc[i][2], acc[i][1] / acc[i][2]]
-                else:
-                    cents[i] = pred[i]
-        mv = 0.0
-        for i in range(len(tracks)):
-            t = tracks[i]
-            nc = cents[i]
-            dx = nc[0] - t["c"][0]
-            dy = nc[1] - t["c"][1]
-            dd = math.sqrt(dx * dx + dy * dy)
-            if dd > 0.015:
-                dx = dx * 0.015 / dd
-                dy = dy * 0.015 / dd
-            if cnt[i] >= 5:
-                t["v"] = [0.5 * t["v"][0] + 0.5 * dx, 0.5 * t["v"][1] + 0.5 * dy]
-                mv = max(mv, math.sqrt(dx * dx + dy * dy))
-            else:
-                t["v"] = [0.85 * t["v"][0], 0.85 * t["v"][1]]
-                dx, dy = t["v"][0], t["v"][1]
-            t["c"] = [t["c"][0] + dx, t["c"][1] + dy]
-            t["n"] = cnt[i]
-            t["lost"] = t["lost"] + 1 if cnt[i] < 5 else 0
-        # merge prevention: two tracks within 3 cm -> the weaker one is lost
-        for i in range(len(tracks)):
-            for j in range(i + 1, len(tracks)):
-                a = tracks[i]
-                b = tracks[j]
-                if (a["c"][0] - b["c"][0]) ** 2 + (a["c"][1] - b["c"][1]) ** 2 < 0.03 * 0.03:
-                    weak = a if a["n"] < b["n"] else b
-                    weak["lost"] = max(weak["lost"], 3)
-                    weak["n"] = 0
-                    TR["merges"] = TR.get("merges", 0) + 1
-        # recovery: lost tracks (>= 3 ticks) re-attach to orphan clusters
-        lost = [t for t in tracks if t["lost"] >= 3]
-        if len(lost) > 0:
-            active = [t for t in tracks if t["lost"] < 3]
-            orphans = []
-            for p in top:
-                far = True
-                for t in active:
-                    if (p[0] - t["c"][0]) ** 2 + (p[1] - t["c"][1]) ** 2 < 0.04 * 0.04:
-                        far = False
-                        break
-                if far:
-                    orphans.append(p)
-            clusters = []
-            for comp in grid_components(orphans, 0.01):
-                if len(comp) >= 15:
-                    clusters.append([sum([p[0] for p in comp]) / len(comp), sum([p[1] for p in comp]) / len(comp)])
-            pairs = []
-            for li in range(len(lost)):
-                for ci in range(len(clusters)):
-                    d = math.sqrt((lost[li]["c"][0] - clusters[ci][0]) ** 2 + (lost[li]["c"][1] - clusters[ci][1]) ** 2)
-                    if d < 0.15:
-                        pairs.append([d, li, ci])
-            pairs = sorted(pairs, key=lambda q: q[0])
-            ul = set()
-            uc = set()
-            for pr in pairs:
-                if pr[1] in ul or pr[2] in uc:
-                    continue
-                ul.add(pr[1])
-                uc.add(pr[2])
-                t = lost[pr[1]]
-                t["c"] = [clusters[pr[2]][0], clusters[pr[2]][1]]
-                t["v"] = [0.0, 0.0]
-                t["lost"] = 0
-                t["n"] = 5
-                R["recoveries"].append([TICKS["n"], t["id"], round(pr[0], 3)])
-        return mv
 
-    def track_tick():
-        try:
-            ob = get_observation()
-        except Exception as e:
-            err("obs", e)
-            return None
-        pts = all_points(ob)
-        rec = {"t": TICKS["n"], "w": len(pts)}
-        if not TR["init"]:
-            if len(pts) > 250:
-                if init_tracks(pts):
-                    TR["init"] = True
-                    TR["init_tick"] = TICKS["n"]
-                    TR["last_motion"] = TICKS["n"]
-                    ev("tracks initialised: %d, ztop %.3f" % (len(tracks), TR["ztop"]))
-        elif not TR["frozen"]:
-            mv = update_tracks(top_band(pts))
-            rec["mv"] = round(mv * 1000, 1)
-            if mv > 0.0015:
-                TR["last_motion"] = TICKS["n"]
-        if TR["init"] and TICKS["n"] % 2 == 0:
-            rec["tr"] = [[round(t["c"][0], 3), round(t["c"][1], 3), t["n"], t["lost"]] for t in tracks]
-        R["trk_log"].append(rec)
-        return pts
+def init_tracks(pts):
+    cl = grid_clusters(pts)
+    hist = S.setdefault("init_hist", [])
+    hist.append(len(cl))
+    report.setdefault("init_counts", []).append([S["tick"], len(cl), len(pts)])
+    # Containers have landed when the cluster count is non-zero and unchanged for 3 ticks.
+    if len(cl) >= max(1, len(order)) and len(hist) >= 3 and hist[-1] == hist[-2] == hist[-3]:
+        S["tracks"] = [{"x": c["x"], "y": c["y"], "vx": 0.0, "vy": 0.0, "n": c["n"], "miss": 0}
+                       for c in cl]
+        S["track_ok"] = True
+        bind_targets()
 
-    # ---- motion helpers ----
-    def joints_now():
-        return [float(v) for v in get_robot_state().joint_positions["primary"]]
 
-    def update_arm():
-        try:
-            p = [float(v) for v in get_robot_state().end_effector_poses["primary"].position]
-            ARM["xy"] = [p[0], p[1]] if p[2] < 0.25 else None
-        except Exception as e:
-            err("arm", e)
-
-    def step_hold(q, grip, track):
-        r = step(RobotAction(arms={"primary": ArmCommand(mode="joint_position", target=list(q),
-                                                         gripper_position=grip, embodiment=EMB)}))
-        TICKS["n"] += 1
-        if is_term(r):
-            STATE["ended"] = True
-            ev("episode terminal flag on step")
-            return r
-        if track:
-            update_arm()
-            track_tick()
-        return r
-
-    def step_to(qt, grip, min_n, track, vmax):
-        qs = joints_now()
-        md = 0.0
-        for k in range(7):
-            md = max(md, abs(qt[k] - qs[k]))
-        n = max(min_n, int(math.ceil(md / vmax)))
-        for i in range(1, n + 1):
-            if STATE["ended"]:
-                return
-            a = i / float(n)
-            step_hold([qs[k] + (qt[k] - qs[k]) * a for k in range(7)], grip, track)
-
-    def ik(pos, quat, seed):
-        res = solve_ik(Pose(position=list(pos), quaternion_wxyz=list(quat), frame=base), seed_joints=list(seed))
-        if not res.ok:
-            raise ValueError("IK failed for %s: %s" % (str([round(v, 3) for v in pos]), str(res.error)[:200]))
-        return [float(v) for v in res.joint_positions]
-
-    press_plan = []
-    bl = sorted(buttons, key=lambda b: b["xyz"][1])
-    for bb in bl[:n_buttons]:
-        qp = ik([bb["xyz"][0], bb["xyz"][1], bb["top"] + 0.06], down_quat, q0)
-        qd = ik([bb["xyz"][0], bb["xyz"][1], bb["top"] - 0.012], down_quat, qp)
-        press_plan.append([qp, qd, bb])
-    if len(press_plan) < n_buttons:
-        ev("only %d buttons found" % len(press_plan))
-
-    # ---- phase W: watch from home until PRESS_AT ----
-    track_tick()
-    while not STATE["ended"] and TICKS["n"] < PRESS_AT:
-        step_hold(q0, 0.0, True)
-
-    # ---- phase P: press buttons ----
-    ARM["box"] = True
-    for pp in press_plan:
-        if STATE["ended"]:
-            break
-        step_to(pp[0], 0.0, 8, True, 0.10)
-        step_to(pp[1], 0.0, 5, True, 0.05)
-        for k in range(3):
-            if not STATE["ended"]:
-                step_hold(pp[1], 0.0, True)
-        ev("pressed button at %.3f %.3f" % (pp[2]["xyz"][0], pp[2]["xyz"][1]))
-        step_to(pp[0], 0.0, 4, True, 0.10)
-    R["press_end"] = TICKS["n"]
-    step_to(q0, 0.0, 10, True, 0.10)
-    ARM["xy"] = None
-    ARM["box"] = False
-    t_after = TICKS["n"]
-    while not STATE["ended"]:
-        step_hold(q0, 0.0, True)
-        if STATE["ended"]:
-            break
-        if TICKS["n"] - TR["last_motion"] >= QUIET_TICKS and TICKS["n"] > t_after + 10:
-            ev("containers quiet")
-            break
-        if TICKS["n"] > max_steps - 420:
-            ev("post-press watch cap")
-            break
-    R["final_tracks"] = [[t["id"], round(t["c"][0], 4), round(t["c"][1], 4), t["n"]] for t in tracks]
-
-    # ---- map cubes -> container tracks at initialisation ----
-    init_pos = {}
-    for row in R.get("init_tracks", []):
-        init_pos[row[0]] = [row[1], row[2]]
-    assign = {}
-    used = set()
+def bind_targets():
+    bind = {}
     for color in order:
-        cb = cubes.get(color)
-        if cb is None:
+        cube = cubes.get(color)
+        if cube is None:
             continue
         best = None
-        for tid in init_pos:
-            if tid in used:
+        bd = None
+        for i in range(len(S["tracks"])):
+            t = S["tracks"][i]
+            d = (t["x"] - cube[0]) ** 2 + (t["y"] - cube[1]) ** 2
+            if bd is None or d < bd:
+                bd = d
+                best = i
+        bind[color] = best
+        log("bind %s -> track %s dist %.3f" % (color, str(best), math.sqrt(bd) if bd is not None else -1))
+    S["bind"] = bind
+    report["bind"] = bind
+    report["tracks_init"] = [[round(t["x"], 3), round(t["y"], 3), t["n"]] for t in S["tracks"]]
+
+
+# ---------------------------------------------------------------- stepping
+def tick(q, grip):
+    if S["ended"]:
+        return False
+    sr = step(RobotAction(arms={"primary": ArmCommand(
+        "joint_position", [float(v) for v in q], gripper_position=float(grip),
+        embodiment=embodiment)}))
+    S["tick"] += 1
+    term = False
+    try:
+        term = bool(sr.terminated) or bool(sr.truncated)
+    except Exception:
+        term = False
+    if term:
+        S["ended"] = True
+        log("episode ended")
+        return False
+    try:
+        obs = sr.observation
+        if obs is None:
+            obs = get_observation()
+    except Exception:
+        obs = get_observation()
+    try:
+        observe(obs)
+    except Exception as exc:
+        report["errors"].append("observe@%d: %s" % (S["tick"], str(exc)[:200]))
+    return True
+
+
+def current_q():
+    obs = S["obs"]
+    if obs is not None:
+        return [float(v) for v in obs.robot_state.joint_positions["primary"]]
+    return [float(v) for v in get_robot_state().joint_positions["primary"]]
+
+
+def goto_joints(target, grip, max_ticks, tol=0.02, max_dq=MAX_DQ):
+    """Interpolate toward joint target one tick at a time (tracking after every tick)."""
+    cmd = current_q()
+    for k in range(max_ticks):
+        if S["ended"]:
+            return False
+        nxt = []
+        done_cmd = True
+        for j in range(7):
+            d = target[j] - cmd[j]
+            if d > max_dq:
+                d = max_dq
+                done_cmd = False
+            elif d < -max_dq:
+                d = -max_dq
+                done_cmd = False
+            nxt.append(cmd[j] + d)
+        cmd = nxt
+        if not tick(cmd, grip):
+            return False
+        if done_cmd:
+            q = current_q()
+            err = max(abs(q[j] - target[j]) for j in range(7))
+            if err < tol:
+                return True
+    return False
+
+
+def goto_pose(pos, quat, grip, max_ticks, tol=0.02, max_dq=MAX_DQ):
+    seed = current_q()
+    ik = solve_ik(Pose((float(pos[0]), float(pos[1]), float(pos[2])), quat, base_frame),
+                  seed_joints=seed)
+    if not ik.ok:
+        log("ik failed for %s" % str([round(float(v), 3) for v in pos]))
+        return False
+    target = [float(v) for v in ik.joint_positions]
+    return goto_joints(target, grip, max_ticks, tol, max_dq)
+
+
+def hold(n, grip):
+    q = current_q()
+    for k in range(n):
+        if not tick(q, grip):
+            return False
+    return True
+
+
+def ee_now():
+    obs = S["obs"]
+    st = obs.robot_state if obs is not None else get_robot_state()
+    return [float(v) for v in st.end_effector_poses["primary"].position]
+
+
+# ---------------------------------------------------------------- tick-0 perception
+cubes = {}
+for color in order:
+    try:
+        seg = segment_text(CAM, color + " cube")
+        if seg.ok and len(seg.segmentations) > 0:
+            cand = seg.segmentations[0]
+            pc = mask_to_point_cloud(cand, CAM, target_frame=base_frame)
+            if len(pc.points) >= 10:
+                cubes[color] = (quantile([p[0] for p in pc.points], 0.5),
+                                quantile([p[1] for p in pc.points], 0.5),
+                                float(cand.score))
+    except Exception as exc:
+        report["errors"].append("cube %s: %s" % (color, str(exc)[:200]))
+report["cubes"] = {c: [round(v, 4) for v in cubes[c]] for c in cubes}
+
+buttons = []
+try:
+    seg = segment_text(CAM, "button")
+    cands = []
+    if seg.ok:
+        for cand in seg.segmentations[:5]:
+            pc = mask_to_point_cloud(cand, CAM, target_frame=base_frame)
+            if len(pc.points) < 10:
                 continue
-            d = math.sqrt((init_pos[tid][0] - cb["xyz"][0]) ** 2 + (init_pos[tid][1] - cb["xyz"][1]) ** 2)
-            if best is None or d < best[0]:
-                best = [d, tid]
-        if best is not None and best[0] < 0.04:
-            assign[color] = best[1]
-            used.add(best[1])
-        R["assign_d_" + color] = None if best is None else round(best[0], 4)
-    R["assign"] = assign
-
-    # ---- phase G: pick each target container in order ----
-    def container_now(tid):
-        # refresh tracks for a few ticks with the arm at home, then measure this track
-        pts = None
-        for k in range(3):
-            if not STATE["ended"]:
-                step_hold(q0, 1.0, True)
-        try:
-            ob = get_observation()
-            pts = all_points(ob)
-        except Exception as e:
-            err("obs pick", e)
-            return None
-        top = top_band(pts)
-        me = None
-        for t in tracks:
-            if t["id"] == tid:
-                me = t
-        mine = []
-        for p in top:
-            dme = (p[0] - me["c"][0]) ** 2 + (p[1] - me["c"][1]) ** 2
-            if dme > 0.032 * 0.032:
-                continue
-            ok = True
-            for t in tracks:
-                if t["id"] != tid and (p[0] - t["c"][0]) ** 2 + (p[1] - t["c"][1]) ** 2 < dme:
-                    ok = False
-                    break
-            if ok:
-                mine.append(p)
-        if len(mine) < 8:
-            return {"c": me["c"], "top": TR["ztop"], "yaw": FINGER_YAW, "n": len(mine)}
-        cx = sum([p[0] for p in mine]) / len(mine)
-        cy = sum([p[1] for p in mine]) / len(mine)
-        zs = sorted([p[2] for p in mine])
-        topz = zs[int(0.8 * (len(zs) - 1))]
-        # 4-fold orientation of the square top face: corners are the farthest points
-        s4 = 0.0
-        c4 = 0.0
-        for p in mine:
-            dx = p[0] - cx
-            dy = p[1] - cy
-            r2 = dx * dx + dy * dy
-            a = math.atan2(dy, dx)
-            s4 += r2 * r2 * math.sin(4 * a)
-            c4 += r2 * r2 * math.cos(4 * a)
-        corner = math.atan2(s4, c4) / 4.0
-        face = corner + math.pi / 4.0
-        return {"c": [cx, cy], "top": topz, "yaw": face, "n": len(mine)}
-
-    def yawed_quat(face_yaw):
-        d = face_yaw - FINGER_YAW
-        while d > math.pi / 4:
-            d -= math.pi / 2
-        while d < -math.pi / 4:
-            d += math.pi / 2
-        rz = [math.cos(d / 2), 0.0, 0.0, math.sin(d / 2)]
-        return qmul(rz, down_quat), d
-
-    R["picks"] = []
-    TR["frozen"] = False
-    for color in order:
-        if STATE["ended"]:
+            bx = quantile([p[0] for p in pc.points], 0.5)
+            by = quantile([p[1] for p in pc.points], 0.5)
+            ztop = quantile([p[2] for p in pc.points], 0.95)
+            zlo = quantile([p[2] for p in pc.points], 0.05)
+            cands.append({"x": bx, "y": by, "top": ztop, "zlo": zlo, "score": float(cand.score)})
+    report["button_cands"] = [[round(c["x"], 3), round(c["y"], 3), round(c["top"], 3),
+                               round(c["zlo"], 3), round(c["score"], 3)] for c in cands]
+    # Keep the highest-scoring, mutually distinct candidates that are not one of the named cubes.
+    for c in sorted(cands, key=lambda c: -c["score"]):
+        if len(buttons) >= n_buttons:
             break
-        if color not in assign:
-            ev("no container for %s" % color)
-            continue
-        for attempt in range(2):
-            if STATE["ended"]:
-                break
-            info = container_now(assign[color])
-            if info is None:
-                break
-            gq, dyaw = yawed_quat(info["yaw"])
-            cx, cy, top = info["c"][0], info["c"][1], info["top"]
-            rec = {"color": color, "track": assign[color], "attempt": attempt, "c": [round(cx, 4), round(cy, 4)],
-                   "top": round(top, 4), "n": info["n"], "dyaw_deg": round(math.degrees(dyaw), 1)}
-            R["picks"].append(rec)
-            gz = max(top - 0.022, 0.012)
-            try:
-                qa = ik([cx, cy, top + 0.07], gq, q0)
-                qg = ik([cx, cy, gz], gq, qa)
-                ql = ik([cx, cy, top + 0.12], gq, qg)
-            except Exception as e:
-                err("pick ik", e)
-                gq = down_quat
-                qa = ik([cx, cy, top + 0.07], gq, q0)
-                qg = ik([cx, cy, gz], gq, qa)
-                ql = ik([cx, cy, top + 0.12], gq, qg)
-            ev("pick %s try %d at %.3f %.3f top %.3f dyaw %.0f" % (color, attempt, cx, cy, top, math.degrees(dyaw)))
-            TR["frozen"] = True
-            step_to(qa, 1.0, 10, False, 0.08)
-            step_to(qg, 1.0, 6, False, 0.04)
-            for k in range(10):
-                if not STATE["ended"]:
-                    step_hold(qg, 0.0, False)
-            g = 0.0
-            try:
-                g = float(get_robot_state().gripper_positions["primary"])
-            except Exception as e:
-                err("grip", e)
-            rec["grip_closed"] = round(g, 3)
-            if g < 0.03 and attempt == 0:
-                ev("grasp closed on nothing; re-observe and retry")
-                step_to(qa, 1.0, 6, False, 0.06)
-                step_to(q0, 1.0, 10, False, 0.08)
-                TR["frozen"] = False
-                continue
-            step_to(ql, 0.0, 8, False, 0.04)
-            for k in range(8):
-                if not STATE["ended"]:
-                    step_hold(ql, 0.0, False)
-            if STATE["ended"]:
-                break
-            step_to(qg, 0.0, 8, False, 0.04)
-            for k in range(5):
-                if not STATE["ended"]:
-                    step_hold(qg, 1.0, False)
-            step_to(qa, 1.0, 6, False, 0.06)
-            step_to(q0, 1.0, 10, False, 0.08)
-            TR["frozen"] = False
-            ev("placed back %s" % color)
-            break
-except Exception as e:
-    err("main", e)
+        near_cube = False
+        for col in cubes:
+            if (c["x"] - cubes[col][0]) ** 2 + (c["y"] - cubes[col][1]) ** 2 < 0.02 ** 2:
+                near_cube = True
+        dup = False
+        for b in buttons:
+            if (c["x"] - b["x"]) ** 2 + (c["y"] - b["y"]) ** 2 < 0.04 ** 2:
+                dup = True
+        if not near_cube and not dup:
+            buttons.append(c)
+except Exception as exc:
+    report["errors"].append("buttons: %s" % str(exc)[:200])
+report["buttons"] = [[round(b["x"], 3), round(b["y"], 3), round(b["top"], 3)] for b in buttons]
 
-R["ticks"] = TICKS["n"]
-result = R
+# initialise tracking state from the tick-0 observation
+S["obs"] = obs0
+try:
+    observe(obs0)
+except Exception as exc:
+    report["errors"].append("observe0: %s" % str(exc)[:200])
+
+# wait (holding still, tracking every tick) until the containers have landed and been bound
+while not S["ended"] and not S["track_ok"] and S["tick"] < 40:
+    hold(1, 1.0)
+report["tick_track_init"] = S["tick"]
+
+# ---------------------------------------------------------------- 1. press buttons
+grip_closed = 0.0
+ee0 = ee_now()
+buttons_sorted = sorted(buttons, key=lambda b: (b["x"] - ee0[0]) ** 2 + (b["y"] - ee0[1]) ** 2)
+press_log = []
+for b in buttons_sorted:
+    if S["ended"]:
+        break
+    above = (b["x"], b["y"], b["top"] + 0.06)
+    ok1 = goto_pose(above, home_quat, grip_closed, 45, tol=0.03, max_dq=0.08)
+    down = (b["x"], b["y"], b["top"] - 0.012)
+    ok2 = goto_pose(down, home_quat, grip_closed, 14, tol=0.01, max_dq=0.04)
+    eed = ee_now()
+    hold(2, grip_closed)
+    ok3 = goto_pose(above, home_quat, grip_closed, 14, tol=0.03, max_dq=0.06)
+    press_log.append({"ok": [ok1, ok2, ok3], "ee_down": [round(v, 4) for v in eed], "tick": S["tick"]})
+report["press"] = press_log
+report["tick_after_press"] = S["tick"]
+
+# ---------------------------------------------------------------- 2. park and wait for stillness
+goto_joints(home_q, 1.0, 60, tol=0.03, max_dq=0.08)
+still = 0
+wait_cap = min(max_steps_total - 400, 700)
+while not S["ended"] and S["tick"] < wait_cap:
+    if not hold(1, 1.0):
+        break
+    if S["track_ok"] and S["speed_hist"] and S["speed_hist"][-1] < 0.0006:
+        still += 1
+    else:
+        still = 0
+    if still >= 25 and S["tick"] > 60:
+        break
+report["tick_still"] = S["tick"]
+report["still_reached"] = still >= 25
+
+
+# ---------------------------------------------------------------- 3. picks
+def target_geometry(ti):
+    """Top-face footprint of track ti from the latest assigned points: centre, yaw, top z."""
+    pts = S["last_pts"]
+    assign = S.get("last_assign", [])
+    mine = [pts[i] for i in range(min(len(pts), len(assign))) if assign[i] == ti]
+    if len(mine) < 10:
+        return None
+    ztop = quantile([p[2] for p in mine], 0.97)
+    top = [p for p in mine if p[2] > ztop - 0.012]
+    if len(top) < 5:
+        top = mine
+    cx = sum(p[0] for p in top) / len(top)
+    cy = sum(p[1] for p in top) / len(top)
+    best_a = 0.0
+    best_area = None
+    for deg in range(0, 90, 3):
+        a = math.radians(deg)
+        ca, sa = math.cos(a), math.sin(a)
+        us = [p[0] * ca + p[1] * sa for p in top]
+        vs = [-p[0] * sa + p[1] * ca for p in top]
+        area = (quantile(us, 0.95) - quantile(us, 0.05)) * (quantile(vs, 0.95) - quantile(vs, 0.05))
+        if best_area is None or area < best_area:
+            best_area = area
+            best_a = a
+            best_ext = [quantile(us, 0.95) - quantile(us, 0.05), quantile(vs, 0.95) - quantile(vs, 0.05)]
+    # recentre on the oriented box mid-point (robust to partial side views)
+    ca, sa = math.cos(best_a), math.sin(best_a)
+    us = [p[0] * ca + p[1] * sa for p in top]
+    vs = [-p[0] * sa + p[1] * ca for p in top]
+    mu = 0.5 * (quantile(us, 0.05) + quantile(us, 0.95))
+    mv = 0.5 * (quantile(vs, 0.05) + quantile(vs, 0.95))
+    cx2 = mu * ca - mv * sa
+    cy2 = mu * sa + mv * ca
+    zs = sorted(p[2] for p in mine)
+    return {"x": cx2, "y": cy2, "cx_mean": cx, "cy_mean": cy, "top": ztop, "yaw": best_a,
+            "ext": best_ext, "n": len(mine), "ntop": len(top),
+            "zq": [round(zs[int((len(zs) - 1) * f)], 3) for f in (0.0, 0.25, 0.5, 0.75, 1.0)]}
+
+
+def yaw_quat(yaw_mod90):
+    d = yaw_mod90
+    while d > math.pi / 4:
+        d -= math.pi / 2
+    while d <= -math.pi / 4:
+        d += math.pi / 2
+    qz = [math.cos(d / 2), 0.0, 0.0, math.sin(d / 2)]
+    return quat_mul(qz, home_quat), d
+
+
+picks = []
+for color in order:
+    if S["ended"]:
+        break
+    ti = S.get("bind", {}).get(color)
+    entry = {"color": color, "track": ti}
+    picks.append(entry)
+    if ti is None:
+        entry["error"] = "unbound"
+        continue
+    geo = target_geometry(ti)
+    if geo is None:
+        t = S["tracks"][ti]
+        entry["geo_fallback"] = True
+        geo = {"x": t["x"], "y": t["y"], "top": 0.08, "yaw": 0.0}
+    entry["geo"] = {k: (round(v, 4) if k in ("x", "y", "top", "yaw", "cx_mean", "cy_mean") else v)
+                    for k, v in geo.items()}
+    quat, dyaw = yaw_quat(geo["yaw"])
+    entry["dyaw_deg"] = round(math.degrees(dyaw), 1)
+    grasp_z = geo["top"] - 0.02
+    S["skip_tracking"] = True
+    above = (geo["x"], geo["y"], geo["top"] + 0.10)
+    entry["above_ok"] = goto_pose(above, quat, 1.0, 60, tol=0.02, max_dq=0.08)
+    entry["descend_ok"] = goto_pose((geo["x"], geo["y"], grasp_z), quat, 1.0, 40, tol=0.01, max_dq=0.04)
+    entry["ee_grasp"] = [round(v, 4) for v in ee_now()]
+    hold(12, 0.0)
+    try:
+        entry["grip_closed"] = round(float(S["obs"].robot_state.gripper_positions["primary"]), 3)
+    except Exception:
+        pass
+    entry["lift_ok"] = goto_pose((geo["x"], geo["y"], geo["top"] + 0.12), quat, 0.0, 40, tol=0.02, max_dq=0.05)
+    hold(5, 0.0)
+    try:
+        entry["grip_lifted"] = round(float(S["obs"].robot_state.gripper_positions["primary"]), 3)
+        entry["ee_lifted"] = [round(v, 4) for v in ee_now()]
+    except Exception:
+        pass
+    entry["tick_lifted"] = S["tick"]
+    # put the container back where it was and release
+    goto_pose((geo["x"], geo["y"], grasp_z + 0.008), quat, 0.0, 40, tol=0.015, max_dq=0.05)
+    hold(6, 1.0)
+    goto_pose((geo["x"], geo["y"], geo["top"] + 0.10), quat, 1.0, 30, tol=0.03, max_dq=0.08)
+    entry["tick_done"] = S["tick"]
+    S["skip_tracking"] = False
+    # return home (tracking on) so the next target is seen unoccluded
+    if not S["ended"]:
+        goto_joints(home_q, 1.0, 60, tol=0.03, max_dq=0.08)
+        hold(2, 1.0)
+
+report["picks"] = picks
+report["final_tick"] = S["tick"]
+report["ended"] = S["ended"]
+report["speed_tail"] = S["speed_hist"][-40:]
+report["speed_every10"] = S["speed_hist"][::10]
+result = report

@@ -1,0 +1,30 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "PickHighlight",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "4210a7c4b5f271213dbbf95b9713573034725e084c6b14f7c036e99cbc2662ec",
+    "perception.py": "5139cc170966b78b1ce76606d424380164487c7ddd088f7d6b350a416710dde6",
+    "robot.py": "d8c4a5985cf7b8af861487bc93360135777671eb33a0ca32e68b7d88d3569352",
+    "tracker.py": "9e33ab34c2a62259be02bf9b6b9dfe12a4c5043cfe2a2fbbd0178f27dc2c19cf",
+    "wtracker.py": "f713c81224e70c397cc8aa1d5106115c88e0a46e226f4658176005ef9124f1f5"
+  },
+  "source_policy_files": {
+    "controller.py": "4210a7c4b5f271213dbbf95b9713573034725e084c6b14f7c036e99cbc2662ec",
+    "perception.py": "5139cc170966b78b1ce76606d424380164487c7ddd088f7d6b350a416710dde6",
+    "robot.py": "d8c4a5985cf7b8af861487bc93360135777671eb33a0ca32e68b7d88d3569352",
+    "tracker.py": "9e33ab34c2a62259be02bf9b6b9dfe12a4c5043cfe2a2fbbd0178f27dc2c19cf",
+    "wtracker.py": "f713c81224e70c397cc8aa1d5106115c88e0a46e226f4658176005ef9124f1f5"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "d01e81c3c5753b0eec54e34934e30f87596152d475cc5f911cf13c0c14dedec5",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "d210abaef3c04f5dae19a1137ba73c52748e3085357531882481980970ceed7d"
+  }
+}

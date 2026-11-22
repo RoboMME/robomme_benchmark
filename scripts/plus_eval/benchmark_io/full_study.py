@@ -27,6 +27,42 @@ IMAGE = os.environ.get('ROBOMME_AGENTIC_IMAGE', 'robomme-agentic:latest')
 TOKEN = Path(os.environ.get('ROBOMME_AGENTIC_TOKEN_FILE', Path.home()/'.config/robomme/relay-token'))
 
 
+def provider_launch_config(record, name, port):
+    """Recover installed paths from the recorded launch, before stopping a service."""
+    record=Path(record)
+    saved=json.loads(record.read_text()).get('argv',[]) if record.is_file() else []
+    module=f'cap_harness.providers.{name}.service'
+    valid_saved=(len(saved)>=5 and saved[1:5]==['-m',module,'--port',str(port)])
+    if saved and not valid_saved:
+        raise ValueError(f'Provider launch record does not match {name} port {port}')
+    default=Path(saved[0]).parents[2] if valid_saved else REPO/'scripts/plus_eval/agentic_methods/aspire/ASPIRE'
+    base=Path(os.environ.get('ROBOMME_ASPIRE_PROVIDER_ROOT',default))
+    executable=base/f'.venv-{name}/bin/python'
+    if not executable.is_file() or not os.access(executable,os.X_OK):
+        raise FileNotFoundError(f'Provider interpreter is unavailable: {executable}')
+    command=[str(executable),'-m',module,'--port',str(port)]
+    if name=='sam3':
+        saved_checkpoint=(saved[saved.index('--checkpoint')+1]
+                          if valid_saved and '--checkpoint' in saved and saved.index('--checkpoint')+1<len(saved)
+                          else base/'checkpoints/sam3.pt')
+        checkpoint=Path(os.environ.get('ROBOMME_SAM3_CHECKPOINT',saved_checkpoint))
+        if not checkpoint.is_file():
+            raise FileNotFoundError(f'SAM3 checkpoint is unavailable: {checkpoint}')
+        command+=['--checkpoint',str(checkpoint)]
+    return command,base
+
+
+def provider_stack_health(port_base, gpu):
+    """Only admit ASPIRE work on a GPU whose local services are responding."""
+    health={}
+    for name,offset in [('sam3',4),('graspnet',5),('pyroki',6),('curobo',8)]:
+        try:
+            with urllib.request.urlopen(f'http://127.0.0.1:{port_base+100*int(gpu)+offset}/healthz',timeout=1.5) as response:
+                health[name]=response.status==200
+        except (OSError,ValueError):health[name]=False
+    return health
+
+
 def write(path, data):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,7 +219,6 @@ class Pipeline:
 
     def start_providers(self, gpus):
         root=self.root/'runtime/providers'
-        base=Path(os.environ.get('ROBOMME_ASPIRE_PROVIDER_ROOT',REPO/'scripts/plus_eval/agentic_methods/aspire/ASPIRE'))
         for gpu in (gpus or self.gpus):
             for name,offset in [('sam3',4),('graspnet',5),('pyroki',6),('curobo',8)]:
                 port=self.provider_port(gpu)+offset
@@ -195,16 +230,18 @@ class Pipeline:
                             return response.status==200
                     except (OSError,ValueError):
                         return False
-                if healthy():
+                ready=healthy()
+                # One delayed health response must not kill a busy provider.
+                if not ready and record.is_file() and alive(json.loads(record.read_text())['pid']):
+                    for _ in range(2):
+                        time.sleep(1)
+                        if healthy():ready=True;break
+                if ready:
                     if not record.is_file():
                         raise RuntimeError(f'Provider port {port} belongs to another run')
                     continue
-                if record.is_file():
-                    stop_owned(record)
-                command=[str(base/f'.venv-{name}/bin/python'),'-m',f'cap_harness.providers.{name}.service',
-                         '--port',str(port)]
-                if name=='sam3':
-                    command+=['--checkpoint',str(Path(os.environ.get('ROBOMME_SAM3_CHECKPOINT',base/'checkpoints/sam3.pt')))]
+                command,base=provider_launch_config(record,name,port)
+                if record.is_file():stop_owned(record)
                 env={**self.env,'CUDA_VISIBLE_DEVICES':gpu,'CAP_HARNESS_VENDOR_ROOT':str(base/'third_party'),
                      'HF_HUB_OFFLINE':'1','TRANSFORMERS_OFFLINE':'1','XLA_PYTHON_CLIENT_PREALLOCATE':'false','JAX_PLATFORMS':'cpu'}
                 env.pop('ROBOMME_AGENTIC_JOB',None)  # Shared services outlive individual jobs.

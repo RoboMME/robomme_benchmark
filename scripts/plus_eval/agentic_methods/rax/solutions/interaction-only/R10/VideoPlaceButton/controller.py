@@ -1,556 +1,262 @@
-"""VideoPlaceButton controller (v1).
-
-Strategy: parse the conditioning-video manifest (robot state per frame) into
-grasp / release / button-press events, select the target placement named by the
-instruction, then pick the cube (at its last release position, refined by
-vision) and place it on that target.
-"""
-import base64
-import io
-import json
-import math
-import os
-import re
-import time
+"""VideoPlaceButton controller v1.
+Reads the conditioning video's per-frame robot states to find pick/place/press events, resolves the
+instruction (ordinal + before/after the button press), localizes the cube and target in the current
+images, then picks and places the cube with a low (contact) release."""
+import json, math, os, sys, time, traceback
 from pathlib import Path
-
-import sys
 import numpy as np
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib import *
+from tracker import frame_detections, phase_swaps, resolve_identity_slot
+from video import load_video_states, extract_events, parse_instruction, resolve_target, assign_tracks, resolve_for_track
 
-WS = Path("/workspace")
-LOG_DIR = WS / "output"
-_LOG = []
-RELEASE_DZ = -0.001
-AFTER_MODE = "first_after"
+SEMANTICS = "naive"
+PRESS_FIRST = False
+TRACK_IDENTITY = True
+OUT = Path("/workspace/output"); OUT.mkdir(parents=True, exist_ok=True)
+LOGF = open(OUT / "controller_log.txt", "a")
 
 
 def log(*a):
-    msg = " ".join(str(x) for x in a)
-    print(msg, flush=True)
-    _LOG.append(msg)
-    try:
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
-        with open(LOG_DIR / "vpb_log.txt", "a") as f:
-            f.write(msg + "\n")
-    except Exception:
-        pass
+    s = " ".join(str(x) for x in a)
+    print(s); LOGF.write(s + "\n"); LOGF.flush()
 
 
-# ---------------------------------------------------------------- MCP helpers
-def packet(reply):
-    for b in reply.get("content", []):
-        if b.get("type") == "text":
-            try:
-                return json.loads(b["text"])
-            except Exception:
-                pass
-    return {}
+def detect_targets(meta, imgs):
+    rgb = imgs[("front", "rgb")]; P, _ = world_points(meta, imgs, "front")
+    h = hsv(rgb); H, S, V = h[..., 0], h[..., 1], h[..., 2]
+    low = P[..., 2] < 0.013
+    colored = ((H >= 180) | (H <= 4)) & (S > 50) & (S <= 185) & (V > 140)
+    white = (S < 50) & (V > 200)
+    ring = (colored | white) & low
+    pts = []
+    for ys, xs in components(ring, 3):
+        p = np.median(P[ys, xs], 0)
+        if p[2] < 0.013:
+            pts.append((p[:2], len(ys)))
+    clusters = []
+    for p, n in pts:
+        for c in clusters:
+            if np.linalg.norm(c["sum"] / c["n"] - p) < 0.03:
+                c["sum"] += p * n; c["n"] += n; break
+        else:
+            clusters.append(dict(sum=p * n, n=n))
+    return [c["sum"] / c["n"] for c in clusters if c["n"] >= 15]
 
 
-def images(reply, pk):
-    out = {}
-    blocks = reply.get("content", [])
-    for att in pk.get("attachments", []):
-        idx = att.get("content_index")
-        if idx is None or idx >= len(blocks):
+def detect_cubes(meta, imgs, color, cam="front"):
+    rgb = imgs[(cam, "rgb")]; P, _ = world_points(meta, imgs, cam)
+    out = []
+    for ys, xs in components(color_mask(rgb, color), 15):
+        pts = P[ys, xs]
+        zmax = np.percentile(pts[:, 2], 95)
+        if zmax < 0.015:
             continue
-        b = blocks[idx]
-        data = b.get("data")
-        if not data:
-            continue
-        from PIL import Image
-        im = Image.open(io.BytesIO(base64.b64decode(data)))
-        arr = np.array(im)
-        out[(att["camera"], att["kind"])] = arr
+        top = pts[pts[:, 2] > zmax - 0.006]
+        out.append(dict(xy=np.median(top[:, :2], 0), ztop=float(zmax), n=len(ys), top=top))
     return out
 
 
-class Robot:
-    def __init__(self, ctx):
-        self.ctx = ctx
-        self.state = None
-        self.ended = False
-        self.complete = False
-        self.remaining = 10 ** 6
-        self.step_id = 0
-
-    def observe(self):
-        r = self.ctx.call("robomme_observe")
-        pk = packet(r)
-        self._upd(pk)
-        return r, pk
-
-    def _upd(self, pk):
-        if "state" in pk:
-            self.state = np.array(pk["state"], dtype=float)
-        lim = pk.get("episode_limits") or {}
-        if "remaining_episode_steps" in lim:
-            self.remaining = lim["remaining_episode_steps"]
-        if pk.get("episode_ended"):
-            self.ended = True
-        if "step_id" in pk:
-            self.step_id = pk["step_id"]
-        for s in pk.get("steps", []) or []:
-            if isinstance(s, dict):
-                if s.get("task_complete"):
-                    self.complete = True
-                if s.get("episode_ended"):
-                    self.ended = True
-        if pk.get("task_complete"):
-            self.complete = True
-        tr = pk.get("transition") or {}
-        if tr.get("task_complete"):
-            self.complete = True
-        if tr.get("episode_ended"):
-            self.ended = True
-        for s in tr.get("steps", []) or []:
-            if isinstance(s, dict) and s.get("task_complete"):
-                self.complete = True
-
-    def step(self, rows):
-        if self.ended:
-            return None
-        rows = [[float(np.clip(v, -1, 1)) for v in r] for r in rows]
-        out = None
-        for i in range(0, len(rows), 100):
-            if self.ended:
-                break
-            chunk = rows[i:i + 100]
-            if self.remaining is not None and len(chunk) > self.remaining:
-                chunk = chunk[:max(0, self.remaining)]
-                if not chunk:
-                    self.ended = True
-                    break
-            r = self.ctx.call("robomme_step", actions=chunk)
-            pk = packet(r)
-            self._upd(pk)
-            out = (r, pk)
-        return out
+def square_yaw(top_pts):
+    """Yaw (mod pi/2) of a square from its top-face world points, by min-area bounding box."""
+    xy = top_pts[:, :2] - top_pts[:, :2].mean(0)
+    best = None
+    for deg in np.arange(0, 90, 1.5):
+        a = math.radians(deg); c, s = math.cos(a), math.sin(a)
+        r = xy @ np.array([[c, -s], [s, c]])
+        area = np.ptp(r[:, 0]) * np.ptp(r[:, 1])
+        if best is None or area < best[0]:
+            best = (area, a)
+    return best[1]
 
 
-# ---------------------------------------------------------------- rotations
-def rotvec_to_mat(rv):
-    rv = np.asarray(rv, float)
-    th = np.linalg.norm(rv)
-    if th < 1e-9:
-        return np.eye(3)
-    k = rv / th
-    K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
-    return np.eye(3) + math.sin(th) * K + (1 - math.cos(th)) * K @ K
-
-
-def mat_to_rotvec(R):
-    c = (np.trace(R) - 1) / 2
-    c = min(1.0, max(-1.0, c))
-    th = math.acos(c)
-    if th < 1e-7:
-        return np.zeros(3)
-    if th > math.pi - 1e-4:
-        # near pi: axis from diagonal
-        A = (R + np.eye(3)) / 2
-        k = np.sqrt(np.clip(np.diag(A), 0, None))
-        i = int(np.argmax(k))
-        if k[i] > 1e-6:
-            k = A[:, i] / k[i]
-        k = k / np.linalg.norm(k)
-        return k * th
-    w = np.array([R[2, 1] - R[1, 2], R[0, 2] - R[2, 0], R[1, 0] - R[0, 1]]) / (2 * math.sin(th))
-    return w * th
-
-
-def rot_err(cur_rv, tgt_rv):
-    """World-frame rotvec taking current to target."""
-    return mat_to_rotvec(rotvec_to_mat(tgt_rv) @ rotvec_to_mat(cur_rv).T)
-
-
-def yaw_of(rv):
-    R = rotvec_to_mat(rv)
-    # gripper x-axis projected to the table
-    return math.atan2(R[1, 0], R[0, 0])
-
-
-def down_with_yaw(yaw):
-    """Gripper pointing down (z-axis -world z) with given yaw of its x axis."""
-    Rd = rotvec_to_mat([math.pi, 0, 0])  # reference down pose (x along +x)
-    Rz = np.array([[math.cos(yaw), -math.sin(yaw), 0], [math.sin(yaw), math.cos(yaw), 0], [0, 0, 1]])
-    return mat_to_rotvec(Rz @ Rd)
-
-
-# ---------------------------------------------------------------- motion
-def move_to(robot, xyz, rv=None, grip=-1.0, speed=0.6, tol=0.004, max_iter=6, settle=2):
-    """Closed-loop chunked motion to xyz (and orientation rv)."""
-    xyz = np.asarray(xyz, float)
-    for it in range(max_iter):
-        if robot.ended or robot.state is None:
-            return False
-        p = robot.state[:3]
-        d = xyz - p
-        dist = float(np.linalg.norm(d))
-        re_ = rot_err(robot.state[3:6], rv) if rv is not None else np.zeros(3)
-        ang = float(np.linalg.norm(re_))
-        if dist < tol and ang < 0.03:
-            return True
-        n_pos = math.ceil(dist / (0.05 * speed)) if dist > 0 else 0
-        n_rot = math.ceil(ang / (0.5 * 0.5)) if ang > 0 else 0
-        n = max(1, n_pos, n_rot)
-        if it > 0:
-            n = max(1, min(n, 8))
-        rows = []
-        for k in range(n):
-            dp = d / n / 0.05
-            dr = re_ / n / 0.5
-            rows.append(list(dp) + list(dr) + [grip])
-        rows += [[0, 0, 0, 0, 0, 0, grip]] * settle
-        robot.step(rows)
-    return False
-
-
-def gripper_cmd(robot, grip, n=10):
-    robot.step([[0, 0, 0, 0, 0, 0, grip]] * n)
-
-
-# ---------------------------------------------------------------- video parse
-def load_manifest(pk):
-    seq = pk.get("frame_sequence") or {}
-    mp = seq.get("manifest_path")
-    if not mp:
-        return None
-    p = WS / mp
-    if not p.exists():
-        return None
-    return json.loads(p.read_text())
-
-
-def parse_events(frames):
-    """Return list of events (kind, frame_idx, xyz, rotvec)."""
-    vf = [f for f in frames if f.get("phase") == "video_demo" and f.get("state")]
-    vf.sort(key=lambda f: f["frame_index"])
-    if not vf:
-        return []
-    S = np.array([f["state"] for f in vf], float)
-    g = S[:, 6] + S[:, 7]
-    z = S[:, 2]
-    # gripper class: 0 open (>0.07), 1 holding (0.01..0.07), 2 closed empty (<0.01)
-    cls = np.where(g > 0.07, 0, np.where(g > 0.012, 1, 2))
-    events = []
-    n = len(vf)
-    # holding segments: grasp at start, release at end
-    i = 0
-    while i < n:
-        if cls[i] == 1:
-            j = i
-            while j + 1 < n and cls[j + 1] == 1:
-                j += 1
-            # segment i..j holding (ignore short transitional blips)
-            if j - i >= 3:
-                gi = i
-                events.append(("grasp", vf[gi]["frame_index"], S[gi, :3].copy(), S[gi, 3:6].copy()))
-                # release: frame where gripper opens after j; use position at j
-                if j + 1 < n and cls[j + 1] == 0 or (j + 1 < n and g[min(n - 1, j + 2)] > 0.06):
-                    events.append(("release", vf[j]["frame_index"], S[j, :3].copy(), S[j, 3:6].copy()))
-                elif j + 1 >= n:
-                    events.append(("held_end", vf[j]["frame_index"], S[j, :3].copy(), S[j, 3:6].copy()))
-                else:
-                    events.append(("release", vf[j]["frame_index"], S[j, :3].copy(), S[j, 3:6].copy()))
-            i = j + 1
-        elif cls[i] == 2:
-            j = i
-            while j + 1 < n and cls[j + 1] == 2:
-                j += 1
-            seg = np.arange(i, j + 1)
-            k = seg[int(np.argmin(z[seg]))]
-            if j - i >= 2 and z[k] < 0.10:
-                events.append(("button", vf[k]["frame_index"], S[k, :3].copy(), S[k, 3:6].copy()))
-            i = j + 1
+def pick_cube(rb, color, last_place, ref=None):
+    grasp_z = 0.022
+    for attempt in range(3):
+        if rb.ended:
+            break
+        cubes = detect_cubes(rb.meta, rb.imgs, color)
+        if ref is None:
+            ref = last_place["xy"] if last_place is not None else np.array([-0.1, 0.0])
+        log("cubes", [(np.round(c["xy"], 3), c["n"]) for c in cubes])
+        if not cubes:
+            cube_xy = ref
         else:
-            i += 1
-    events.sort(key=lambda e: e[1])
-    return events
+            cube_xy = min(cubes, key=lambda c: np.linalg.norm(c["xy"] - ref))["xy"]
+        cy = yaw_of(rb.state[3:6])
+        if last_place is not None and np.linalg.norm(cube_xy - last_place["xy"]) < 0.02 and attempt == 0:
+            gyaw = yaw_of(last_place["yaw_aa"])
+        else:
+            gyaw = cy
+        gyaw = cy + wrap(gyaw - cy, math.pi / 2)
+        rb.grip = -1.0
+        rb.move_to([cube_xy[0], cube_xy[1], 0.12], yaw=gyaw)
+        # refine with wrist view
+        wc = detect_cubes(rb.meta, rb.imgs, color, cam="wrist")
+        ztop = 0.041
+        if wc:
+            c = min(wc, key=lambda c: np.linalg.norm(c["xy"] - cube_xy))
+            if np.linalg.norm(c["xy"] - cube_xy) < 0.05:
+                sy = square_yaw(c["top"]) if len(c["top"]) > 30 else None
+                log("wrist cube", np.round(c["xy"], 3), "ztop", round(c["ztop"], 3), "sq_yaw", sy, "gyaw", round(gyaw, 3))
+                cube_xy = c["xy"]; ztop = c["ztop"]
+                if sy is not None:
+                    cur = yaw_of(rb.state[3:6])
+                    cand = cur + wrap(sy - cur, math.pi / 2)
+                    if abs(wrap(cand - gyaw, math.pi / 2)) > math.radians(12) or attempt > 0:
+                        log("using wrist yaw", round(cand, 3))
+                        gyaw = cand
+        gz = max(0.012, ztop - 0.02)
+        rb.move_to([cube_xy[0], cube_xy[1], 0.06], yaw=gyaw)
+        rb.move_to([cube_xy[0], cube_xy[1], gz], yaw=gyaw, vmax=0.4, max_iter=6)
+        grasp_z = rb.state[2]
+        rb.gripper(1.0, 10)
+        rb.move_to([cube_xy[0], cube_xy[1], 0.15], yaw=gyaw)
+        w = rb.state[6] + rb.state[7]
+        log("after lift width", round(w, 4), "step", rb.meta.get("step_id"), "grasp_z", round(grasp_z, 4))
+        if 0.01 < w < 0.075:
+            break
+        log("grasp failed; reopening")
+        rb.gripper(-1.0, 8)
+        rb.observe()
+    else:
+        log("grasp failed 3 times")
+
+    return grasp_z
 
 
-def build_chains(events, tol=0.03):
-    """Group grasp/release events into per-object chains by position continuity.
-    Each chain: dict(start=xy, events=[...], end=xy)."""
-    chains = []
-    holding = None
-    for e in events:
-        if e[0] == "grasp":
-            xy = e[2][:2]
-            best, bd = None, tol
-            for c in chains:
-                d = float(np.linalg.norm(c["end"] - xy))
-                if d < bd and not c.get("held"):
-                    best, bd = c, d
-            if best is None:
-                best = {"start": xy.copy(), "end": xy.copy(), "events": []}
-                chains.append(best)
-            best["held"] = True
-            best["events"].append(e)
-            holding = best
-        elif e[0] in ("release", "held_end"):
-            if holding is not None:
-                holding["events"].append(e)
-                holding["end"] = e[2][:2].copy()
-                holding["held"] = False
-                holding = None
-    return chains
+def descend_contact(rb, xy, yaw, grasp_z, floor_margin=0.004, max_steps=40):
+    """Descend in small steps until the TCP stops moving (contact) or reaches grasp_z - margin."""
+    rb.move_to([xy[0], xy[1], grasp_z + 0.012], yaw=yaw, vmax=0.4, max_iter=6, tol=0.003)
+    zs = [rb.state[2]]
+    n = 0
+    while n < max_steps and not rb.ended:
+        s = rb.state
+        e = np.asarray(xy) - s[:2]
+        rb.step([[e[0] / 0.05, e[1] / 0.05, -0.04, 0, 0, 0, rb.grip]] * 2)
+        n += 2
+        zs.append(rb.state[2])
+        if rb.state[2] < grasp_z - floor_margin:
+            break
+        if len(zs) >= 3 and zs[-3] - zs[-1] < 0.0015:
+            break
+    rb.step([[0, 0, 0, 0, 0, 0, rb.grip]] * 2)
+    log("descend_contact z", [round(z, 4) for z in zs], "grasp_z", round(grasp_z, 4))
 
 
-def choose_target(events, instruction):
-    ins = instruction.lower()
-    places = [e for e in events if e[0] == "release"]
-    buttons = [e for e in events if e[0] == "button"]
-    if not places:
-        return None, "no placements"
-    if not buttons:
-        return places[-1], "no button; last placement"
-    bf = buttons[0][1]
-    before = re.search(r"\bbefore\b", ins) is not None
-    after = re.search(r"\bafter\b", ins) is not None
-    first = re.search(r"\bfirst\b", ins) is not None
-    last = re.search(r"\b(last|final|latest)\b", ins) is not None
-    if before and not after:
-        cand = [p for p in places if p[1] < bf]
-        if not cand:
-            return places[0], "before: none, fallback first"
-        if first:
-            return cand[0], "first before button"
-        return cand[-1], "last before button"
-    if AFTER_MODE == "resting_at_press":
-        cand = [p for p in places if p[1] < bf]
-        if cand:
-            return cand[-1], "after(resting_at_press): last release before button"
-    cand = [p for p in places if p[1] > bf]
-    if not cand:
-        return places[-1], "after: none, fallback last"
-    if last:
-        return cand[-1], "last after button"
-    return cand[0], "first after button"
+def press_button(rb, xy):
+    log("press_button at", np.round(xy, 3))
+    rb.grip = 1.0
+    yaw = yaw_of(rb.state[3:6])
+    rb.move_to([xy[0], xy[1], 0.15], yaw=yaw)
+    rb.gripper(1.0, 6)
+    rb.move_to([xy[0], xy[1], 0.06], yaw=yaw)
+    zs = []
+    for _ in range(12):
+        e = np.asarray(xy) - rb.state[:2]
+        rb.step([[e[0] / 0.05, e[1] / 0.05, -0.12, 0, 0, 0, 1.0]] * 2)
+        zs.append(round(rb.state[2], 4))
+        if rb.state[2] < 0.025 or rb.ended:
+            break
+    rb.step([[0, 0, 0, 0, 0, 0, 1.0]] * 3)
+    log("press z trace", zs, "ended", rb.ended)
+    rb.move_to([xy[0], xy[1], 0.15], yaw=yaw)
+    rb.grip = -1.0
+    rb.gripper(-1.0, 6)
 
 
-def parse_color(instruction):
-    ins = instruction.lower()
-    for c in ["red", "green", "blue", "yellow", "purple", "orange", "pink", "white", "black", "cyan"]:
-        if re.search(r"\b%s\b" % c, ins):
-            return c
-    return "red"
+def place_at(rb, target_xy, grasp_z, lift=True):
+    yaw = yaw_of(rb.state[3:6])
+    rb.move_to([target_xy[0], target_xy[1], 0.15], yaw=yaw)
+    rb.move_to([target_xy[0], target_xy[1], 0.06], yaw=yaw)
+    descend_contact(rb, target_xy, yaw, grasp_z)
+    log("at place", np.round(rb.state[:3], 4), "step", rb.meta.get("step_id"))
+    rb.gripper(-1.0, 10)
+    if not rb.ended:
+        rb.move_to([target_xy[0], target_xy[1], 0.15], max_iter=4)
+    if not rb.ended:
+        rb.step([[0, 0, 0, 0, 0, 0, -1]] * 5)
 
 
-# ---------------------------------------------------------------- vision
-def cam_points(depth_mm, intr, pose, mask):
-    K = np.array(intr["matrix"], float)
-    fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
-    vs, us = np.nonzero(mask)
-    d = depth_mm[vs, us].astype(float) * 0.001
-    ok = d > 0
-    vs, us, d = vs[ok], us[ok], d[ok]
-    pc = np.stack([(us + 0.5 - cx) * d / fx, -(vs + 0.5 - cy) * d / fy, -d], 1)
-    w, x, y, z = pose["quaternion_wxyz"]
-    R = np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-                  [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-                  [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
-    return pc @ R.T + np.array(pose["position_m"], float)
-
-
-def color_mask(rgb, color):
-    r, g, b = [rgb[..., i].astype(int) for i in range(3)]
-    if color == "red":
-        return (r > 120) & (g < 60) & (b < 60)
-    if color == "green":
-        return (g > 100) & (r < 80) & (b < 80)
-    if color == "blue":
-        return (b > 100) & (r < 60) & (g < 60)
-    if color == "yellow":
-        return (r > 150) & (g > 150) & (b < 60)
-    return (r > 120) & (g < 60) & (b < 60)
-
-
-def locate_cube(reply, pk, color, cam="front"):
-    ims = images(reply, pk)
-    rgb = ims.get((cam, "rgb"))
-    dep = ims.get((cam, "depth"))
-    if rgb is None or dep is None:
-        return None
-    m = color_mask(rgb[..., :3], color)
-    if m.sum() < 6:
-        return None
-    pts = cam_points(dep, pk["camera_intrinsics"][cam], pk["camera_poses"][cam], m)
-    if len(pts) < 6:
-        return None
-    # keep points above table, on cube top/side
-    pts = pts[(pts[:, 2] > -0.02) & (pts[:, 2] < 0.12)]
-    if len(pts) < 6:
-        return None
-    # top face only (side faces bias the estimate toward the camera)
-    zt = np.percentile(pts[:, 2], 90)
-    top = pts[pts[:, 2] > zt - 0.006]
-    if len(top) >= 4:
-        pts = top
-    med = np.median(pts, 0)
-    near = pts[np.linalg.norm(pts[:, :2] - med[:2], axis=1) < 0.04]
-    if len(near) < 4:
-        near = pts
-    return np.median(near, 0), int(m.sum())
-
-
-# ---------------------------------------------------------------- main
 def main(ctx):
-    try:
-        _main(ctx)
-    except Exception as ex:
-        import traceback
-        log("controller error:", repr(ex), traceback.format_exc()[-1500:])
-
-
-def _main(ctx):
     t0 = time.time()
-    robot = Robot(ctx)
-    reply, pk = robot.observe()
-    instruction = pk.get("instruction", "")
-    log("instruction:", instruction, "step", pk.get("step_id"))
-    man = load_manifest(pk)
-    if man is None:
-        log("no manifest")
-        events = []
-    else:
-        events = parse_events(man["frames"])
-    for e in events:
-        log("event", e[0], e[1], np.round(e[2], 3).tolist(), np.round(e[3], 3).tolist())
-    color = parse_color(instruction)
-    vis = locate_cube(reply, pk, color, "front")
-    log("vision cube:", None if vis is None else (np.round(vis[0], 3).tolist(), vis[1]))
-    chains = build_chains(events)
-    for c in chains:
-        log("chain start", np.round(c["start"], 3).tolist(), "end", np.round(c["end"], 3).tolist(), "n", len(c["events"]))
-    chain = None
-    if chains:
-        if vis is not None:
-            chain = min(chains, key=lambda c: float(np.linalg.norm(c["end"] - vis[0][:2])))
-            dmin = float(np.linalg.norm(chain["end"] - vis[0][:2]))
-            log("chain matched to vision, dist", round(dmin, 3))
-        else:
-            chain = max(chains, key=lambda c: len(c["events"]))
-            log("no vision; using longest chain")
-    all_events = list(events)
-    buttons = [e for e in events if e[0] == "button"]
-    cev = (chain["events"] if chain else []) + buttons
-    cev.sort(key=lambda e: e[1])
-    events = cev
-    tgt, why = choose_target(events, instruction)
-    log("target:", why, None if tgt is None else np.round(tgt[2], 3).tolist())
-    if tgt is None:
-        log("no target; abort")
-        return
-    target_xy = tgt[2][:2].copy()
-    place_z = float(tgt[2][2])
-    # targets swap slots during the video: follow the chosen target's identity
+    rb = Robot(ctx, log=log)
+    meta = rb.observe()
+    instr = meta.get("instruction", "")
+    log("instruction:", instr)
+    seq = meta.get("frame_sequence") or {}
+    spec = parse_instruction(instr)
+    color = spec["color"] or "red"
+    log("spec", spec)
+    target_xy = None; last_place = None; press_xy = None
     try:
-        import tracker
-        vframes = [f for f in man["frames"] if f.get("phase") in ("video_demo", "execution")]
-        slots, sev = tracker.swap_analysis(vframes, log=log)
-        all_rel = [e for e in all_events if e[0] == "release"]
-        offs = []
-        for e in all_rel:
-            d = np.linalg.norm(slots - e[2][:2], axis=1)
-            if d.min() < 0.025:
-                offs.append(e[2][:2] - slots[int(d.argmin())])
-        off = np.median(np.array(offs), axis=0) if offs else np.zeros(2)
-        log("slots", np.round(slots, 3).tolist(), "release-slot offset", np.round(off, 4).tolist(), "n", len(offs))
-        d = np.linalg.norm(slots + off - target_xy, axis=1)
-        s0 = int(d.argmin())
-        log("placement slot", s0, "dist", round(float(d.min()), 3), "at frame", tgt[1])
-        if d.min() < 0.04:
-            s1 = tracker.target_slot_after(slots, sev, s0, tgt[1])
-            target_xy = slots[s1] + off
-            log("target identity followed: slot", s0, "->", s1, "xy", np.round(target_xy, 3).tolist())
+        S, T, frames, m = load_video_states(seq["manifest_path"])
+        ev = extract_events(S, T)
+        for e in ev:
+            log("event", e["kind"], e["index"], np.round(e["xy"], 3), round(e["z"], 3))
+        tracks = assign_tracks(ev)
+        cubes0 = detect_cubes(rb.meta, rb.imgs, color)
+        track = None
+        if cubes0 and tracks:
+            best = None
+            for c in cubes0:
+                for i, t in enumerate(tracks):
+                    d = np.linalg.norm(t["pos"] - c["xy"])
+                    if best is None or d < best[0]:
+                        best = (d, i)
+            log("cube->track", best)
+            if best[0] < 0.05:
+                track = best[1]
+        if track is None:
+            track = len(tracks) - 1 if len(tracks) == 1 else 0
+            log("track fallback", track)
+        if SEMANTICS == "global_flip":
+            tgt, why = resolve_for_track(ev, spec, None, "flip_global")
         else:
-            log("placement not at a slot; using raw placement xy")
-    except Exception as ex:
-        import traceback
-        log("tracker failed:", repr(ex), traceback.format_exc()[-500:])
+            tgt, why = resolve_for_track(ev, spec, track, SEMANTICS)
+        log("resolved", why, None if tgt is None else np.round(tgt["xy"], 3))
+        if tgt is not None:
+            target_xy = np.array(tgt["xy"])
+            if TRACK_IDENTITY:
+                try:
+                    t1 = time.time()
+                    dets = frame_detections(rb.meta, frames)
+                    slots = dets[-1]
+                    sw = phase_swaps(slots, dets, log=log)
+                    log("swaps", sw, "slots", [np.round(s, 3) for s in slots], "t", round(time.time() - t1, 1))
+                    s, d = resolve_identity_slot(slots, sw, tgt["index"], np.array(tgt["xy"]))
+                    log("identity slot", s, "dist", round(float(d), 3))
+                    if s is not None:
+                        target_xy = np.array(slots[s])
+                        log("tracked target_xy", np.round(target_xy, 3))
+                except Exception:
+                    log("tracking failed", traceback.format_exc())
+        presses = [e for e in ev if e["kind"] == "press"]
+        if presses:
+            press_xy = np.array(presses[0]["xy"])
+        places = [e for e in ev if e["kind"] == "place" and e.get("track") == track]
+        if places:
+            last_place = places[-1]
+    except Exception:
+        log("video parse failed", traceback.format_exc())
 
-    # cube location: last release in video (cube rests there), refined by vision
-    rel = [e for e in events if e[0] == "release"]
-    last = rel[-1] if rel else None
-    if last is not None:
-        cube_xy = last[2][:2].copy()
-        grasp_z = float(last[2][2])
-        grasp_rv = last[3].copy()
-        if vis is not None and np.linalg.norm(vis[0][:2] - cube_xy) < 0.04:
-            pass  # expert release xy is the cube centre; vision has a +x bias
-        elif vis is not None:
-            log("vision disagrees with last release; using vision")
-            cube_xy = vis[0][:2]
-    else:
-        if vis is None:
-            log("no cube location")
-            return
-        cube_xy = vis[0][:2]
-        grasp_z = 0.018
-        grasp_rv = np.array([math.pi, 0, 0])
-    grasp_z = min(max(grasp_z, 0.012), 0.03)
-    place_z = min(max(place_z, 0.015), 0.04)
-    log("cube_xy", np.round(cube_xy, 3).tolist(), "grasp_z", round(grasp_z, 3))
+    targets = detect_targets(rb.meta, rb.imgs)
+    log("targets detected", [np.round(t, 3) for t in targets])
+    if target_xy is None:
+        target_xy = targets[0] if targets else np.array([-0.2, 0.0])
+    if targets:
+        d = [np.linalg.norm(t - target_xy) for t in targets]
+        k = int(np.argmin(d))
+        if d[k] < 0.03:
+            target_xy = 0.5 * (target_xy + targets[k])
+    log("target_xy", np.round(target_xy, 3))
 
-    hover = 0.12
-    # 1. open gripper, go above cube with grasp orientation
-    move_to(robot, [cube_xy[0], cube_xy[1], hover], grasp_rv, grip=-1, speed=0.6)
-    # refine with wrist? (use front vision again at hover)
-    r2, pk2 = robot.observe()
-    v2 = locate_cube(r2, pk2, color, "wrist")
-    if v2 is not None:
-        log("wrist check", np.round(v2[0], 3).tolist())
-    move_to(robot, [cube_xy[0], cube_xy[1], grasp_z + 0.03], grasp_rv, grip=-1, speed=0.4)
-    move_to(robot, [cube_xy[0], cube_xy[1], grasp_z], grasp_rv, grip=-1, speed=0.2, tol=0.003)
-    gripper_cmd(robot, 1, 12)
-    grasp_meas_z = float(robot.state[2])
-    g = robot.state[6] + robot.state[7]
-    log("after close gripper sum", round(float(g), 4), "pos", np.round(robot.state[:3], 3).tolist())
-    move_to(robot, [cube_xy[0], cube_xy[1], hover], grasp_rv, grip=1, speed=0.5)
-    g = robot.state[6] + robot.state[7]
-    log("lifted gripper sum", round(float(g), 4))
-    # grasp retry: an empty gripper closes to ~0; re-locate the cube by vision and retry
-    for attempt in range(2):
-        if robot.ended or g > 0.015:
-            break
-        log("grasp missed; retry", attempt)
-        gripper_cmd(robot, -1, 8)
-        rr, pr = robot.observe()
-        vv = locate_cube(rr, pr, color, "front")
-        if vv is None:
-            log("cube not visible for retry")
-            break
-        cube_xy = vv[0][:2] - np.array([0.008, 0.0])  # front-view top-face +x bias
-        move_to(robot, [cube_xy[0], cube_xy[1], hover], grasp_rv, grip=-1, speed=0.5)
-        rw, pw = robot.observe()
-        vw = locate_cube(rw, pw, color, "wrist")
-        if vw is not None and np.linalg.norm(vw[0][:2] - cube_xy) < 0.05:
-            cube_xy = vw[0][:2]
-        move_to(robot, [cube_xy[0], cube_xy[1], grasp_z + 0.03], grasp_rv, grip=-1, speed=0.4)
-        move_to(robot, [cube_xy[0], cube_xy[1], grasp_z], grasp_rv, grip=-1, speed=0.2, tol=0.003)
-        gripper_cmd(robot, 1, 12)
-        grasp_meas_z = float(robot.state[2])
-        move_to(robot, [cube_xy[0], cube_xy[1], hover], grasp_rv, grip=1, speed=0.5)
-        g = robot.state[6] + robot.state[7]
-        log("retry lifted gripper sum", round(float(g), 4))
-    # 2. carry to target
-    move_to(robot, [target_xy[0], target_xy[1], hover], tgt[3], grip=1, speed=0.6)
-    rel_z = grasp_meas_z + RELEASE_DZ
-    log("release z", round(rel_z, 4))
-    move_to(robot, [target_xy[0], target_xy[1], rel_z + 0.03], tgt[3], grip=1, speed=0.4)
-    move_to(robot, [target_xy[0], target_xy[1], rel_z], tgt[3], grip=1, speed=0.15, tol=0.003)
-    robot.step([[0, 0, 0, 0, 0, 0, 1]] * 4)
-    log("pre-release pos", np.round(robot.state[:3], 4).tolist())
-    gripper_cmd(robot, -1, 10)
-    log("post-release ended", robot.ended, "complete", robot.complete)
-    move_to(robot, [target_xy[0], target_xy[1], hover], tgt[3], grip=-1, speed=0.5)
-    if robot.ended:
-        log("episode ended; complete", robot.complete, "steps", robot.step_id, "t", round(time.time() - t0, 1))
-        return
-    r3, pk3 = robot.observe()
-    v3 = locate_cube(r3, pk3, color, "front")
-    log("final cube vision", None if v3 is None else np.round(v3[0], 3).tolist(),
-        "target", np.round(target_xy, 3).tolist(), "ended", robot.ended, "complete", robot.complete,
-        "steps", robot.step_id, "t", round(time.time() - t0, 1))
+    if PRESS_FIRST and press_xy is not None:
+        press_button(rb, press_xy)
+        rb.observe()
+    grasp_z = pick_cube(rb, color, last_place)
+    if not rb.ended:
+        place_at(rb, target_xy, grasp_z)
+    log("done ended", rb.ended, "complete", rb.complete, "step", rb.meta.get("step_id"), "t", round(time.time() - t0, 1))
+    tr = rb.meta.get("transition") or {}
+    log("transition", json.dumps({k: tr.get(k) for k in ("episode_ended", "task_complete")}))

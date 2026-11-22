@@ -5,19 +5,26 @@
   "task": "VideoRepick",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "c41f70a5f5e54f201deab2a25db372447c059fb1cb547758357153361687555c",
-    "motion.py": "5ed33f7816540ef4d66700ca0e5561d3c7df453d111112d70644e8df9edd9a14",
-    "perception.py": "fdcfcf86bbff2a7f5f6fcbcf3ac081bf406fb50884d70262da20cae537e14f59",
-    "video.py": "9c03efebb086a0eb5cdcfaa60bde8ced0ae3430ade6686a50f5b3ce8eb2e9901"
+    "controller.py": "ec16eb91445d7b98723e467e15e3e62c07d1ee2f3461158f5446afbe47c55c7d",
+    "robot.py": "fa2bd1d8d12236e0b081198c7e193b52a80e2f95986d6f0dff84c38d6881b270",
+    "seg.py": "8991018769fccacf4132548ee80dbdc1d12f281677869c1c3d5547c35de96024",
+    "tracker.py": "6e13ea07f444b8193c3825300310c417f52a0e2ab9b77ff3a27e5da205d59a65",
+    "vision.py": "df292fa4a3861f9b095e0cdde2082b3c4bddcfb4d1555c8767c2b9a3ef2a23c9"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "ec16eb91445d7b98723e467e15e3e62c07d1ee2f3461158f5446afbe47c55c7d",
+    "robot.py": "fa2bd1d8d12236e0b081198c7e193b52a80e2f95986d6f0dff84c38d6881b270",
+    "seg.py": "8991018769fccacf4132548ee80dbdc1d12f281677869c1c3d5547c35de96024",
+    "tracker.py": "6e13ea07f444b8193c3825300310c417f52a0e2ab9b77ff3a27e5da205d59a65",
+    "vision.py": "df292fa4a3861f9b095e0cdde2082b3c4bddcfb4d1555c8767c2b9a3ef2a23c9"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "c8e3c18fcd66381657ddc758d3f34fc770a98810fa71db1cd7f98a72d62d80c3",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "c41f70a5f5e54f201deab2a25db372447c059fb1cb547758357153361687555c",
-    "motion.py": "5ed33f7816540ef4d66700ca0e5561d3c7df453d111112d70644e8df9edd9a14",
-    "perception.py": "fdcfcf86bbff2a7f5f6fcbcf3ac081bf406fb50884d70262da20cae537e14f59",
-    "video.py": "9c03efebb086a0eb5cdcfaa60bde8ced0ae3430ade6686a50f5b3ce8eb2e9901"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "554292d009907c367d1f2149b16554397bce58f3713d43b238bbcc7d778224df"
+  }
 }

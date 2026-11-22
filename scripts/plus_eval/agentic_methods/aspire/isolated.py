@@ -4,6 +4,7 @@ Only sensor/robot contract data traverses JSON RPC. The worker cannot import the
 simulator, reset it, access host files, or reach a network/provider credential.
 """
 import json
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -139,7 +140,8 @@ def run_program(*, study_root, output_root, task, episode, code, image,
     source.write_text(code)
     recorder.save_program(source)
     adapter = RoboMMEPlusAdapter(study_root=study_root, output_root=recorder.root / 'native',
-                                 purpose=purpose, run_observer=recorder)
+                                 purpose=purpose, run_observer=recorder,
+                                 policy_revision=hashlib.sha256(code.encode()).hexdigest() if dataset == 'train' else None)
     if study_override is not None:
         adapter.study = study_override
     execution = None

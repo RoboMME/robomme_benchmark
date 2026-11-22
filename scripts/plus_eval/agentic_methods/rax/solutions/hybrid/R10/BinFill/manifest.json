@@ -1,0 +1,28 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "BinFill",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "fb5b3367d56cc8f7a6ba12eb74a0859225301f06eab8eea08bbbe448ff13f6e2",
+    "robot.py": "a5a7157694a11f9a9e852cbd7c9050e51af9b55355e1db25af061329a89ca439",
+    "skills.py": "3f96904fe7efe310e3f4d36adc6ea251df2f95533ece9fc9ff0df3ba3f34a03c",
+    "vision.py": "7ab477d347b3dd507c6cf80c311e8831bd9984569d6f6de1060f1c03c31d291b"
+  },
+  "source_policy_files": {
+    "controller.py": "fb5b3367d56cc8f7a6ba12eb74a0859225301f06eab8eea08bbbe448ff13f6e2",
+    "robot.py": "a5a7157694a11f9a9e852cbd7c9050e51af9b55355e1db25af061329a89ca439",
+    "skills.py": "3f96904fe7efe310e3f4d36adc6ea251df2f95533ece9fc9ff0df3ba3f34a03c",
+    "vision.py": "7ab477d347b3dd507c6cf80c311e8831bd9984569d6f6de1060f1c03c31d291b"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "c6ce095284e2d5e3626fb34753b412371a8db574f46dd49a4a8e6f3ac11e35e8",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "452be976520ec49a4b399fbf1f062c175208e421a64ee2362597e1b21467f4aa"
+  }
+}

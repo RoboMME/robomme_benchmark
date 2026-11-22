@@ -5,13 +5,15 @@
   "task": "PickHighlight",
   "evaluation_episodes": 50,
   "policy_files": {
-    "policy.py": "517004792f43d9acd80508d44103ff5d3fadfa5834dbc5fb871eae9065ba3089"
+    "policy.py": "50cdfe3a5dd0b38a6fe7d17a694500b72acf2d0854265f9bce6dd119dc36c19d"
   },
-  "source_experiment": "full_20261116_protocol_v2",
-  "test_feedback_to_development": false,
-  "status": "frozen_policy",
   "source_policy_files": {
-    "PickHighlight.py": "517004792f43d9acd80508d44103ff5d3fadfa5834dbc5fb871eae9065ba3089"
+    "PickHighlight.py": "50cdfe3a5dd0b38a6fe7d17a694500b72acf2d0854265f9bce6dd119dc36c19d"
   },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "af1fd98dde91910aa4e850862f48805d31cc7d240f2f37a1edf4f554c94c51d1",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy"
 }

@@ -18,7 +18,7 @@ There are three different sources of visual information:
 - **Released training demonstration:** a fixed recording of a training episode.
   It can contain an initial task video followed by the expert robot's execution.
   It is recorded data for offline analysis, available in `demo-only` and
-  `demo&interaction`.
+  `Hybrid`.
 - **Task conditioning video:** earlier events supplied as part of the current
   episode's input, when that task has a video. It is available during both training
   interaction and testing, including `interaction-only`. It is not an additional training
@@ -35,7 +35,7 @@ The assigned adaptation setting determines what development may use:
 | `zero-shot` | No | 0 |
 | `demo-only` | Yes | 0 |
 | `interaction-only` | No | At most 10 |
-| `demo&interaction` | Yes | At most 10 |
+| `Hybrid` | Yes | At most 10 |
 
 The main budget R is 10 for interaction settings and 0 for `zero-shot`/`demo-only`.
 R1/R3/R5 are optional results; use the assigned budget, which is a total per task

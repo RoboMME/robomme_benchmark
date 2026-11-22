@@ -13,11 +13,13 @@ from benchmark_io.artifacts import link
 RELEASE=Path(__file__).resolve().parents[2]
 
 
-def test_published_solutions_match_all_288_evaluated_policies():
+def test_published_solutions_match_all_64_evaluated_r10_policies():
     for method in ('aspire','rax'):
         root=RELEASE/'agentic_methods'/method/'solutions'
         index=json.loads((root/'index.json').read_text())
-        assert len(index['entries'])==144
+        assert len(index['entries'])==32
+        assert {e['budget'] for e in index['entries']} == {10}
+        assert {e['setting'] for e in index['entries']} == {'interaction-only', 'hybrid'}
         for entry in index['entries']:
             manifest=solutions.verified_files(root/entry['path'])
             assert manifest['policy_files'] and manifest['status']=='frozen_policy'
@@ -35,9 +37,20 @@ def test_solution_hash_rejects_changed_program(tmp_path):
     with pytest.raises(ValueError,match='changed'):solutions.verified_files(tmp_path)
 
 
+def test_solution_hash_rejects_changed_runner(tmp_path):
+    (tmp_path/'policy.py').write_bytes(b'policy')
+    (tmp_path/'runner.json').write_bytes(b'{}')
+    (tmp_path/'manifest.json').write_text(json.dumps({
+        'policy_files': {'policy.py': hashlib.sha256(b'policy').hexdigest()},
+        'runner_files': {'runner.json': hashlib.sha256(b'{}').hexdigest()}}))
+    solutions.verified_files(tmp_path)
+    (tmp_path/'runner.json').write_text('{"workspace_path":"changed"}')
+    with pytest.raises(ValueError,match='runner.json'):solutions.verified_files(tmp_path)
+
+
 def test_worker_preserves_native_episode_field(tmp_path,monkeypatch):
     monkeypatch.setattr(solutions,'EvaluationStudy',lambda _:SimpleNamespace(attempts=lambda:[]))
-    monkeypatch.setattr(sys,'argv',['eval','--setting','demo-only','--budget','0','--output-dir',str(tmp_path),
+    monkeypatch.setattr(sys,'argv',['eval','--setting','Hybrid','--budget','10','--output-dir',str(tmp_path),
         '--_worker','--tasks','BinFill','--episodes','0'])
     solutions.main('aspire',lambda *a:dict(episode=0,task_success=True),tmp_path)
     assert json.loads((tmp_path/'episodes/BinFill/episode_000/result.json').read_text())['task_success']

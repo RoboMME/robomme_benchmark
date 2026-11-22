@@ -56,8 +56,17 @@ class RoboMMEPlusSession:
             raise PermissionError("Only the released training and test datasets are available")
         if study.config["method"] != "rax":
             raise ValueError("Not a RAX study")
+        provenance = {}
+        evidence = os.environ.get('ROBOMME_AGENTIC_TASK_EVIDENCE')
+        if self.collection == 0 and evidence:
+            from benchmark_io.development_evidence import EvidenceRecorder
+            root = Path(evidence)
+            revision = EvidenceRecorder(root/'history', root.parent/'agent-workspace').record(
+                dict(hook_event_name='SimulatorStart', task=self.task, episode=int(layout_id)))
+            provenance['policy_revision'] = revision
         self.episode = Episode(self.task, int(layout_id), study=study, output=self.output / "recording",
-                               action_space="ee_pose", purpose=os.environ.get("ROBOMME_PLUS_PURPOSE", "development"))
+                               action_space="ee_pose", purpose=os.environ.get("ROBOMME_PLUS_PURPOSE", "development"),
+                               **provenance)
         self.episode_id = uuid.uuid4().hex
         self.initial_frames = [self._observation(frame) for frame in self.episode.frames]
         self.obs = self.initial_frames[-1]

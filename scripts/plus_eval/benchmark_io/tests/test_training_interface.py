@@ -19,6 +19,16 @@ def study(path, setting="interaction-only", budget=10):
     return Study(path, method="my_agent", setting=setting, budget=budget, records=records())
 
 
+def test_hybrid_alias_resumes_the_same_budget_and_demo_access(tmp_path):
+    old = study(tmp_path, setting='demo&interaction')
+    old.reserve('BinFill', purpose='verification')
+    current = study(tmp_path, setting='Hybrid')
+    assert current.config == old.config
+    current.require_demos()
+    assert current.reserve('BinFill', purpose='verification')['ordinal'] == 2
+    assert len(Study.open(tmp_path).attempts()) == 2
+
+
 def test_explicit_seed_does_not_advance_auto_rotation_and_resume_keeps_cursor(tmp_path):
     s = study(tmp_path)
     assert s.reserve("BinFill", seed=102, purpose="verification")["episode"] == 2

@@ -1,327 +1,273 @@
-"""Track identical-looking targets through the conditioning video (they swap slots)."""
-import json
-from pathlib import Path
-
+"""Track (identical-looking) targets through the conditioning video; they swap positions over time."""
+import itertools, json
 import numpy as np
 from PIL import Image
-from scipy import ndimage
-from scipy.optimize import linear_sum_assignment
-
-WS = Path("/workspace")
+from lib import WS, world_points, hsv, components
 
 
-def quat_R(q):
-    w, x, y, z = q
-    return np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-                     [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-                     [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
-
-
-def ring_mask(rgb):
-    r, g, b = [rgb[..., i].astype(int) for i in range(3)]
-    return (b - g > 20) & (r > 100) & (b > 70)
-
-
-def detect(rgb, depth_mm, intr, pose, min_px=6, merge=0.035):
-    """Return list of (xy world, pixel count) ring detections on the table."""
-    m = ring_mask(rgb)
-    lab, n = ndimage.label(m)
-    if n == 0:
-        return []
-    K = np.array(intr["matrix"], float)
-    fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
-    R = quat_R(pose["quaternion_wxyz"])
-    t = np.array(pose["position_m"], float)
-    comps = []
-    for k in range(1, n + 1):
-        vs, us = np.nonzero(lab == k)
-        if len(vs) < min_px:
-            continue
-        d = depth_mm[vs, us].astype(float) * 0.001
-        ok = d > 0
-        if ok.sum() < min_px:
-            continue
-        vs, us, d = vs[ok], us[ok], d[ok]
-        pc = np.stack([(us + 0.5 - cx) * d / fx, -(vs + 0.5 - cy) * d / fy, -d], 1)
-        pw = pc @ R.T + t
-        keep = (pw[:, 2] > -0.01) & (pw[:, 2] < 0.03)
-        if keep.sum() < min_px:
-            continue
-        pw = pw[keep]
-        comps.append([pw[:, :2].mean(0) * len(pw), len(pw)])
-    # merge components (outer ring + bullseye centre) within `merge` metres
-    merged = True
-    while merged and len(comps) > 1:
-        merged = False
-        for i in range(len(comps)):
-            for j in range(i + 1, len(comps)):
-                ci = comps[i][0] / comps[i][1]
-                cj = comps[j][0] / comps[j][1]
-                if np.linalg.norm(ci - cj) < merge:
-                    comps[i] = [comps[i][0] + comps[j][0], comps[i][1] + comps[j][1]]
-                    comps.pop(j)
-                    merged = True
-                    break
-            if merged:
-                break
-    return [(c[0] / c[1], c[1]) for c in comps]
-
-
-def load_frame(frame):
-    files = {(f["camera"], f["kind"]): f["path"] for f in frame["files"]}
-    rgb = np.array(Image.open(WS / files[("front", "rgb")]).convert("RGB"))
-    dep = np.array(Image.open(WS / files[("front", "depth")]))
-    return rgb, dep
-
-
-def track(frames, log=print, gate=0.07):
-    """Track targets through ordered frames. Returns dict:
-    times (frame_index list), tracks: array [T, N, 2], slots: initial positions,
-    observed: bool [T, N]."""
-    frames = sorted(frames, key=lambda f: f["frame_index"])
-    dets_all = []
-    for f in frames:
-        try:
-            rgb, dep = load_frame(f)
-            d = detect(rgb, dep, f["camera_intrinsics"]["front"], f["camera_poses"]["front"])
-        except Exception as e:  # missing file etc.
-            d = []
-        dets_all.append(d)
-    # number of targets: the mode of detection count over frames with large blobs
-    counts = [len([x for x in d if x[1] >= 40]) for d in dets_all]
-    vals, cnts = np.unique(counts, return_counts=True)
-    # take the most common count among the first and last 10% frames (static scene)
-    edge = counts[: max(1, len(counts) // 20)] + counts[-max(1, len(counts) // 20):]
-    ev, ec = np.unique(edge, return_counts=True)
-    N = int(ev[np.argmax(ec)])
-    # init from first frame having N big detections
-    init_i = next(i for i, c in enumerate(counts) if c == N)
-    pos = np.array([x[0] for x in dets_all[init_i] if x[1] >= 40])
-    vel = np.zeros_like(pos)
-    T = len(frames)
-    tr = np.zeros((T, N, 2))
-    obs = np.zeros((T, N), bool)
-    miss = np.zeros(N, int)
-    for i in range(T):
-        if i < init_i:
-            tr[i] = pos
-            continue
-        d = [x for x in dets_all[i] if x[1] >= 8]
-        pred = pos + vel
-        if d:
-            D = np.array([x[0] for x in d])
-            C = np.linalg.norm(pred[:, None, :] - D[None, :, :], axis=2)
-            ri, ci = linear_sum_assignment(C)
-            matched = set()
-            newpos = pred.copy()
-            for a, b in zip(ri, ci):
-                if C[a, b] < gate:
-                    newpos[a] = D[b]
-                    matched.add(a)
-            for a in range(N):
-                if a in matched:
-                    vel[a] = 0.6 * vel[a] + 0.4 * (newpos[a] - pos[a])
-                    miss[a] = 0
-                    obs[i, a] = True
-                else:
-                    miss[a] += 1
-                    vel[a] *= 0.8
-            pos = newpos
+def detect_targets_img(meta, rgb, depth):
+    imgs = {("front", "rgb"): rgb, ("front", "depth"): depth}
+    P, _ = world_points(meta, imgs, "front")
+    h = hsv(rgb); H, S, V = h[..., 0], h[..., 1], h[..., 2]
+    low = (P[..., 2] < 0.013) & (P[..., 2] > -0.01)
+    colored = ((H >= 180) | (H <= 4)) & (S > 50) & (S <= 185) & (V > 140)
+    white = (S < 50) & (V > 200)
+    ring = (colored | white) & low
+    pts = []
+    for ys, xs in components(ring, 3):
+        p = np.median(P[ys, xs], 0)
+        pts.append((p[:2], len(ys)))
+    clusters = []
+    for p, n in sorted(pts, key=lambda t: -t[1]):
+        for c in clusters:
+            if np.linalg.norm(c["sum"] / c["n"] - p) < 0.035:
+                c["sum"] += p * n; c["n"] += n; break
         else:
-            pos = pred
-            vel *= 0.8
-            miss += 1
-        tr[i] = pos
-    return {"times": [f["frame_index"] for f in frames], "tracks": tr, "observed": obs,
-            "N": N, "init": init_i, "counts": counts}
+            clusters.append(dict(sum=p * n, n=n))
+    return [c["sum"] / c["n"] for c in clusters if c["n"] >= 15]
 
 
-def track_manifest(manifest, log=print):
-    frames = [f for f in manifest["frames"] if f.get("phase") in ("video_demo", "execution")]
-    return track(frames, log=log)
+def best_assignment(T, D, gate):
+    """Min-cost matching of track predictions T (list) to detections D (list) with gating."""
+    nT, nD = len(T), len(D)
+    if nT == 0 or nD == 0:
+        return {}
+    C = np.array([[np.linalg.norm(t - d) for d in D] for t in T])
+    best, bestc = {}, None
+    # brute force over assignments (small sizes)
+    idx = list(range(nD))
+    for k in range(min(nT, nD), 0, -1):
+        found = False
+        for ts in itertools.combinations(range(nT), k):
+            for ds in itertools.permutations(idx, k):
+                c = sum(C[t, d] for t, d in zip(ts, ds))
+                if any(C[t, d] > gate for t, d in zip(ts, ds)):
+                    continue
+                if bestc is None or c < bestc:
+                    bestc, best = c, dict(zip(ts, ds)); found = True
+        if found:
+            return best
+    return {}
 
 
-if __name__ == "__main__":
-    import sys
-    m = json.load(open(sys.argv[1]))
-    res = track_manifest(m)
-    tr, obs = res["tracks"], res["observed"]
-    print("N", res["N"], "init", res["init"])
-    step = int(sys.argv[2]) if len(sys.argv) > 2 else 6
-    for i in range(0, len(tr), step):
-        print(res["times"][i], res["counts"][i], " ".join("%s(%.3f,%.3f)" % ("" if obs[i, k] else "*", tr[i, k, 0], tr[i, k, 1]) for k in range(res["N"])))
-    print("final", " ".join("(%.3f,%.3f)" % tuple(tr[-1, k]) for k in range(res["N"])))
+def track_targets(meta, frames, init=None, gate=0.07, log=None):
+    """frames: list of manifest frames (ordered). Returns (positions[frame][track], final tracks)."""
+    hist = []
+    tracks = None; vel = None; missing = None
+    for fi, f in enumerate(frames):
+        files = {(x["camera"], x["kind"]): x["path"] for x in f["files"]}
+        rgb = np.asarray(Image.open(WS / files[("front", "rgb")]).convert("RGB"))
+        dep = np.asarray(Image.open(WS / files[("front", "depth")])).astype(np.float32) * 0.001
+        D = detect_targets_img(meta, rgb, dep)
+        if tracks is None:
+            tracks = [d.copy() for d in (init if init is not None else D)]
+            vel = [np.zeros(2) for _ in tracks]; missing = [0 for _ in tracks]
+            hist.append([t.copy() for t in tracks])
+            continue
+        pred = [t + v for t, v in zip(tracks, vel)]
+        A = best_assignment(pred, D, gate)
+        usedD = set(A.values())
+        newt = [t.copy() for t in tracks]
+        for ti, di in A.items():
+            nv = D[di] - tracks[ti]
+            vel[ti] = 0.6 * nv + 0.4 * vel[ti] if missing[ti] == 0 else np.zeros(2)
+            newt[ti] = D[di].copy(); missing[ti] = 0
+        lostT = [ti for ti in range(len(tracks)) if ti not in A]
+        freeD = [di for di in range(len(D)) if di not in usedD
+                 and min(np.linalg.norm(D[di] - t) for t in newt) > 0.05]
+        if lostT and freeD:
+            A2 = best_assignment([tracks[t] for t in lostT], [D[d] for d in freeD], 1.0)
+            for a, b in A2.items():
+                ti, di = lostT[a], freeD[b]
+                if log:
+                    log(f"frame {fi}: re-acquire track {ti} {np.round(tracks[ti],3)} -> {np.round(D[di],3)}")
+                newt[ti] = D[di].copy(); vel[ti] = np.zeros(2); missing[ti] = 0
+        for ti in range(len(tracks)):
+            if ti not in A and missing[ti] >= 0 and not np.array_equal(newt[ti], tracks[ti]) is False:
+                pass
+        for ti in lostT:
+            if np.array_equal(newt[ti], tracks[ti]):
+                missing[ti] += 1
+                vel[ti] = vel[ti] * 0.5
+                newt[ti] = tracks[ti] + vel[ti]
+        tracks = newt
+        hist.append([t.copy() for t in tracks])
+    return hist, tracks
 
 
-# ---------------------------------------------------------------- slot/pair model
-def _angle(v):
-    return float(np.arctan2(v[1], v[0]))
-
-
-def swap_analysis(frames, log=print, slot_tol=0.03):
-    """Model: N fixed slots; targets exchange slots pairwise, the two movers staying
-    point-symmetric about the pair midpoint while both slots are vacant.
-    Returns slots and events (t0, t1, i, j, total rotation, k half turns)."""
-    frames = sorted(frames, key=lambda f: f["frame_index"])
-    times = [f["frame_index"] for f in frames]
-    dets = []
+def frame_detections(meta, frames):
+    out = []
     for f in frames:
-        try:
-            rgb, dep = load_frame(f)
-            dets.append(detect(rgb, dep, f["camera_intrinsics"]["front"], f["camera_poses"]["front"]))
-        except Exception:
-            dets.append([])
+        files = {(x["camera"], x["kind"]): x["path"] for x in f["files"]}
+        rgb = np.asarray(Image.open(WS / files[("front", "rgb")]).convert("RGB"))
+        dep = np.asarray(Image.open(WS / files[("front", "depth")])).astype(np.float32) * 0.001
+        out.append(detect_targets_img(meta, rgb, dep))
+    return out
 
-    def big(d):
-        return [x[0] for x in d if x[1] >= 40]
-    last = big(dets[-1])
-    first = big(dets[0])
-    slots = np.array(last if len(last) >= len(first) else first)
-    N = len(slots)
-    pairs = [(i, j) for i in range(N) for j in range(i + 1, N)]
-    mids = {p: (slots[p[0]] + slots[p[1]]) / 2 for p in pairs}
-    dist = {p: float(np.linalg.norm(slots[p[0]] - slots[p[1]])) for p in pairs}
-    T = len(dets)
-    empty = []
-    movers = []
-    for d in dets:
-        occ = set()
-        mv = []
-        for (xy, cnt) in d:
-            ds = np.linalg.norm(slots - xy, axis=1)
-            if ds.min() < slot_tol:
-                occ.add(int(ds.argmin()))
-            elif cnt >= 8:
-                mv.append(np.asarray(xy))
-        empty.append(set(range(N)) - occ)
-        movers.append(mv)
-    # per frame: pairs supported by two symmetric movers among empty slots
-    support = [dict() for _ in range(T)]  # pair -> list of mover xy
-    for t in range(T):
-        mv = movers[t]
-        cands = []
-        for a in range(len(mv)):
-            for b in range(a + 1, len(mv)):
-                m = (mv[a] + mv[b]) / 2
-                sep = np.linalg.norm(mv[a] - mv[b])
-                for p in pairs:
-                    if p[0] not in empty[t] or p[1] not in empty[t]:
-                        continue
-                    e = np.linalg.norm(m - mids[p])
-                    if e < 0.035 and 0.4 * dist[p] < sep < 1.15 * dist[p]:
-                        cands.append((e, a, b, p))
-        cands.sort(key=lambda x: x[0])
-        cands = cands[:12]
-        best_sel = [()]
-        best_key = [(0, 0.0)]
 
-        def search(idx, sel, um, us, cost):
-            key = (len(sel), -cost)
-            if key > best_key[0]:
-                best_key[0], best_sel[0] = key, tuple(sel)
-            for q in range(idx, len(cands)):
-                e, a, b, p = cands[q]
-                if a in um or b in um or p[0] in us or p[1] in us:
-                    continue
-                search(q + 1, sel + [q], um | {a, b}, us | {p[0], p[1]}, cost + e)
-        search(0, [], frozenset(), frozenset(), 0.0)
-        used = set()
-        for q in best_sel[0]:
-            e, a, b, p = cands[q]
-            used.update([a, b])
-            support[t][p] = [mv[a], mv[b]]
-        # single movers -> a pair whose both slots are empty and radius fits, preferring
-        # pairs supported in neighbouring frames
-        for a in range(len(mv)):
-            if a in used:
-                continue
-            best, bs = None, -1
-            for p in pairs:
-                if p[0] not in empty[t] or p[1] not in empty[t]:
-                    continue
-                rr = np.linalg.norm(mv[a] - mids[p])
-                if not (0.15 * dist[p] < rr < max(0.65 * dist[p], 0.5 * dist[p] + 0.06)):
-                    continue
-                score = sum(1 for u in range(max(0, t - 3), min(T, t + 4)) if p in support[u])
-                if score > bs:
-                    best, bs = p, score
-            if best is not None and bs > 0:
-                support[t].setdefault(best, []).append(mv[a])
-    events = []
-    for p in pairs:
-        i, j = p
-        # runs of frames with both slots empty
+def swap_events(slots, dets, slot_tol=0.03, vac_tol=0.015, gap=4, min_frames=3, log=None):
+    """Detect swap events: runs of frames with in-transit ring detections; the swapped pair
+    = the two slots most often vacant during the run. Returns list of dict(start,end,pair,vac)."""
+    n = len(slots)
+    transit = []
+    vac = []
+    for D in dets:
         t = 0
-        while t < T:
-            if not (i in empty[t] and j in empty[t]):
+        for d in D:
+            if min(np.linalg.norm(d - s) for s in slots) > slot_tol:
                 t += 1
-                continue
-            t0 = t
-            t1 = t
-            while t < T:
-                if i in empty[t] and j in empty[t]:
-                    t1 = t
-                    t += 1
-                    continue
-                # tolerate a short interruption (a mover passing over a slot)
-                if t + 1 < T and i in empty[t + 1] and j in empty[t + 1] and t - t1 <= 1:
-                    t += 1
-                    continue
-                break
-            t = t1 + 1
-            fr_sup = [u for u in range(t0, t1 + 1) if p in support[u]]
-            if len(fr_sup) < 2:
-                continue
-            c = mids[p]
-            a0 = _angle(slots[i] - c)
-            prev, total = 0.0, 0.0
-            for u in fr_sup:
-                best = None
-                for xy in support[u][p]:
-                    val = np.mod(_angle(xy - c) - a0, np.pi)
-                    dlt = (val - prev + np.pi / 2) % np.pi - np.pi / 2
-                    if best is None or abs(dlt) < abs(best):
-                        best = dlt
-                total += best
-                prev = (prev + best) % np.pi
-            if abs(total) >= 0.35 * np.pi:
-                k = int(np.sign(total)) * max(1, int(np.round(abs(total) / np.pi)))
+        transit.append(t)
+        vac.append([all(np.linalg.norm(d - s) > vac_tol for d in D) for s in slots])
+    runs = []
+    cur = None
+    for fi, t in enumerate(transit):
+        if t:
+            if cur is not None and fi - cur[1] <= gap:
+                cur[1] = fi
             else:
-                k = 0
-            events.append({"t0": times[t0], "t1": times[t1], "i": i, "j": j,
-                           "total": round(float(total), 3), "k": k, "n": len(fr_sup)})
-    # a slot can take part in only one swap at a time: resolve overlaps
-    events = [e for e in events if e["k"] != 0]
-    events.sort(key=lambda e: -(e["n"] + abs(e["total"])))
-    kept = []
-    for e in events:
-        clash = False
-        for q in kept:
-            if {e["i"], e["j"]} & {q["i"], q["j"]} and not (e["t1"] < q["t0"] or q["t1"] < e["t0"]):
-                clash = True
-                break
-        if not clash:
-            kept.append(e)
-        else:
-            log("drop overlapping event", e)
-    events = kept
-    events.sort(key=lambda e: e["t0"])
-    for e in events:
-        log("swap event", e)
-    return slots, events
-
-
-def target_slot_after(slots, events, slot_at_time, t_query, t_end=None):
-    """Identity tracking: target in `slot_at_time` at time t_query -> its slot at the end."""
-    s = slot_at_time
-    for e in events:
-        if e["t0"] < t_query:
-            continue  # completed before (or ongoing at) the query; slot assignment already observed
-        if t_end is not None and e["t0"] > t_end:
+                if cur is not None:
+                    runs.append(cur)
+                cur = [fi, fi]
+    if cur is not None:
+        runs.append(cur)
+    out = []
+    for a, b in runs:
+        if b - a + 1 < min_frames:
             continue
-        if e["k"] % 2 != 0:
-            if s == e["i"]:
-                s = e["j"]
-            elif s == e["j"]:
-                s = e["i"]
-    return s
+        frac = np.mean([vac[f] for f in range(a, b + 1)], axis=0)
+        order = np.argsort(-frac)
+        p = tuple(sorted(int(x) for x in order[:2]))
+        # symmetry votes: swapping pair moves point-symmetrically about its midpoint
+        votes = {}
+        for f in range(a, b + 1):
+            T = [d for d in dets[f] if min(np.linalg.norm(d - s) for s in slots) > slot_tol]
+            for u in range(len(T)):
+                for w in range(u + 1, len(T)):
+                    m = (T[u] + T[w]) / 2
+                    best = None
+                    for i in range(n):
+                        for j in range(i + 1, n):
+                            e = np.linalg.norm(m - (slots[i] + slots[j]) / 2)
+                            L = np.linalg.norm(slots[i] - slots[j]); l = np.linalg.norm(T[u] - T[w])
+                            if l > L + 0.03 or l < 0.35 * L:
+                                continue
+                            if best is None or e < best[0]:
+                                best = (e, (i, j))
+                    if best is not None and best[0] < 0.02:
+                        votes[best[1]] = votes.get(best[1], 0) + 1
+        if not votes:
+            if log:
+                log(f"ignore transit run {a}-{b} (no symmetric votes) vac {np.round(frac,2).tolist()}")
+            continue
+        vp, vk = max(votes.items(), key=lambda t: t[1])
+        if vk < 3:
+            if log:
+                log(f"ignore transit run {a}-{b} weak votes {votes}")
+            continue
+        p = vp
+        e = dict(start=a, end=b, pair=p, vac=np.round(frac, 2).tolist(), votes=votes,
+                 margin=float(frac[order[1]] - (frac[order[2]] if n > 2 else 0)))
+        out.append(e)
+        if log:
+            log(f"swap {a}-{b} pair {p} vac {e['vac']}")
+    return out
+
+
+def identity_timeline(n, events, n_frames):
+    """ident[f][slot] = identity at slot for frame f (swap applied at event end)."""
+    ident = list(range(n))
+    tl = []
+    ev = sorted(events, key=lambda e: e["start"])
+    k = 0
+    for f in range(n_frames):
+        while k < len(ev) and ev[k]["end"] < f:
+            i, j = ev[k]["pair"]; ident[i], ident[j] = ident[j], ident[i]; k += 1
+        tl.append(list(ident))
+    return tl, ident
+
+
+def phase_swaps(slots, dets, slot_tol=0.03, mid_tol=0.02, hi=np.radians(55), lo=np.radians(35), min_support=4, log=None):
+    """Count swaps per slot pair from per-frame symmetric detection pairs.
+    For a swapping pair (i,j) the two moving rings are point-symmetric about the pair midpoint;
+    the line through them rotates 0 -> 90 -> 0 deg relative to the s_i-s_j line once per swap.
+    Returns list of (frame, (i,j)) in order of the 90-deg crossing."""
+    n = len(slots)
+    pairs = [(i, j) for i in range(n) for j in range(i + 1, n)]
+    state = {p: "low" for p in pairs}
+    last_seen = {p: -99 for p in pairs}
+    seen_frames = {}
+    out = []
+    for f, D in enumerate(dets):
+        T = [d for d in D if min(np.linalg.norm(d - s) for s in slots) > slot_tol]
+        cands = []
+        for u in range(len(T)):
+            for w in range(u + 1, len(T)):
+                m = (T[u] + T[w]) / 2
+                l = np.linalg.norm(T[u] - T[w])
+                for (i, j) in pairs:
+                    L = np.linalg.norm(slots[i] - slots[j])
+                    if l < 0.3 * L:
+                        continue
+                    e = np.linalg.norm(m - (slots[i] + slots[j]) / 2)
+                    if e < mid_tol:
+                        a = slots[i] - slots[j]; b = T[u] - T[w]
+                        c = abs(np.dot(a, b)) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-9)
+                        ang = np.arccos(np.clip(c, 0, 1))
+                        cands.append((e, u, w, (i, j), ang))
+        # choose the disjoint candidate set with max cardinality, then min total error
+        cands.sort(key=lambda t: t[0])
+        cands = cands[:14]
+        best = (0, 0.0, [])
+        def rec(k, used, usedp, chosen, err):
+            nonlocal best
+            if (len(chosen), -err) > (best[0], -best[1]):
+                best = (len(chosen), err, list(chosen))
+            for q in range(k, len(cands)):
+                e, u, w, p, ang = cands[q]
+                if u in used or w in used or p[0] in usedp or p[1] in usedp:
+                    continue
+                chosen.append(cands[q])
+                rec(q + 1, used | {u, w}, usedp | {p[0], p[1]}, chosen, err + e)
+                chosen.pop()
+        rec(0, frozenset(), frozenset(), [], 0.0)
+        for e, u, w, p, ang in best[2]:
+            last_seen[p] = f
+            seen_frames.setdefault(p, []).append(f)
+            if state[p] == "low" and ang > hi:
+                state[p] = "high"
+                out.append((f, p))
+                if log:
+                    log(f"swap {p} at frame {f} ang {np.degrees(ang):.0f}")
+            elif state[p] == "high" and ang < lo:
+                state[p] = "low"
+        # pairs not seen for a while (swap finished, rings back at slots) reset to low
+        occ = [any(np.linalg.norm(d - s) < 0.015 for d in D) for s in slots]
+        for p in pairs:
+            if state[p] == "high" and last_seen[p] != f and occ[p[0]] and occ[p[1]]:
+                state[p] = "low"
+    good = []
+    for f, p in out:
+        k = sum(1 for g in seen_frames.get(p, []) if abs(g - f) <= 8)
+        if k >= min_support:
+            good.append((f, p))
+        elif log:
+            log(f"drop weak swap {p} at {f} support {k}")
+    return good
+
+
+def resolve_identity_slot(slots, swaps, place_frame, place_xy, tol=0.04):
+    """Return (final slot index of the target identity placed at place_xy at place_frame, dist)."""
+    d = [np.linalg.norm(s - place_xy) for s in slots]
+    s0 = int(np.argmin(d))
+    if d[s0] > tol:
+        return None, d[s0]
+    # identity at slot s0 at place_frame: apply swaps up to place_frame to identity map
+    ident = list(range(len(slots)))   # ident[slot] = identity
+    for f, (i, j) in swaps:
+        if f <= place_frame:
+            ident[i], ident[j] = ident[j], ident[i]
+    idt = ident[s0]
+    for f, (i, j) in swaps:
+        if f > place_frame:
+            ident[i], ident[j] = ident[j], ident[i]
+    return ident.index(idt), d[s0]

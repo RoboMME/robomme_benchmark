@@ -5,21 +5,32 @@
   "task": "ButtonUnmaskSwap",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "26453eb1201092f9bc3a0a20e814570bd0021ad7fcb4c3a40212bee08961232c",
-    "geom.py": "4245e921de6cc36307ac8a51b55dc176c7a2b324ebf2caf5421fe7a02ae6ad39",
-    "percept.py": "ff9cda9f2ad5e190849c6f068499b3ff4d8c90f5b401eb71fd5d51f39dd07156",
-    "robot.py": "808635d189f27ce717339be581c7ef8f2fe1bba40aded966e35df20f4daef433",
-    "tracker.py": "78cdc4c86cc536a9dac34807443cbb2b338efd0a3147497c4f6e53ef87340c25"
+    "controller.py": "038a107bfbd683b5f1681899fe08444bfc6e3c69459e12a1dc26bddef610b1bf",
+    "controller_v1.py": "9dd67b038e73835e2cbfeaf8bf0fd9817e26d9aabe28fe84bb2138fc30fa2fb4",
+    "controller_v2.py": "e7325ffe7a6c01f24871737f2b5cc01cc024d0b138f9732c4556084558efc64c",
+    "controller_v3.py": "1a7c457e65d1033fceafa792ef35b71d8689f2b66e58e5882f8b89064b8fd03c",
+    "logic.py": "fd58e586d1eca50599398233466259f98b7aa0521944253bc50518efdd6c4cc0",
+    "percep.py": "8ab097c4bd8836c45950af2ffd26d2aaa8edad9afa6886dc2f608590ec59e8a9",
+    "robot.py": "22c498a7fbe343ec19bcb37ffda7589fa5fa0c045e9d597b37cdf78848a8320c",
+    "tracker.py": "5e3e18430521b2a7f34abc8bc6b0168286a4cd35c0fafc112e88369d5ac6f792"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "038a107bfbd683b5f1681899fe08444bfc6e3c69459e12a1dc26bddef610b1bf",
+    "controller_v1.py": "9dd67b038e73835e2cbfeaf8bf0fd9817e26d9aabe28fe84bb2138fc30fa2fb4",
+    "controller_v2.py": "e7325ffe7a6c01f24871737f2b5cc01cc024d0b138f9732c4556084558efc64c",
+    "controller_v3.py": "1a7c457e65d1033fceafa792ef35b71d8689f2b66e58e5882f8b89064b8fd03c",
+    "logic.py": "fd58e586d1eca50599398233466259f98b7aa0521944253bc50518efdd6c4cc0",
+    "percep.py": "8ab097c4bd8836c45950af2ffd26d2aaa8edad9afa6886dc2f608590ec59e8a9",
+    "robot.py": "22c498a7fbe343ec19bcb37ffda7589fa5fa0c045e9d597b37cdf78848a8320c",
+    "tracker.py": "5e3e18430521b2a7f34abc8bc6b0168286a4cd35c0fafc112e88369d5ac6f792"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "f84c8a44525f498ad00e7b815f02a5c1cebae8933e82e33933f7d1e590cdbf9d",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "26453eb1201092f9bc3a0a20e814570bd0021ad7fcb4c3a40212bee08961232c",
-    "geom.py": "4245e921de6cc36307ac8a51b55dc176c7a2b324ebf2caf5421fe7a02ae6ad39",
-    "percept.py": "ff9cda9f2ad5e190849c6f068499b3ff4d8c90f5b401eb71fd5d51f39dd07156",
-    "robot.py": "808635d189f27ce717339be581c7ef8f2fe1bba40aded966e35df20f4daef433",
-    "tracker.py": "78cdc4c86cc536a9dac34807443cbb2b338efd0a3147497c4f6e53ef87340c25"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "b07e4bbc57105e21b7620202a7890da70ff4533a68c2f4a01401c36a46825d60"
+  }
 }

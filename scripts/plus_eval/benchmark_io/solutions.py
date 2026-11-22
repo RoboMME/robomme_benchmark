@@ -19,7 +19,7 @@ from .runtime_source import assemble
 def verified_files(directory):
     directory = Path(directory)
     manifest = json.loads((directory/'manifest.json').read_text())
-    for relative, expected in manifest['policy_files'].items():
+    for relative, expected in {**manifest['policy_files'], **manifest.get('runner_files', {})}.items():
         path = directory/relative
         if path.is_symlink() or not path.resolve().is_relative_to(directory.resolve()):
             raise ValueError('Policy paths must stay inside their solution directory')
@@ -36,8 +36,8 @@ def resolve_image(image):
 
 def main(method, evaluate, method_dir):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--setting', choices=['demo-only','interaction-only','demo&interaction'], required=True)
-    parser.add_argument('--budget', type=int, choices=[0,1,3,5,10], required=True)
+    parser.add_argument('--setting', type=str.lower, choices=['interaction-only','hybrid'], required=True)
+    parser.add_argument('--budget', type=int, choices=[10], default=10)
     parser.add_argument('--solutions', type=Path, default=Path(method_dir)/'solutions')
     parser.add_argument('--output-dir', type=Path, required=True)
     parser.add_argument('--tasks', nargs='+')
@@ -48,8 +48,6 @@ def main(method, evaluate, method_dir):
     parser.add_argument('--artifacts', choices=['full','logs'], default='full')
     parser.add_argument('--_worker', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if (args.setting=='demo-only') != (args.budget==0):
-        parser.error('demo-only uses R0; interaction settings use R10, with R1/R3/R5 optional')
     if args.workers<1 or not args.episodes or any(i<0 or i>=50 for i in args.episodes):
         parser.error('Use positive worker counts and test episode indices 0–49')
     args.output_dir=args.output_dir.resolve();args.solutions=args.solutions.resolve()

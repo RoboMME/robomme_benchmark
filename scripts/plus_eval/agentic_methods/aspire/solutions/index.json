@@ -1,1015 +1,198 @@
 {
   "method": "aspire",
-  "configurations": 9,
-  "tasks": 16,
+  "source_experiment": "r10_20261121",
   "entries": [
     {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "BinFill",
-      "path": "demo-only/R0/BinFill",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "ButtonUnmask",
-      "path": "demo-only/R0/ButtonUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "ButtonUnmaskSwap",
-      "path": "demo-only/R0/ButtonUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "InsertPeg",
-      "path": "demo-only/R0/InsertPeg",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "MoveCube",
-      "path": "demo-only/R0/MoveCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "PatternLock",
-      "path": "demo-only/R0/PatternLock",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "PickHighlight",
-      "path": "demo-only/R0/PickHighlight",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "PickXtimes",
-      "path": "demo-only/R0/PickXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "RouteStick",
-      "path": "demo-only/R0/RouteStick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "StopCube",
-      "path": "demo-only/R0/StopCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "SwingXtimes",
-      "path": "demo-only/R0/SwingXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "VideoPlaceButton",
-      "path": "demo-only/R0/VideoPlaceButton",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "VideoPlaceOrder",
-      "path": "demo-only/R0/VideoPlaceOrder",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "VideoRepick",
-      "path": "demo-only/R0/VideoRepick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "VideoUnmask",
-      "path": "demo-only/R0/VideoUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo-only",
-      "budget": 0,
-      "task": "VideoUnmaskSwap",
-      "path": "demo-only/R0/VideoUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "BinFill",
-      "path": "interaction-only/R1/BinFill",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "ButtonUnmask",
-      "path": "interaction-only/R1/ButtonUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "ButtonUnmaskSwap",
-      "path": "interaction-only/R1/ButtonUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "InsertPeg",
-      "path": "interaction-only/R1/InsertPeg",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "MoveCube",
-      "path": "interaction-only/R1/MoveCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "PatternLock",
-      "path": "interaction-only/R1/PatternLock",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "PickHighlight",
-      "path": "interaction-only/R1/PickHighlight",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "PickXtimes",
-      "path": "interaction-only/R1/PickXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "RouteStick",
-      "path": "interaction-only/R1/RouteStick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "StopCube",
-      "path": "interaction-only/R1/StopCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "SwingXtimes",
-      "path": "interaction-only/R1/SwingXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "VideoPlaceButton",
-      "path": "interaction-only/R1/VideoPlaceButton",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "VideoPlaceOrder",
-      "path": "interaction-only/R1/VideoPlaceOrder",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "VideoRepick",
-      "path": "interaction-only/R1/VideoRepick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "VideoUnmask",
-      "path": "interaction-only/R1/VideoUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 1,
-      "task": "VideoUnmaskSwap",
-      "path": "interaction-only/R1/VideoUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "BinFill",
-      "path": "interaction-only/R3/BinFill",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "ButtonUnmask",
-      "path": "interaction-only/R3/ButtonUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "ButtonUnmaskSwap",
-      "path": "interaction-only/R3/ButtonUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "InsertPeg",
-      "path": "interaction-only/R3/InsertPeg",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "MoveCube",
-      "path": "interaction-only/R3/MoveCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "PatternLock",
-      "path": "interaction-only/R3/PatternLock",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "PickHighlight",
-      "path": "interaction-only/R3/PickHighlight",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "PickXtimes",
-      "path": "interaction-only/R3/PickXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "RouteStick",
-      "path": "interaction-only/R3/RouteStick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "StopCube",
-      "path": "interaction-only/R3/StopCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "SwingXtimes",
-      "path": "interaction-only/R3/SwingXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "VideoPlaceButton",
-      "path": "interaction-only/R3/VideoPlaceButton",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "VideoPlaceOrder",
-      "path": "interaction-only/R3/VideoPlaceOrder",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "VideoRepick",
-      "path": "interaction-only/R3/VideoRepick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "VideoUnmask",
-      "path": "interaction-only/R3/VideoUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 3,
-      "task": "VideoUnmaskSwap",
-      "path": "interaction-only/R3/VideoUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "BinFill",
-      "path": "interaction-only/R5/BinFill",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "ButtonUnmask",
-      "path": "interaction-only/R5/ButtonUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "ButtonUnmaskSwap",
-      "path": "interaction-only/R5/ButtonUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "InsertPeg",
-      "path": "interaction-only/R5/InsertPeg",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "MoveCube",
-      "path": "interaction-only/R5/MoveCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "PatternLock",
-      "path": "interaction-only/R5/PatternLock",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "PickHighlight",
-      "path": "interaction-only/R5/PickHighlight",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "PickXtimes",
-      "path": "interaction-only/R5/PickXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "RouteStick",
-      "path": "interaction-only/R5/RouteStick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "StopCube",
-      "path": "interaction-only/R5/StopCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "SwingXtimes",
-      "path": "interaction-only/R5/SwingXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "VideoPlaceButton",
-      "path": "interaction-only/R5/VideoPlaceButton",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "VideoPlaceOrder",
-      "path": "interaction-only/R5/VideoPlaceOrder",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "VideoRepick",
-      "path": "interaction-only/R5/VideoRepick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "VideoUnmask",
-      "path": "interaction-only/R5/VideoUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "interaction-only",
-      "budget": 5,
-      "task": "VideoUnmaskSwap",
-      "path": "interaction-only/R5/VideoUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
       "setting": "interaction-only",
       "budget": 10,
       "task": "BinFill",
-      "path": "interaction-only/R10/BinFill",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/BinFill"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "ButtonUnmask",
-      "path": "interaction-only/R10/ButtonUnmask",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/ButtonUnmask"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "ButtonUnmaskSwap",
-      "path": "interaction-only/R10/ButtonUnmaskSwap",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/ButtonUnmaskSwap"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "InsertPeg",
-      "path": "interaction-only/R10/InsertPeg",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/InsertPeg"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "MoveCube",
-      "path": "interaction-only/R10/MoveCube",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/MoveCube"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "PatternLock",
-      "path": "interaction-only/R10/PatternLock",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/PatternLock"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "PickHighlight",
-      "path": "interaction-only/R10/PickHighlight",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/PickHighlight"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "PickXtimes",
-      "path": "interaction-only/R10/PickXtimes",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/PickXtimes"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "RouteStick",
-      "path": "interaction-only/R10/RouteStick",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/RouteStick"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "StopCube",
-      "path": "interaction-only/R10/StopCube",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/StopCube"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "SwingXtimes",
-      "path": "interaction-only/R10/SwingXtimes",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/SwingXtimes"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "VideoPlaceButton",
-      "path": "interaction-only/R10/VideoPlaceButton",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/VideoPlaceButton"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "VideoPlaceOrder",
-      "path": "interaction-only/R10/VideoPlaceOrder",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/VideoPlaceOrder"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "VideoRepick",
-      "path": "interaction-only/R10/VideoRepick",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/VideoRepick"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "VideoUnmask",
-      "path": "interaction-only/R10/VideoUnmask",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/VideoUnmask"
     },
     {
       "setting": "interaction-only",
       "budget": 10,
       "task": "VideoUnmaskSwap",
-      "path": "interaction-only/R10/VideoUnmaskSwap",
-      "status": "frozen_policy"
+      "path": "interaction-only/R10/VideoUnmaskSwap"
     },
     {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "BinFill",
-      "path": "demo&interaction/R1/BinFill",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "ButtonUnmask",
-      "path": "demo&interaction/R1/ButtonUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "ButtonUnmaskSwap",
-      "path": "demo&interaction/R1/ButtonUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "InsertPeg",
-      "path": "demo&interaction/R1/InsertPeg",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "MoveCube",
-      "path": "demo&interaction/R1/MoveCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "PatternLock",
-      "path": "demo&interaction/R1/PatternLock",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "PickHighlight",
-      "path": "demo&interaction/R1/PickHighlight",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "PickXtimes",
-      "path": "demo&interaction/R1/PickXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "RouteStick",
-      "path": "demo&interaction/R1/RouteStick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "StopCube",
-      "path": "demo&interaction/R1/StopCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "SwingXtimes",
-      "path": "demo&interaction/R1/SwingXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "VideoPlaceButton",
-      "path": "demo&interaction/R1/VideoPlaceButton",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "VideoPlaceOrder",
-      "path": "demo&interaction/R1/VideoPlaceOrder",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "VideoRepick",
-      "path": "demo&interaction/R1/VideoRepick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "VideoUnmask",
-      "path": "demo&interaction/R1/VideoUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 1,
-      "task": "VideoUnmaskSwap",
-      "path": "demo&interaction/R1/VideoUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "BinFill",
-      "path": "demo&interaction/R3/BinFill",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "ButtonUnmask",
-      "path": "demo&interaction/R3/ButtonUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "ButtonUnmaskSwap",
-      "path": "demo&interaction/R3/ButtonUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "InsertPeg",
-      "path": "demo&interaction/R3/InsertPeg",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "MoveCube",
-      "path": "demo&interaction/R3/MoveCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "PatternLock",
-      "path": "demo&interaction/R3/PatternLock",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "PickHighlight",
-      "path": "demo&interaction/R3/PickHighlight",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "PickXtimes",
-      "path": "demo&interaction/R3/PickXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "RouteStick",
-      "path": "demo&interaction/R3/RouteStick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "StopCube",
-      "path": "demo&interaction/R3/StopCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "SwingXtimes",
-      "path": "demo&interaction/R3/SwingXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "VideoPlaceButton",
-      "path": "demo&interaction/R3/VideoPlaceButton",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "VideoPlaceOrder",
-      "path": "demo&interaction/R3/VideoPlaceOrder",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "VideoRepick",
-      "path": "demo&interaction/R3/VideoRepick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "VideoUnmask",
-      "path": "demo&interaction/R3/VideoUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 3,
-      "task": "VideoUnmaskSwap",
-      "path": "demo&interaction/R3/VideoUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "BinFill",
-      "path": "demo&interaction/R5/BinFill",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "ButtonUnmask",
-      "path": "demo&interaction/R5/ButtonUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "ButtonUnmaskSwap",
-      "path": "demo&interaction/R5/ButtonUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "InsertPeg",
-      "path": "demo&interaction/R5/InsertPeg",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "MoveCube",
-      "path": "demo&interaction/R5/MoveCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "PatternLock",
-      "path": "demo&interaction/R5/PatternLock",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "PickHighlight",
-      "path": "demo&interaction/R5/PickHighlight",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "PickXtimes",
-      "path": "demo&interaction/R5/PickXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "RouteStick",
-      "path": "demo&interaction/R5/RouteStick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "StopCube",
-      "path": "demo&interaction/R5/StopCube",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "SwingXtimes",
-      "path": "demo&interaction/R5/SwingXtimes",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "VideoPlaceButton",
-      "path": "demo&interaction/R5/VideoPlaceButton",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "VideoPlaceOrder",
-      "path": "demo&interaction/R5/VideoPlaceOrder",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "VideoRepick",
-      "path": "demo&interaction/R5/VideoRepick",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "VideoUnmask",
-      "path": "demo&interaction/R5/VideoUnmask",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
-      "budget": 5,
-      "task": "VideoUnmaskSwap",
-      "path": "demo&interaction/R5/VideoUnmaskSwap",
-      "status": "frozen_policy"
-    },
-    {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "BinFill",
-      "path": "demo&interaction/R10/BinFill",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/BinFill"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "ButtonUnmask",
-      "path": "demo&interaction/R10/ButtonUnmask",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/ButtonUnmask"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "ButtonUnmaskSwap",
-      "path": "demo&interaction/R10/ButtonUnmaskSwap",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/ButtonUnmaskSwap"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "InsertPeg",
-      "path": "demo&interaction/R10/InsertPeg",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/InsertPeg"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "MoveCube",
-      "path": "demo&interaction/R10/MoveCube",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/MoveCube"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "PatternLock",
-      "path": "demo&interaction/R10/PatternLock",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/PatternLock"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "PickHighlight",
-      "path": "demo&interaction/R10/PickHighlight",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/PickHighlight"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "PickXtimes",
-      "path": "demo&interaction/R10/PickXtimes",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/PickXtimes"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "RouteStick",
-      "path": "demo&interaction/R10/RouteStick",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/RouteStick"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "StopCube",
-      "path": "demo&interaction/R10/StopCube",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/StopCube"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "SwingXtimes",
-      "path": "demo&interaction/R10/SwingXtimes",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/SwingXtimes"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "VideoPlaceButton",
-      "path": "demo&interaction/R10/VideoPlaceButton",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/VideoPlaceButton"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "VideoPlaceOrder",
-      "path": "demo&interaction/R10/VideoPlaceOrder",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/VideoPlaceOrder"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "VideoRepick",
-      "path": "demo&interaction/R10/VideoRepick",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/VideoRepick"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "VideoUnmask",
-      "path": "demo&interaction/R10/VideoUnmask",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/VideoUnmask"
     },
     {
-      "setting": "demo&interaction",
+      "setting": "hybrid",
       "budget": 10,
       "task": "VideoUnmaskSwap",
-      "path": "demo&interaction/R10/VideoUnmaskSwap",
-      "status": "frozen_policy"
+      "path": "hybrid/R10/VideoUnmaskSwap"
     }
   ]
 }

@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 import uuid
 
@@ -56,7 +57,7 @@ class Campaign:
         self.archive_lock = threading.Lock()
         self.slots = queue.Queue()
         for index, gpu in enumerate(args.gpus):
-            self.slots.put((gpu, args.provider_port_base + 100 * index))
+            self.slots.put((gpu, args.provider_port_base + 100 * args.gpus.index(gpu)))
         self.replies = []
         self.clocks = CampaignClocks(self.study.root, self.root/'claude-home', self.tasks)
         if (self.root / 'run_replies.json').is_file():
@@ -208,7 +209,7 @@ only the benchmark access, budget and evaluation protocol, not your learning str
 - interaction-only has no expert recordings. demo-only and demo&interaction have all 50 released recordings under
   /workspace/demonstrations/<TASK>/manifest.json (front/wrist RGB, goal and phase).
   Recordings are fixed evidence, not access to oracle actions or simulator code.
-- The host provides {len(args.gpus)} simulator slots, one on each assigned GPU, and
+- The host provides {len(args.gpus)} simulator slots across the assigned GPUs and
   routes jobs automatically. Keep at most {len(args.gpus)} task/verifier jobs in flight.
   Provider startup, installations and GPU management are operator-only.
 - Use public APIs in docs/api-reference.md and docs/robomme-plus.md. The available
@@ -252,8 +253,8 @@ def main():
         model, home, bridge = 'us.anthropic.claude-opus-5-5', session.root / 'claude-home', session.root / 'bridge'
     else:
         model, home, bridge = prepare(session)
-    rpc = session.root / 'rpc'
-    rpc.mkdir(exist_ok=True)
+    rpc_context = tempfile.TemporaryDirectory(prefix='aspire-campaign-rpc-')
+    rpc = Path(rpc_context.name)
     (rpc / 'agent.sock').unlink(missing_ok=True)
     container = 'aspire-campaign-' + uuid.uuid4().hex
     prompt = ('Act as the ASPIRE multi-task coordinator. Read CLAUDE.md and the original coordinator '
@@ -281,6 +282,9 @@ def main():
         (home/'settings.json','/claude-home/settings.json',True),(home/'mcp.json','/claude-home/mcp.json',True)]
     if session.study.config['setting'] != 'interaction-only':
         mounts.append((session.root/'demonstrations','/workspace/demonstrations',True))
+    from benchmark_io.development_evidence import capture
+    evidence = capture(session.root/'audit', session.workspace, home/'settings.json')
+    mounts.extend(evidence.__enter__())
     for source,target,readonly in mounts:
         command += ['--mount',f'type=bind,src={source},dst={target}'+(',readonly' if readonly else '')]
     command += ['--entrypoint','/usr/local/bin/python',args.image,'/opt/bridge/agent_bridge.py',
@@ -368,7 +372,9 @@ def main():
             print(json.dumps(report),flush=True)
         finally:
             subprocess.run(['docker','rm','-f',container],capture_output=True,timeout=30)
+            evidence.__exit__(None, None, None)
             server.shutdown()
+    rpc_context.cleanup()
 
 
 if __name__ == '__main__':

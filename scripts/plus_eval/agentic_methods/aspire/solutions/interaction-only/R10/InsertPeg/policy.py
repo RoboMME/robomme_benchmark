@@ -1,638 +1,665 @@
-import math
+# v06 — InsertPeg: v05 with the side views REMOVED (v05 seeds 1,2: the view shifted +2 cm
+# picked up non-floor points up to +3.7 cm / z 0.06, so the union centre was wrong on both).
+# Hole centre = MID-POINT of the lateral extent (q03..q97) of the visible hole-floor points in
+# the single centred wrist view (the median is biased by the peg occluding one side); fine
+# 1.5 mm lateral grid first, then +-1.5 mm and +3/+4.5 mm heights. Keeps v05's deep push.
+# v05 — InsertPeg: v04 + two failure-mode fixes (seed 1: "entered but no native success";
+# seed 2: "every offset stalls on the face").
+#  (1) Insertion depth: once the peg tip has entered the hole (progress clearly beyond the face
+#      stall), keep the guarded push going PAST the video's push depth until it stalls or the
+#      episode ends, then hold. v04 stopped 4 mm short of the video depth.
+#  (2) Hole centre from an unoccluded view: the held peg hides part of the hole floor in the
+#      wrist view, so the visible-floor median is biased away from the peg line. v05 takes three
+#      wrist-depth views (peg retracted, centred and shifted to either side), unions the
+#      world-frame hole points and uses the MID-POINT of their lateral extent as the hole centre;
+#      floor height as before. Search around it on a fine 1.5 mm grid with short retracts.
+# All offsets / steps are generic tolerances; every pose comes from the video or live depth.
+# v04 — InsertPeg: v03 + program fix: the native episode can end (success) inside a push; every
+# state read after a step is now guarded and the push loop returns as soon as a step reports
+# termination, so the program result is not lost.
+# v03 — (kept) v02 plus the HOLE HEIGHT: the push line is lowered/raised so the peg's
+# underside meets the perceived hole floor (EE z = hole floor - table + EE grasp height).
+# v02 — (kept) live hole perception: when the push stalls on the box face, back off, read the wrist depth, and take the
+# lateral position of the hole from the depth points that lie BEHIND the box face plane
+# (the hole interior), then re-push on that line with a small search around it.
+#
+# The goal says: grasp the same peg at the same end and insert it into the same side of the box
+# as in the video. All look-alike pegs are identified by the video itself, so the program reads
+# the video's own per-frame robot state at runtime:
+#   * grasp frame  = last frame before the video gripper starts closing (EE at the grasp pose)
+#   * insertion    = the video's post-grasp EE path (lift, transit, descend, side push)
+# Then it measures from front depth whether the layout moved between video frame 0 and the live
+# scene (centroids of the peg region around the video grasp point and of the box region around
+# the video's final insertion point, same method on both images).
+#   * unchanged layout -> follow the video joint states tick by tick (same peg, same end, same
+#     side, same IK branch)
+#   * moved layout     -> shift the video EE path by the measured peg / box displacement and solve
+#     IK per waypoint, seeded with the video joints of that frame.
+# No scene coordinate, size or colour is a constant here; every pose comes from this episode's
+# video or live depth.
 
-# v04 — InsertPeg: v03 (video imitation + in-hand peg alignment) with a wider insertion-probe grid.
-# The conditioning video (robomme_plus.get_conditioning_video(), live episode input) carries the
-# demonstrating robot's per-frame joint state, end-effector pose and gripper reading.
-# 1. Compare the video's first front RGB-D frame with the live front RGB-D frame around the
-#    video's grasp point (peg) and final insertion point (box), using depth only.
-# 2. If both objects are where the video had them, replay the video's joint trajectory tick by
-#    tick (joint_position steps), closing/opening the gripper when the video's gripper does.
-# 3. Otherwise replay the video's end-effector waypoints transformed rigidly: pre-grasp/grasp/lift
-#    by the peg's displacement, transport/insertion by the box's displacement.
-# 4. v02 (failure in v01 ep0: the replayed EE matched the video within 1 mm, but the peg jammed
-#    on the box face 3.4 cm short of the video's final pose): after the lift, measure the held peg's
-#    yaw relative to the hand from WRIST depth (live vs the same video frame), follow the video's
-#    insertion path with the hand yaw corrected by that difference (IK + joint interpolation),
-#    and, if still short, retract 12 mm and re-push with small lateral/vertical/yaw offsets.
-# 6. v04 (failure in v03 ep0: in-hand pose matched the video within 0.2 mm / 0.2 deg, yet every
-#    +-8 mm ring probe met a flat wall at the box face plane): probe a wider/lower/higher grid.
-# 5. v03 (failure in v02 ep0: every re-push stopped at the box face at the same depth; the wrist
-#    view showed the hole opening beside the peg tip): measure the held peg's full in-hand pose
-#    (yaw, lateral offset of its axis, height) from wrist depth at the INSERTION START frame, live
-#    vs the same video frame, and shift/rotate the insertion path so the live peg follows the
-#    video peg. If still short, press lightly against the face and scan lateral/vertical offsets
-#    in growing rings (then with +-3 deg yaw); when the peg advances, push to the video's depth.
-
-report = {"stage": "start", "notes": []}
-result = report
-
-
-def note(msg):
-    report["notes"].append(str(msg))
-
-
-def r4(values):
-    return [round(float(v), 4) for v in values]
-
-
-def qmul(a, b):
-    aw, ax, ay, az = a
-    bw, bx, by, bz = b
-    return (aw * bw - ax * bx - ay * by - az * bz,
-            aw * bx + ax * bw + ay * bz - az * by,
-            aw * by - ax * bz + ay * bw + az * bx,
-            aw * bz + ax * by - ay * bx + az * bw)
-
-
-def qz(angle):
-    return (math.cos(angle / 2.0), 0.0, 0.0, math.sin(angle / 2.0))
+report = {"version": "v06"}
+context = get_task_context()
+report["task"] = context.language
+state0 = get_robot_state()
+base_frame = state0.base_frame
+embodiment = state0.embodiment
 
 
-def rotmat(q):
-    w, x, y, z = (float(v) for v in q)
-    return ((1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)),
-            (2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)),
-            (2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)))
+def quat_to_matrix(q):
+    w = float(q[0]); x = float(q[1]); y = float(q[2]); z = float(q[3])
+    return [[1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+            [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+            [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]]
 
 
-def backproject(cam, stride):
-    """Front-camera depth -> robot_base points (OpenCV pinhole: z forward, y down)."""
-    depth = cam.depth_m
+def camera_model(cam):
     k = cam.intrinsics
-    fx = float(k[0][0])
-    fy = float(k[1][1])
-    cx = float(k[0][2])
-    cy = float(k[1][2])
-    rm = rotmat(cam.camera_pose.quaternion_wxyz)
-    p = [float(v) for v in cam.camera_pose.position]
-    h = len(depth)
-    w = len(depth[0])
-    pts = []
-    for vv in range(0, h, stride):
-        row = depth[vv]
-        for uu in range(0, w, stride):
-            d = float(row[uu])
-            if d <= 0.0 or d > 3.0:
+    return {
+        "fx": float(k[0][0]), "fy": float(k[1][1]), "cx": float(k[0][2]), "cy": float(k[1][2]),
+        "R": quat_to_matrix(cam.camera_pose.quaternion_wxyz),
+        "p": [float(v) for v in cam.camera_pose.position],
+        "depth": cam.depth_m,
+        "h": int(cam.depth_m.shape[0]), "w": int(cam.depth_m.shape[1]),
+    }
+
+
+def project(model, point):
+    R = model["R"]; p = model["p"]
+    d = [float(point[0]) - p[0], float(point[1]) - p[1], float(point[2]) - p[2]]
+    cxyz = [R[0][0] * d[0] + R[1][0] * d[1] + R[2][0] * d[2],
+            R[0][1] * d[0] + R[1][1] * d[1] + R[2][1] * d[2],
+            R[0][2] * d[0] + R[1][2] * d[1] + R[2][2] * d[2]]
+    if cxyz[2] <= 1e-6:
+        return None
+    return (model["fx"] * cxyz[0] / cxyz[2] + model["cx"], model["fy"] * cxyz[1] / cxyz[2] + model["cy"])
+
+
+def deproject(model, u, v):
+    z = float(model["depth"][v][u])
+    if not (z > 0.0) or z > 5.0:
+        return None
+    xc = (u - model["cx"]) / model["fx"] * z
+    yc = (v - model["cy"]) / model["fy"] * z
+    R = model["R"]; p = model["p"]
+    return (R[0][0] * xc + R[0][1] * yc + R[0][2] * z + p[0],
+            R[1][0] * xc + R[1][1] * yc + R[1][2] * z + p[1],
+            R[2][0] * xc + R[2][1] * yc + R[2][2] * z + p[2])
+
+
+def region_centroid(model, ref, radius, z_low, z_high, window):
+    """Mean of depth points within `radius` (XY) of ref and inside the z band."""
+    uv = project(model, ref)
+    if uv is None:
+        return None
+    u0 = int(round(uv[0])); v0 = int(round(uv[1]))
+    sx = 0.0; sy = 0.0; sz = 0.0; count = 0
+    for v in range(max(0, v0 - window), min(model["h"], v0 + window + 1)):
+        for u in range(max(0, u0 - window), min(model["w"], u0 + window + 1)):
+            q = deproject(model, u, v)
+            if q is None:
                 continue
-            a = (uu - cx) / fx * d
-            b = (vv - cy) / fy * d
-            x = rm[0][0] * a + rm[0][1] * b + rm[0][2] * d + p[0]
-            y = rm[1][0] * a + rm[1][1] * b + rm[1][2] * d + p[1]
-            z = rm[2][0] * a + rm[2][1] * b + rm[2][2] * d + p[2]
-            pts.append((x, y, z))
-    return pts
-
-
-def region(pts, cxy, radius, zlo, zhi):
-    out = []
-    r2 = radius * radius
-    for q in pts:
-        if q[2] < zlo or q[2] > zhi:
-            continue
-        dx = q[0] - cxy[0]
-        dy = q[1] - cxy[1]
-        if dx * dx + dy * dy <= r2:
-            out.append(q)
-    return out
-
-
-def centroid_axis(pts):
-    n = len(pts)
-    if n < 8:
+            if q[2] < z_low or q[2] > z_high:
+                continue
+            dx = q[0] - ref[0]; dy = q[1] - ref[1]
+            if dx * dx + dy * dy > radius * radius:
+                continue
+            sx += q[0]; sy += q[1]; sz += q[2]; count += 1
+    if count == 0:
         return None
-    mx = sum(q[0] for q in pts) / n
-    my = sum(q[1] for q in pts) / n
-    mz = sum(q[2] for q in pts) / n
-    sxx = sum((q[0] - mx) * (q[0] - mx) for q in pts) / n
-    syy = sum((q[1] - my) * (q[1] - my) for q in pts) / n
-    sxy = sum((q[0] - mx) * (q[1] - my) for q in pts) / n
-    ang = 0.5 * math.atan2(2.0 * sxy, sxx - syy)
-    return {"c": (mx, my, mz), "ang": ang, "n": n}
+    return (sx / count, sy / count, sz / count, count)
 
 
-def track(pts, start_xy, radius, zlo, zhi):
-    """Re-centre a radius search a few times so a displaced object is followed."""
-    cur = start_xy
-    info = None
-    for it in range(3):
-        sel = region(pts, cur, radius, zlo, zhi)
-        info = centroid_axis(sel)
-        if info is None:
-            return None
-        cur = (info["c"][0], info["c"][1])
-    return info
+# ---------------- Read the conditioning video ----------------
+video = robomme_plus.get_conditioning_video()
+n = len(video)
+report["video_frames"] = n
+if n < 10:
+    raise ValueError("conditioning video missing or too short")
 
+joints = []
+ee_pos = []
+ee_quat = []
+grip = []
+for index in range(n):
+    rs = video[index].robot_state
+    joints.append([float(v) for v in rs.joint_positions["primary"]])
+    pose = rs.end_effector_poses["primary"]
+    ee_pos.append([float(v) for v in pose.position])
+    ee_quat.append([float(v) for v in pose.quaternion_wxyz])
+    grip.append(float(rs.gripper_positions["primary"]))
 
-def wrap_half(a):
-    while a > math.pi / 2.0:
-        a -= math.pi
-    while a < -math.pi / 2.0:
-        a += math.pi
-    return a
+open_level = grip[0]
+close_index = None
+for index in range(1, n):
+    if grip[index] < open_level - 0.1:
+        close_index = index
+        break
+if close_index is None:
+    raise ValueError("video gripper never closes; cannot find the grasp frame")
+grasp_index = close_index - 1
+# The commanded close precedes the measured drop by a few ticks; the EE is stationary there.
+report["video_grasp_index"] = grasp_index
+report["video_grasp_pose"] = {"position": [round(v, 4) for v in ee_pos[grasp_index]],
+                              "quaternion_wxyz": [round(v, 4) for v in ee_quat[grasp_index]]}
+final_index = n - 1
+report["video_final_pose"] = {"position": [round(v, 4) for v in ee_pos[final_index]],
+                              "quaternion_wxyz": [round(v, 4) for v in ee_quat[final_index]]}
 
+lift_top = grasp_index
+for index in range(grasp_index, n):
+    if ee_pos[index][2] > ee_pos[lift_top][2] + 1e-4:
+        lift_top = index
+descend_mid = final_index
+mid_z = 0.5 * (ee_pos[lift_top][2] + ee_pos[final_index][2])
+for index in range(lift_top, n):
+    if ee_pos[index][2] < mid_z:
+        descend_mid = index
+        break
+report["video_lift_top_index"] = lift_top
+report["video_descend_mid_index"] = descend_mid
 
-def transform_pose(pos, quat, center, dyaw, shift):
-    c = math.cos(dyaw)
-    s = math.sin(dyaw)
-    rx = pos[0] - center[0]
-    ry = pos[1] - center[1]
-    nx = center[0] + c * rx - s * ry + shift[0]
-    ny = center[1] + s * rx + c * ry + shift[1]
-    nz = pos[2] + shift[2]
-    nq = qmul(qz(dyaw), quat)
-    return (nx, ny, nz), nq
+# ---------------- Did the layout move between video frame 0 and now? ----------------
+live = get_observation()
+live_front = camera_model(live.cameras["front"])
+video_front = camera_model(video[0].cameras["front"])
 
+grasp_ref = ee_pos[grasp_index]
+final_ref = ee_pos[final_index]
+peg_band = (0.002, max(0.01, grasp_ref[2] + 0.03))       # table-level band around the grasp height
+box_band = (grasp_ref[2] + 0.03, final_ref[2] + 0.15)     # above lying pegs, below the arm at home
 
-def ended(res):
-    try:
-        return bool(res.terminated) or bool(res.truncated)
-    except Exception:
-        return False
+peg_video = region_centroid(video_front, grasp_ref, 0.06, peg_band[0], peg_band[1], 30)
+peg_live = region_centroid(live_front, grasp_ref, 0.06, peg_band[0], peg_band[1], 30)
+box_video = region_centroid(video_front, final_ref, 0.15, box_band[0], box_band[1], 45)
+box_live = region_centroid(live_front, final_ref, 0.15, box_band[0], box_band[1], 45)
+report["peg_region"] = {"video": peg_video, "live": peg_live}
+report["box_region"] = {"video": box_video, "live": box_live}
 
+peg_delta = (0.0, 0.0)
+box_delta = (0.0, 0.0)
+if peg_video is not None and peg_live is not None:
+    peg_delta = (peg_live[0] - peg_video[0], peg_live[1] - peg_video[1])
+if box_video is not None and box_live is not None:
+    box_delta = (box_live[0] - box_video[0], box_live[1] - box_video[1])
+peg_shift = (peg_delta[0] ** 2 + peg_delta[1] ** 2) ** 0.5
+box_shift = (box_delta[0] ** 2 + box_delta[1] ** 2) ** 0.5
+report["peg_delta"] = [round(peg_delta[0], 4), round(peg_delta[1], 4)]
+report["box_delta"] = [round(box_delta[0], 4), round(box_delta[1], 4)]
 
+# Global depth agreement (diagnostic): fraction of pixels whose depth changed by > 1 cm.
+changed = 0
+total = 0
+for v in range(0, live_front["h"], 2):
+    live_row = live_front["depth"][v]
+    video_row = video_front["depth"][v]
+    for u in range(0, live_front["w"], 2):
+        total += 1
+        if abs(float(live_row[u]) - float(video_row[u])) > 0.01:
+            changed += 1
+report["depth_changed_fraction"] = round(changed / max(1, total), 4)
 
-def hand_yaw(q):
-    hx = qrot(q, (1.0, 0.0, 0.0))
-    return math.atan2(hx[1], hx[0])
+# Live perception sanity check: is a peg actually under the video grasp point?
+peg_seg = segment_text("front", "peg")
+nearest_peg = None
+if peg_seg.ok:
+    for candidate in peg_seg.segmentations[:5]:
+        cloud = mask_to_point_cloud(candidate, "front", target_frame=base_frame)
+        for point in cloud.points:
+            dx = float(point[0]) - grasp_ref[0]; dy = float(point[1]) - grasp_ref[1]
+            dist = (dx * dx + dy * dy) ** 0.5
+            if nearest_peg is None or dist < nearest_peg:
+                nearest_peg = dist
+report["live_peg_nearest_to_video_grasp_m"] = None if nearest_peg is None else round(nearest_peg, 4)
 
+SHIFT_TOL = 0.004
+layout_unchanged = (peg_video is not None and peg_live is not None and box_video is not None
+                    and box_live is not None and peg_shift < SHIFT_TOL and box_shift < SHIFT_TOL)
+report["mode"] = "video_joint_replay" if layout_unchanged else "shifted_pose_replay"
 
-def qrot(q, v):
-    w, x, y, z = q
-    r = qmul(qmul((w, x, y, z), (0.0, v[0], v[1], v[2])), (w, -x, -y, -z))
-    return (r[1], r[2], r[3])
+# ---------------- Build per-frame joint targets ----------------
+targets = []
+if layout_unchanged:
+    targets = joints
+else:
+    def frame_delta(index):
+        if index <= grasp_index:
+            a = float(index) / max(1, grasp_index)
+            return (peg_delta[0] * a, peg_delta[1] * a)
+        if index <= lift_top:
+            return peg_delta
+        if index >= descend_mid:
+            return box_delta
+        a = float(index - lift_top) / max(1, descend_mid - lift_top)
+        return (peg_delta[0] * (1 - a) + box_delta[0] * a, peg_delta[1] * (1 - a) + box_delta[1] * a)
 
-
-def wrap_pi(a):
-    while a > math.pi:
-        a -= 2.0 * math.pi
-    while a < -math.pi:
-        a += 2.0 * math.pi
-    return a
-
-
-def held_peg(cam, ee_pos, ee_q):
-    """Held peg's long side seen by the wrist camera: points 3-13 cm from the tool point
-    horizontally, within 3 cm of its height. Returns yaw relative to the hand x-axis."""
-    pts = backproject(cam, 2)
-    sx = 0.0
-    sy = 0.0
-    sz = 0.0
-    cnt = 0
-    for q in pts:
-        dz = q[2] - ee_pos[2]
-        if dz < -0.03 or dz > 0.03:
-            continue
-        dx = q[0] - ee_pos[0]
-        dy = q[1] - ee_pos[1]
-        rr = math.sqrt(dx * dx + dy * dy)
-        if rr < 0.03 or rr > 0.13:
-            continue
-        sx += dx / rr
-        sy += dy / rr
-        sz += dz
-        cnt += 1
-    if cnt < 12:
-        return {"n": cnt}
-    yaw = math.atan2(sy, sx)
-    return {"n": cnt, "yaw": yaw, "rel": wrap_pi(yaw - hand_yaw(ee_q)), "dz": sz / cnt,
-            "spread": math.sqrt(sx * sx + sy * sy) / cnt}
-
-
-def peg_pose(cam, ee_pos, ee_q):
-    """Held peg in hand-relative terms from wrist depth: yaw of its axis relative to the hand
-    x-axis, signed perpendicular distance of the axis from the tool point (left normal), height of
-    its visible surface above the tool point, and the far-end projection along the axis."""
-    pts = backproject(cam, 1)
-    sel = []
-    sx = 0.0
-    sy = 0.0
-    for q in pts:
-        dz = q[2] - ee_pos[2]
-        if dz < -0.03 or dz > 0.03:
-            continue
-        dx = q[0] - ee_pos[0]
-        dy = q[1] - ee_pos[1]
-        rr = math.sqrt(dx * dx + dy * dy)
-        if rr < 0.025 or rr > 0.11:
-            continue
-        sel.append((dx, dy, dz))
-        sx += dx / rr
-        sy += dy / rr
-    if len(sel) < 30:
-        return None
-    ang = math.atan2(sy, sx)
-    core = []
-    mx = 0.0
-    my = 0.0
-    for it in range(3):
-        # straight band along the current axis estimate (no radial clipping bias), then PCA
-        ca = math.cos(ang)
-        sa = math.sin(ang)
-        core = []
-        for p in sel:
-            al = p[0] * ca + p[1] * sa
-            ac = -p[0] * sa + p[1] * ca
-            if al > 0.03 and al < 0.09 and abs(ac) < 0.018:
-                core.append(p)
-        if len(core) < 30:
-            return None
-        m = len(core)
-        mx = sum(p[0] for p in core) / m
-        my = sum(p[1] for p in core) / m
-        sxx = sum((p[0] - mx) ** 2 for p in core) / m
-        syy = sum((p[1] - my) ** 2 for p in core) / m
-        sxy = sum((p[0] - mx) * (p[1] - my) for p in core) / m
-        a1 = 0.5 * math.atan2(2.0 * sxy, sxx - syy)
-        if math.cos(a1 - ang) < 0.0:
-            a1 += math.pi
-        ang = a1
-    m = len(core)
-    ca = math.cos(ang)
-    sa = math.sin(ang)
-    lat = -mx * sa + my * ca
-    along = sorted(p[0] * ca + p[1] * sa for p in core)
-    zs = sorted(p[2] for p in core)
-    return {"n": m, "yaw": ang, "rel": wrap_pi(ang - hand_yaw(ee_q)), "lat": lat,
-            "ztop": zs[int(0.8 * (m - 1))], "zmed": zs[int(0.5 * (m - 1))],
-            "tip": along[int(0.98 * (m - 1))]}
-
-
-def step_to(jt, grip, embodiment):
-    return step(RobotAction(arms={"primary": ArmCommand(
-        mode="joint_position", target=jt, gripper_position=grip, embodiment=embodiment)}))
-
-
-def drive(jfrom, jto, ticks, grip, embodiment):
-    last = None
-    for t in range(1, ticks + 1):
-        a = t / float(ticks)
-        last = step_to([jfrom[j] + (jto[j] - jfrom[j]) * a for j in range(7)], grip, embodiment)
-        if ended(last):
-            return last, True
-    return last, False
-
-
-try:
-    context = get_task_context()
-    report["language"] = context.language
-    meta = robomme_plus.get_task_metadata()
-    max_steps = int(meta["max_steps"])
-    report["max_steps"] = max_steps
-    state0 = get_robot_state()
-    base_frame = state0.base_frame
-    embodiment = state0.embodiment
-
-    # ---------------- conditioning video ----------------
-    video = robomme_plus.get_conditioning_video()
-    n = len(video)
-    report["video_frames"] = n
-    if n < 10:
-        raise ValueError("conditioning video too short")
-    vj = []
-    vpos = []
-    vq = []
-    vg = []
-    vt = []
-    for i in range(n):
-        rs = video[i].robot_state
-        vj.append([float(v) for v in rs.joint_positions["primary"]])
-        ee = rs.end_effector_poses["primary"]
-        vpos.append([float(v) for v in ee.position])
-        vq.append(tuple(float(v) for v in ee.quaternion_wxyz))
-        vg.append(float(rs.gripper_positions["primary"]))
-        vt.append(float(video[i].timestamp_s))
-    report["video_dt"] = round((vt[n - 1] - vt[0]) / (n - 1), 4)
-    grasp_idx = None
-    for i in range(1, n):
-        if vg[i] < 0.6 and vg[i - 1] >= 0.6:
-            grasp_idx = i
-            break
-    if grasp_idx is None:
-        raise ValueError("no gripper close in video")
-    release_idx = None
-    for i in range(grasp_idx + 1, n):
-        if vg[i] > 0.6:
-            release_idx = i
-            break
-    report["video_grasp_idx"] = grasp_idx
-    report["video_release_idx"] = release_idx
-    G = vpos[grasp_idx]
-    F = vpos[n - 1]
-    report["video_grasp_ee"] = r4(G)
-    report["video_final_ee"] = r4(F)
-
-    # ---------------- object displacement video[0] -> live ----------------
-    vpts = backproject(video[0].cameras["front"], 2)
-    obs = get_observation()
-    lpts = backproject(obs.cameras["front"], 2)
-    peg_v = track(vpts, (G[0], G[1]), 0.06, 0.004, 0.035)
-    box_v = track(vpts, (F[0], F[1]), 0.12, 0.03, 0.20)
-    peg_l = None
-    box_l = None
-    if peg_v is not None:
-        peg_l = track(lpts, (peg_v["c"][0], peg_v["c"][1]), 0.06, 0.004, 0.035)
-    if box_v is not None:
-        box_l = track(lpts, (box_v["c"][0], box_v["c"][1]), 0.12, 0.03, 0.20)
-    if peg_v is None or box_v is None or peg_l is None or box_l is None:
-        raise ValueError("could not find peg/box near the video grasp/insert points")
-    dpeg = [peg_l["c"][k] - peg_v["c"][k] for k in range(3)]
-    dbox = [box_l["c"][k] - box_v["c"][k] for k in range(3)]
-    dyaw_peg = wrap_half(peg_l["ang"] - peg_v["ang"])
-    report["peg_video"] = {"c": r4(peg_v["c"]), "ang": round(peg_v["ang"], 4), "n": peg_v["n"]}
-    report["peg_live"] = {"c": r4(peg_l["c"]), "ang": round(peg_l["ang"], 4), "n": peg_l["n"]}
-    report["box_video"] = {"c": r4(box_v["c"]), "n": box_v["n"]}
-    report["box_live"] = {"c": r4(box_l["c"]), "n": box_l["n"]}
-    report["dpeg"] = r4(dpeg)
-    report["dbox"] = r4(dbox)
-    report["dyaw_peg_deg"] = round(dyaw_peg * 180.0 / math.pi, 2)
-    same_layout = (math.sqrt(dpeg[0] ** 2 + dpeg[1] ** 2) < 0.01 and
-                   math.sqrt(dbox[0] ** 2 + dbox[1] ** 2) < 0.01 and
-                   abs(dyaw_peg) < 4.0 * math.pi / 180.0)
-    report["same_layout"] = same_layout
-
-
-    # insertion start: last video frame more than 7 cm from the final pose
-    k_ins = n - 1
-    while k_ins > grasp_idx and math.sqrt(sum((vpos[k_ins][j] - F[j]) ** 2 for j in range(3))) < 0.07:
-        k_ins -= 1
-    T = None
-    for i in range(grasp_idx + 1, k_ins):
-        if vpos[i][2] - G[2] > 0.10:
-            T = i
-            break
-    report["insert_start_idx"] = k_ins
-    shift = [0.0, 0.0, 0.0]
-    report["inhand_check_idx"] = T
-    delta = 0.0
-    if same_layout:
-        # ---------------- joint replay up to the insertion start ----------------
-        report["stage"] = "joint_replay"
-        last = None
-        for i in range(1, k_ins + 1):
-            look = min(i + 1, n - 1)
-            grip = 0.0 if vg[look] < 0.9 and look >= grasp_idx and (release_idx is None or look < release_idx) else 1.0
-            last = step_to(vj[i], grip, embodiment)
-            if ended(last):
-                report["ended_at_replay_frame"] = i
-                report["episode_ended"] = True
-                break
-            if T is not None and i == T:
-                try:
-                    vv = held_peg(video[T].cameras["wrist"], vpos[T], vq[T])
-                    so = get_observation()
-                    ls = so.robot_state
-                    lv = held_peg(so.cameras["wrist"], [float(v) for v in ls.end_effector_poses["primary"].position],
-                                  tuple(float(v) for v in ls.end_effector_poses["primary"].quaternion_wxyz))
-                    rv = {}
-                    for kk in vv:
-                        rv[kk] = round(float(vv[kk]), 4)
-                    rl = {}
-                    for kk in lv:
-                        rl[kk] = round(float(lv[kk]), 4)
-                    report["inhand_video"] = rv
-                    report["inhand_live"] = rl
-                    if "rel" in vv and "rel" in lv and vv["spread"] > 0.8 and lv["spread"] > 0.8:
-                        dl = wrap_pi(lv["rel"] - vv["rel"])
-                        if abs(dl) < 12.0 * math.pi / 180.0:
-                            delta = dl
-                except Exception as exc:
-                    note("inhand " + str(exc))
-        report["inhand_delta_deg_lift"] = round(delta * 180.0 / math.pi, 2)
-        delta = 0.0
-        shift = [0.0, 0.0, 0.0]
-        if not report.get("episode_ended", False):
-            # ---------- in-hand peg pose at the insertion start: live vs video ----------
-            try:
-                pv = peg_pose(video[k_ins].cameras["wrist"], vpos[k_ins], vq[k_ins])
-                so = get_observation()
-                ls = so.robot_state
-                le = [float(v) for v in ls.end_effector_poses["primary"].position]
-                lq = tuple(float(v) for v in ls.end_effector_poses["primary"].quaternion_wxyz)
-                pl = peg_pose(so.cameras["wrist"], le, lq)
-                report["ee_err_at_kins"] = r4([le[j] - vpos[k_ins][j] for j in range(3)])
-                if pv is not None:
-                    rv = {}
-                    for kk in pv:
-                        rv[kk] = round(float(pv[kk]), 4)
-                    report["peg_kins_video"] = rv
-                if pl is not None:
-                    rl = {}
-                    for kk in pl:
-                        rl[kk] = round(float(pl[kk]), 4)
-                    report["peg_kins_live"] = rl
-                if pv is not None and pl is not None:
-                    th = wrap_pi(pv["rel"] - pl["rel"])
-                    dlat = pv["lat"] - pl["lat"]
-                    dzc = pv["ztop"] - pl["ztop"]
-                    ok_th = abs(th) < 10.0 * math.pi / 180.0
-                    ok_lat = abs(dlat) < 0.015
-                    ok_z = abs(dzc) < 0.015
-                    report["align_raw"] = {"dyaw_deg": round(th * 180.0 / math.pi, 2), "dlat": round(dlat, 4),
-                                           "dz": round(dzc, 4)}
-                    if ok_th:
-                        delta = -th
-                    nvx = -math.sin(pv["yaw"])
-                    nvy = math.cos(pv["yaw"])
-                    if ok_lat:
-                        shift[0] = dlat * nvx
-                        shift[1] = dlat * nvy
-                    if ok_z:
-                        shift[2] = dzc
-            except Exception as exc:
-                note("peg_pose " + str(exc))
-        report["inhand_delta_deg"] = round(delta * 180.0 / math.pi, 2)
-        report["align_shift"] = r4(shift)
-        if not report.get("episode_ended", False):
-            # ---------------- corrected insertion along the video path ----------------
-            report["stage"] = "corrected_insert"
-            s = get_robot_state()
-            jcur = [float(v) for v in s.joint_positions["primary"]]
-            corr = qz(-delta)
-            idxs = list(range(k_ins, n, 3))
-            if idxs[len(idxs) - 1] != n - 1:
-                idxs.append(n - 1)
-            first = True
-            for i in idxs:
-                tp = [vpos[i][j] + shift[j] for j in range(3)]
-                ik = solve_ik(Pose(tp, qmul(corr, vq[i]), base_frame), seed_joints=jcur)
-                if not ik.ok:
-                    note("ik fail at video frame " + str(i))
-                    continue
-                jn = [float(v) for v in ik.joint_positions]
-                last, stop = drive(jcur, jn, 10 if first else 3, 0.0, embodiment)
-                first = False
-                jcur = jn
-                if stop:
-                    report["ended_at_insert_frame"] = i
-                    report["episode_ended"] = True
-                    break
-            if not report.get("episode_ended", False):
-                for tick in range(5):
-                    last = step_to(jcur, 0.0, embodiment)
-                    if ended(last):
-                        report["episode_ended"] = True
-                        break
-    else:
-        # ---------------- transformed Cartesian replay ----------------
-        report["stage"] = "cartesian_replay"
-        lift_idx = n - 1
-        for i in range(grasp_idx, n):
-            if vpos[i][2] > G[2] + 0.15:
-                lift_idx = i
-                break
-        report["video_lift_idx"] = lift_idx
-        dyaw_box = 0.0
-        open_gripper()
-        idxs = list(range(5, grasp_idx, 8)) + [grasp_idx]
-        idxs += list(range(grasp_idx + 8, n, 8)) + [n - 1]
-        closed = False
-        stopped = False
-        for i in idxs:
-            if i <= lift_idx:
-                pos, q = transform_pose(vpos[i], vq[i], peg_v["c"], dyaw_peg, dpeg)
-            else:
-                pos, q = transform_pose(vpos[i], vq[i], box_v["c"], dyaw_box, dbox)
-            tol = 0.004 if (i >= grasp_idx - 10 and i <= grasp_idx) or i > lift_idx else 0.01
-            res = move_to_pose(Pose(pos, q, base_frame), tolerance=tol, max_steps=60)
-            if ended(res):
-                report["ended_at_waypoint"] = i
-                report["episode_ended"] = True
-                stopped = True
-                break
-            if i == grasp_idx and not closed:
-                cg = close_gripper()
-                closed = True
-                report["close_status"] = str(cg.status)
-                if ended(cg):
-                    report["episode_ended"] = True
-                    stopped = True
-                    break
-        report["cartesian_done"] = not stopped
-    report["stage"] = "done"
-except Exception as exc:
-    report["error"] = str(exc)
-
-def along(pos, origin, d):
-    return sum((pos[j] - origin[j]) * d[j] for j in range(3))
-
-
-try:
-    # ---------------- press-and-scan insertion search ----------------
-    if report.get("stage") == "done" and not report.get("episode_ended", False):
-        report["stage"] = "search"
-        if same_layout:
-            F_t = [F[j] + shift[j] for j in range(3)]
+    samples = list(range(0, n, 4))
+    if grasp_index not in samples:
+        samples.append(grasp_index)
+    if final_index not in samples:
+        samples.append(final_index)
+    samples = sorted(samples)
+    solved = {}
+    previous = None
+    ik_failures = 0
+    for index in samples:
+        d = frame_delta(index)
+        pose = Pose((ee_pos[index][0] + d[0], ee_pos[index][1] + d[1], ee_pos[index][2]),
+                    ee_quat[index], base_frame)
+        ik = solve_ik(pose, seed_joints=joints[index])
+        if ik.ok:
+            solved[index] = [float(v) for v in ik.joint_positions]
         else:
-            F_b, unused_q = transform_pose(F, vq[n - 1], box_v["c"], 0.0, dbox)
-            F_t = [F_b[j] + shift[j] for j in range(3)]
-        k = k_ins
-        dv = [F[j] - vpos[k][j] for j in range(3)]
-        dn = math.sqrt(sum(v * v for v in dv))
-        d = [v / dn for v in dv]
-        hn = math.sqrt(d[0] * d[0] + d[1] * d[1])
-        perp = [-d[1] / hn, d[0] / hn, 0.0]
-        report["insert_dir"] = r4(d)
-        deg = math.pi / 180.0
-        # v04: v03's +-8 mm rings all met a flat wall at the face plane, so probe farther out:
-        # lower first (towards the box's mid-height), then wider sideways, then higher.
-        offsets = [(0.0, 0.0, 0.0)]
-        for zz in (-0.011, -0.014, -0.017, -0.020, -0.024):
-            for ll in (0.0, 0.004, -0.004):
-                offsets.append((ll, zz, 0.0))
-        for zz in (0.0, -0.005):
-            for ll in (0.011, -0.011, 0.015, -0.015):
-                offsets.append((ll, zz, 0.0))
-        for zz in (0.011, 0.014):
-            for ll in (0.0, 0.004, -0.004):
-                offsets.append((ll, zz, 0.0))
-        s = get_robot_state()
-        cur = [float(v) for v in s.end_effector_poses["primary"].position]
-        remaining = along(F_t, cur, d)
-        contact = along(cur, F_t, d)
-        report["remaining_after_insert"] = round(remaining, 4)
-        tries = []
-        found = remaining < 0.004
-        for off in offsets:
-            if found:
-                break
-            s = get_robot_state()
-            ticks_used = int(round(float(s.timestamp_s) * 20.0))
-            if ticks_used + 16 > max_steps:
-                tries.append({"out_of_ticks": True, "ticks": ticks_used})
-                break
-            q_t = qmul(qz(-delta + off[2]), vq[n - 1])
-            back = [F_t[j] + d[j] * (contact - 0.004) + perp[j] * off[0] for j in range(3)]
-            back[2] += off[1]
-            push = [F_t[j] + d[j] * (contact + 0.005) + perp[j] * off[0] for j in range(3)]
-            push[2] += off[1]
-            jcur = [float(v) for v in s.joint_positions["primary"]]
-            ik_b = solve_ik(Pose(back, q_t, base_frame), seed_joints=jcur)
-            if not ik_b.ok:
-                tries.append({"off": r4(off), "ik": "fail"})
-                continue
-            jb = [float(v) for v in ik_b.joint_positions]
-            ik_p = solve_ik(Pose(push, q_t, base_frame), seed_joints=jb)
-            if not ik_p.ok:
-                tries.append({"off": r4(off), "ik": "fail"})
-                continue
-            jp = [float(v) for v in ik_p.joint_positions]
-            last, stop = drive(jcur, jb, 5, 0.0, embodiment)
-            if not stop:
-                last, stop = drive(jb, jp, 6, 0.0, embodiment)
-            if not stop:
-                last, stop = drive(jp, jp, 1, 0.0, embodiment)
-            if stop:
-                report["episode_ended"] = True
-                tries.append({"off": r4(off), "episode_ended": True})
-                break
-            s2 = get_robot_state()
-            cur2 = [float(v) for v in s2.end_effector_poses["primary"].position]
-            adv = along(cur2, F_t, d) - contact
-            entry = {"off": r4(off), "adv": round(adv, 4)}
-            if adv > 0.004:
-                # the peg entered: push on to the video's insertion depth along the same offset
-                deep = [F_t[j] + d[j] * 0.004 + perp[j] * off[0] for j in range(3)]
-                deep[2] += off[1]
-                ik_d = solve_ik(Pose(deep, q_t, base_frame), seed_joints=jp)
-                if ik_d.ok:
-                    jd = [float(v) for v in ik_d.joint_positions]
-                    last, stop = drive(jp, jd, 20, 0.0, embodiment)
-                    if not stop:
-                        last, stop = drive(jd, jd, 5, 0.0, embodiment)
-                    if stop:
-                        report["episode_ended"] = True
-                        entry["episode_ended"] = True
-                        tries.append(entry)
-                        break
-                    s3 = get_robot_state()
-                    cur3 = [float(v) for v in s3.end_effector_poses["primary"].position]
-                    entry["remaining_after_deep"] = round(along(F_t, cur3, d), 4)
-                    if along(F_t, cur3, d) < 0.006:
-                        found = True
-                    else:
-                        contact = along(cur3, F_t, d)
-            tries.append(entry)
-        report["search"] = tries
-        report["inserted"] = found
-        if found and not report.get("episode_ended", False):
-            s = get_robot_state()
-            jh = [float(v) for v in s.joint_positions["primary"]]
-            for tick in range(10):
-                last = step_to(jh, 0.0, embodiment)
-                if ended(last):
-                    report["episode_ended"] = True
-                    break
-        if not report.get("episode_ended", False):
-            report["stage"] = "search_done"
-except Exception as exc:
-    report["error_search"] = str(exc)
+            ik_failures += 1
+            solved[index] = None
+    report["ik_failures"] = ik_failures
+    known = [index for index in samples if solved[index] is not None]
+    if len(known) < 2:
+        raise ValueError("shifted replay: IK failed on nearly every waypoint")
+    for index in range(n):
+        lower = None
+        upper = None
+        for k in known:
+            if k <= index:
+                lower = k
+            if k >= index and upper is None:
+                upper = k
+        if lower is None:
+            lower = upper
+        if upper is None:
+            upper = lower
+        if upper == lower:
+            targets.append(solved[lower])
+        else:
+            a = float(index - lower) / float(upper - lower)
+            targets.append([solved[lower][j] * (1 - a) + solved[upper][j] * a for j in range(7)])
 
+
+
+
+# ---------------- Push geometry from the video ----------------
 try:
-    s = get_robot_state()
-    report["final_ee"] = r4(s.end_effector_poses["primary"].position)
-    report["final_gripper"] = round(float(s.gripper_positions["primary"]), 3)
-    report["final_t"] = float(s.timestamp_s)
-except Exception as exc:
-    note("final state " + str(exc))
+    max_steps = int(robomme_plus.get_task_metadata()["max_steps"])
+except Exception:
+    max_steps = 800
+final_z = ee_pos[final_index][2]
+push_start = final_index
+for index in range(descend_mid, n):
+    if ee_pos[index][2] <= final_z + 0.003:
+        push_start = index
+        break
+use_delta = box_delta if not layout_unchanged else (0.0, 0.0)
+P0 = [ee_pos[push_start][0] + use_delta[0], ee_pos[push_start][1] + use_delta[1], ee_pos[push_start][2]]
+PF = [ee_pos[final_index][0] + use_delta[0], ee_pos[final_index][1] + use_delta[1], ee_pos[final_index][2]]
+axis = [PF[0] - P0[0], PF[1] - P0[1], PF[2] - P0[2]]
+s_final = (axis[0] ** 2 + axis[1] ** 2 + axis[2] ** 2) ** 0.5
+if s_final < 0.01:
+    raise ValueError("video has no side push segment")
+axis = [axis[0] / s_final, axis[1] / s_final, axis[2] / s_final]
+lat_norm = (axis[0] ** 2 + axis[1] ** 2) ** 0.5
+lateral = [-axis[1] / lat_norm, axis[0] / lat_norm, 0.0]   # horizontal, perpendicular to the push
+push_quat = ee_quat[final_index]
+report["video_push_start_index"] = push_start
+report["push_axis"] = [round(v, 4) for v in axis]
+report["push_length"] = round(s_final, 4)
+
+
+# ---------------- Execute ----------------
+ended = {"flag": False}
+counter = {"ticks": 0}
+
+
+def tick(target, gripper):
+    res = step(RobotAction(arms={"primary": ArmCommand(
+        "joint_position", target, gripper_position=gripper, embodiment=embodiment)}))
+    counter["ticks"] += 1
+    try:
+        if bool(res.terminated) or bool(res.truncated):
+            ended["flag"] = True
+    except Exception:
+        pass
+    return res
+
+
+last_known = {"joints": [float(v) for v in state0.joint_positions["primary"]],
+              "ee": [float(v) for v in state0.end_effector_poses["primary"].position]}
+
+
+def read_state():
+    if ended["flag"]:
+        return None
+    try:
+        st = get_robot_state()
+    except Exception as exc:
+        ended["flag"] = True
+        report["state_read_error"] = str(exc)
+        return None
+    last_known["joints"] = [float(v) for v in st.joint_positions["primary"]]
+    last_known["ee"] = [float(v) for v in st.end_effector_poses["primary"].position]
+    return st
+
+
+def current_joints():
+    read_state()
+    return list(last_known["joints"])
+
+
+def joint_error(target):
+    js = current_joints()
+    return max(abs(js[j] - float(target[j])) for j in range(7))
+
+
+def ee_now():
+    read_state()
+    return list(last_known["ee"])
+
+
+def progress(point):
+    return sum((point[k] - P0[k]) * axis[k] for k in range(3))
+
+
+def push_pose(s, du, dz):
+    return Pose((P0[0] + axis[0] * s + lateral[0] * du,
+                 P0[1] + axis[1] * s + lateral[1] * du,
+                 P0[2] + axis[2] * s + dz), push_quat, base_frame)
+
+
+def ik_for(s, du, dz):
+    seed = current_joints()
+    ik = solve_ik(push_pose(s, du, dz), seed_joints=seed)
+    if not ik.ok:
+        return None
+    solution = [float(v) for v in ik.joint_positions]
+    if max(abs(solution[j] - seed[j]) for j in range(7)) > 0.3:
+        return None   # branch jump: refuse rather than swing the arm through the box
+    return solution
+
+
+def glide(s, du, dz, ticks_n):
+    """Joint-interpolate from the current joints to the IK solution of a push pose."""
+    goal = ik_for(s, du, dz)
+    if goal is None:
+        return False
+    start = current_joints()
+    for k in range(1, ticks_n + 1):
+        a = float(k) / ticks_n
+        tick([start[j] * (1 - a) + goal[j] * a for j in range(7)], 0.0)
+        if ended["flag"]:
+            return True
+    if not ended["flag"]:
+        tick(goal, 0.0)
+    return True
+def guarded_push(du, dz, lead, budget_ticks, s_cap):
+    """Push along the axis, commanding `lead` ahead of measured progress (never beyond s_cap);
+    stop on stall, on episode end, or when the cap is reached."""
+    history = []
+    used = 0
+    while used < budget_ticks and not ended["flag"]:
+        s_now = progress(ee_now())
+        if s_now >= s_cap - 0.001:
+            return ("cap", s_now)
+        target = ik_for(min(s_now + lead, s_cap), du, dz)
+        if target is None:
+            return ("ik_failed", s_now)
+        tick(target, 0.0)
+        used += 1
+        if ended["flag"]:
+            return ("episode_ended", s_now)
+        s_after = progress(ee_now())
+        history.append(s_after)
+        if len(history) >= 6 and history[-1] - history[-6] < 0.0008:
+            return ("stalled", s_after)
+    return ("budget", progress(ee_now()))
+
+
+    return ("budget", progress(ee_now()))
+
+
+# Phase A: approach the video grasp pose with the gripper open.
+for index in range(0, grasp_index + 1):
+    tick(targets[index], 1.0)
+    if ended["flag"]:
+        break
+if not ended["flag"]:
+    for settle in range(25):
+        if joint_error(targets[grasp_index]) < 0.004:
+            break
+        tick(targets[grasp_index], 1.0)
+        if ended["flag"]:
+            break
+    report["grasp_joint_error"] = round(joint_error(targets[grasp_index]), 4)
+    report["ee_at_grasp"] = [round(v, 4) for v in ee_now()]
+
+# Phase B: close.
+if not ended["flag"]:
+    closed = close_gripper()
+    try:
+        counter["ticks"] += int(closed.steps_executed)
+        if bool(closed.terminated) or bool(closed.truncated):
+            ended["flag"] = True
+    except Exception:
+        pass
+    if not ended["flag"]:
+        st = read_state()
+        if st is not None:
+            report["gripper_after_close"] = round(float(st.gripper_positions["primary"]), 3)
+
+# Phase C: follow the video's lift/transit/descent up to the start of the push, skipping
+# video frames where the joints barely move (saves ticks for the guarded push).
+if not ended["flag"]:
+    last_sent = targets[grasp_index]
+    for index in range(grasp_index + 1, push_start + 1):
+        change = max(abs(float(targets[index][j]) - float(last_sent[j])) for j in range(7))
+        if change < 0.002 and index != push_start:
+            continue
+        tick(targets[index], 0.0)
+        last_sent = targets[index]
+        if ended["flag"]:
+            break
+    for settle in range(10):
+        if ended["flag"] or joint_error(targets[push_start]) < 0.003:
+            break
+        tick(targets[push_start], 0.0)
+    if not ended["flag"]:
+        st = read_state()
+        if st is not None:
+            report["gripper_at_push_start"] = round(float(st.gripper_positions["primary"]), 3)
+        report["ticks_at_push_start"] = counter["ticks"]
+
+# Box face plane and top along the push axis, from live front depth around the video insertion
+# point (same region as the layout check).
+box_s = []
+box_z = []
+box_lat = []
+uvb = project(live_front, final_ref)
+if uvb is not None:
+    ub = int(round(uvb[0])); vb = int(round(uvb[1]))
+    for v in range(max(0, vb - 45), min(live_front["h"], vb + 46)):
+        for u in range(max(0, ub - 45), min(live_front["w"], ub + 46)):
+            q = deproject(live_front, u, v)
+            if q is None or q[2] < box_band[0] or q[2] > box_band[1]:
+                continue
+            dx = q[0] - final_ref[0]; dy = q[1] - final_ref[1]
+            if dx * dx + dy * dy > 0.15 * 0.15:
+                continue
+            box_s.append(progress(q))
+            box_z.append(q[2])
+            box_lat.append(sum((q[k] - P0[k]) * lateral[k] for k in range(3)))
+face_s = None
+box_top = None
+if len(box_s) >= 30:
+    ordered = sorted(box_s)
+    face_s = ordered[len(ordered) // 50]
+    ordered_z = sorted(box_z)
+    box_top = ordered_z[(95 * len(ordered_z)) // 100]
+    ordered_lat = sorted(box_lat)
+    report["box_lateral_range"] = [round(ordered_lat[len(ordered_lat) // 50], 4),
+                                   round(ordered_lat[(49 * len(ordered_lat)) // 50], 4)]
+report["box_face_s"] = None if face_s is None else round(face_s, 4)
+report["box_top_z"] = None if box_top is None else round(box_top, 4)
+
+
+def hole_points():
+    """Wrist-depth points of the hole interior: behind the face plane, below the box top, above
+    the table-level pegs, laterally within the box. Returns (lats, zs) or None."""
+    if face_s is None or ended["flag"]:
+        return None
+    try:
+        obs = get_observation()
+    except Exception as exc:
+        ended["flag"] = True
+        report["observation_error"] = str(exc)
+        return None
+    wrist = camera_model(obs.cameras["wrist"])
+    lats = []
+    zs = []
+    for v in range(0, wrist["h"]):
+        for u in range(0, wrist["w"]):
+            q = deproject(wrist, u, v)
+            if q is None:
+                continue
+            if q[2] > box_top - 0.004 or q[2] < grasp_ref[2] + 0.015:
+                continue
+            sq = progress(q)
+            if sq < face_s + 0.006 or sq > face_s + 0.10:
+                continue
+            lat_q = sum((q[k] - P0[k]) * lateral[k] for k in range(3))
+            if abs(lat_q) > 0.08:
+                continue
+            lats.append(lat_q)
+            zs.append(q[2])
+    return (lats, zs)
+
+
+def quantile(values, frac):
+    ordered = sorted(values)
+    return ordered[min(len(ordered) - 1, max(0, int(frac * len(ordered))))]
+
+
+# Table height near the peg (live front depth, points below the lying pegs' band).
+table_region = region_centroid(live_front, grasp_ref, 0.10, -0.03, peg_band[0], 30)
+table_z = 0.0 if table_region is None else table_region[2]
+report["table_z"] = round(table_z, 4)
+
+RETRACT_VIEW = 0.015   # back-off from the face stall before looking
+RETRACT_TRY = 0.005    # back-off between insertion tries
+ENTRY_GAIN = 0.010     # progress beyond the face stall that counts as "tip inside the hole"
+OVERSHOOT = 0.03       # allowed push beyond the video's push depth once inside
+GRID = 0.0015          # search step around the hole estimate
+
+
+def entered(s_value, face_stall):
+    return s_value > face_stall + ENTRY_GAIN or s_value >= s_final - 0.004
+
+
+def finish_insertion(du, dz):
+    """Tip is inside: keep pushing past the video depth until stall / episode end, then hold."""
+    deeper = guarded_push(du, dz, 0.004, 80, s_final + OVERSHOOT)
+    attempts.append({"du": round(du, 4), "dz": round(dz, 4), "result": "deep_" + deeper[0],
+                     "s": round(deeper[1], 4)})
+    if not ended["flag"]:
+        hold = current_joints()
+        for settle in range(20):
+            if counter["ticks"] >= max_steps - 2:
+                break
+            tick(hold, 0.0)
+            if ended["flag"]:
+                break
+
+
+# Phase D: guarded push on the video line; on a face stall, look for the hole and search.
+attempts = []
+inserted = False
+if not ended["flag"]:
+    outcome = guarded_push(0.0, 0.0, 0.004, 120, s_final + OVERSHOOT)
+    attempts.append({"du": 0.0, "dz": 0.0, "result": outcome[0], "s": round(outcome[1], 4)})
+    stall_s = outcome[1]
+    if outcome[0] in ("stalled", "cap", "budget") and entered(stall_s, stall_s) and stall_s >= s_final - 0.004:
+        inserted = True
+        finish_insertion(0.0, 0.0)
+    hole_du = 0.0
+    hole_dz = 0.0
+    median_du = None
+    if not inserted and not ended["flag"]:
+        glide(stall_s - RETRACT_VIEW, 0.0, 0.0, 4)
+        pts = hole_points()
+        view = {"du": 0.0}
+        if pts is not None:
+            view["count"] = len(pts[0])
+        if pts is not None and len(pts[0]) >= 10:
+            lo = quantile(pts[0], 0.03)
+            hi = quantile(pts[0], 0.97)
+            median_du = quantile(pts[0], 0.5)
+            hole_du = 0.5 * (lo + hi)
+            floor_z = quantile(pts[1], 0.1)
+            # Peg underside rested on the table when grasped at the video grasp height; align it
+            # with the hole floor plus a little clearance.
+            target_z = floor_z - table_z + grasp_ref[2] + 0.0015
+            hole_dz = target_z - (P0[2] + axis[2] * stall_s)
+            report["hole_estimate"] = {"lat_lo": round(lo, 4), "lat_hi": round(hi, 4), "centre": round(hole_du, 4),
+                                       "median": round(median_du, 4), "floor_z": round(floor_z, 4),
+                                       "z_q90": round(quantile(pts[1], 0.9), 4), "count": len(pts[0])}
+            report["hole_target_ee_z"] = round(target_z, 4)
+        report["hole_views"] = [view]
+    report["hole_offset"] = [round(hole_du, 4), round(hole_dz, 4)]
+
+    offsets = []
+    for k in (0, 1, -1, 2, -2, 3, -3, 4, -4):
+        offsets.append((hole_du + GRID * k, hole_dz))
+    for kz in (1, -1):
+        for k in (0, 1, -1, 2, -2, 3, -3):
+            offsets.append((hole_du + GRID * k, hole_dz + GRID * kz))
+    for kz in (2, 3):
+        for k in (0, 2, -2):
+            offsets.append((hole_du + GRID * k, hole_dz + GRID * kz))
+    if median_du is not None:
+        offsets.append((median_du, hole_dz))
+    offsets.append((0.0, hole_dz))
+
+    current = (0.0, 0.0)
+    for offset in offsets:
+        if inserted or ended["flag"]:
+            break
+        if counter["ticks"] > max_steps - 30:
+            break
+        back_s = stall_s - RETRACT_TRY
+        if not glide(back_s, current[0], current[1], 2):
+            attempts.append({"du": round(offset[0], 4), "dz": round(offset[1], 4), "result": "ik_failed_retract"})
+            continue
+        if not glide(back_s, offset[0], offset[1], 3):
+            attempts.append({"du": round(offset[0], 4), "dz": round(offset[1], 4), "result": "ik_failed_shift"})
+            continue
+        current = offset
+        remaining = max_steps - 20 - counter["ticks"]
+        outcome = guarded_push(offset[0], offset[1], 0.004, min(60, max(0, remaining)), s_final + OVERSHOOT)
+        attempts.append({"du": round(offset[0], 4), "dz": round(offset[1], 4), "result": outcome[0],
+                         "s": round(outcome[1], 4)})
+        if outcome[0] == "episode_ended":
+            inserted = True
+        elif entered(outcome[1], stall_s):
+            inserted = True
+            finish_insertion(offset[0], offset[1])
+report["push_attempts"] = attempts
+report["inserted"] = inserted
+
+if not ended["flag"]:
+    hold = current_joints()
+    for settle in range(8):
+        if counter["ticks"] >= max_steps - 2:
+            break
+        tick(hold, 0.0)
+        if ended["flag"]:
+            break
+
+report["ticks"] = counter["ticks"]
+report["episode_ended"] = ended["flag"]
+if not ended["flag"]:
+    try:
+        final_state = get_robot_state()
+        report["final_ee"] = [round(float(v), 4) for v in final_state.end_effector_poses["primary"].position]
+        report["final_gripper"] = round(float(final_state.gripper_positions["primary"]), 3)
+        report["final_progress"] = round(progress(report["final_ee"]), 4)
+    except Exception as exc:
+        report["final_read_error"] = str(exc)
 
 result = report

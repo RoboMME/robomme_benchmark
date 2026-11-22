@@ -1,720 +1,877 @@
-import math
-
-# v03 - v02 + merge duplicate cube detections within 0.035 m (one cube split by an occluder
-#       produced two seeds -> two tracks on one container). Tracks that receive no points hold
-#       position (a constant-velocity variant was tried offline on an occluded replay and did not
-#       help, so it is disabled); per-track lost-frame counts are reported.
-# v02 - v01 + (a) tall-object exclusion: points whose XY footprint also has points 0.11-0.17 m
-#       above the table (a standing pillar/obstacle) are not containers or cubes, and do not
-#       trigger "containers appeared"; (b) front + wrist camera fusion for cubes, tracking and
-#       top-face refinement (the front view can be occluded by a tall object); (c) containers
-#       with no cube under them at appearance get an "unknown" track; (d) raise the approach
-#       height near tall obstacles; (e) compact visual diagnostics of the video.
-# All positions come from the current episode's depth images; nothing is copied from a run.
-
-report = {"version": "v03", "errors": [], "motions": []}
-result = report
-
-COLOR_WORDS = ("red", "green", "blue", "yellow", "orange", "purple", "cyan", "white", "pink", "black", "brown", "gray", "grey")
-TOP_LO = 0.045
-TOP_HI = 0.11
-TALL_LO = 0.11
-TALL_HI = 0.17
-CUBE_LO = 0.012
-CUBE_HI = 0.042
-X_MIN = 0.2
-GATE = 0.06
-CELL = 0.02
-ALPH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+# v05 — v04 + physical de-duplication: same-colour cube clusters closer than one container footprint
+#       are one cube; container tracks closer than 3 cm are one container; never pick the same container twice
+# v04 — v03 + front+wrist depth fusion, static-background voxel rejection (occluding pillar),
+#       occlusion-aware track re-acquisition, fused cube detection, hidden-cube fallback label
+# v03 — v02 + live hold-and-track: the shuffle continues during execution; track per tick until still, then pick
+# v02 — v01 with the whole body guarded by try/except (no uncaught exception can reach the worker)
+#       and diagnostic dumps encoded as strings (no ragged nested lists in the recorded result)
+# v01 — (v00 resubmitted without `import math`, `**` and sorted(reverse=); v00 start crashed the worker before any artifact)
+# v00 — robomme_plus VideoUnmaskSwap: depth-tracked container shuffle, then ordered picks.
+# Allowed APIs only. Everything task-dependent (cube colours, container positions, heights,
+# yaw) is derived at runtime from the conditioning video and the live front RGB-D camera.
+PI = 3.141592653589793
 
 
-def enc_rgb(rgb, stride):
-    rows = to_rows(rgb, stride)
-    parts = []
-    for row in rows:
-        for pixel in row:
-            parts.append(ALPH[int(pixel[0]) // 4])
-            parts.append(ALPH[int(pixel[1]) // 4])
-            parts.append(ALPH[int(pixel[2]) // 4])
-    return "".join(parts)
+def mradians(d):
+    return d * PI / 180.0
 
 
-def to_rows(array, stride):
+def msin(x):
+    for rr in range(20):
+        if x > PI:
+            x = x - 2.0 * PI
+        elif x < -PI:
+            x = x + 2.0 * PI
+    term = x
+    total = x
+    x2 = x * x
+    for n in range(1, 10):
+        term = -term * x2 / ((2 * n) * (2 * n + 1))
+        total += term
+    return total
+
+
+def mcos(x):
+    return msin(x + PI / 2.0)
+
+
+def msqrt(v):
+    if v <= 0:
+        return 0.0
+    g = v if v > 1.0 else 1.0
+    for n in range(40):
+        g = 0.5 * (g + v / g)
+    return g
+
+
+CAM = "front"
+STRIDE = 2              # pixel stride for per-frame video processing
+WIDE_ZLO = 0.03         # wide band used to detect container appearance (metres above table)
+WIDE_ZHI = 0.15         # below the parked gripper in the video
+TRACK_RADIUS = 0.035    # max association radius per frame (container footprint ~5 cm)
+MIN_PTS = 3
+TRANSIT_ABOVE_TOP = 0.10
+LIFT_ABOVE_TOP = 0.10
+MAX_WAIT_TICKS = 700     # hold-and-track cap (native horizon 1370)
+STILL_EPS = 0.0015       # per-tick displacement treated as stationary
+STILL_TICKS = 12         # consecutive stationary ticks before picking
+WRIST = "wrist"
+WRIST_STRIDE = 4         # wrist pixels per video frame (dense close-up view)
+BG_VOX = 0.01           # static-background voxel size (m)
+REACQ_GROW = 0.006       # re-acquisition radius growth per lost frame
+REACQ_MAX = 0.12
+
+report = {"version": "v01", "errors": [], "calls": []}
+report["version"] = "v05"
+report["stage"] = "start"
+try:
+    context = get_task_context()
+    language = context.language
+    report["language"] = language
+    state0 = get_robot_state()
+    base_frame = state0.base_frame
+    home_quat = [float(v) for v in state0.end_effector_poses["primary"].quaternion_wxyz]
     try:
-        return array[::stride, ::stride].tolist()
-    except Exception:
-        rows = []
-        for y in range(0, len(array), stride):
-            row = []
-            for x in range(0, len(array[0]), stride):
-                row.append(array[y][x])
-            rows.append(row)
-        return rows
+        meta = robomme_plus.get_task_metadata()
+        max_steps_total = int(meta["max_steps"])
+    except Exception as exc:
+        max_steps_total = 1000
+        report["errors"].append("meta: " + str(exc))
+    report["max_steps"] = max_steps_total
+
+    # ---------------------------------------------------------------- language -> colour order
+    COLOR_WORDS = ["red", "orange", "yellow", "green", "cyan", "blue", "purple", "pink", "white", "black"]
+    low = language.lower()
+    mentions = []
+    for cw in COLOR_WORDS:
+        pos = low.find(cw)
+        if pos >= 0:
+            mentions.append([pos, cw])
+    mentions = sorted(mentions)
+    color_order = [m[1] for m in mentions]
+    report["color_order"] = color_order
 
 
-def mat_rows(m):
-    try:
-        return m.tolist()
-    except Exception:
-        return [[m[i][j] for j in range(3)] for i in range(3)]
-
-
-def qmat(q):
-    w = float(q[0]); x = float(q[1]); y = float(q[2]); z = float(q[3])
-    return [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]]
-
-
-def qmul(a, b):
-    return [a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
-            a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
-            a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
-            a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]]
-
-
-def cam_model(cam):
-    intr = mat_rows(cam.intrinsics)
-    pos = [float(v) for v in cam.camera_pose.position]
-    quat = [float(v) for v in cam.camera_pose.quaternion_wxyz]
-    return {"fx": float(intr[0][0]), "fy": float(intr[1][1]), "cx": float(intr[0][2]), "cy": float(intr[1][2]),
-            "t": pos, "R": qmat(quat), "h": len(cam.rgb), "w": len(cam.rgb[0])}
-
-
-def ray_table(model, stride):
-    R = model["R"]
-    rows = []
-    for v in range(0, model["h"], stride):
-        row = []
-        for u in range(0, model["w"], stride):
-            a = (u - model["cx"]) / model["fx"]
-            b = (v - model["cy"]) / model["fy"]
-            row.append((R[0][0] * a + R[0][1] * b + R[0][2],
-                        R[1][0] * a + R[1][1] * b + R[1][2],
-                        R[2][0] * a + R[2][1] * b + R[2][2]))
-        rows.append(row)
-    return {"rows": rows, "t": model["t"]}
-
-
-def get_rays(cache, name, cam, stride):
-    key = name + "/" + str(stride)
-    pos = [float(v) for v in cam.camera_pose.position]
-    quat = [float(v) for v in cam.camera_pose.quaternion_wxyz]
-    entry = cache.get(key)
-    if entry is not None:
-        same = True
-        for i in range(3):
-            if abs(entry["pos"][i] - pos[i]) > 0.0005:
-                same = False
-        for i in range(4):
-            if abs(entry["quat"][i] - quat[i]) > 0.0005:
-                same = False
-        if same:
-            return entry["rays"]
-    model = cam_model(cam)
-    rays = ray_table(model, stride)
-    cache[key] = {"pos": pos, "quat": quat, "rays": rays, "model": model}
-    return rays
-
-
-def scan(depth_rows, rays, rgb_rows=None):
-    """One pass: top-band points, tall points (footprint of standing obstacles), cube-band points."""
-    tx = rays["t"][0]; ty = rays["t"][1]; tz = rays["t"][2]
-    top = []
-    tall = []
-    low = []
-    iy = 0
-    for drow in depth_rows:
-        rrow = rays["rows"][iy]
-        ix = 0
-        for d in drow:
-            if d > 0.05 and d < 4.0:
-                k = rrow[ix]
-                z = tz + d * k[2]
-                if z > CUBE_LO and z < TALL_HI:
-                    x = tx + d * k[0]
-                    if x > X_MIN:
-                        y = ty + d * k[1]
-                        if z > TOP_LO and z < TOP_HI:
-                            top.append([x, y, z])
-                        if z > TALL_LO:
-                            tall.append([x, y, z])
-                        if rgb_rows is not None and z < CUBE_HI:
-                            low.append([x, y, z, rgb_rows[iy][ix]])
-            ix += 1
-        iy += 1
-    return top, tall, low
-
-
-def tall_cells(tall):
-    cells = {}
-    for p in tall:
-        key = (int(math.floor(p[0] / CELL)), int(math.floor(p[1] / CELL)))
-        cells[key] = cells.get(key, 0) + 1
-    keep = {}
-    for key in cells:
-        if cells[key] >= 2:
-            keep[key] = True
-    return keep
-
-
-def exclude(points, cells):
-    if not cells:
-        return points
-    out = []
-    for p in points:
-        cx = int(math.floor(p[0] / CELL)); cy = int(math.floor(p[1] / CELL))
-        hit = False
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                if (cx + dx, cy + dy) in cells:
-                    hit = True
-        if not hit:
-            out.append(p)
-    return out
-
-
-def fused_points(frame, cache, stride, want_low=False):
-    tops = []
-    talls = []
-    lows = []
-    for name in ("front", "wrist"):
-        try:
-            cam = frame.cameras[name]
-        except Exception:
-            continue
-        rays = get_rays(cache, name, cam, stride)
-        rgb_rows = to_rows(cam.rgb, stride) if want_low else None
-        top, tall, low = scan(to_rows(cam.depth_m, stride), rays, rgb_rows)
-        tops.extend(top)
-        talls.extend(tall)
-        lows.extend(low)
-    cells = tall_cells(talls)
-    return exclude(tops, cells), exclude(lows, cells), cells, len(talls)
-
-
-def cluster_xy(points, radius):
-    clusters = []
-    used = [False] * len(points)
-    r2 = radius * radius
-    for i in range(len(points)):
-        if used[i]:
-            continue
-        used[i] = True
-        members = [points[i]]
-        frontier = [i]
-        while frontier:
-            j = frontier.pop()
-            pj = points[j]
-            for k in range(len(points)):
-                if not used[k]:
-                    dx = points[k][0] - pj[0]
-                    dy = points[k][1] - pj[1]
-                    if dx * dx + dy * dy < r2:
-                        used[k] = True
-                        members.append(points[k])
-                        frontier.append(k)
-        clusters.append(members)
-    return clusters
-
-
-def classify_color(rgb_list):
-    if not rgb_list:
-        return "unknown"
-    r = sum(float(p[0]) for p in rgb_list) / len(rgb_list)
-    g = sum(float(p[1]) for p in rgb_list) / len(rgb_list)
-    b = sum(float(p[2]) for p in rgb_list) / len(rgb_list)
-    if max(r, g, b) < 40:
-        return "unknown"
-    if r > 1.8 * b and g > 1.8 * b:
-        ratio = g / max(r, 1.0)
-        if ratio > 0.85 and ratio < 1.18:
-            return "yellow"
-        if ratio <= 0.85 and ratio > 0.4:
-            return "orange"
-    if r > 2.0 * g and r > 2.0 * b:
-        return "red"
-    if g > 1.8 * r and g > 1.8 * b:
-        return "green"
-    if b > 1.8 * r and b > 1.5 * g:
-        return "blue"
-    if r > 1.8 * g and b > 1.8 * g:
-        return "purple"
-    if g > 1.8 * r and b > 1.8 * r:
-        return "cyan"
-    if r > 150 and g > 150 and b > 150:
-        return "white"
-    return "unknown"
-
-
-def track_step(tracks, points, gate):
-    sums = [[0.0, 0.0, 0, 0.0] for t in tracks]
-    g2 = gate * gate
-    for p in points:
-        best = -1
-        bestd = g2
-        for ti in range(len(tracks)):
-            dx = p[0] - tracks[ti]["x"]
-            dy = p[1] - tracks[ti]["y"]
-            dd = dx * dx + dy * dy
-            if dd < bestd:
-                bestd = dd
-                best = ti
-        if best >= 0:
-            sums[best][0] += p[0]
-            sums[best][1] += p[1]
-            sums[best][2] += 1
-            sums[best][3] += p[2]
-    for ti in range(len(tracks)):
-        tracks[ti]["n"] = sums[ti][2]
-        if sums[ti][2] >= 2:
-            tracks[ti]["x"] = sums[ti][0] / sums[ti][2]
-            tracks[ti]["y"] = sums[ti][1] / sums[ti][2]
-            tracks[ti]["z"] = sums[ti][3] / sums[ti][2]
-
-
-def track_frame(tracks, points, dt=0.05):
-    before = [(t["x"], t["y"]) for t in tracks]
-    for it in range(3):
-        track_step(tracks, points, GATE)
-    moved = 0.0
-    for ti in range(len(tracks)):
-        t = tracks[ti]
-        vx = t.get("vx", 0.0); vy = t.get("vy", 0.0)
-        if t.get("n", 0) >= 2:
-            if dt > 0.0:
-                t["vx"] = 0.5 * vx + 0.5 * (t["x"] - before[ti][0]) / dt
-                t["vy"] = 0.5 * vy + 0.5 * (t["y"] - before[ti][1]) / dt
-            t["lost"] = 0
+    def hue_name(r, g, b):
+        mx = max(r, g, b)
+        mn = min(r, g, b)
+        if mx - mn < 50:
+            return "none"
+        d = float(mx - mn)
+        if mx == r:
+            h = 60.0 * ((g - b) / d)
+        elif mx == g:
+            h = 60.0 * ((b - r) / d) + 120.0
         else:
-            t["x"] = before[ti][0]
-            t["y"] = before[ti][1]
-            t["lost"] = t.get("lost", 0) + 1
-            if t["lost"] > t.get("maxlost", 0):
-                t["maxlost"] = t["lost"]
-        dd = math.sqrt((t["x"] - before[ti][0]) ** 2 + (t["y"] - before[ti][1]) ** 2)
-        if dd > t.get("maxstep", 0.0):
-            t["maxstep"] = dd
-        if dd > moved:
-            moved = dd
-    return moved
+            h = 60.0 * ((r - g) / d) + 240.0
+        if h < 0:
+            h += 360.0
+        if h < 15 or h >= 340:
+            return "red"
+        if h < 45:
+            return "orange"
+        if h < 70:
+            return "yellow"
+        if h < 170:
+            return "green"
+        if h < 200:
+            return "cyan"
+        if h < 260:
+            return "blue"
+        return "purple"
 
 
-def min_separation(tracks):
-    best = 9.0
-    for i in range(len(tracks)):
-        for j in range(i + 1, len(tracks)):
-            dd = math.sqrt((tracks[i]["x"] - tracks[j]["x"]) ** 2 + (tracks[i]["y"] - tracks[j]["y"]) ** 2)
-            if dd < best:
-                best = dd
-    return best
+    def quat_to_rot(q):
+        w = q[0]
+        x = q[1]
+        y = q[2]
+        z = q[3]
+        return [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]]
 
 
-def snapshot(tracks):
-    return [[t["color"], round(t["x"], 4), round(t["y"], 4), t.get("n", 0), t.get("maxlost", 0)] for t in tracks]
-
-
-def detect_cubes(frame, cache):
-    top, low, cells, ntall = fused_points(frame, cache, 2, True)
-    groups = []
-    for c in cluster_xy(low, 0.012):
-        if len(c) < 4:
-            continue
-        groups.append({"pts": c, "x": sum(p[0] for p in c) / len(c), "y": sum(p[1] for p in c) / len(c)})
-    merged = True
-    while merged:
-        merged = False
-        for i in range(len(groups)):
-            for j in range(i + 1, len(groups)):
-                if (groups[i]["x"] - groups[j]["x"]) ** 2 + (groups[i]["y"] - groups[j]["y"]) ** 2 < 0.035 * 0.035:
-                    pts = groups[i]["pts"] + groups[j]["pts"]
-                    groups[i] = {"pts": pts, "x": sum(p[0] for p in pts) / len(pts), "y": sum(p[1] for p in pts) / len(pts)}
-                    groups.pop(j)
-                    merged = True
-                    break
-            if merged:
-                break
-    cubes = []
-    for g in groups:
-        cubes.append({"x": g["x"], "y": g["y"], "color": classify_color([p[3] for p in g["pts"]]), "npix": len(g["pts"])})
-    return cubes
-
-
-def parse_goal(language):
-    words = []
-    for raw in language.lower().replace(",", " ").replace(".", " ").replace(";", " ").split():
-        words.append(raw)
-    order = []
-    for i in range(len(words)):
-        if words[i] in COLOR_WORDS:
-            plural = False
-            if i + 1 < len(words) and words[i + 1] == "cubes":
-                plural = True
-            for j in range(max(0, i - 4), i):
-                if words[j] == "all":
-                    plural = True
-            order.append([words[i], plural])
-    return order
-
-
-def refine_container(model, depth, tx, ty, tz_hint, others):
-    """Top face of the container nearest (tx, ty): centre, top z, yaw (deg) from full-res depth."""
-    R = model["R"]; t = model["t"]
-    px = tx - t[0]; py = ty - t[1]; pz = tz_hint - t[2]
-    xc = R[0][0] * px + R[1][0] * py + R[2][0] * pz
-    yc = R[0][1] * px + R[1][1] * py + R[2][1] * pz
-    zc = R[0][2] * px + R[1][2] * py + R[2][2] * pz
-    if zc <= 0.01:
-        return None
-    u0 = int(model["fx"] * xc / zc + model["cx"])
-    v0 = int(model["fy"] * yc / zc + model["cy"])
-    half = 22
-    ua = max(0, u0 - half); ub = min(model["w"], u0 + half)
-    va = max(0, v0 - half); vb = min(model["h"], v0 + half)
-    if ua >= ub or va >= vb:
-        return None
-    try:
-        window = depth[va:vb, ua:ub].tolist()
-    except Exception:
-        window = [[depth[v][u] for u in range(ua, ub)] for v in range(va, vb)]
-    pts = []
-    for iv in range(len(window)):
-        v = va + iv
-        b = (v - model["cy"]) / model["fy"]
-        for iu in range(len(window[iv])):
-            d = window[iv][iu]
-            if not (d > 0.05 and d < 4.0):
-                continue
-            a = (ua + iu - model["cx"]) / model["fx"]
-            z = t[2] + d * (R[2][0] * a + R[2][1] * b + R[2][2])
-            if z < 0.04 or z > TOP_HI:
-                continue
-            x = t[0] + d * (R[0][0] * a + R[0][1] * b + R[0][2])
-            y = t[1] + d * (R[1][0] * a + R[1][1] * b + R[1][2])
-            d0 = (x - tx) ** 2 + (y - ty) ** 2
-            if d0 < 0.035 * 0.035:
-                nearest = True
-                for o in others:
-                    if (x - o[0]) ** 2 + (y - o[1]) ** 2 < d0:
-                        nearest = False
-                if nearest:
-                    pts.append([x, y, z])
-    if len(pts) < 8:
-        return None
-    zs = sorted(p[2] for p in pts)
-    top_z = zs[int(0.9 * (len(zs) - 1))]
-    face = [p for p in pts if p[2] > top_z - 0.006]
-    if len(face) < 5:
-        face = pts
-    cx = sum(p[0] for p in face) / len(face)
-    cy = sum(p[1] for p in face) / len(face)
-    best_yaw = 0.0
-    best_area = None
-    for deg in range(0, 90, 5):
-        c = math.cos(math.radians(deg)); s = math.sin(math.radians(deg))
-        amin = 9.0; amax = -9.0; bmin = 9.0; bmax = -9.0
-        for p in face:
-            qa = (p[0] - cx) * c + (p[1] - cy) * s
-            qb = -(p[0] - cx) * s + (p[1] - cy) * c
-            amin = min(amin, qa); amax = max(amax, qa); bmin = min(bmin, qb); bmax = max(bmax, qb)
-        area = (amax - amin) * (bmax - bmin)
-        if best_area is None or area < best_area:
-            best_area = area
-            best_yaw = float(deg)
-            best_ext = [amax - amin, bmax - bmin]
-    if best_yaw > 45.0:
-        best_yaw -= 90.0
-    return {"x": cx, "y": cy, "top_z": top_z, "yaw_deg": best_yaw, "npts": len(pts), "nface": len(face),
-            "ext": [round(best_ext[0], 4), round(best_ext[1], 4)]}
-
-
-def ticks_now():
-    try:
-        return int(round(float(get_robot_state().timestamp_s) * 20.0))
-    except Exception:
-        return -1
-
-
-def motion(label, res):
-    entry = [label, bool(res.ok), str(res.status), int(res.steps_executed), ticks_now()]
-    try:
-        if res.terminated or res.truncated:
-            entry.append("TERMINAL")
-    except Exception:
-        pass
-    report["motions"].append(entry)
-    try:
-        return bool(res.terminated or res.truncated)
-    except Exception:
-        return False
-
-
-ended = False
-
-# ---------------- context ----------------
-context = get_task_context()
-language = context.language
-report["language"] = language
-goal = parse_goal(language)
-report["goal_order"] = goal
-max_steps = 1370
-try:
-    meta = robomme_plus.get_task_metadata()
-    max_steps = int(meta["max_steps"])
-except Exception as exc:
-    report["errors"].append("meta: " + str(exc))
-report["max_steps"] = max_steps
-
-# ---------------- conditioning video tracking ----------------
-tracks = None
-cubes = []
-video_snaps = []
-thumbs = {}
-vcache = {}
-try:
-    video = robomme_plus.get_conditioning_video()
-    n = len(video)
-    report["video_len"] = n
-    if n > 0:
+    def to_rows(arr):
         try:
-            report["video_wrist_pose0"] = [round(float(v), 4) for v in video[0].cameras["wrist"].camera_pose.position]
-            report["video_ee0"] = [round(float(v), 4) for v in video[0].robot_state.end_effector_poses["primary"].position]
-        except Exception as exc:
-            report["errors"].append("video pose: " + str(exc))
-        last_pre = -1
-        max_move = 0.0
-        min_sep = 9.0
-        top_counts = []
-        for index in range(n):
-            frame = video[index]
-            top, low, cells, ntall = fused_points(frame, vcache, 4, False)
-            if index == 0:
-                report["video_tall_cells0"] = len(cells)
-                report["video_ntall0"] = ntall
-            if index % 32 == 0:
-                top_counts.append([index, len(top)])
-            if tracks is None:
-                if len(top) < 6:
-                    last_pre = index
+            return arr.tolist()
+        except Exception:
+            out = []
+            for rr in range(int(arr.shape[0])):
+                out.append([float(arr[rr, cc]) for cc in range(int(arr.shape[1]))])
+            return out
+
+
+    def build_samples(cam, stride):
+        # Per sampled pixel the base-frame ray scaled for z-depth: point = cam_pos + depth * dir.
+        K = to_rows(cam.intrinsics)
+        fx = float(K[0][0])
+        fy = float(K[1][1])
+        cxp = float(K[0][2])
+        cyp = float(K[1][2])
+        pose = cam.camera_pose
+        Rm = quat_to_rot([float(v) for v in pose.quaternion_wxyz])
+        cpos = [float(v) for v in pose.position]
+        h = int(cam.rgb.shape[0])
+        w = int(cam.rgb.shape[1])
+        rows = []
+        for r in range(0, h, stride):
+            yc = (r - cyp) / fy
+            line = []
+            for c in range(0, w, stride):
+                xc = (c - cxp) / fx
+                dx = Rm[0][0] * xc + Rm[0][1] * yc + Rm[0][2]
+                dy = Rm[1][0] * xc + Rm[1][1] * yc + Rm[1][2]
+                dz = Rm[2][0] * xc + Rm[2][1] * yc + Rm[2][2]
+                if dz >= -1e-6:
+                    continue  # ray does not hit the table plane
+                s = -cpos[2] / dz
+                tx = cpos[0] + s * dx
+                ty = cpos[1] + s * dy
+                if tx < 0.1 or tx > 0.9 or ty < -0.5 or ty > 0.5:
                     continue
-                report["containers_appear_frame"] = index
-                report["containers_appear_npts"] = len(top)
-                if last_pre >= 0:
-                    cubes = detect_cubes(video[last_pre], vcache)
-                report["cubes"] = [[c["color"], round(c["x"], 4), round(c["y"], 4), c["npix"]] for c in cubes]
-                tracks = []
-                for c in cubes:
-                    tracks.append({"x": c["x"], "y": c["y"], "color": c["color"]})
-                extra = 0
-                for cl in cluster_xy(top, 0.02):
-                    if len(cl) < 4:
-                        continue
-                    mx = sum(p[0] for p in cl) / len(cl)
-                    my = sum(p[1] for p in cl) / len(cl)
-                    near = False
-                    for t in tracks:
-                        if (t["x"] - mx) ** 2 + (t["y"] - my) ** 2 < 0.035 * 0.035:
-                            near = True
-                    if not near:
-                        tracks.append({"x": mx, "y": my, "color": "unknown"})
-                        extra += 1
-                report["unknown_tracks_added"] = extra
-                if not tracks:
+                line.append((c, dx, dy, dz))
+            if len(line) > 0:
+                rows.append((r, line))
+        return {"rows": rows, "pos": cpos}
+
+
+    def band_points(depth_rows, samples, zlo, zhi):
+        cpx = samples["pos"][0]
+        cpy = samples["pos"][1]
+        cpz = samples["pos"][2]
+        pts = []
+        for entry in samples["rows"]:
+            drow = depth_rows[entry[0]]
+            for s in entry[1]:
+                dd = drow[s[0]]
+                z = cpz + dd * s[3]
+                if z > zlo and z < zhi:
+                    pts.append((cpx + dd * s[1], cpy + dd * s[2], z))
+        return pts
+
+
+    def track_step(centers, prev, pts, radius, iters, min_pts):
+        k = len(centers)
+        cur = []
+        for j in range(k):
+            vx = centers[j][0] - prev[j][0]
+            vy = centers[j][1] - prev[j][1]
+            cur.append([centers[j][0] + vx, centers[j][1] + vy])
+        r2 = radius * radius
+        counts = [0] * k
+        for it in range(iters):
+            sx = [0.0] * k
+            sy = [0.0] * k
+            counts = [0] * k
+            for p in pts:
+                px = p[0]
+                py = p[1]
+                best = -1
+                bd = r2
+                for j in range(k):
+                    ddx = px - cur[j][0]
+                    ddy = py - cur[j][1]
+                    dd = ddx * ddx + ddy * ddy
+                    if dd < bd:
+                        bd = dd
+                        best = j
+                if best >= 0:
+                    sx[best] += px
+                    sy[best] += py
+                    counts[best] += 1
+            for j in range(k):
+                if counts[j] >= min_pts:
+                    cur[j] = [sx[j] / counts[j], sy[j] / counts[j]]
+        for j in range(k):
+            if counts[j] < min_pts:
+                cur[j] = [centers[j][0], centers[j][1]]
+        return cur, counts
+
+
+    def greedy_clusters(pts, radius, min_size):
+        clusters = []
+        for p in pts:
+            placed = False
+            for cl in clusters:
+                ddx = p[0] - cl["x"]
+                ddy = p[1] - cl["y"]
+                if ddx * ddx + ddy * ddy < radius * radius:
+                    cl["pts"].append(p)
+                    n = len(cl["pts"])
+                    cl["x"] += (p[0] - cl["x"]) / n
+                    cl["y"] += (p[1] - cl["y"]) / n
+                    placed = True
                     break
-                for ti in (last_pre, index, index + 40):
-                    if ti >= 0 and ti < n:
-                        try:
-                            thumbs[str(ti)] = [enc_rgb(video[ti].cameras["front"].rgb, 4), enc_rgb(video[ti].cameras["wrist"].rgb, 4)]
-                        except Exception:
-                            pass
-            frame_dt = 0.05
-            if index > 0:
-                frame_dt = float(frame.timestamp_s) - float(video[index - 1].timestamp_s)
-            moved = track_frame(tracks, top, frame_dt)
-            if moved > max_move:
-                max_move = moved
-            sep = min_separation(tracks)
-            if sep < min_sep:
-                min_sep = sep
-            if index % 64 == 0 or index == n - 1:
-                video_snaps.append([index, round(float(frame.timestamp_s), 3), snapshot(tracks)])
-        report["video_top_counts"] = top_counts
-        report["video_max_step"] = round(max_move, 4)
-        report["video_min_separation"] = round(min_sep, 4)
-        for ti in (0, n - 1):
+            if not placed:
+                clusters.append({"x": p[0], "y": p[1], "pts": [p]})
+        return [cl for cl in clusters if len(cl["pts"]) >= min_size]
+
+
+    def track_step2(centers, prev, lost, pts, radius, min_pts, grow, rmax):
+        # pass 1: visible tracks, constant-velocity prediction + Voronoi mean
+        k = len(centers)
+        cur = []
+        for j in range(k):
+            if lost[j] == 0:
+                cur.append([2 * centers[j][0] - prev[j][0], 2 * centers[j][1] - prev[j][1]])
+            else:
+                cur.append([centers[j][0], centers[j][1]])
+        act = [lost[j] == 0 for j in range(k)]
+        r2 = radius * radius
+        counts = [0] * k
+        owner = [-1] * len(pts)
+        for it in range(3):
+            sx = [0.0] * k
+            sy = [0.0] * k
+            counts = [0] * k
+            for i in range(len(pts)):
+                p = pts[i]
+                best = -1
+                bd = r2
+                for j in range(k):
+                    ddx = p[0] - cur[j][0]
+                    ddy = p[1] - cur[j][1]
+                    dd = ddx * ddx + ddy * ddy
+                    if dd < bd:
+                        bd = dd
+                        best = j
+                owner[i] = best
+                if best >= 0:
+                    sx[best] += p[0]
+                    sy[best] += p[1]
+                    counts[best] += 1
+            for j in range(k):
+                if counts[j] >= min_pts:
+                    cur[j] = [sx[j] / counts[j], sy[j] / counts[j]]
+        new = []
+        new_lost = []
+        for j in range(k):
+            if counts[j] >= min_pts:
+                new.append(cur[j])
+                new_lost.append(0)
+            else:
+                new.append([centers[j][0], centers[j][1]])
+                new_lost.append(lost[j] + 1)
+        # pass 2: unclaimed points -> clusters -> recapture by lost tracks
+        left = []
+        for i in range(len(pts)):
+            j = owner[i]
+            if j < 0 or counts[j] < min_pts:
+                left.append(pts[i])
+        if len(left) >= min_pts:
+            cls = greedy_clusters(left, 0.03, max(min_pts, 6))
+            used = [False] * len(cls)
+            order = sorted([[new_lost[j], j] for j in range(k) if new_lost[j] > 0])
+            for o in order:
+                j = o[1]
+                rr = radius + grow * lost[j]
+                if rr > rmax:
+                    rr = rmax
+                best = -1
+                bd = rr * rr
+                for c in range(len(cls)):
+                    if used[c]:
+                        continue
+                    ddx = cls[c]["x"] - new[j][0]
+                    ddy = cls[c]["y"] - new[j][1]
+                    dd = ddx * ddx + ddy * ddy
+                    if dd < bd:
+                        bd = dd
+                        best = c
+                if best >= 0:
+                    used[best] = True
+                    new[j] = [cls[best]["x"], cls[best]["y"]]
+                    new_lost[j] = 0
+                    counts[j] = len(cls[best]["pts"])
+        return new, new_lost, counts
+
+
+    def quantile(vals, q):
+        o = sorted(vals)
+        if len(o) == 0:
+            return None
+        return o[int((len(o) - 1) * q)]
+
+
+    # ---------------------------------------------------------------- conditioning video
+    report["stage"] = "video"
+    video = robomme_plus.get_conditioning_video()
+    nv = len(video)
+    report["video_len"] = nv
+    if nv < 3:
+        raise ValueError("no conditioning video")
+    samples = build_samples(video[0].cameras[CAM], STRIDE)
+    wide = []
+    counts_wide = []
+    for i in range(nv):
+        pts = band_points(to_rows(video[i].cameras[CAM].depth_m), samples, WIDE_ZLO, WIDE_ZHI)
+        wide.append(pts)
+        counts_wide.append(len(pts))
+    # wrist view of the parked arm (top-down, sees behind front-view occluders)
+    wrist_ok = True
+    wide_w = []
+    try:
+        wsamples = build_samples(video[0].cameras[WRIST], WRIST_STRIDE)
+        for i in range(nv):
+            wide_w.append(band_points(to_rows(video[i].cameras[WRIST].depth_m), wsamples, WIDE_ZLO, WIDE_ZHI))
+    except Exception as exc:
+        wrist_ok = False
+        wide_w = [[] for i in range(nv)]
+        report["errors"].append("wrist video: " + str(exc))
+    report["wrist_ok"] = wrist_ok
+    report["counts_wrist"] = [len(w) for w in wide_w]
+    report["stage"] = "after_wide"
+    report["counts_wide"] = counts_wide
+    baseline = counts_wide[0]
+    first = -1
+    for i in range(1, nv):
+        if counts_wide[i] > baseline + 40:
+            first = i
+            break
+    report["first_container_frame"] = first
+    if first < 1:
+        raise ValueError("container appearance not found")
+    zs_first = [p[2] for p in wide[first]]
+    top_z = quantile(zs_first, 0.9)
+    zlo = 0.6 * top_z
+    zhi = top_z + 0.03
+    report["top_z"] = top_z
+    report["band"] = [zlo, zhi]
+
+    # static background (e.g. an occluding pillar): band points of the pre-cover frame 0,
+    # dilated by one voxel; any later band point inside is rejected (video and live)
+    def vkey(x, y, z):
+        return str(int(x / BG_VOX + 1000.0)) + "," + str(int(y / BG_VOX + 1000.0)) + "," + str(int(z / BG_VOX + 1000.0))
+
+    bg = {}
+    for p in wide[0] + wide_w[0]:
+        if p[2] > zlo and p[2] < zhi:
+            for ox in (-1, 0, 1):
+                for oy in (-1, 0, 1):
+                    for oz in (-1, 0, 1):
+                        bg[vkey(p[0] + ox * BG_VOX, p[1] + oy * BG_VOX, p[2] + oz * BG_VOX)] = 1
+    report["bg_voxels"] = len(bg)
+
+    # cubes in the frame before the containers appear (front stride 1 + wrist stride 2, colour from RGB)
+    cube_pts = []
+    low_pts = []
+    cam_list = [[CAM, 1]]
+    if wrist_ok:
+        cam_list.append([WRIST, 2])
+    for cs in cam_list:
+        ccam = video[first - 1].cameras[cs[0]]
+        cube_samples = build_samples(ccam, cs[1])
+        cdepth = to_rows(ccam.depth_m)
+        crgb = to_rows(ccam.rgb)
+        cpx = cube_samples["pos"][0]
+        cpy = cube_samples["pos"][1]
+        cpz = cube_samples["pos"][2]
+        for entry in cube_samples["rows"]:
+            r = entry[0]
+            drow = cdepth[r]
+            crow = crgb[r]
+            for s in entry[1]:
+                dd = drow[s[0]]
+                z = cpz + dd * s[3]
+                if z > 0.004 and z < zlo:
+                    px = crow[s[0]]
+                    sat = max(px[0], px[1], px[2]) - min(px[0], px[1], px[2])
+                    if sat >= 70:
+                        cube_pts.append((cpx + dd * s[1], cpy + dd * s[2], z, px[0], px[1], px[2]))
+                    elif z > 0.008 and cs[0] == CAM:
+                        low_pts.append((cpx + dd * s[1], cpy + dd * s[2], z))
+    report["stage"] = "cubes"
+    cube_clusters = greedy_clusters(cube_pts, 0.025, 8)
+    merged = []
+    order_list = sorted([[len(cube_clusters[i]["pts"]), i] for i in range(len(cube_clusters))])
+    order_list.reverse()
+    for cl in order_list:
+        cand = cube_clusters[cl[1]]
+        dup = False
+        for mcl in merged:
+            ddx = cand["x"] - mcl["x"]
+            ddy = cand["y"] - mcl["y"]
+            if ddx * ddx + ddy * ddy < 0.03 * 0.03:
+                dup = True
+        if not dup:
+            merged.append(cand)
+    cube_clusters = merged
+    cubes = []
+    for cl in cube_clusters:
+        rr = quantile([p[3] for p in cl["pts"]], 0.5)
+        gg = quantile([p[4] for p in cl["pts"]], 0.5)
+        bb = quantile([p[5] for p in cl["pts"]], 0.5)
+        cubes.append({"x": cl["x"], "y": cl["y"], "rgb": [rr, gg, bb], "color": hue_name(rr, gg, bb),
+                      "n": len(cl["pts"])})
+    # a cube seen partly from two views can split into two same-colour clusters; two cubes under
+    # different containers are at least one container footprint apart, so merge closer pairs
+    FOOTPRINT = 0.045
+    dedup = []
+    n_merged = 0
+    for cb in cubes:
+        hit = -1
+        for m in range(len(dedup)):
+            ddx = cb["x"] - dedup[m]["x"]
+            ddy = cb["y"] - dedup[m]["y"]
+            if dedup[m]["color"] == cb["color"] and ddx * ddx + ddy * ddy < FOOTPRINT * FOOTPRINT:
+                hit = m
+        if hit >= 0:
+            tot = dedup[hit]["n"] + cb["n"]
+            dedup[hit]["x"] = (dedup[hit]["x"] * dedup[hit]["n"] + cb["x"] * cb["n"]) / tot
+            dedup[hit]["y"] = (dedup[hit]["y"] * dedup[hit]["n"] + cb["y"] * cb["n"]) / tot
+            dedup[hit]["n"] = tot
+            n_merged += 1
+        else:
+            dedup.append(cb)
+    cubes = dedup
+    report["cubes_merged"] = n_merged
+    report["cubes"] = cubes
+
+    # initialise container tracks at the first container frame
+    def band_filter(pts):
+        out = []
+        for p in pts:
+            if p[2] > zlo and p[2] < zhi:
+                if vkey(p[0], p[1], p[2]) not in bg:
+                    out.append(p)
+        return out
+
+    pts0 = band_filter(wide[first] + wide_w[first])
+    centers = [[c["x"], c["y"]] for c in cubes]
+    centers, cnt0 = track_step(centers, centers, pts0, 0.05, 6, MIN_PTS)
+    labels = []
+    kept = []
+    kcnt = []
+    for j in range(len(centers)):
+        if cnt0[j] >= MIN_PTS:
+            kept.append(centers[j])
+            labels.append(cubes[j]["color"])
+            kcnt.append(cnt0[j])
+    centers = kept
+    med = 20
+    if len(kcnt) > 0:
+        med = sorted(kcnt)[int(len(kcnt) / 2)]
+    report["median_container_pts"] = med
+    # containers not over a detected cube
+    left = []
+    for p in pts0:
+        near = False
+        for c in centers:
+            ddx = p[0] - c[0]
+            ddy = p[1] - c[1]
+            if ddx * ddx + ddy * ddy < 0.045 * 0.045:
+                near = True
+                break
+        if not near:
+            left.append(p)
+    min_extra = int(0.4 * med)
+    if min_extra < 8:
+        min_extra = 8
+    for cl in greedy_clusters(left, 0.035, min_extra):
+        centers.append([cl["x"], cl["y"]])
+        labels.append("unknown")
+    centers, cnt0 = track_step(centers, centers, pts0, 0.05, 4, MIN_PTS)
+    # two tracks on one container (closer than 3 cm) are one container: keep the labelled / better supported one
+    keep_c = []
+    keep_l = []
+    keep_n = []
+    n_dup_tracks = 0
+    for j in range(len(centers)):
+        hit = -1
+        for m in range(len(keep_c)):
+            ddx = centers[j][0] - keep_c[m][0]
+            ddy = centers[j][1] - keep_c[m][1]
+            if ddx * ddx + ddy * ddy < 0.03 * 0.03:
+                hit = m
+        if hit < 0:
+            keep_c.append(centers[j])
+            keep_l.append(labels[j])
+            keep_n.append(cnt0[j])
+        else:
+            n_dup_tracks += 1
+            if keep_l[hit] == "unknown" and labels[j] != "unknown":
+                keep_c[hit] = centers[j]
+                keep_l[hit] = labels[j]
+                keep_n[hit] = cnt0[j]
+    centers = keep_c
+    labels = keep_l
+    cnt0 = keep_n
+    report["dup_tracks_removed"] = n_dup_tracks
+    # unknown containers: is there an unsaturated (white/black) cube under it, or nothing seen (hidden)?
+    hidden = []
+    for j in range(len(centers)):
+        if labels[j] == "unknown":
+            n_low = 0
+            for p in low_pts:
+                ddx = p[0] - centers[j][0]
+                ddy = p[1] - centers[j][1]
+                if ddx * ddx + ddy * ddy < 0.03 * 0.03:
+                    n_low += 1
+            if n_low < 8:
+                hidden.append(j)
+    report["hidden_unknown"] = hidden
+    report["labels"] = labels
+    report["init_centers"] = [[round(c[0], 4), round(c[1], 4)] for c in centers]
+
+    report["stage"] = "track"
+    prev = [c[:] for c in centers]
+    lost = [0] * len(centers)
+    track_hist = [[[round(c[0], 4), round(c[1], 4)] for c in centers]]
+    lost_frames = 0
+    max_lost = [0] * len(centers)
+    for i in range(first + 1, nv):
+        pts = band_filter(wide[i] + wide_w[i])
+        new, lost, cnt = track_step2(centers, prev, lost, pts, TRACK_RADIUS, MIN_PTS, REACQ_GROW, REACQ_MAX)
+        if max(lost) > 0:
+            lost_frames += 1
+        for j in range(len(lost)):
+            if lost[j] > max_lost[j]:
+                max_lost[j] = lost[j]
+        prev = centers
+        centers = new
+        track_hist.append([[round(c[0], 4), round(c[1], 4)] for c in centers])
+    report["lost_frames"] = lost_frames
+    report["max_lost"] = max_lost
+    report["final_video_centers"] = track_hist[-1]
+    # compact dump of band points for offline replay (mm), encoded as strings so the
+    # recorded result never contains ragged nested arrays
+    dump = []
+    for i in range(nv):
+        dump.append(";".join([str(int(p[0] * 1000)) + "," + str(int(p[1] * 1000)) + "," + str(int(p[2] * 1000)) for p in band_filter(wide[i] + wide_w[i])]))
+    report["dump_wide_mm"] = dump
+    report["dump_cube_pts"] = ";".join([str(int(p[0] * 1000)) + "," + str(int(p[1] * 1000)) + "," + str(int(p[2] * 1000)) + "," + str(p[3]) + "," + str(p[4]) + "," + str(p[5]) for p in cube_pts])
+    report["track_hist"] = [";".join([str(c[0]) + "," + str(c[1]) for c in h]) for h in track_hist]
+
+    # ---------------------------------------------------------------- live scene
+    def obs_points(obs, fstride, wstride):
+        out = []
+        cam = obs.cameras[CAM]
+        out = out + band_points(to_rows(cam.depth_m), build_samples(cam, fstride), zlo, zhi)
+        if wrist_ok:
             try:
-                thumbs[str(ti)] = [enc_rgb(video[ti].cameras["front"].rgb, 4), enc_rgb(video[ti].cameras["wrist"].rgb, 4)]
+                wc = obs.cameras[WRIST]
+                out = out + band_points(to_rows(wc.depth_m), build_samples(wc, wstride), zlo, zhi)
+            except Exception as exc:
+                report["errors"].append("live wrist: " + str(exc))
+        return band_filter(out)
+
+
+    def live_points(stride, lo, hi):
+        return obs_points(get_observation(), stride, 2 * stride)
+
+
+    def refine_live(centers_in, stride):
+        pts = live_points(stride, zlo, zhi)
+        cur, cnt = track_step(centers_in, centers_in, pts, 0.045, 4, MIN_PTS)
+        groups = [[] for c in cur]
+        for p in pts:
+            best = -1
+            bd = 0.04 * 0.04
+            for j in range(len(cur)):
+                ddx = p[0] - cur[j][0]
+                ddy = p[1] - cur[j][1]
+                dd = ddx * ddx + ddy * ddy
+                if dd < bd:
+                    bd = dd
+                    best = j
+            if best >= 0:
+                groups[best].append(p)
+        return cur, cnt, groups
+
+
+    def square_yaw(points):
+        # min-area bounding square orientation (degrees in [0, 90)) from top-face points
+        best_a = 0
+        best_area = None
+        for a in range(0, 90, 5):
+            ca = mcos(mradians(a))
+            sa = msin(mradians(a))
+            us = [p[0] * ca + p[1] * sa for p in points]
+            vs = [-p[0] * sa + p[1] * ca for p in points]
+            area = (quantile(us, 0.95) - quantile(us, 0.05)) * (quantile(vs, 0.95) - quantile(vs, 0.05))
+            if best_area is None or area < best_area:
+                best_area = area
+                best_a = a
+        return best_a
+
+
+    def yaw_quat(theta_deg):
+        th = mradians(theta_deg)
+        cw = mcos(th / 2.0)
+        sz = msin(th / 2.0)
+        hw = home_quat[0]
+        hx = home_quat[1]
+        hy = home_quat[2]
+        hz = home_quat[3]
+        return [cw * hw - sz * hz, cw * hx - sz * hy, cw * hy + sz * hx, cw * hz + sz * hw]
+
+
+    steps_used = [0]
+    terminal = [False]
+
+
+    def log_call(name, res):
+        entry = {"call": name}
+        try:
+            entry["ok"] = bool(res.ok)
+            entry["status"] = str(res.status)
+            entry["steps"] = int(res.steps_executed)
+            steps_used[0] += int(res.steps_executed)
+        except Exception as exc:
+            entry["err"] = str(exc)
+        try:
+            if res.terminated or res.truncated:
+                terminal[0] = True
+                entry["terminal"] = [bool(res.terminated), bool(res.truncated)]
+        except Exception:
+            pass
+        report["calls"].append(entry)
+        return res
+
+
+    def move(x, y, z, quat, name, tol):
+        res = move_to_pose(Pose((x, y, z), quat, base_frame), tolerance=tol, max_steps=150)
+        return log_call(name, res)
+
+
+    report["stage"] = "live_wait"
+    # The shuffle CONTINUES during execution (v02 evidence): hold the arm still, track every
+    # tick from the step observation, and only pick once all containers have stopped.
+    hold_state = get_robot_state()
+    hold_joints = [float(v) for v in hold_state.joint_positions["primary"]]
+    obs_l0 = get_observation()
+    live_samples = build_samples(obs_l0.cameras[CAM], STRIDE)
+    live_wsamples = None
+    if wrist_ok:
+        try:
+            live_wsamples = build_samples(obs_l0.cameras[WRIST], WRIST_STRIDE)
+        except Exception as exc:
+            report["errors"].append("live wrist samples: " + str(exc))
+    lost = [0] * len(centers)
+    still = 0
+    wait_ticks = 0
+    live_hist = []
+    disp_hist = []
+    for tick in range(MAX_WAIT_TICKS):
+        try:
+            cmd = ArmCommand("joint_position", hold_joints, gripper_position=1.0, embodiment=hold_state.embodiment)
+        except Exception:
+            cmd = ArmCommand("joint_position", hold_joints, gripper_position=1.0)
+        sres = step(RobotAction(arms={"primary": cmd}))
+        wait_ticks += 1
+        steps_used[0] += 1
+        try:
+            if sres.terminated or sres.truncated:
+                terminal[0] = True
+                break
+        except Exception:
+            pass
+        try:
+            obs = sres.observation
+            dcam = obs.cameras[CAM]
+        except Exception:
+            obs = get_observation()
+            dcam = obs.cameras[CAM]
+        pts = band_points(to_rows(dcam.depth_m), live_samples, zlo, zhi)
+        if live_wsamples is not None:
+            try:
+                pts = pts + band_points(to_rows(obs.cameras[WRIST].depth_m), live_wsamples, zlo, zhi)
             except Exception:
                 pass
-except Exception as exc:
-    report["errors"].append("video: " + str(exc))
-report["video_snaps"] = video_snaps
-report["video_thumbs_s4"] = thumbs
+        pts = band_filter(pts)
+        new, lost, cnt = track_step2(centers, prev, lost, pts, TRACK_RADIUS, MIN_PTS, REACQ_GROW, REACQ_MAX)
+        dmax = 0.0
+        for j in range(len(new)):
+            ddx = new[j][0] - centers[j][0]
+            ddy = new[j][1] - centers[j][1]
+            dd = msqrt(ddx * ddx + ddy * ddy)
+            if dd > dmax:
+                dmax = dd
+        prev = centers
+        centers = new
+        disp_hist.append(int(dmax * 10000))
+        live_hist.append(";".join([str(round(c[0], 4)) + "," + str(round(c[1], 4)) for c in centers]))
+        if dmax < STILL_EPS:
+            still += 1
+        else:
+            still = 0
+        if still >= STILL_TICKS:
+            break
+    report["wait_ticks"] = wait_ticks
+    report["still_reached"] = still >= STILL_TICKS
+    report["live_disp_1e4"] = disp_hist
+    report["live_track_hist"] = live_hist
 
-# ---------------- live tracking until still ----------------
-live_log = []
-lcache = {}
-obstacle = []
-try:
-    state = get_robot_state()
-    base_frame = state.base_frame
-    embodiment = state.embodiment
-    home_joints = [float(v) for v in state.joint_positions["primary"]]
-    q_down = [float(v) for v in state.end_effector_poses["primary"].quaternion_wxyz]
-    obs = get_observation()
-    if tracks is not None:
-        top, low, cells, ntall = fused_points(obs, lcache, 4, False)
-        jump = track_frame(tracks, top)
-        report["live_first_jump"] = round(jump, 4)
-        live_log.append([0, snapshot(tracks)])
-        still_count = 0
-        history = [[(t["x"], t["y"]) for t in tracks]]
-        tick = 0
-        cap = 500
-        while tick < cap:
-            reply = step(RobotAction(arms={"primary": ArmCommand(
-                mode="joint_position", target=home_joints, gripper_position=1.0, embodiment=embodiment)}))
-            tick += 1
-            if reply.terminated or reply.truncated:
-                ended = True
-                report["ended_in_wait"] = tick
-                break
-            obs = get_observation()
-            top, low, cells, ntall = fused_points(obs, lcache, 4, False)
-            track_frame(tracks, top)
-            history.append([(t["x"], t["y"]) for t in tracks])
-            if len(history) > 6:
-                old = history[len(history) - 6]
-                drift = 0.0
-                for ti in range(len(tracks)):
-                    dd = math.sqrt((tracks[ti]["x"] - old[ti][0]) ** 2 + (tracks[ti]["y"] - old[ti][1]) ** 2)
-                    if dd > drift:
-                        drift = dd
-                if drift < 0.003:
-                    still_count += 1
-                else:
-                    still_count = 0
-            if tick % 10 == 0:
-                live_log.append([tick, snapshot(tracks)])
-            if still_count >= 10:
-                break
-        report["live_wait_ticks"] = tick
-        report["live_still"] = still_count >= 10
-        report["live_min_separation"] = round(min_separation(tracks), 4)
-        report["live_final"] = snapshot(tracks)
-        # standing obstacles (anything 0.11-0.45 m above the table away from the robot base)
-        for name in ("front", "wrist"):
-            cam = obs.cameras[name]
-            model = cam_model(cam)
-            rays = ray_table(model, 4)
-            tx = rays["t"][0]; ty = rays["t"][1]; tz = rays["t"][2]
-            drows = to_rows(cam.depth_m, 4)
-            for iy in range(len(drows)):
-                for ix in range(len(drows[iy])):
-                    d = drows[iy][ix]
-                    if d > 0.05 and d < 4.0:
-                        k = rays["rows"][iy][ix]
-                        z = tz + d * k[2]
-                        if z > TALL_LO and z < 0.45:
-                            x = tx + d * k[0]
-                            if x > X_MIN:
-                                obstacle.append([x, ty + d * k[1], z])
-        report["obstacle_points"] = len(obstacle)
-        if obstacle:
-            report["obstacle_ztop"] = round(max(p[2] for p in obstacle), 4)
-except Exception as exc:
-    report["errors"].append("live: " + str(exc))
-report["live_log"] = live_log
+    report["stage"] = "live"
+    live_c, live_cnt, groups = refine_live(centers, 1)
+    report["live_centers"] = [[round(c[0], 4), round(c[1], 4)] for c in live_c]
+    report["live_counts"] = live_cnt
+    shift = []
+    for j in range(len(centers)):
+        ddx = live_c[j][0] - centers[j][0]
+        ddy = live_c[j][1] - centers[j][1]
+        shift.append(round(msqrt(ddx * ddx + ddy * ddy), 4))
+    report["video_to_live_shift"] = shift
 
-# ---------------- plan and execute ordered lifts ----------------
-picks = []
-try:
-    if tracks is not None and not ended:
-        obs = get_observation()
-        for ti in range(len(tracks)):
-            t = tracks[ti]
-            others = [(o["x"], o["y"]) for oj, o in enumerate(tracks) if oj != ti]
-            ref = None
-            for name in ("wrist", "front"):
-                cam = obs.cameras[name]
-                try:
-                    ref = refine_container(cam_model(cam), cam.depth_m, t["x"], t["y"], t.get("z", (TOP_LO + TOP_HI) / 2.0), others)
-                except Exception as exc:
-                    report["errors"].append("refine " + name + ": " + str(exc))
-                    ref = None
-                if ref is not None:
-                    ref["cam"] = name
-                    break
-            t["ref"] = ref
-        report["refined"] = [[t["color"], t["ref"]] for t in tracks]
-        taken = [False] * len(tracks)
-        for item in goal:
-            color = item[0]
-            cands = []
-            for ti in range(len(tracks)):
-                if not taken[ti] and tracks[ti]["color"] == color:
-                    cands.append(ti)
-            if not item[1]:
-                cands = cands[:1]
-            for ti in cands:
-                taken[ti] = True
-                picks.append(ti)
-        report["pick_plan"] = [[tracks[ti]["color"], round(tracks[ti]["x"], 4), round(tracks[ti]["y"], 4)] for ti in picks]
-except Exception as exc:
-    report["errors"].append("plan: " + str(exc))
+    plan = []
+    fallback = []
+    for cw in color_order:
+        found = 0
+        for j in range(len(labels)):
+            if labels[j] == cw:
+                plan.append(j)
+                found += 1
+        if found == 0 and len(hidden) > 0:
+            # the requested cube was never visible: it is under a container that no visible cube explains
+            j = hidden[0]
+            hidden = hidden[1:]
+            labels[j] = cw + "?"
+            plan.append(j)
+            fallback.append(cw)
+    report["fallback_colors"] = fallback
+    report["plan"] = plan
+    report["plan_colors"] = [labels[j] for j in plan]
+    if len(plan) == 0:
+        raise ValueError("no container matches the requested colours")
 
-lifts = []
-report["lifts"] = lifts
-try:
-    for ti in picks:
-        if ended:
+    report["stage"] = "motion"
+    positions = [c[:] for c in live_c]
+    picked = []
+    skipped = []
+    for j in plan:
+        if terminal[0]:
             break
-        t = tracks[ti]
-        ref = t.get("ref")
-        if ref is None:
-            ref = {"x": t["x"], "y": t["y"], "top_z": t.get("z", (TOP_LO + TOP_HI) / 2.0), "yaw_deg": 0.0}
-        gx = ref["x"]; gy = ref["y"]; top_z = ref["top_z"]
-        half = math.radians(ref["yaw_deg"]) / 2.0
-        quat = qmul([math.cos(half), 0.0, 0.0, math.sin(half)], q_down)
-        grasp_z = top_z - 0.028
-        hover_z = top_z + 0.07
-        near_top = None
-        for p in obstacle:
-            if (p[0] - gx) ** 2 + (p[1] - gy) ** 2 < 0.12 * 0.12:
-                if near_top is None or p[2] > near_top:
-                    near_top = p[2]
-        if near_top is not None and near_top + 0.05 > hover_z:
-            hover_z = near_top + 0.05
-        info = {"color": t["color"], "target": [round(gx, 4), round(gy, 4), round(top_z, 4), ref["yaw_deg"]], "hover_z": round(hover_z, 4)}
-        lifts.append(info)
-        ended = motion("above_" + t["color"], move_to_pose(Pose((gx, gy, hover_z), quat, base_frame), tolerance=0.01, max_steps=200))
-        if ended:
+        again = False
+        for pk in picked:
+            ddx = positions[j][0] - pk["grasp_xy"][0]
+            ddy = positions[j][1] - pk["grasp_xy"][1]
+            if ddx * ddx + ddy * ddy < 0.025 * 0.025:
+                again = True
+        if again:
+            skipped.append(j)
+            continue
+        # re-observe: refresh every container position from the current live view
+        try:
+            cur, cnt, groups = refine_live(positions, 1)
+            positions = cur
+        except Exception as exc:
+            report["errors"].append("refine: " + str(exc))
+            groups = [[] for c in positions]
+        tops = [p for p in groups[j] if p[2] > top_z - 0.008]
+        if len(tops) >= 8:
+            gx = quantile([p[0] for p in tops], 0.5)
+            gy = quantile([p[1] for p in tops], 0.5)
+            alpha = square_yaw(tops)
+        else:
+            gx = positions[j][0]
+            gy = positions[j][1]
+            alpha = 0
+        # choose the jaw axis (two square-aligned options) with more clearance from neighbours
+        best_theta = None
+        best_clear = None
+        for theta in (alpha, alpha - 90):
+            th = mradians(theta)
+            ax = -msin(th)
+            ay = mcos(th)
+            clear = 1.0
+            for k in range(len(positions)):
+                if k == j:
+                    continue
+                for sgn in (1.0, -1.0):
+                    fx = gx + sgn * 0.045 * ax
+                    fy = gy + sgn * 0.045 * ay
+                    ddx = fx - positions[k][0]
+                    ddy = fy - positions[k][1]
+                    dd = msqrt(ddx * ddx + ddy * ddy)
+                    if dd < clear:
+                        clear = dd
+            if best_clear is None or clear > best_clear:
+                best_clear = clear
+                best_theta = theta
+        quat = yaw_quat(best_theta)
+        grasp_z = 0.6 * top_z
+        transit_z = top_z + TRANSIT_ABOVE_TOP
+        info = {"index": j, "color": labels[j], "grasp_xy": [round(gx, 4), round(gy, 4)],
+                "alpha": alpha, "theta": best_theta, "clear": round(best_clear, 4), "n_top": len(tops),
+                "steps_before": steps_used[0]}
+        log_call("preopen_" + str(j), open_gripper())
+        move(gx, gy, transit_z, quat, "above_" + str(j), 0.015)
+        if terminal[0]:
             break
-        ended = motion("descend", move_to_pose(Pose((gx, gy, grasp_z), quat, base_frame), tolerance=0.008, max_steps=150))
-        if ended:
+        move(gx, gy, grasp_z, quat, "descend_" + str(j), 0.01)
+        if terminal[0]:
             break
-        ended = motion("close", close_gripper())
-        info["grip_closed"] = round(float(get_robot_state().gripper_positions["primary"]), 4)
-        if ended:
+        log_call("close_" + str(j), close_gripper())
+        if terminal[0]:
             break
-        ended = motion("lift", move_to_pose(Pose((gx, gy, grasp_z + 0.12), quat, base_frame), tolerance=0.015, max_steps=150))
-        if ended:
+        try:
+            info["grip_after_close"] = round(float(get_robot_state().gripper_positions["primary"]), 3)
+        except Exception:
+            pass
+        move(gx, gy, top_z + LIFT_ABOVE_TOP, quat, "lift_" + str(j), 0.015)
+        if terminal[0]:
+            picked.append(info)
             break
-        st = get_robot_state()
-        info["grip_lifted"] = round(float(st.gripper_positions["primary"]), 4)
-        info["ee_lifted"] = [round(float(v), 4) for v in st.end_effector_poses["primary"].position]
-        ended = motion("lower", move_to_pose(Pose((gx, gy, grasp_z + 0.006), quat, base_frame), tolerance=0.01, max_steps=150))
-        if ended:
+        try:
+            info["grip_after_lift"] = round(float(get_robot_state().gripper_positions["primary"]), 3)
+        except Exception:
+            pass
+        move(gx, gy, grasp_z + 0.01, quat, "lower_" + str(j), 0.015)
+        if terminal[0]:
+            picked.append(info)
             break
-        ended = motion("release", open_gripper())
-        if ended:
+        log_call("open_" + str(j), open_gripper())
+        if terminal[0]:
+            picked.append(info)
             break
-        ended = motion("retreat", move_to_pose(Pose((gx, gy, hover_z), quat, base_frame), tolerance=0.015, max_steps=150))
-        if ended:
-            break
-except Exception as exc:
-    report["errors"].append("lifts: " + str(exc))
+        move(gx, gy, transit_z, quat, "retreat_" + str(j), 0.02)
+        info["steps_after"] = steps_used[0]
+        picked.append(info)
 
-report["ended"] = ended
-report["final_tick"] = ticks_now() if not ended else "ended"
+    report["picked"] = picked
+    report["skipped_same_container"] = skipped
+    report["steps_used"] = steps_used[0]
+    report["terminal"] = terminal[0]
+except Exception as exc:
+    report["fatal"] = str(exc)
 result = report

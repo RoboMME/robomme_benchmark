@@ -14,10 +14,10 @@ python -m benchmark_io.prepare --root runs/my_agent/interaction-only \
   --method my_agent --setting interaction-only --budget 10
 ```
 
-Use `--setting zero-shot`, `demo-only`, `interaction-only` or `'demo&interaction'`
-(quoted in shell commands). `zero-shot` and `demo-only` are fixed at 0 starts.
+Use `--setting zero-shot`, `demo-only`, `interaction-only` or `hybrid`
+(`Hybrid` in the public tables). `zero-shot` and `demo-only` are fixed at 0 starts.
 `--budget` is the total **per task across all its training seeds, workers and
-sessions**: 10 for the leaderboard, or 1, 3 or 5 for optional results. Preparation
+sessions**: 10 for the leaderboard, or a smaller budget for optional results. Preparation
 pins the training metadata and benchmark source hashes without starting a simulator.
 
 In demo settings, `--export-demos --demos <H5_DIR>` writes each task's RGB frames,
@@ -125,6 +125,14 @@ It copies the policy, records its SHA-256 hashes and the development attempt
 count, and refuses evaluation if either changes. Disclose human corrections with
 diffs and input provenance. Do not derive solutions from Plus implementation
 details or revise them using test feedback.
+
+For optional results with a smaller budget R, either run independent experiments capped at R
+attempts per task or extract checkpoints from a 10-attempt development run.
+Report which approach you use. Save each task's code and dependencies before
+**that task's** (R+1)th start;
+offline revisions after the preceding attempt are allowed. Apply the
+[per-task checkpoint rule](../../src/robomme_plus/README.md#evaluation-protocol)
+and retain the full history, including subsequent development.
 
 **Report usage** per task (starts, unfinished starts and simulator steps) from the ledger:
 

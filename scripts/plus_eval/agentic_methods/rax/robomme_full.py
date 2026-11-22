@@ -123,6 +123,7 @@ class EvaluationSupervisor(Supervisor):
 
 
 def develop(args):
+    os.environ['ROBOMME_RAX_DIRECTORY_STORAGE'] = '1'
     study = Study.open(args.study)
     budget = study.config['budget']
     if args.output.exists() and not args.resume:
@@ -176,7 +177,11 @@ def develop(args):
                   'development time remain charged; no budget resets. ' + prompt)
     (args.output/('resume_prompt.txt' if args.resume else 'development_prompt.txt')).write_text(prompt)
     (args.output/'development_config.json').write_text(json.dumps(asdict(config),default=str,indent=2))
-    result = launch(config,deployed,prompt=prompt,capture=True,calls_file=args.output/'model-call-count.json')
+    from benchmark_io.development_evidence import capture
+    os.environ['ROBOMME_AGENTIC_TASK_EVIDENCE'] = str(args.output.resolve()/'audit')
+    with capture(args.output/'audit', deployed['workspace'], deployed['claude_home']/'settings.json') as mounts:
+        deployed = {**deployed, 'audit_mounts': mounts}
+        result = launch(config,deployed,prompt=prompt,capture=True,calls_file=args.output/'model-call-count.json')
     with (args.output/'agent_stdout.jsonl').open('a') as stream:
         stream.write(result.stdout or '')
     with (args.output/'agent_stderr.log').open('a') as stream:

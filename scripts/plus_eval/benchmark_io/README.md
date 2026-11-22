@@ -57,17 +57,17 @@ Preparation pins the benchmark, 50 recordings, protocol, runtime and image
 digest without API calls or simulator starts. New studies create **6 configurations**:
 2 methods × (`demo-only` at 0; each interaction setting at 10).
 Each configuration evaluates 800 episodes: 4,800 tests across both methods.
-Existing studies retain their pinned configuration list, including historical budgets.
+Use `--settings interaction-only hybrid --budgets 10` to develop the four released configurations.
 
-Use these setting names in commands and directories:
+Use these public setting names:
 
 | Setting | Main budget |
 | --- | --- |
 | `demo-only` | 0 |
 | `interaction-only` | 10 |
-| `demo&interaction` | 10 |
+| `Hybrid` | 10 |
 
-In shell commands, write `--setting 'demo&interaction'` with quotes.
+Use `--setting hybrid` in commands. Saved development ledgers preserve their original identifiers.
 
 Worker allocation is configurable. Evaluation requires frozen policies.
 Example `<RUN_ROOT>/schedule_policy.json` for two GPUs:
@@ -76,11 +76,20 @@ Example `<RUN_ROOT>/schedule_policy.json` for two GPUs:
 {
   "development_workers_total": 6,
   "development_workers_per_gpu": 3,
+  "development_task_workers": {"aspire": 2, "rax": 4},
   "evaluation_workers_total": 16,
   "evaluation_workers_by_gpu": {"0": 8, "1": 8},
   "evaluation_mode": "after_all_development"
 }
 ```
+
+Development workers above are configuration jobs. `development_task_workers`
+sets task concurrency within each configuration (default 1); all share its ledger.
+
+Evaluation supports up to 24 workers. To update scheduling code after policies
+are frozen, save a separate operator snapshot containing `benchmark_io/` and pass
+`--scheduler-code <SCHEDULER_DIR>` to `watch_unified`. Episode workers continue
+using the study's frozen runtime; keep the scheduler snapshot with the run logs.
 
 The default episode selection covers all 800 tests. Create `STOP` to stop
 dispatching; running workers remain owned by the monitor. Limits are in
@@ -92,8 +101,8 @@ use each method's `eval_plus.py`.
 Under `METHOD/SETTING/Rn/`: `study/` contains metadata/attempts;
 `development/` contains native commands, transcripts, code and training rollouts;
 `development_api/` contains usage/cost records; `evaluation/` contains frozen
-policies, test results and logs. R0/R10 save full test media; R5 saves logs.
-R1/R3/R5 results remain optional, with their original budgets and assignments.
+policies, test results and logs. Runs with 0 or 10 rollouts save full test media; 5-rollout runs save logs.
+The packaged ASPIRE/RAX policies and result tables contain only R10.
 All development history is retained. `progress.json` aggregates the study.
 
 See [Preserve evidence](../../../doc/robomme_plus/agentic_development.md#preserve-evidence)

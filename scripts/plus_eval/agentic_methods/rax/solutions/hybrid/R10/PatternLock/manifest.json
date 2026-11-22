@@ -1,0 +1,30 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "PatternLock",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "ca73687d3f2e5719f8b2c8c820fcb4aa3967a2b6461cedebbc2630aa716119b7",
+    "geom.py": "f0eeccea4733962d6c24a2a9cae63840f51f8620ece92c8df923216c27dc6352",
+    "grid.py": "6795c2252df2e9554b335934f5a29fefa3efb87553a90b98651d20c0b1771b4e",
+    "pattern.py": "878fce5bf2777bcc80616e9efee8b0515cac4194c64d28dba347cbdb6bdd7d2c",
+    "stick.py": "0724e4fe2291fa8c0c156356fa633bbcb9f6a1305337725eaeed01b7de8b3bc6"
+  },
+  "source_policy_files": {
+    "controller.py": "ca73687d3f2e5719f8b2c8c820fcb4aa3967a2b6461cedebbc2630aa716119b7",
+    "geom.py": "f0eeccea4733962d6c24a2a9cae63840f51f8620ece92c8df923216c27dc6352",
+    "grid.py": "6795c2252df2e9554b335934f5a29fefa3efb87553a90b98651d20c0b1771b4e",
+    "pattern.py": "878fce5bf2777bcc80616e9efee8b0515cac4194c64d28dba347cbdb6bdd7d2c",
+    "stick.py": "0724e4fe2291fa8c0c156356fa633bbcb9f6a1305337725eaeed01b7de8b3bc6"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "dec60b33f52df5845aae8e67decaeb0871dd6fbebf9d97640a5d0419476e34bf",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "54bcb4c5321e18ab61613e0cde292b2e4601ff5c9b4c4e5e3406b2bc232784bb"
+  }
+}

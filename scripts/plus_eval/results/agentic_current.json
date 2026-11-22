@@ -1,0 +1,471 @@
+{
+  "source_experiment": "r10_20261121",
+  "rows": [
+    {
+      "method": "aspire",
+      "setting": "interaction-only",
+      "budget": 10,
+      "run_id": "r10_20261121",
+      "total": 800,
+      "successes": 302,
+      "success_rate": 0.3775,
+      "tasks": {
+        "BinFill": {
+          "total": 50,
+          "successes": 25
+        },
+        "ButtonUnmask": {
+          "total": 50,
+          "successes": 35
+        },
+        "ButtonUnmaskSwap": {
+          "total": 50,
+          "successes": 4
+        },
+        "InsertPeg": {
+          "total": 50,
+          "successes": 12
+        },
+        "MoveCube": {
+          "total": 50,
+          "successes": 3
+        },
+        "PatternLock": {
+          "total": 50,
+          "successes": 3
+        },
+        "PickHighlight": {
+          "total": 50,
+          "successes": 17
+        },
+        "PickXtimes": {
+          "total": 50,
+          "successes": 24
+        },
+        "RouteStick": {
+          "total": 50,
+          "successes": 10
+        },
+        "StopCube": {
+          "total": 50,
+          "successes": 40
+        },
+        "SwingXtimes": {
+          "total": 50,
+          "successes": 27
+        },
+        "VideoPlaceButton": {
+          "total": 50,
+          "successes": 9
+        },
+        "VideoPlaceOrder": {
+          "total": 50,
+          "successes": 15
+        },
+        "VideoRepick": {
+          "total": 50,
+          "successes": 24
+        },
+        "VideoUnmask": {
+          "total": 50,
+          "successes": 27
+        },
+        "VideoUnmaskSwap": {
+          "total": 50,
+          "successes": 27
+        }
+      },
+      "training_starts": {
+        "BinFill": 10,
+        "ButtonUnmask": 10,
+        "ButtonUnmaskSwap": 10,
+        "InsertPeg": 10,
+        "MoveCube": 10,
+        "PatternLock": 10,
+        "PickHighlight": 10,
+        "PickXtimes": 10,
+        "RouteStick": 10,
+        "StopCube": 10,
+        "SwingXtimes": 10,
+        "VideoPlaceButton": 10,
+        "VideoPlaceOrder": 10,
+        "VideoRepick": 7,
+        "VideoUnmask": 10,
+        "VideoUnmaskSwap": 10
+      },
+      "training_starts_total": 157,
+      "infrastructure_errors": 6,
+      "development_api_cost_usd": 160,
+      "pending_usage_requests": 0,
+      "incomplete_requests": 1,
+      "evaluation_api_cost_usd": 0,
+      "frozen_manifests": {
+        "evaluation/frozen_evaluation.json": "af1fd98dde91910aa4e850862f48805d31cc7d240f2f37a1edf4f554c94c51d1"
+      },
+      "summary_sha256": "e737d3eb3a6104b476109c962fc030f5ccab10d2c9fa1f384033f67a18bce7e9",
+      "source_setting": "interaction-only",
+      "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
+      "audits": {
+        "harness": "FAIL",
+        "development": "PENDING"
+      }
+    },
+    {
+      "method": "rax",
+      "setting": "interaction-only",
+      "budget": 10,
+      "run_id": "r10_20261121",
+      "total": 800,
+      "successes": 370,
+      "success_rate": 0.4625,
+      "tasks": {
+        "BinFill": {
+          "total": 50,
+          "successes": 31
+        },
+        "ButtonUnmask": {
+          "total": 50,
+          "successes": 31
+        },
+        "ButtonUnmaskSwap": {
+          "total": 50,
+          "successes": 15
+        },
+        "InsertPeg": {
+          "total": 50,
+          "successes": 16
+        },
+        "MoveCube": {
+          "total": 50,
+          "successes": 0
+        },
+        "PatternLock": {
+          "total": 50,
+          "successes": 10
+        },
+        "PickHighlight": {
+          "total": 50,
+          "successes": 18
+        },
+        "PickXtimes": {
+          "total": 50,
+          "successes": 35
+        },
+        "RouteStick": {
+          "total": 50,
+          "successes": 10
+        },
+        "StopCube": {
+          "total": 50,
+          "successes": 26
+        },
+        "SwingXtimes": {
+          "total": 50,
+          "successes": 32
+        },
+        "VideoPlaceButton": {
+          "total": 50,
+          "successes": 31
+        },
+        "VideoPlaceOrder": {
+          "total": 50,
+          "successes": 16
+        },
+        "VideoRepick": {
+          "total": 50,
+          "successes": 33
+        },
+        "VideoUnmask": {
+          "total": 50,
+          "successes": 28
+        },
+        "VideoUnmaskSwap": {
+          "total": 50,
+          "successes": 38
+        }
+      },
+      "training_starts": {
+        "BinFill": 8,
+        "ButtonUnmask": 6,
+        "ButtonUnmaskSwap": 7,
+        "InsertPeg": 5,
+        "MoveCube": 5,
+        "PatternLock": 8,
+        "PickHighlight": 10,
+        "PickXtimes": 9,
+        "RouteStick": 8,
+        "StopCube": 9,
+        "SwingXtimes": 9,
+        "VideoPlaceButton": 10,
+        "VideoPlaceOrder": 9,
+        "VideoRepick": 6,
+        "VideoUnmask": 7,
+        "VideoUnmaskSwap": 7
+      },
+      "training_starts_total": 123,
+      "infrastructure_errors": 0,
+      "development_api_cost_usd": 90,
+      "pending_usage_requests": 0,
+      "incomplete_requests": 0,
+      "evaluation_api_cost_usd": 0,
+      "frozen_manifests": {
+        "evaluation/InsertPeg/frozen_evaluation.json": "7ed8345ee7421a2637524210a9ea0d8d96ba7f8e6c86f47148765a00efb8fc43",
+        "evaluation/VideoUnmaskSwap/frozen_evaluation.json": "36bf2d4c2aeeb66a4437e510dd2324ff4d5abdc7794f1dc5ee12db5a85a32a15",
+        "evaluation/VideoPlaceButton/frozen_evaluation.json": "83bcfca0f6b46fb06337a527483a5d2e895efe2b8c6a4f255a5985adf9986bc2",
+        "evaluation/ButtonUnmask/frozen_evaluation.json": "0b29f97c181e173d5b8a9bb97289af678f857c2b239c12d0011f92f55264bd92",
+        "evaluation/VideoRepick/frozen_evaluation.json": "c8e3c18fcd66381657ddc758d3f34fc770a98810fa71db1cd7f98a72d62d80c3",
+        "evaluation/MoveCube/frozen_evaluation.json": "00dbd7d88afee5faea2bb73063bb68e7f25af606a6febc4cbd6345c2b2417bc8",
+        "evaluation/StopCube/frozen_evaluation.json": "a18da237b4dbcf008cb437d427fbc668aefdf2df6fd2a4d84259f336c66dfec1",
+        "evaluation/PickHighlight/frozen_evaluation.json": "1b08e6a8561796a594ac57bfecffa9574d9ed387f220242d754e132bdce541ff",
+        "evaluation/RouteStick/frozen_evaluation.json": "7968d15921194f27201572ca47004a8af9138e846022f97d84fd6b38958845ba",
+        "evaluation/VideoUnmask/frozen_evaluation.json": "0b3dede2cc04f1d7ec26880580b797040b925be204ef57e0b4e43ae92a07d125",
+        "evaluation/PatternLock/frozen_evaluation.json": "e9daacad6977b5fcd8a43001abb2ac9c7df0f84fc73e9d91be764ea5be386ff6",
+        "evaluation/VideoPlaceOrder/frozen_evaluation.json": "6a4d1aebb513a42c04c4bc290f6956398c521b5f0f7fa4fa80c186702456b971",
+        "evaluation/PickXtimes/frozen_evaluation.json": "563728de7e5d6cdc33806bc68935f649b45f9c36caf695d234ed3efde1c36cbb",
+        "evaluation/BinFill/frozen_evaluation.json": "000dff9b44a637ff6f1fd1c1c2a613dff13d0db67189a85336e05cab09715b2c",
+        "evaluation/SwingXtimes/frozen_evaluation.json": "54444b650c167a36fc28e53f7a192a58f8c642d861843d19470bd7b547c08c1e",
+        "evaluation/ButtonUnmaskSwap/frozen_evaluation.json": "f84c8a44525f498ad00e7b815f02a5c1cebae8933e82e33933f7d1e590cdbf9d"
+      },
+      "summary_sha256": "195ed6f7d8c19c71bd1bed68861e967fa6c6853d717205cc020d32463908e907",
+      "source_setting": "interaction-only",
+      "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
+      "audits": {
+        "harness": "PENDING",
+        "development": "PENDING"
+      }
+    },
+    {
+      "method": "aspire",
+      "setting": "Hybrid",
+      "budget": 10,
+      "run_id": "r10_20261121",
+      "total": 800,
+      "successes": 342,
+      "success_rate": 0.4275,
+      "tasks": {
+        "BinFill": {
+          "total": 50,
+          "successes": 41
+        },
+        "ButtonUnmask": {
+          "total": 50,
+          "successes": 28
+        },
+        "ButtonUnmaskSwap": {
+          "total": 50,
+          "successes": 14
+        },
+        "InsertPeg": {
+          "total": 50,
+          "successes": 4
+        },
+        "MoveCube": {
+          "total": 50,
+          "successes": 1
+        },
+        "PatternLock": {
+          "total": 50,
+          "successes": 10
+        },
+        "PickHighlight": {
+          "total": 50,
+          "successes": 11
+        },
+        "PickXtimes": {
+          "total": 50,
+          "successes": 11
+        },
+        "RouteStick": {
+          "total": 50,
+          "successes": 23
+        },
+        "StopCube": {
+          "total": 50,
+          "successes": 29
+        },
+        "SwingXtimes": {
+          "total": 50,
+          "successes": 33
+        },
+        "VideoPlaceButton": {
+          "total": 50,
+          "successes": 9
+        },
+        "VideoPlaceOrder": {
+          "total": 50,
+          "successes": 20
+        },
+        "VideoRepick": {
+          "total": 50,
+          "successes": 36
+        },
+        "VideoUnmask": {
+          "total": 50,
+          "successes": 34
+        },
+        "VideoUnmaskSwap": {
+          "total": 50,
+          "successes": 38
+        }
+      },
+      "training_starts": {
+        "BinFill": 10,
+        "ButtonUnmask": 5,
+        "ButtonUnmaskSwap": 10,
+        "InsertPeg": 10,
+        "MoveCube": 5,
+        "PatternLock": 10,
+        "PickHighlight": 8,
+        "PickXtimes": 8,
+        "RouteStick": 10,
+        "StopCube": 9,
+        "SwingXtimes": 7,
+        "VideoPlaceButton": 10,
+        "VideoPlaceOrder": 10,
+        "VideoRepick": 9,
+        "VideoUnmask": 8,
+        "VideoUnmaskSwap": 5
+      },
+      "training_starts_total": 134,
+      "infrastructure_errors": 0,
+      "development_api_cost_usd": 160,
+      "pending_usage_requests": 0,
+      "incomplete_requests": 2,
+      "evaluation_api_cost_usd": 0,
+      "frozen_manifests": {
+        "evaluation/frozen_evaluation.json": "7fcaf7676f967fe98354aa33c6c56b6a6377b3b13ca409d2d7f1a8d57af004d6"
+      },
+      "summary_sha256": "cce0fc689a78b357655b61238f7c37686368f24090fee09e97c3c87c14374f96",
+      "source_setting": "demo&interaction",
+      "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
+      "audits": {
+        "harness": "PENDING",
+        "development": "PENDING"
+      }
+    },
+    {
+      "method": "rax",
+      "setting": "Hybrid",
+      "budget": 10,
+      "run_id": "r10_20261121",
+      "total": 800,
+      "successes": 326,
+      "success_rate": 0.4075,
+      "tasks": {
+        "BinFill": {
+          "total": 50,
+          "successes": 25
+        },
+        "ButtonUnmask": {
+          "total": 50,
+          "successes": 34
+        },
+        "ButtonUnmaskSwap": {
+          "total": 50,
+          "successes": 10
+        },
+        "InsertPeg": {
+          "total": 50,
+          "successes": 0
+        },
+        "MoveCube": {
+          "total": 50,
+          "successes": 1
+        },
+        "PatternLock": {
+          "total": 50,
+          "successes": 10
+        },
+        "PickHighlight": {
+          "total": 50,
+          "successes": 19
+        },
+        "PickXtimes": {
+          "total": 50,
+          "successes": 20
+        },
+        "RouteStick": {
+          "total": 50,
+          "successes": 12
+        },
+        "StopCube": {
+          "total": 50,
+          "successes": 33
+        },
+        "SwingXtimes": {
+          "total": 50,
+          "successes": 33
+        },
+        "VideoPlaceButton": {
+          "total": 50,
+          "successes": 19
+        },
+        "VideoPlaceOrder": {
+          "total": 50,
+          "successes": 18
+        },
+        "VideoRepick": {
+          "total": 50,
+          "successes": 31
+        },
+        "VideoUnmask": {
+          "total": 50,
+          "successes": 29
+        },
+        "VideoUnmaskSwap": {
+          "total": 50,
+          "successes": 32
+        }
+      },
+      "training_starts": {
+        "BinFill": 5,
+        "ButtonUnmask": 9,
+        "ButtonUnmaskSwap": 10,
+        "InsertPeg": 10,
+        "MoveCube": 10,
+        "PatternLock": 10,
+        "PickHighlight": 8,
+        "PickXtimes": 8,
+        "RouteStick": 10,
+        "StopCube": 7,
+        "SwingXtimes": 6,
+        "VideoPlaceButton": 7,
+        "VideoPlaceOrder": 4,
+        "VideoRepick": 5,
+        "VideoUnmask": 5,
+        "VideoUnmaskSwap": 7
+      },
+      "training_starts_total": 121,
+      "infrastructure_errors": 0,
+      "development_api_cost_usd": 100,
+      "pending_usage_requests": 0,
+      "incomplete_requests": 0,
+      "evaluation_api_cost_usd": 0,
+      "frozen_manifests": {
+        "evaluation/InsertPeg/frozen_evaluation.json": "265559fdd0b28b99f47472009e1b99459e0d7510b16f678db5156bb610b53a09",
+        "evaluation/VideoUnmaskSwap/frozen_evaluation.json": "07f65f325285b121466c4250e6f262f30dbc93f45b334e8ec771d0f15c80f9f9",
+        "evaluation/VideoPlaceButton/frozen_evaluation.json": "c75ea3ea3cb72e5e67b9584fa8a0df55919038e391454a06a93107f6c6d55628",
+        "evaluation/ButtonUnmask/frozen_evaluation.json": "17ce7ada560a6c0efaddc608b74e6b32f14b0d57579a5d34e41c1411b65284cb",
+        "evaluation/VideoRepick/frozen_evaluation.json": "3b707d15cac723a9dbce621ea63abd246b7e8ac9aebe79657d5ff4bb1ef85a96",
+        "evaluation/MoveCube/frozen_evaluation.json": "e6b46ce43575e745569a8537cf3a9ef5f482193ec18ae4d6141a5a6864ec2704",
+        "evaluation/StopCube/frozen_evaluation.json": "331673cdd68301931f7e32402e436217fb1126fe36605ec349a707344c8d52e1",
+        "evaluation/PickHighlight/frozen_evaluation.json": "d01e81c3c5753b0eec54e34934e30f87596152d475cc5f911cf13c0c14dedec5",
+        "evaluation/RouteStick/frozen_evaluation.json": "aaee702e56fe13000e07f61ddafcb205d3c2f3dccaa8edd4a1f33420684e49b5",
+        "evaluation/VideoUnmask/frozen_evaluation.json": "0f9ee4235b836ef8a0951eb6e680699fb235831b434b2490a61c73886de239b2",
+        "evaluation/PatternLock/frozen_evaluation.json": "dec60b33f52df5845aae8e67decaeb0871dd6fbebf9d97640a5d0419476e34bf",
+        "evaluation/VideoPlaceOrder/frozen_evaluation.json": "48d26d04843a44d344dba5f63837f7f16c7002ad9570a0fb4addbfe44afe2bf9",
+        "evaluation/PickXtimes/frozen_evaluation.json": "2bef5b0fa9d5f50d8b8878fde67e877129340e981d7d25d1815004b126ab155f",
+        "evaluation/BinFill/frozen_evaluation.json": "c6ce095284e2d5e3626fb34753b412371a8db574f46dd49a4a8e6f3ac11e35e8",
+        "evaluation/SwingXtimes/frozen_evaluation.json": "243495f75c06c8298e7d6c54651584f984d85cdfcc333e95efbb1e47cdfb2a74",
+        "evaluation/ButtonUnmaskSwap/frozen_evaluation.json": "09c1f8191fe69ee9a14f74a505b75f6dd5f951221b96f423f0c8866a13226744"
+      },
+      "summary_sha256": "985737a8edf81530d9c4797b58306c892bdf04bcda1ea1c512a336450ba932eb",
+      "source_setting": "demo&interaction",
+      "cost_basis": "Estimated from recorded usage; rounded to nearest 10 USD; exact records retained in development logs",
+      "audits": {
+        "harness": "PENDING",
+        "development": "PENDING"
+      }
+    }
+  ]
+}

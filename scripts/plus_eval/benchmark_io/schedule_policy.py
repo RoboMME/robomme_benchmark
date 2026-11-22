@@ -33,9 +33,9 @@ def evaluation_placement(root):
     if limits is None:
         per_gpu = policy.get('evaluation_workers_per_gpu', 8)
         limits = {'0': per_gpu, '1': per_gpu}
-    if (type(total) is not int or not 1 <= total <= 18
+    if (type(total) is not int or not 1 <= total <= 24
             or not isinstance(limits, dict) or set(limits) != {'0', '1'}
-            or any(type(n) is not int or not 0 <= n <= 18 for n in limits.values())
+            or any(type(n) is not int or not 0 <= n <= 24 for n in limits.values())
             or total > sum(limits.values())):
         raise ValueError('Invalid evaluation concurrency for two GPUs')
     return total, limits

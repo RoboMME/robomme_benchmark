@@ -5,19 +5,22 @@
   "task": "ButtonUnmask",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "aa811612532521b10560af425481de83ca9e2ba4d663d82a9e0eb0b78a375abd",
-    "percep.py": "707b75c3acfcac1080b9709bf7bc8b4d6d2f4d422e79e9905e302c53d0c5f356",
-    "pick.py": "4d6fc8db943b1e9dbb82a6bb2b490ca923af424651e023c99540cb08e84c2b3d",
-    "robot.py": "d9674cc9f051df28f728e9a78ecca14096ff77740dbc039dbef5635d10ba64cf"
+    "controller.py": "e9e608d2d7796a3431f2e8130842b096cca8621ff8a005e702aab13d986cf768",
+    "perception.py": "ac865542025a188fd4062001b94ad457c9be14ea3daaaac4b279b48194686f60",
+    "robot.py": "e162c04dfc5bf97514bb0bf56379c30216dd245e270f15ba61ccdb9e34b0d284"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "e9e608d2d7796a3431f2e8130842b096cca8621ff8a005e702aab13d986cf768",
+    "perception.py": "ac865542025a188fd4062001b94ad457c9be14ea3daaaac4b279b48194686f60",
+    "robot.py": "e162c04dfc5bf97514bb0bf56379c30216dd245e270f15ba61ccdb9e34b0d284"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "0b29f97c181e173d5b8a9bb97289af678f857c2b239c12d0011f92f55264bd92",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "aa811612532521b10560af425481de83ca9e2ba4d663d82a9e0eb0b78a375abd",
-    "percep.py": "707b75c3acfcac1080b9709bf7bc8b4d6d2f4d422e79e9905e302c53d0c5f356",
-    "pick.py": "4d6fc8db943b1e9dbb82a6bb2b490ca923af424651e023c99540cb08e84c2b3d",
-    "robot.py": "d9674cc9f051df28f728e9a78ecca14096ff77740dbc039dbef5635d10ba64cf"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "8c8499af559bd77d9b65824df78839fb059d55a268c16d35cf4389293f542d03"
+  }
 }

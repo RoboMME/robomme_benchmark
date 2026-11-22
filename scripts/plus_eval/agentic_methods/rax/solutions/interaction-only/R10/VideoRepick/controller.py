@@ -1,202 +1,250 @@
-"""VideoRepick controller v1: track the picked object through the conditioning video,
-pick & place it twice, then press the button."""
-import os, sys, time, json, traceback
-from pathlib import Path
-HERE = os.path.dirname(os.path.abspath(__file__))
-if HERE not in sys.path:
-    sys.path.insert(0, HERE)
-import numpy as np
-from motion import Robot, Ended
-import perception as pc
-import video
+"""VideoRepick controller.
 
-VERSION = "v4"
-HOVER_DZ = 0.20      # hover height above table for wrist refinement
-GRASP_DZ = 0.020     # EE height above table at grasp (video expert used ~0.02)
-LIFT_DZ = 0.15       # lift height above table
-PLACE_DZ = 0.025     # EE height above table when releasing
-MATCH_GATE = 0.05    # max live-vs-video target mismatch (m)
+1. Read the conditioning video (frame manifest); find the grasp/release from the robot
+   state in the video, then track the released object through the shuffle (front-cam
+   green blobs -> world xy via depth, K-means with fixed K and velocity prediction).
+2. Pick and place that object twice at its current spot (closed loop, verified grasp).
+3. Locate the button (gray/white, table height), close gripper and press down until the
+   episode ends.
+"""
+import os, sys, time, traceback
+from pathlib import Path
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from robot import Robot  # noqa: E402
+from seg import find_button, object_blobs, merge_buttons  # noqa: E402
 
 OUT = Path("/workspace/output")
+SAFE_Z = 0.15
+GRASP_Z = 0.022
+PLACE_Z = 0.025
+T0 = time.time()
 
 
-def mklog():
-    OUT.mkdir(parents=True, exist_ok=True)
-    f = open(OUT / "controller_log.txt", "a")
-    t0 = time.time()
+def make_log():
+    try:
+        OUT.mkdir(parents=True, exist_ok=True)
+        fh = open(OUT / "controller_log.txt", "a")
+    except Exception:
+        fh = None
 
-    def log(msg):
-        line = f"[{VERSION} {time.time()-t0:6.1f}s] {msg}"
-        print(line, flush=True)
-        f.write(line + "\n"); f.flush()
+    def log(*a):
+        s = "[%6.1fs] " % (time.time() - T0) + " ".join(str(x) for x in a)
+        print(s, flush=True)
+        if fh:
+            fh.write(s + "\n"); fh.flush()
     return log
 
 
-def pick_live_target(robot, pred_xy, log, cam="front", tz=None):
-    if cam == "fused":
-        B = pc.live_blobs_fused(robot, tz)
-        objs = [{"xy": b.mean(0), "n": len(b)} for b in B]
-    else:
-        objs, tz = pc.live_objects(robot, cam)
-    if not objs:
-        return None, tz, objs
-    d = [np.linalg.norm(o["xy"] - pred_xy) for o in objs]
-    j = int(np.argmin(d))
-    log(f"live[{cam}]: {len(objs)} objs, nearest to pred {np.round(pred_xy,3)} is {np.round(objs[j]['xy'],3)} d={d[j]:.3f} n={objs[j]['n']}")
-    return objs[j], tz, objs
+BUTTON = None  # world-frame button box, set once per episode
 
 
-CTX = {"positions": None, "tgt": None, "unit": 42.0}
+def cam_args(m, cam):
+    return (m["_imgs"][(cam, "rgb")], m["_imgs"][(cam, "depth")], m["camera_intrinsics"][cam], m["camera_poses"][cam])
 
 
-def refine_all(robot, xy, tz, log, cams):
-    """Associate all known object positions to live grid blobs; return refined target xy or None."""
-    P = CTX["positions"]
-    if P is None:
+def button_find(m, cam, near=None):
+    b = find_button(*cam_args(m, cam))
+    if b is not None and near is not None and np.linalg.norm(b["xy"] - near) > 0.06:
         return None
-    P = P.copy()
-    P[CTX["tgt"]] = xy
-    views = [pc.live_points(robot, c) for c in cams]
-    zmax = float(np.clip(robot.state()[2] - tz - 0.015, 0.03, 0.09))
-    B = pc.grid_blobs_from_views(views, tz, zmax)
-    newP, seen = pc.associate(B, P, CTX["unit"])
-    t = CTX["tgt"]
-    if not seen[t]:
-        log(f"refine[{'+'.join(cams)}]: target unseen among {len(B)} blobs")
-        return None
-    # update others that were seen (they may have been nudged)
-    for j in range(len(P)):
-        if seen[j]:
-            P[j] = newP[j]
-    CTX["positions"] = P
-    log(f"refine[{'+'.join(cams)}]: {len(B)} blobs, target {np.round(xy,3)} -> {np.round(newP[t],3)}")
-    return newP[t]
+    return b
 
 
-def wrist_update(robot, xy, tz, log, gate=MATCH_GATE):
-    r = None
-    try:
-        r = refine_all(robot, xy, tz, log, ["wrist"])
-    except Exception:
-        log("refine failed: " + traceback.format_exc())
-    if r is not None and np.linalg.norm(r - xy) < gate:
-        return r
-    o, _, _ = pick_live_target(robot, xy, log, cam="wrist")
-    if o is not None and np.linalg.norm(o["xy"] - xy) < gate:
-        return o["xy"]
-    return xy
+def live_blobs(m, cam):
+    return object_blobs(*cam_args(m, cam), button=BUTTON)
 
 
-def grasp_cycle(robot, xy, tz, log, k):
-    """Hover, refine with wrist, descend, grasp, lift. Returns (ok, xy_refined)."""
-    robot.move_to([xy[0], xy[1], tz + HOVER_DZ], grip=-1)
-    robot.observe()
-    xy = wrist_update(robot, xy, tz, log)
-    robot.move_to([xy[0], xy[1], tz + 0.08], grip=-1)
-    robot.observe()
-    xy = wrist_update(robot, xy, tz, log, gate=0.03)
-    robot.move_to([xy[0], xy[1], tz + 0.06], grip=-1)
-    robot.move_to([xy[0], xy[1], tz + GRASP_DZ], grip=-1, speed=0.3)
-    robot.gripper(1, 12)
-    robot.move_to([xy[0], xy[1], tz + LIFT_DZ], grip=1, speed=0.4)
-    robot.hold(3, 1)
-    op = robot.opening()
-    ok = op > 0.004
-    log(f"grasp {k}: opening after lift {op:.4f} ok={ok} ee={np.round(robot.state()[:3],3)}")
-    return ok, xy
+def wrist_offset(m):
+    """camera xy minus TCP xy at the current pose."""
+    return np.array(m["camera_poses"]["wrist"]["position_m"][:2]) - np.array(m["state"][:2])
 
 
-def place_cycle(robot, xy, tz, log, k):
-    robot.move_to([xy[0], xy[1], tz + PLACE_DZ + 0.02], grip=1, speed=0.4)
-    robot.move_to([xy[0], xy[1], tz + PLACE_DZ], grip=1, speed=0.2)
-    robot.gripper(-1, 10)
-    robot.move_to([xy[0], xy[1], tz + LIFT_DZ], grip=-1)
-    log(f"place {k}: done ee={np.round(robot.state()[:3],3)}")
-
-
-def press_button(robot, btn, tz, log):
-    bx, by = btn["xy"]
-    top = btn["ztop"]
-    robot.move_to([bx, by, top + 0.10], grip=1)
-    robot.move_to([bx, by, top + 0.03], grip=1, speed=0.3)
-    # push down slowly below the top surface
-    for i in range(4):
-        if robot.ended:
-            return
-        robot.step([[0, 0, -0.25, 0, 0, 0, 1]] * 6)
-        log(f"press: ee z {robot.state()[2]:.3f} top {top:.3f} complete={robot.complete}")
-        if robot.state()[2] < top - 0.02:
+def locate_object(r, est, log, gate=0.06):
+    """refine object xy with the wrist camera from above; returns (xy, ok)."""
+    m = r.observe()
+    off = wrist_offset(m)
+    # put the camera roughly above the object (camera looks straight down)
+    r.move_to([est[0] - off[0] * 0.5, est[1] - off[1] * 0.5, 0.24], -1, vmax=0.6, max_steps=40)
+    m = r.observe()
+    best = None
+    for cam in ("wrist", "front"):
+        bl = live_blobs(m, cam)
+        if not bl:
+            continue
+        d = [np.linalg.norm(b["xy"] - est) for b in bl]
+        b = bl[int(np.argmin(d))]
+        if min(d) < gate:
+            P = b["pts"]
+            top = P[P[:, 2] > P[:, 2].max() - 0.008]
+            xy = top[:, :2].mean(0) if len(top) > 10 else b["xy"]
+            log(f"locate {cam}: blob {b['xy'].round(3)} top {xy.round(3)} n={b['n']} d={min(d):.3f}")
+            best = xy
+            global NEIGHBORS
+            NEIGHBORS = [o["xy"] for o in bl if o is not b]
             break
-    if not robot.ended:
-        robot.move_to([bx, by, top + 0.08], grip=1)
+        else:
+            log(f"locate {cam}: nearest blob {min(d):.3f} m away (gate {gate})")
+    if best is None:
+        return np.asarray(est), False
+    return best, True
+
+
+NEIGHBORS = []
+R0 = None
+
+
+def conflict(xy, axis):
+    """penalty for neighbours near the finger sweep along unit `axis` (closing direction)."""
+    pen = 0.0
+    for n in NEIGHBORS:
+        d = np.asarray(n) - xy
+        along = abs(d @ axis); perp = abs(d[0] * axis[1] - d[1] * axis[0])
+        if along < 0.075 and perp < 0.035:
+            pen += (0.075 - along) + (0.035 - perp)
+    return pen
+
+
+def grasp_rot(xy, log):
+    from scipy.spatial.transform import Rotation as Rr
+    if R0 is None:
+        return None
+    p0 = conflict(xy, np.array([0.0, 1.0])); p90 = conflict(xy, np.array([1.0, 0.0]))
+    yaw = 0.0 if p0 <= p90 else np.pi / 2
+    log(f"grasp yaw {np.degrees(yaw):.0f} (conflict y-axis {p0:.3f}, x-axis {p90:.3f})")
+    return (Rr.from_euler("z", yaw) * Rr.from_rotvec(R0)).as_rotvec()
+
+
+def pick(r, xy, log):
+    x, y = xy
+    rot = grasp_rot(xy, log)
+    r.move_to([x, y, SAFE_Z], -1, vmax=0.6, max_steps=40)
+    r.move_to([x, y, 0.07], -1, rot=rot, vmax=0.4, max_steps=40)
+    r.move_to([x, y, GRASP_Z], -1, rot=rot, vmax=0.25, max_steps=40, tol=0.003)
+    r.hold(1, 10)
+    r.observe()
+    g = r.state()[6] + r.state()[7]
+    r.move_to([x, y, SAFE_Z], 1, vmax=0.4, max_steps=40)
+    r.observe()
+    g2 = r.state()[6] + r.state()[7]
+    log(f"pick at {np.round(xy,3)}: opening after close {g:.4f}, after lift {g2:.4f}, z {r.state()[2]:.3f}")
+    return g2 > 0.008
+
+
+def place(r, xy, log):
+    x, y = xy
+    r.move_to([x, y, 0.07], 1, vmax=0.4, max_steps=30)
+    r.move_to([x, y, PLACE_Z], 1, vmax=0.25, max_steps=40, tol=0.003)
+    r.hold(-1, 8)
+    r.move_to([x, y, SAFE_Z], -1, rot=R0, vmax=0.4, max_steps=40)
+    r.observe()
+    log(f"placed at {np.round(xy,3)}; state {r.state()[:3].round(3)}")
+
+
+def press_button(r, bxy, log):
+    x, y = bxy
+    r.move_to([x, y, SAFE_Z], 1, vmax=0.6, max_steps=40)
+    r.move_to([x, y, 0.07], 1, vmax=0.4, max_steps=30)
+    for z in [0.05, 0.04, 0.032, 0.025, 0.018, 0.012, 0.006]:
+        r.move_to([x, y, z], 1, vmax=0.2, max_steps=12, tol=0.003)
+        if r.ended:
+            break
+    r.observe() if not r.ended else None
+    log(f"press attempt at {np.round(bxy,3)} ended={r.ended} complete={r.complete} z={r.state()[2]:.3f}")
+    if not r.ended:
+        r.move_to([x, y, 0.09], 1, vmax=0.4, max_steps=20)
+
+
+def analyze(m, log):
+    from tracker import analyze_video
+    fs = m.get("frame_sequence") or {}
+    mp = fs.get("manifest_path")
+    if not mp:
+        raise RuntimeError("no frame_sequence manifest in initial observation")
+    res = analyze_video(mp, log=log, use_wrist=True)
+    log(f"tracked target final {res['final_xy'].round(3)} min_nn {res['min_nn']:.3f} K={res['K']}")
+    return res
 
 
 def main(ctx):
-    log = mklog()
-    robot = Robot(ctx, log)
+    log = make_log()
+    r = Robot(ctx, log=log)
+    m = r.observe()
+    log("instruction:", m.get("instruction"), "step", m.get("step_id"), "limits", m.get("episode_limits"))
+    init = m
+    global BUTTON, GRASP_Z, PLACE_Z, R0
+    R0 = np.array(m["state"][3:6], float)
+    btn = button_find(init, "front")
+    if init["state"][2] > 0.15:
+        btn = merge_buttons(btn, button_find(init, "wrist"))
+    BUTTON = btn
+    log("button coarse (front):", None if btn is None else (btn["xy"].round(3), btn["ext"].round(3), btn["n"]))
+    # ---------- 1. which object
+    target = None
     try:
-        p = robot.observe()
-        log(f"instruction: {p.get('instruction')} step {p.get('step_id')} limits {p.get('episode_limits')}")
-        seq = p.get("frame_sequence") or {}
-        man = seq.get("manifest_path")
-        res = None
-        try:
-            res = video.analyze(man, log)
-        except Exception:
-            log("video analysis failed: " + traceback.format_exc())
-        objs, tz = pc.live_objects(robot, "front")
-        rgb, pts = pc.live_points(robot, "front")
-        btn = pc.button_location(rgb, pts, tz)
-        log(f"table z {tz:.4f}; live objects {[np.round(o['xy'],3).tolist() for o in objs]}; button {btn}")
-        if res is not None:
-            pred = res["target_xy"]
-        else:
-            pred = objs[0]["xy"] if objs else np.array([-0.1, 0.0])
-        o, _, _ = pick_live_target(robot, pred, log, cam="fused", tz=tz)
-        xy = o["xy"] if (o is not None and np.linalg.norm(o["xy"] - pred) < MATCH_GATE) else pred
-        if res is not None:
-            CTX["positions"] = np.array(res["final_all"], float)
-            CTX["tgt"] = res["tgt"]
-            CTX["unit"] = res["unit"]
-            try:
-                r = refine_all(robot, pred, tz, log, ["front", "wrist"])
-                if r is not None and np.linalg.norm(r - pred) < MATCH_GATE:
-                    xy = r
-            except Exception:
-                log("initial refine failed: " + traceback.format_exc())
-        log(f"initial target xy {np.round(xy,3)}")
-        done = 0
-        attempts = 0
-        while done < 2 and attempts < 5 and not robot.ended:
-            attempts += 1
-            ok, xy = grasp_cycle(robot, xy, tz, log, done + 1)
-            if not ok:
-                robot.gripper(-1, 8)
-                robot.move_to([xy[0], xy[1], tz + LIFT_DZ], grip=-1)
-                robot.move_to([xy[0], xy[1], tz + HOVER_DZ], grip=-1)
-                robot.observe()
-                xy = wrist_update(robot, xy, tz, log)
-                continue
-            place_cycle(robot, xy, tz, log, done + 1)
+        res = analyze(m, log)
+        target = np.asarray(res["final_xy"], float)
+        gz = res.get("grasp_z")
+        if gz is not None and np.isfinite(gz):
+            GRASP_Z = float(np.clip(gz + 0.003, 0.014, 0.03))
+            PLACE_Z = max(GRASP_Z + 0.004, 0.025)
+        log(f"grasp z {GRASP_Z:.3f} place z {PLACE_Z:.3f}")
+    except Exception as e:
+        log("video analysis failed:", repr(e)); log(traceback.format_exc())
+    live = live_blobs(init, "front")
+    log("live front blobs:", [(b["xy"].round(3).tolist(), b["n"]) for b in live])
+    if target is None:
+        if not live:
+            log("no objects visible; abort"); return
+        target = live[0]["xy"]
+    elif live:
+        d = [np.linalg.norm(b["xy"] - target) for b in live]
+        log(f"nearest live front blob to target: {min(d):.3f} m")
+    # ---------- button coarse from the initial front view
+
+    # ---------- 2. pick & place twice
+    obj = np.asarray(target, float)
+    done = 0
+    attempts = 0
+    while done < 2 and attempts < 6 and not r.ended:
+        attempts += 1
+        if r.remaining() < 150:
+            log("step budget low; go to button"); break
+        xy, ok = locate_object(r, obj, log, gate=0.06 if attempts <= 2 else 0.09)
+        obj = xy
+        if pick(r, xy, log):
+            place(r, xy, log)
             done += 1
-            if done < 2:
-                robot.move_to([xy[0], xy[1], tz + HOVER_DZ], grip=-1)
-                robot.observe()
-                xy = wrist_update(robot, xy, tz, log)
-        if not robot.ended:
-            robot.move_to([xy[0], xy[1], tz + HOVER_DZ], grip=1)
-            robot.observe()
-            rgb, pts = pc.live_points(robot, "front")
-            b2 = pc.button_location(rgb, pts, tz)
-            if b2 is not None and btn is not None and np.linalg.norm(b2["xy"] - btn["xy"]) < 0.05:
-                btn = b2
-            if btn is None:
-                btn = b2
-            log(f"button {btn}")
-            if btn is not None:
-                press_button(robot, btn, tz, log)
-        log(f"finished: ended={robot.ended} complete={robot.complete}")
-    except Ended:
-        log(f"episode ended complete={robot.complete}")
-    except Exception:
-        log("fatal: " + traceback.format_exc())
+            # object may have shifted slightly; re-locate next time
+        else:
+            log("grasp failed; retry")
+            r.move_to([xy[0], xy[1], SAFE_Z], -1, vmax=0.5, max_steps=20)
+    log(f"pick/place cycles done: {done} in {attempts} attempts; step {r.last.get('step_id')}")
+    if r.ended:
+        log("episode ended early; complete=", r.complete); return
+
+    # ---------- 3. button
+    bxy = None if btn is None else btn["xy"]
+    m = r.observe()
+    if bxy is not None:
+        off = wrist_offset(m)
+        r.move_to([bxy[0] - off[0], bxy[1] - off[1], 0.22], -1, vmax=0.6, max_steps=40)
+        m = r.observe()
+        bw = button_find(m, "wrist", near=bxy)
+        if bw is not None and np.linalg.norm(bw["xy"] - bxy) < 0.06 and bw["n"] > 200:
+            log(f"button wrist refine {bw['xy'].round(3)} ext {bw['ext'].round(3)} n={bw['n']}")
+            bxy = (bw["lo"] + bw["hi"]) / 2 if np.all(bw["ext"] > 0.05) else bw["xy"]
+        else:
+            log("button wrist refine failed:", None if bw is None else (bw["xy"].round(3), bw["n"]))
+    else:
+        bf = button_find(m, "front") or button_find(m, "wrist")
+        if bf is None:
+            log("no button found"); return
+        bxy = bf["xy"]
+    log("button target", np.round(bxy, 3))
+    for k, dxy in enumerate([(0, 0), (-0.01, 0), (0.01, 0), (0, 0.01), (0, -0.01)]):
+        if r.ended or r.remaining() < 20:
+            break
+        press_button(r, np.asarray(bxy) + np.asarray(dxy), log)
+    log(f"FINISHED ended={r.ended} complete={r.complete} step={r.last.get('step_id')} t={time.time()-T0:.1f}s")

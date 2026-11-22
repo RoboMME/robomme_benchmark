@@ -18,18 +18,16 @@ Each method link below provides setup and running instructions.
 
 ## Agentic adaptation
 
-The interaction settings allow at most **10 development rollouts per task**.
-ASPIRE and RAX develop each budget independently. The main leaderboard uses R10;
-all results use 800 test episodes.
+ASPIRE and RAX use at most **10 development rollouts per task**, shared across
+training seeds. The packaged solutions and results cover the current R10 runs.
 
 | Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
 |---|---|---:|---:|
-| `demo-only` | 0 | 136/800 (17.00%) | 152/800 (19.00%) |
-| `interaction-only` | 10 | 341/800 (42.63%) | 312/800 (39.00%) |
-| `demo&interaction` | 10 | 279/800 (34.88%) | 337/800 (42.13%) |
+| `interaction-only` | 10 | 302/800 (37.75%) | 370/800 (46.25%) |
+| `Hybrid` | 10 | 342/800 (42.75%) | 326/800 (40.75%) |
 
-[Optional R1/R3/R5 results](../../doc/robomme_plus/robomme_plus_baseline_results.md#optional-interaction-budgets)
-remain documented, with frozen solutions and JSON summaries.
+The submissions include the [ASPIRE](<../../doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
+and [RAX](<../../doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>) audit records.
 
 Final summaries: [model baselines](results/model_baselines.json) ·
-[ASPIRE/RAX](results/agentic_20261118.json).
+[ASPIRE/RAX](results/agentic_current.json).

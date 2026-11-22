@@ -1,0 +1,32 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "VideoUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "61d10a6fdae9b7334775278f052dd6d0436e853cd71989c6bbab0a475bb827de",
+    "geom.py": "fa4af28745dead0467e57fb3d2f808c24bf42952b0f01d77512e87154552f860",
+    "robot.py": "df3d403601e7a25c69a2e6ac1cca78e5ef012208cb18f980a74a7e47b26e9046",
+    "skills.py": "69ab07f4aedabf05e35ddecf91c6e67234168eb8dba8ebadd7929eca3596546b",
+    "track3.py": "19e7b33341403137233919f72c2cb68f47da8b73b93e9ab04b4bcb401fcceee3",
+    "tracker.py": "4f62f2b89e286271baf2e7e08fc2eea70fecc6e937364e776ab7cda3c052c488"
+  },
+  "source_policy_files": {
+    "controller.py": "61d10a6fdae9b7334775278f052dd6d0436e853cd71989c6bbab0a475bb827de",
+    "geom.py": "fa4af28745dead0467e57fb3d2f808c24bf42952b0f01d77512e87154552f860",
+    "robot.py": "df3d403601e7a25c69a2e6ac1cca78e5ef012208cb18f980a74a7e47b26e9046",
+    "skills.py": "69ab07f4aedabf05e35ddecf91c6e67234168eb8dba8ebadd7929eca3596546b",
+    "track3.py": "19e7b33341403137233919f72c2cb68f47da8b73b93e9ab04b4bcb401fcceee3",
+    "tracker.py": "4f62f2b89e286271baf2e7e08fc2eea70fecc6e937364e776ab7cda3c052c488"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "07f65f325285b121466c4250e6f262f30dbc93f45b334e8ec771d0f15c80f9f9",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "61023c01af48c91e5aa9c73b9d96eb84cd870d72319d10ccd91e3324eae90f9e"
+  }
+}

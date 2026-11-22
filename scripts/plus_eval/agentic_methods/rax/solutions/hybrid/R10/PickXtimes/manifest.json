@@ -1,0 +1,24 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "PickXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "240493cc5b0941384aa1a52dcf91c05b9697bc353ab04bf708c5e6c98e5e7909",
+    "perception.py": "409dae306a58ddc84e0882dd2bf89e0ce9096c1b97bf8c7a07a1f162ea689a75"
+  },
+  "source_policy_files": {
+    "controller.py": "240493cc5b0941384aa1a52dcf91c05b9697bc353ab04bf708c5e6c98e5e7909",
+    "perception.py": "409dae306a58ddc84e0882dd2bf89e0ce9096c1b97bf8c7a07a1f162ea689a75"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "2bef5b0fa9d5f50d8b8878fde67e877129340e981d7d25d1815004b126ab155f",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "3d674103c90288172e5d46968adfd48d48386af7e94bcfe3ae614f35ef2b96b4"
+  }
+}

@@ -7,7 +7,8 @@
     "sha256": "66577843ad15d298df5d9bca072610a1957752a155626c3a3f37dd62f9b59928"
   },
   "patches": [
-    "patches/robomme-plus.patch"
+    "patches/robomme-plus.patch",
+    "patches/development-audit.patch"
   ],
   "overlay": "adapter"
 }

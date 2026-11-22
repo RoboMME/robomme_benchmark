@@ -5,15 +5,20 @@
   "task": "SwingXtimes",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "ef6b5957eaed51b2d8cddadd4fd53a27136f707e2ecef98300275fb7e7654b1a",
-    "lib.py": "798fad7bdc96d4432875aa7967a934502e11dbea787fc417b0b11c0bae96dad9"
+    "controller.py": "72391e07c7d9fe5543baa9a6f482851ec9273ba946cfa36d609edac987f549fd",
+    "percept.py": "16487393bf05a3ff84075c2c88c82c9216945d94dc62cd0b7f65259e82fd7e5d"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "72391e07c7d9fe5543baa9a6f482851ec9273ba946cfa36d609edac987f549fd",
+    "percept.py": "16487393bf05a3ff84075c2c88c82c9216945d94dc62cd0b7f65259e82fd7e5d"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "54444b650c167a36fc28e53f7a192a58f8c642d861843d19470bd7b547c08c1e",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "ef6b5957eaed51b2d8cddadd4fd53a27136f707e2ecef98300275fb7e7654b1a",
-    "lib.py": "798fad7bdc96d4432875aa7967a934502e11dbea787fc417b0b11c0bae96dad9"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "65d0ee3cf0d5824ebefca674fd942ab117eb8522d6836ccdde747aed7ee24903"
+  }
 }

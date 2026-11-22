@@ -12,7 +12,7 @@ import sys
 import time
 
 from .full_study import REPO, IMAGE, Pipeline, write
-from .protocol import source_fingerprint
+from .protocol import source_fingerprint, setting_key
 from .runtime_policy import RuntimePolicy
 from .runtime_source import assemble
 from .prompt_bundle import DEFAULT_BUNDLE, bundle_version
@@ -59,16 +59,27 @@ def pin_demonstrations(source, target, metadata):
     return dict(files=rows, episodes=50)
 
 
-def prepare(root, demos, *, protocol=None, settings=None):
-    root = Path(root).resolve()
-    if root.exists():
-        raise FileExistsError('Use a fresh study directory')
+def select_configurations(settings=None, budgets=None):
+    if settings is not None:
+        settings = [setting_key(setting) for setting in settings]
     allowed = ('demo-only', 'interaction-only', 'demo&interaction')
     if settings is not None and (not settings or len(set(settings)) != len(settings)
                                  or not set(settings) <= set(allowed)):
         raise ValueError('Choose distinct supported development settings')
-    selected = [dict(key=k,method=m,setting=s,budget=b) for k,m,s,b in configurations()
-                if settings is None or s in settings]
+    if budgets is not None and (not budgets or len(set(budgets))!=len(budgets)
+            or any(type(b) is not int or b not in (1,3,5,10) for b in budgets)):
+        raise ValueError('Choose distinct supported rollout budgets: 1, 3, 5, 10')
+    return [dict(key=f'{method}/{setting}/R{budget}',method=method,setting=setting,budget=budget)
+            for setting in (settings if settings is not None else allowed)
+            for budget in ([0] if setting=='demo-only' else (budgets if budgets is not None else [10]))
+            for method in ('aspire','rax')]
+
+
+def prepare(root, demos, *, protocol=None, settings=None, budgets=None):
+    root = Path(root).resolve()
+    if root.exists():
+        raise FileExistsError('Use a fresh study directory')
+    selected=select_configurations(settings,budgets)
     image = IMAGE
     if not re.fullmatch(r'(?:[A-Za-z0-9_./:-]+@)?sha256:[a-f0-9]{64}', image):
         image = subprocess.check_output(['docker','image','inspect','--format={{.Id}}',image], text=True).strip()
@@ -125,12 +136,15 @@ def main():
     parser.add_argument('--root',type=Path,required=True)
     parser.add_argument('--demos',type=Path,help='Directory containing the 16 released training H5 files')
     parser.add_argument('--protocol',type=Path,help='Immutable public protocol bundle')
-    parser.add_argument('--settings',nargs='+',choices=['demo-only','interaction-only','demo&interaction'],
+    parser.add_argument('--settings',nargs='+',type=setting_key,choices=['demo-only','interaction-only','demo&interaction'],
+                        metavar='{demo-only,interaction-only,hybrid}',
                         help='Development settings to prepare; default: all three')
+    parser.add_argument('--budgets',type=int,nargs='+',choices=[1,3,5,10],
+                        help='Independent interaction budgets; default: 10 (demo-only always uses 0)')
     args = parser.parse_args()
     if args.command=='prepare':
         if args.demos is None:parser.error('prepare requires --demos')
-        prepare(args.root,args.demos,protocol=args.protocol,settings=args.settings)
+        prepare(args.root,args.demos,protocol=args.protocol,settings=args.settings,budgets=args.budgets)
     elif args.command=='pin-runtime':pin_runtime(args.root)
     else:ledgers(args.root)
 

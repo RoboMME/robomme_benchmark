@@ -1,182 +1,461 @@
-"""PatternLock controller v3.
-
-Pattern = grid nodes where the conditioning-video tool dwelled while low (video TCP
-states in the reset manifest).  Video grid -> execution grid via a similarity fit of
-the detected 5x5 button grids (front depth).  Execution: demo-style approach (descend
-beside the first node, slide in), straight node-to-node strokes at constant speed,
-and a dwell on every node so it registers.
-"""
-import json, sys, time, traceback
+"""PatternLock controller: read the conditioning video, recover the visited grid-node
+sequence, re-detect the grid in the live scene and trace the same sequence with the stick."""
+import json, os, sys, time, traceback
 from pathlib import Path
 import numpy as np
+from PIL import Image
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-from motion import Robot, rotvec_to_R  # noqa
-import perception as pc  # noqa
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geom import backproject, find_buttons
 
-OUT = Path("/workspace/output")
-SPEED = 0.022       # m per step on strokes (demo ~0.005-0.008); native horizon ~450 steps
-SLIDE_SPEED = 0.006 # m per step for the first slide-in
-DWELL = 6           # steps held on every node
-HOVER = 0.04        # m above drawing height for the approach
+WS = Path("/workspace")
+OUT = WS / "output"
+LOG = []
+CONTACT_Z = 0.070       # TCP height while drawing (from video contact phase)
+HOVER_Z = 0.120
+SNAP = 0.032
+XY_OFFSET_GAIN = 1.0    # apply full lateral tip shift (ep3 evidence)
 
 
 def log(*a):
-    print(*a, flush=True)
+    s = " ".join(str(x) for x in a)
+    print(s, flush=True)
+    LOG.append(s)
     try:
         OUT.mkdir(parents=True, exist_ok=True)
         with open(OUT / "controller_log.txt", "a") as f:
-            f.write(" ".join(str(x) for x in a) + "\n")
+            f.write(s + "\n")
     except Exception:
         pass
 
 
-def load_manifest(pkt):
-    seq = pkt.get("frame_sequence") or {}
-    mp = seq.get("manifest_path")
-    return json.loads((Path("/workspace") / mp).read_text())
+def packet(reply):
+    for b in reply.get("content", []):
+        if b.get("type") == "text":
+            try:
+                return json.loads(b["text"])
+            except Exception:
+                pass
+    return {}
 
 
-def merge_red(vid, gv, nodes):
-    """Cross-check dwell nodes with the red-highlight onsets; add red-only nodes by time."""
-    try:
-        red = pc.red_onsets(vid, gv["idx"])
-    except Exception as e:
-        log("red_onsets error", repr(e))
-        return nodes
-    log("red onsets", red)
-    dw = [n["idx"] for n in nodes]
-    if [k for k, _ in red] == dw:
-        log("pattern check: dwell == red")
-        return nodes
-    log("pattern check: MISMATCH dwell", dw, "red", [k for k, _ in red])
-    out = list(nodes)
-    for k, pos in red:
-        if k in dw:
-            continue
-        # insert before the first dwell node that started after this onset (red lights ~0.3 s into a dwell)
-        i = 0
-        while i < len(out) and out[i]["start"] <= pos - 8:
-            i += 1
-        out.insert(i, {"idx": k, "point": np.asarray(gv["idx"][k]), "start": pos - 8, "end": pos, "dist": 0.0})
-        log("inserted red-only node", k, "at", i)
+def reply_images(reply, p):
+    """Decode rgb/depth attachments of a reply -> {(camera, kind): array}."""
+    import base64, io
+    out = {}
+    blocks = reply.get("content", [])
+    for a in p.get("attachments", []) or []:
+        try:
+            b = blocks[a["content_index"]]
+            im = Image.open(io.BytesIO(base64.b64decode(b["data"])))
+            arr = np.array(im.convert("RGB")) if a["kind"] == "rgb" else np.array(im).astype(float) * 0.001
+            out[(a["camera"], a["kind"])] = arr
+        except Exception:
+            pass
     return out
 
 
-def plan(pkt):
-    man = load_manifest(pkt)
-    frames = man["frames"]
-    vid = sorted([f for f in frames if f.get("phase") == "video_demo"], key=lambda f: f["frame_index"])
-    ex = [f for f in frames if f.get("phase") == "execution"]
-    ex = ex[-1] if ex else frames[-1]
-    tv, te = pc.top_centers(vid[0]), pc.top_centers(ex)
-    if len(tv) != 25 or len(te) != 25:
-        log("WARN button count video", len(tv), "exec", len(te))
-    gv, ge = pc.grid_index(tv), pc.grid_index(te)
-    log("grid video n", len(gv["idx"]), "theta", round(np.degrees(gv["theta"]), 2), "s", round(gv["spacing"], 4),
-        "| exec n", len(ge["idx"]), "theta", round(np.degrees(ge["theta"]), 2), "s", round(ge["spacing"], 4))
-    keys = [k for k in gv["idx"] if k in ge["idx"]]
-    A, t, res = pc.fit_similarity([gv["idx"][k] for k in keys], [ge["idx"][k] for k in keys])
-    log("transform A", np.round(A, 4).tolist(), "t", np.round(t, 4).tolist(), "resid max", round(float(res.max()), 4))
-    nodes, zmin = pc.dwell_nodes(vid, gv)
-    log("video nodes", [(n["idx"], n["start"], n["end"]) for n in nodes])
-    nodes = merge_red(vid, gv, nodes)
-    st = np.array([f["state"][:3] for f in vid])
-    # drawing height: demo z during dwells, corrected by button-top height change
-    zd = [st[n["start"]:n["end"] + 1, 2] for n in nodes]
-    z_draw = float(np.median(np.concatenate(zd))) if zd else zmin
-    ztv = float(np.median([b[2] for b in tv]))
-    zte = float(np.median([b[2] for b in te]))
-    z_draw += (zte - ztv)
-    # map node centres to execution grid
-    ecent = {k: np.asarray(v) for k, v in ge["idx"].items()}
-    targets = []
-    for n in nodes:
-        p = A @ np.asarray(gv["idx"][n["idx"]]) + t
-        k = min(ecent, key=lambda kk: np.linalg.norm(ecent[kk] - p))
-        d = float(np.linalg.norm(ecent[k] - p))
-        if d > 0.5 * ge["spacing"]:
-            log("WARN node map far", n["idx"], k, d)
-        targets.append((k, ecent[k]))
-    # demo approach point: first low frame of first dwell's approach
-    low = np.nonzero(st[:, 2] < zmin + 0.012)[0]
-    approach = None
-    if len(low) and nodes:
-        a = st[low[0], :2]
-        off = A @ (a - np.asarray(gv["idx"][nodes[0]["idx"]]))
-        if np.linalg.norm(off) > 0.03:
-            off = off / np.linalg.norm(off) * 0.03
-        if np.linalg.norm(off) < 0.008:
-            off = np.array([-0.015, 0.0])
-        approach = targets[0][1] + off
-    log("exec targets", [(k, np.round(p, 4).tolist()) for k, p in targets], "z_draw", round(z_draw, 4),
-        "approach", None if approach is None else np.round(approach, 4).tolist())
-    return targets, z_draw, approach
+def node_red_pixels(reply, p, xy):
+    """Count red pixels (wrist and front) whose world point is within 2.5 cm of node xy."""
+    imgs = reply_images(reply, p)
+    tot = 0
+    for cam in ("wrist", "front"):
+        if (cam, "rgb") not in imgs or (cam, "depth") not in imgs:
+            continue
+        pts = backproject(imgs[(cam, "depth")], p["camera_intrinsics"][cam]["matrix"], p["camera_poses"][cam])
+        m = red_mask(imgs[(cam, "rgb")]) & np.isfinite(pts[..., 0])
+        P = pts[m]
+        if len(P):
+            tot += int((np.linalg.norm(P[:, :2] - np.asarray(xy), axis=1) < 0.025).sum())
+    return tot
 
 
-def stroke(r, start, end, z, speed, tol=0.002, max_extra=15):
-    """Constant-speed straight line from start to end at height z with feedback."""
-    start, end = np.asarray(start, float), np.asarray(end, float)
-    L = float(np.linalg.norm(end - start))
-    n = max(1, int(np.ceil(L / speed)))
-    for i in range(1, n + 1):
-        if r.ended or r.remaining() <= 0:
+def frame_arrays(frame, cam):
+    files = {(x["camera"], x["kind"]): x["path"] for x in frame["files"]}
+    rgb = np.array(Image.open(WS / files[(cam, "rgb")]).convert("RGB"))
+    dep = np.array(Image.open(WS / files[(cam, "depth")])).astype(float) * 0.001
+    pts = backproject(dep, frame["camera_intrinsics"][cam]["matrix"], frame["camera_poses"][cam])
+    return rgb, pts
+
+
+def detect_grid(frame):
+    """Return 5x5x3 array of button centres indexed [row(x order), col(y order)], or None."""
+    for cam in ("front", "wrist"):
+        try:
+            rgb, pts = frame_arrays(frame, cam)
+            b = find_buttons(rgb, pts)
+            c = np.array([p for p, n, _ in b if 8 <= n <= 200 and abs(p[2] - 0.016) < 0.03])
+            if len(c) >= 10:
+                zm = np.median(c[:, 2])
+                c = c[np.abs(c[:, 2] - zm) < 0.005]
+            if len(c) >= 10:
+                # drop isolated candidates: keep those with >=2 neighbours at 0.06-0.13 m
+                D = np.linalg.norm(c[:, None, :2] - c[None, :, :2], axis=-1)
+                keep = ((D > 0.06) & (D < 0.13)).sum(1) >= 2
+                c = c[keep]
+            if len(c) < 20:
+                log("grid", cam, "only", len(c), "candidates")
+                continue
+            g = fit_lattice(c)
+            if g is None:
+                log("grid", cam, "lattice fit failed", len(c))
+                continue
+            log("grid", cam, "n", len(c), "origin", np.round(g[0, 0], 3), "ex", np.round(g[1, 0] - g[0, 0], 3), "ey", np.round(g[0, 1] - g[0, 0], 3))
+            return g
+        except Exception as e:
+            log("grid error", cam, repr(e))
+    return None
+
+
+def fit_lattice(c):
+    """Fit a 5x5 square lattice (any small rotation) to candidate centres c (Nx3).
+    Index i runs along the basis closest to world +x, j along world +y."""
+    P = c[:, :2]
+    D = P[None, :, :] - P[:, None, :]
+    L = np.linalg.norm(D, axis=-1)
+    m = (L > 0.05) & (L < 0.13)
+    v = D[m]
+    if len(v) < 20:
+        return None
+    s0 = np.median(np.linalg.norm(v, axis=1))
+    near = np.abs(np.linalg.norm(v, axis=1) - s0) < 0.2 * s0
+    v = v[near]
+    ang = np.arctan2(v[:, 1], v[:, 0])
+    th = np.angle(np.mean(np.exp(4j * ang))) / 4.0       # in (-45, 45] deg
+    ex = np.array([np.cos(th), np.sin(th)]); ey = np.array([-np.sin(th), np.cos(th)])
+    sp = float(np.median(np.linalg.norm(v, axis=1)))
+    cen = P.mean(0)
+    u = (P - cen) @ ex / sp; w = (P - cen) @ ey / sp
+    iu = np.round(u - np.median(u - np.round(u))); iw = np.round(w - np.median(w - np.round(w)))
+    iu -= iu.min(); iw -= iw.min()
+    if iu.max() != 4 or iw.max() != 4:
+        return None
+    # least squares: P = o + i*a + j*b
+    A = np.stack([np.ones_like(iu), iu, iw], 1)
+    sol, *_ = np.linalg.lstsq(A, P, rcond=None)
+    res = np.linalg.norm(A @ sol - P, axis=1)
+    if np.median(res) > 0.01:
+        return None
+    o, a, b = sol
+    z = float(np.median(c[:, 2]))
+    g = np.zeros((5, 5, 3))
+    for i in range(5):
+        for j in range(5):
+            g[i, j, :2] = o + i * a + j * b
+            g[i, j, 2] = z
+    return g
+
+
+def stick_tip(frame):
+    """World point of the visible stick end in the wrist camera (deepest near-camera pixels)."""
+    files = {(x["camera"], x["kind"]): x["path"] for x in frame["files"]}
+    dep = np.array(Image.open(WS / files[("wrist", "depth")])).astype(float) * 0.001
+    pts = backproject(dep, frame["camera_intrinsics"]["wrist"]["matrix"], frame["camera_poses"]["wrist"])
+    m = (dep > 0) & (dep < 0.25)
+    if m.sum() < 50:
+        return None
+    dmax = dep[m].max()
+    mm = m & (dep >= dmax - 0.004)
+    tip = np.nanmean(pts[mm], 0)
+    tcp = np.array(frame["state"][:3])
+    return tip - tcp
+
+
+def nearest_node(grid, p):
+    d = np.linalg.norm(grid[:, :, :2] - np.asarray(p[:2]), axis=-1)
+    i, j = np.unravel_index(np.argmin(d), d.shape)
+    return (int(i), int(j)), float(d[i, j])
+
+
+def sequence_from_states(frames, grid):
+    seq = []
+    zs = np.array([f["state"][2] for f in frames])
+    zmin = zs.min()
+    log("video z range", round(zs.min(), 3), round(zs.max(), 3))
+    if zs.max() - zmin < 0.05:
+        return []
+    for f in frames:
+        s = f["state"]
+        if s[2] > zmin + 0.015:
+            continue
+        node, d = nearest_node(grid, s)
+        if d < SNAP and (not seq or seq[-1] != node):
+            seq.append(node)
+    return seq, float(np.median(zs[zs < zmin + 0.015]))
+
+
+def sequence_from_dwells(frames, grid, vmax=0.0018, min_len=4, near=0.022):
+    """Nodes where the video stick paused at contact height (speed < vmax m/frame)."""
+    S = np.array([f["state"][:3] for f in frames], float)
+    if len(S) < 10 or S[:, 2].max() - S[:, 2].min() < 0.05:
+        return []
+    zmin = S[:, 2].min()
+    ts = np.array([f.get("timestamp_s", k * 0.05) for k, f in enumerate(frames)], float)
+    dt = np.maximum(np.r_[1.0, np.diff(ts)], 1e-3)
+    sp = np.r_[np.inf, np.linalg.norm(np.diff(S, axis=0), axis=1)] * 0.05 / dt   # m per 20 Hz tick
+    min_len = max(2, int(round(min_len * 0.05 / max(np.median(dt[1:]), 1e-3))))
+    slow = (sp < vmax) & (S[:, 2] < zmin + 0.012)
+    seq = []
+    k = 0
+    while k < len(S):
+        if not slow[k]:
+            k += 1
+            continue
+        e = k
+        while e < len(S) and slow[e]:
+            e += 1
+        if e - k >= min_len:
+            node, d = nearest_node(grid, S[k:e].mean(0))
+            if d < near and (not seq or seq[-1] != node):
+                seq.append(node)
+        k = e
+    return seq
+
+
+def red_mask(rgb):
+    r, g, b = [rgb[..., k].astype(float) for k in range(3)]
+    return (r > 150) & (g < 90) & (b < 90)
+
+
+def sequence_from_red(frames, grid):
+    """Order nodes by when they turn (and stay) red in the front camera."""
+    reds = []
+    for f in frames[::2] + [frames[-1]]:
+        cur = set()
+        try:
+            rgb, pts = frame_arrays(f, "front")
+            m = red_mask(rgb) & np.isfinite(pts[..., 0]) & (np.abs(pts[..., 2] - grid[0, 0, 2]) < 0.01)
+            P = pts[m]
+            for i in range(5):
+                for j in range(5):
+                    if (np.linalg.norm(P[:, :2] - grid[i, j, :2], axis=1) < 0.02).sum() >= 3:
+                        cur.add((i, j))
+        except Exception:
+            pass
+        reds.append(cur)
+    final = reds[-1]
+    start = {}
+    for n in final:
+        k = len(reds) - 1
+        while k > 0 and n in reds[k - 1]:
+            k -= 1
+        start[n] = k
+    return [n for n, _ in sorted(start.items(), key=lambda t: t[1])]
+
+
+class Robot:
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.ended = False
+        self.complete = False
+        self.state = None
+        self.step = 0
+        self.remaining = 10**9
+        self.last = None
+        self.last_reply = None
+
+    def observe(self):
+        p = packet(self.ctx.call("robomme_observe"))
+        self._upd(p)
+        return p
+
+    def _upd(self, p):
+        if "state" in p:
+            self.state = np.array(p["state"], float)
+        if "step_id" in p:
+            self.step = p["step_id"]
+        lim = p.get("episode_limits") or {}
+        if "remaining_episode_steps" in lim:
+            self.remaining = lim["remaining_episode_steps"]
+        if p.get("episode_ended"):
+            self.ended = True
+        tr = p.get("transition") or {}
+        if tr.get("episode_ended"):
+            self.ended = True
+        if tr.get("task_complete"):
+            self.complete = True
+        for s in (p.get("steps", []) or []) + (tr.get("steps", []) or []):
+            if isinstance(s, dict):
+                if s.get("task_complete"):
+                    self.complete = True
+                if s.get("episode_ended"):
+                    self.ended = True
+        if p.get("task_complete"):
+            self.complete = True
+        self.last = p
+
+    def send(self, rows):
+        if self.ended or not rows:
             return
-        p = start + (end - start) * (i / n)
-        r.step([r.row_towards([p[0], p[1], z], vmax=1.0)])
-    e = 0
-    while e < max_extra and not r.ended and r.remaining() > 0:
-        if np.linalg.norm(r.state()[:2] - end) < tol and abs(r.state()[2] - z) < 0.003:
+        rows = rows[: max(0, min(100, self.remaining))]
+        if not rows:
+            self.ended = True
+            return
+        reply = self.ctx.call("robomme_step", actions=[list(map(float, r)) for r in rows])
+        p = packet(reply)
+        self._upd(p)
+        self.last_reply = reply
+
+    def move_to(self, target, vmax=0.012, tol=0.003, max_steps=120, chunk=4):
+        """Closed-loop straight-line move of the TCP to target (x,y,z)."""
+        target = np.asarray(target, float)
+        used = 0
+        best, stall = 1e9, 0
+        while not self.ended and used < max_steps:
+            err = target - self.state[:3]
+            dist = np.linalg.norm(err)
+            if dist < tol:
+                return True
+            if dist < best - 0.002:
+                best, stall = dist, 0
+            else:
+                stall += 1
+                if stall >= 4:
+                    log("move stalled at", np.round(self.state[:3], 3), "dist", round(dist, 3))
+                    return False
+            rows = []
+            pos = self.state[:3].copy()
+            for _ in range(chunk):
+                e = target - pos
+                dn = np.linalg.norm(e)
+                if dn < tol:
+                    break
+                stepv = e if dn <= vmax else e / dn * vmax
+                pos = pos + stepv
+                rows.append(list(np.clip(stepv / 0.05, -1, 1)) + [0, 0, 0, 0])
+            if not rows:
+                return True
+            self.send(rows)
+            used += len(rows)
+        return np.linalg.norm(target - self.state[:3]) < 3 * tol
+
+
+DWELL_MIN, DWELL_MAX = 12, 24
+TRAVEL_V = 0.015
+HARD_STEPS = 440        # observed native end at step 450 regardless of reported limit
+
+
+def dwell(rob, xy, cz, dmin=None, dmax=None):
+    """Hold the stick on node xy until it turns red (or DWELL_MAX steps)."""
+    held = 0
+    red = 0
+    dmin = DWELL_MIN if dmin is None else dmin
+    dmax = DWELL_MAX if dmax is None else dmax
+    while not rob.ended and held < dmax:
+        n = 4
+        rows = []
+        pos = rob.state[:3]
+        e = np.array([xy[0], xy[1], cz]) - pos
+        rows.append(list(np.clip(e / 0.05, -0.2, 0.2)) + [0, 0, 0, 0])
+        rows += [[0, 0, 0, 0, 0, 0, 0]] * (n - 1)
+        rob.send(rows)
+        held += n
+        try:
+            red = node_red_pixels(rob.last_reply, rob.last, xy)
+        except Exception as ex:
+            red = -1
+        if held >= dmin and red >= 60:
             break
-        r.step([r.row_towards([end[0], end[1], z], vmax=0.3)])
-        e += 1
-
-
-def dwell(r, p, z, n):
-    for _ in range(n):
-        if r.ended or r.remaining() <= 0:
-            return
-        r.step([r.row_towards([p[0], p[1], z], vmax=0.2)])
+    return held, red
 
 
 def main(ctx):
-    try:
-        _main(ctx)
-    except Exception as e:
-        log("CONTROLLER ERROR", repr(e), traceback.format_exc())
-
-
-def _main(ctx):
     t0 = time.time()
-    r = Robot(ctx, log=log)
-    pkt = r.observe()
-    log("limits", pkt.get("episode_limits"))
-    targets, z_draw, approach = plan(pkt)
-    r.R_ref = rotvec_to_R(r.state()[3:6])
-    if not targets:
-        log("no targets; stop")
+    log("PatternLock controller v5 start (dwell + full tip offset + fast)")
+    rob = Robot(ctx)
+    p = rob.observe()
+    seqd = p.get("frame_sequence") or {}
+    frames = []
+    try:
+        man = json.loads((WS / seqd["manifest_path"]).read_text())
+        frames = sorted(man["frames"], key=lambda f: f["frame_index"])
+    except Exception as e:
+        log("manifest error", repr(e))
+    video = [f for f in frames if f.get("phase") == "video_demo"]
+    exe = [f for f in frames if f.get("phase") == "execution"]
+    log("frames", len(frames), "video", len(video), "exec", len(exe))
+
+    live_grid = detect_grid(exe[-1]) if exe else None
+    vid_grid = detect_grid(video[0]) if video else None
+    if live_grid is None:
+        live_grid = vid_grid
+    if vid_grid is None:
+        vid_grid = live_grid
+    if live_grid is None:
+        log("no grid found; abort")
         return
-    first = targets[0][1]
-    ap = approach if approach is not None else first
-    # hover above approach point, descend, slide in
-    r.goto([ap[0], ap[1], z_draw + HOVER], tol=0.005, vmax=1.0, max_steps=60)
-    r.goto([ap[0], ap[1], z_draw], tol=0.002, vmax=0.3, max_steps=30)
-    log("descended at", np.round(r.state()[:3], 4), "step", r.last.get("step_id"))
-    stroke(r, r.state()[:2], first, z_draw, SLIDE_SPEED)
-    dwell(r, first, z_draw, DWELL)
-    log("node", targets[0][0], "at", np.round(r.state()[:3], 4), "step", r.last.get("step_id"))
-    for k, p in targets[1:]:
-        if r.ended:
+
+    seq, cz = [], CONTACT_Z
+    try:
+        r = sequence_from_states(video, vid_grid)
+        if r:
+            seq, cz = r
+    except Exception as e:
+        log("state seq error", repr(e), traceback.format_exc())
+    log("state(snap) sequence", seq, "contact z", round(cz, 4))
+    try:
+        seq_dw = sequence_from_dwells(video, vid_grid)
+    except Exception as e:
+        seq_dw = []
+        log("dwell seq error", repr(e))
+    log("dwell sequence", seq_dw)
+    if len(seq_dw) >= 2:
+        seq = seq_dw
+    try:
+        seq_red = sequence_from_red(video, vid_grid)
+        log("red sequence", seq_red)
+    except Exception as e:
+        seq_red = []
+        log("red seq error", repr(e))
+    if len(seq) < 2 and len(seq_red) >= 2:
+        seq = seq_red
+    if len(seq) < 2:
+        log("no usable sequence; abort")
+        return
+    cz = float(np.clip(cz, 0.060, 0.080))
+    off = np.zeros(3)
+    try:
+        tv = stick_tip(video[0]) if video else None
+        tl = stick_tip(exe[-1]) if exe else None
+        log("tip rel tcp video", None if tv is None else np.round(tv, 4), "live", None if tl is None else np.round(tl, 4))
+        if tv is not None and tl is not None:
+            same_pose = np.linalg.norm(np.array(video[0]["state"][:3]) - np.array(exe[-1]["state"][:3])) < 0.01
+            off = tl - tv
+            if not same_pose:
+                log("warning: video/live start poses differ")
+            off = np.clip(off, [-0.03, -0.03, -0.03], [0.03, 0.03, 0.09])
+            off[:2] *= XY_OFFSET_GAIN
+    except Exception as e:
+        log("tip error", repr(e))
+    log("tool offset (live - video)", np.round(off, 4))
+    cz = cz - off[2]
+    targets = [live_grid[i, j, :2] - off[:2] for i, j in seq]
+    log("targets", [np.round(t, 3).tolist() for t in targets], "t", round(time.time() - t0, 1))
+
+    path = sum(np.linalg.norm(np.asarray(targets[k + 1]) - targets[k]) for k in range(len(targets) - 1))
+    travel = int(path / TRAVEL_V * 1.2) + 70
+    spare = max(0, min(rob.remaining, HARD_STEPS) - travel - 10)
+    dmax = int(np.clip(spare / len(targets), 4, DWELL_MAX))
+    dmin = min(DWELL_MIN, dmax)
+    log("path", round(path, 3), "travel est", travel, "remaining", rob.remaining, "dwell", dmin, dmax)
+    # approach above first node, descend, trace, stay
+    x0, y0 = targets[0]
+    rob.move_to([x0, y0, HOVER_Z - off[2]], vmax=0.03, tol=0.004, max_steps=60)
+    log("hover", np.round(rob.state[:3], 3), "step", rob.step)
+    rob.move_to([x0, y0, cz], vmax=0.008, tol=0.002, max_steps=30)
+    log("down", np.round(rob.state[:3], 3), "step", rob.step)
+    h, red = dwell(rob, targets[0], cz, dmin, dmax)
+    log("dwell node 0", seq[0], "held", h, "red", red, "step", rob.step, "ended", rob.ended, "complete", rob.complete)
+    for k, (x, y) in enumerate(targets[1:], 1):
+        if rob.ended:
             break
-        stroke(r, r.state()[:2], p, z_draw, SPEED)
-        dwell(r, p, z_draw, DWELL)
-        log("node", k, "at", np.round(r.state()[:3], 4), "step", r.last.get("step_id"),
-            "ended", r.ended, "complete", r.task_complete)
-    # hold on the last node waiting for the verdict
-    n = 0
-    while not r.ended and n < 20 and r.remaining() > 0:
-        dwell(r, targets[-1][1], z_draw, 1)
-        n += 1
-    log("final step", r.last.get("step_id"), "ended", r.ended, "complete", r.task_complete,
-        "wall", round(time.time() - t0, 1))
+        ok = rob.move_to([x, y, cz], vmax=TRAVEL_V, tol=0.003, max_steps=80)
+        log("node", k, seq[k], ok, np.round(rob.state[:3], 3), "step", rob.step, "ended", rob.ended, "complete", rob.complete)
+        if not rob.ended:
+            h, red = dwell(rob, (x, y), cz, dmin, dmax)
+            log("dwell node", k, seq[k], "held", h, "red", red, "step", rob.step, "ended", rob.ended, "complete", rob.complete)
+    # dwell a few steps at the last node so contact registers
+    if not rob.ended:
+        x, y = targets[-1]
+        rob.move_to([x, y, cz], vmax=0.004, tol=0.001, max_steps=6, chunk=6)
+    log("done step", rob.step, "ended", rob.ended, "complete", rob.complete, "t", round(time.time() - t0, 1))

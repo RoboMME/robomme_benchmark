@@ -7,8 +7,8 @@ not used.
 
 ## Adaptation
 
-Settings are `demo-only`, `interaction-only` and `demo&interaction`.
-The leaderboard uses R10; R1/R3/R5 are optional reported results.
+The released policies cover `interaction-only` and `Hybrid`, each with at most
+10 development rollouts per task.
 
 We retain the LIBERO coordinator, task workers, verifier, shared skill library,
 robot API and SAM3/Contact-GraspNet/PyRoki/cuRobo providers. Each setting/budget has
@@ -20,7 +20,7 @@ an independent multi-task campaign. Programs and libraries freeze before testing
 - `campaign.py` and companion modules: development isolation, budget/deadline
   enforcement, transport and logging.
 - `eval_plus.py`: frozen test execution through the public benchmark interface.
-- `solutions/`: all 144 evaluated task policies, organized by setting, R and task.
+- `solutions/`: 32 current R10 task policies, organized by setting and task.
 - `runs/`: optional ignored link to external development logs and test rollouts.
 
 These settings describe this baseline under the
@@ -30,13 +30,14 @@ The model, time limits and input sampling are implementation choices.
 | Area | Configuration |
 | --- | --- |
 | Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; development/evaluation usage and cost logged separately. |
-| Budgets | `demo-only`: 0 starts. Interaction settings: at most 10 starts per task. Historical R1/R3/R5 studies were developed independently. All starts, including failed setup and verification, share the budget. Optional-budget solutions remain available. |
-| Training demos | `demo-only`/`demo&interaction` receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. `interaction-only` receives none. Simulator replay counts toward the development budget. |
+| Budgets | `demo-only`: 0 starts. Interaction settings: at most 10 starts per task. All starts, including failed setup and verification, share the budget. |
+| Training demos | `demo-only`/`Hybrid` receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. `interaction-only` receives none. Simulator replay counts toward the development budget. |
 | Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
 | Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
 | Reset recovery | One setup attempt per reserved training start; up to three identical test setup attempts. Policy execution is not retried automatically. |
 | SAM3 recovery | At most three HTTP attempts per request for transient service/connection errors, with 1-second then 2-second backoff. Each attempt retains the 60-second timeout; episode watchdogs still apply. No retries for empty detections or invalid prompts. |
+| Provider supervision | Restart from recorded installation/checkpoint paths, verify replacement files before stopping a service, and recheck transient health failures. ASPIRE test jobs start only on GPUs with healthy providers; RAX can continue independently. |
 
 - **Deadline:** 150 minutes from a task's first worker assignment, including API
   calls, offline work and rollouts. Resumes preserve its clock. Expiry stops the
@@ -56,7 +57,7 @@ The model, time limits and input sampling are implementation choices.
   previous artifacts and replace selected results regardless of success/failure.
 
 Published `solutions/` contain the evaluated policies. Each task's `manifest.json`
-records its source selection, evaluated hashes and interface-adjustment provenance.
+records the source run, exact evaluated file hashes and benchmark fingerprint.
 
 ### Runtime limits
 
@@ -75,6 +76,9 @@ These limits apply to development and testing without extending simulator step
 limits. Timeouts count as unsuccessful tests. The queue's 48-hour job cap and
 30-minute idle watchdog do not extend the per-task development deadline.
 Clocks, commands, transcripts and API usage are retained in run artifacts.
+Tool hooks also save host-owned command/results and code snapshots in
+`development/audit/history/`; each simulator attempt records its submitted code hash.
+Frozen evaluation verifies the pinned harness and protocol as well as policy files.
 
 ## Setup and run
 
@@ -94,7 +98,7 @@ python scripts/plus_eval/agentic_methods/aspire/eval_plus.py \
   --gpu 0 --output-dir "<RUN_ROOT>/aspire-interaction-only-R10"
 ```
 
-`--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media.
+Use `--setting hybrid` for Hybrid. `--workers` sets concurrent processes on that GPU; `--artifacts logs` omits media.
 The same output directory resumes unstarted tests; use a new directory for a fresh run. Solution manifests preserve
 file hashes and policy provenance.
 

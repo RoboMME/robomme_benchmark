@@ -5,22 +5,15 @@
   "task": "PickXtimes",
   "evaluation_episodes": 50,
   "policy_files": {
-    "policy.py": "0ccc1ed664c940743a1da4067a6003517201c46b50e96f703bb031bf888e572a"
+    "policy.py": "582bcfe59bb5c97dfdfd6a6f70ab113ce4b32feb9ebdc6ad5447399c9b228c02"
   },
-  "source_experiment": "full_20261116_protocol_v2",
-  "test_feedback_to_development": false,
-  "status": "frozen_policy",
   "source_policy_files": {
-    "PickXtimes.py": "8fb580f84f9c83294a43f0d583e8f7d02b7171e7dd48aeaa570b7793ff6d0cd8"
+    "PickXtimes.py": "582bcfe59bb5c97dfdfd6a6f70ab113ce4b32feb9ebdc6ad5447399c9b228c02"
   },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3",
-  "publication_annotations": {
-    "change": "Setting names in comments, docstrings and documentation only; executable Python AST unchanged.",
-    "files": {
-      "policy.py": {
-        "evaluated_sha256": "8fb580f84f9c83294a43f0d583e8f7d02b7171e7dd48aeaa570b7793ff6d0cd8",
-        "published_sha256": "0ccc1ed664c940743a1da4067a6003517201c46b50e96f703bb031bf888e572a"
-      }
-    }
-  }
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "af1fd98dde91910aa4e850862f48805d31cc7d240f2f37a1edf4f554c94c51d1",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy"
 }

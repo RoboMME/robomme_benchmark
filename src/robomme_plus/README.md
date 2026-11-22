@@ -60,12 +60,21 @@ from Plus demonstrations or rollouts. It requires development logs and two audit
 | `zero-shot` | No Plus data: test directly, or develop only on original RoboMME | 0 |
 | `demo-only` | The 50 released demonstrations, used offline | 0 |
 | `interaction-only` | Simulator rollouts on provided training seeds; no released demonstrations | 10 |
-| `demo&interaction` | Released demonstrations and training-seed rollouts | 10 |
+| `Hybrid` | Released demonstrations and training-seed rollouts | 10 |
 
 Demonstrations are offline recordings. Replaying their actions in the simulator
 counts as interaction and is forbidden in `demo-only`. The interaction budget is
 **at most 10 attempts per task across all its training seeds combined**.
-The leaderboard uses this budget; 1, 3 and 5 are optional. Each result covers all 800 tests.
+The leaderboard uses this budget. Results with smaller budgets are optional. Each result covers all 800 tests.
+
+Optional results with a smaller budget R may come from **independent experiments capped at R
+attempts per task** or **checkpoints extracted from a 10-attempt development run**.
+Report which approach you use. Checkpoints are selected **per task**, after at most R attempts and
+before that task's (R+1)th start. A checkpoint may include offline revisions using
+feedback from those attempts; saving immediately after an attempt is also valid.
+Tasks need not freeze simultaneously. Preserve the checkpoint's code and dependency
+versions. Shared components must also respect the reported per-task budget; later
+rollouts on another task alone do not invalidate an independently saved checkpoint.
 
 1. **Keep the full development history.** Record the whole development process
    so it can be audited. Every simulator start on a Plus training seed counts,

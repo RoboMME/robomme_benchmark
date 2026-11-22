@@ -5,21 +5,20 @@
   "task": "VideoPlaceOrder",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "6b4cd030bff137718e5f784e3fd7d86f636fa5e55c8374caf00c755b5db26090",
-    "pairs.py": "4780ef6eafc2035767853d75b169e2cf531498cc9782b90b9b7342973748f784",
-    "swaps.py": "7bf8195e84a5af198e1003b2061f25e72c9ce90a56f1980f49653da0dd33f6ab",
-    "tracker.py": "33496a837e7adc1fed5a4b55ddfc1c7bbfe65fa800409e9da6ca710d3811647e",
-    "wtrack.py": "7a950f862656e5c8f668b6bfdbe0b2cedbf19befd1874f488073c5db9a9577ff"
+    "controller.py": "6eb938629ac8f72dd5e7e62e10471c8c4598e978c80e4289735c222d6834f792",
+    "vlib.py": "8ebc7c04d655bbbbeadfc9c40a694743337eed979b088ff6c748bc2086d3ecb5"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "6eb938629ac8f72dd5e7e62e10471c8c4598e978c80e4289735c222d6834f792",
+    "vlib.py": "8ebc7c04d655bbbbeadfc9c40a694743337eed979b088ff6c748bc2086d3ecb5"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "6a4d1aebb513a42c04c4bc290f6956398c521b5f0f7fa4fa80c186702456b971",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "6b4cd030bff137718e5f784e3fd7d86f636fa5e55c8374caf00c755b5db26090",
-    "pairs.py": "4780ef6eafc2035767853d75b169e2cf531498cc9782b90b9b7342973748f784",
-    "swaps.py": "7bf8195e84a5af198e1003b2061f25e72c9ce90a56f1980f49653da0dd33f6ab",
-    "tracker.py": "33496a837e7adc1fed5a4b55ddfc1c7bbfe65fa800409e9da6ca710d3811647e",
-    "wtrack.py": "7a950f862656e5c8f668b6bfdbe0b2cedbf19befd1874f488073c5db9a9577ff"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "ffc1d9f9670ca43200a69e0bbb96c5d5d97c679b9725e42d4a889ce0ae5de9c0"
+  }
 }

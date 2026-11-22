@@ -1,75 +1,48 @@
 import numpy as np
-from motion import hand_yaw, wrap
-from percept import find_cubes, rect_yaw
+from lib import *
+from percep import *
 
-def locate_cube_wrist(robot, xy_guess, max_dist=0.05):
-    robot.observe()
-    cs = find_cubes(robot.meta, robot.imgs, cam="wrist")
-    best = None
-    for c in cs:
-        dd = np.linalg.norm(c["xyz"][:2] - xy_guess)
-        if dd < max_dist and (best is None or dd < best[0]):
-            best = (dd, c)
-    if best is None:
-        return None
-    c = best[1]
-    yaw, ext = rect_yaw(c["top"][:, :2])
-    return dict(xyz=c["xyz"], yaw=yaw, ext=ext)
+HOVER_Z = 0.16
+GRASP_DZ = 0.022     # grasp TCP this far below cube top
+LIFT_Z = 0.15
 
-def conflicts(xy, g, neighbors):
-    a = np.array([np.cos(g), np.sin(g)]); b = np.array([-a[1], a[0]])
-    n = 0
-    for p in neighbors:
-        d = np.asarray(p) - xy
-        if abs(d @ b) < 0.04 and abs(d @ a) < 0.085:
-            n += 1
-    return n
 
-def pick_cube(robot, get_xy, log=print, hover=0.15, lift=0.15, place_back=True, neighbors=()):
-    """Approach tracked cube, refine with wrist cam, grasp, lift, (place back), release."""
-    robot.grip = -1.0
-    xy = get_xy()
-    robot.move_to([xy[0], xy[1], hover], chunk=8)
-    info = None
-    for k in range(3):
-        xy = get_xy()
-        info = locate_cube_wrist(robot, np.asarray(xy[:2]), max_dist=0.025)
-        if info is None:
-            log("wrist locate failed", k); break
-        log("wrist cube", np.round(info["xyz"], 3), "yaw", np.degrees(info["yaw"]))
-        xy = info["xyz"][:2]
-        if np.linalg.norm(robot.state[:2] - xy) < 0.006:
-            break
-        robot.move_to([xy[0], xy[1], hover])
-    cube_yaw = info["yaw"] if info else 0.0
-    cur = hand_yaw(robot.state)
-    goal = cur + wrap(cube_yaw - cur, np.pi / 2)
-    alt = goal + (np.pi / 2 if goal < cur else -np.pi / 2)
-    c0, c1 = conflicts(xy, goal, neighbors), conflicts(xy, alt, neighbors)
-    if c0 > 0 and c1 < c0:
-        log("using alternate grasp axis", c0, c1)
-        goal = alt
-    robot.set_down(goal)
-    robot.move_to([xy[0], xy[1], hover])
-    ztop = info["xyz"][2] if info else 0.04
-    robot.move_to([xy[0], xy[1], ztop + 0.03], vmax=0.6)
-    robot.move_to([xy[0], xy[1], max(ztop - 0.022, 0.012)], vmax=0.3, max_steps=25)
-    robot.hold(10, grip=1.0)
-    robot.move_to([xy[0], xy[1], lift], vmax=0.6)
-    robot.hold(3)
-    opening = float(robot.state[6] + robot.state[7])
-    held = opening > 0.025
-    log("lifted, opening %.4f held %s" % (opening, held))
-    if place_back:
-        robot.move_to([xy[0], xy[1], ztop - 0.015], vmax=0.5, max_steps=30)
-        robot.hold(6, grip=-1.0)
-        robot.move_to([xy[0], xy[1], hover])
-    return held
+def refine(ctx, xy, yaw0=0.0):
+    """Hover over xy with the wrist camera, return refined (xy, top_z, yaw)."""
+    o, _ = servo(ctx, [xy[0], xy[1], HOVER_Z], yaw=yaw0, grip=-1)
+    for k in range(2):
+        pts = cube_top_points(o, 'wrist', xy)
+        if len(pts) < 20:
+            return o, None
+        xy = pts[:, :2].mean(0)
+        yaw = square_yaw(pts[:, :2]); top = float(np.median(pts[:, 2]))
+        log('refine', k, 'xy', xy.round(4), 'top %.3f yaw %.1f n %d' % (top, np.degrees(yaw), len(pts)))
+        if k == 0:
+            o, _ = servo(ctx, [xy[0], xy[1], HOVER_Z - 0.04], yaw=yaw0, grip=-1, obs=o)
+    return o, (xy, top, yaw)
 
-def press_button(robot, bxy, btop, log=print, depth=0.012):
-    robot.grip = 1.0
-    robot.move_to([bxy[0], bxy[1], btop + 0.07], chunk=8)
-    robot.move_to([bxy[0], bxy[1], btop + 0.02], vmax=0.5)
-    robot.move_to([bxy[0], bxy[1], btop - depth], vmax=0.25, max_steps=20)
-    robot.hold(3)
-    robot.move_to([bxy[0], bxy[1], btop + 0.07], vmax=0.6)
+
+def pick(ctx, xy):
+    o, r = refine(ctx, xy)
+    if r is None:
+        return o, False, None
+    xy, top, yaw = r
+    gz = max(top - GRASP_DZ, 0.012)
+    o, _ = servo(ctx, [xy[0], xy[1], top + 0.05], yaw=yaw, grip=-1, obs=o)
+    o, _ = servo(ctx, [xy[0], xy[1], gz], yaw=yaw, grip=-1, obs=o, max_iter=25)
+    log('at grasp', o.state[:3].round(4), 'yaw', round(np.degrees(ee_yaw(o.state)), 1))
+    o = hold(ctx, 1.0, 12)
+    log('closed fingers', o.state[6:8].round(4))
+    o, _ = servo(ctx, [xy[0], xy[1], LIFT_Z], yaw=yaw, grip=1.0, obs=o)
+    width = o.state[6] + o.state[7]
+    held = width > 0.01
+    log('lifted', o.state[:3].round(3), 'width %.4f held %s' % (width, held))
+    return o, held, (xy, top, yaw)
+
+
+def place(ctx, xy, top, yaw):
+    o, _ = servo(ctx, [xy[0], xy[1], top + 0.03], yaw=yaw, grip=1.0)
+    o, _ = servo(ctx, [xy[0], xy[1], top - GRASP_DZ + 0.006], yaw=yaw, grip=1.0, obs=o, max_iter=20)
+    o = hold(ctx, -1.0, 8)
+    o, _ = servo(ctx, [xy[0], xy[1], HOVER_Z], yaw=yaw, grip=-1.0, obs=o)
+    return o

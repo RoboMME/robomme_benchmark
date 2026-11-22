@@ -26,13 +26,15 @@ class RoboMMEPlusAdapter(LiberoAdapter):
     # Native Panda joint-position control can hold intermediate finger widths.
     gripper_holds_intermediate = True
 
-    def __init__(self, *, study_root, output_root, purpose="development", run_observer=None, episode_factory=Episode):
+    def __init__(self, *, study_root, output_root, purpose="development", run_observer=None, episode_factory=Episode,
+                 policy_revision=None):
         super().__init__(run_observer=run_observer, post_settle_steps=0, camera_width=256, camera_height=256)
         self.study = Study.open(study_root)
         if self.study.config["method"] != "aspire":
             raise ValueError("Not an ASPIRE study")
         self.output_root = Path(output_root)
         self.purpose, self.episode_factory = purpose, episode_factory
+        self.policy_revision = policy_revision
         self.episode = None
         self._demonstration = ()
 
@@ -54,7 +56,8 @@ class RoboMMEPlusAdapter(LiberoAdapter):
             raise ValueError("Only released training tasks may be reset in development")
         # 'seed' here is the released episode index. No procedural seed API.
         self.episode = self.episode_factory(task, seed, study=self.study,
-            output=self.output_root / f"{task}_{uuid.uuid4().hex[:12]}", purpose=self.purpose)
+            output=self.output_root / f"{task}_{uuid.uuid4().hex[:12]}", purpose=self.purpose,
+            **({'policy_revision': self.policy_revision} if self.policy_revision else {}))
         self.control_frequency = self.episode.frequency
         self.control_period_s = 1.0 / self.control_frequency
         self.horizon = self.episode.limit

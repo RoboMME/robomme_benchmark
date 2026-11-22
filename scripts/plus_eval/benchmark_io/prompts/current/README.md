@@ -1,6 +1,6 @@
 # RoboMME-Plus public development protocol v9
 
-Use `zero-shot`, `demo-only`, `interaction-only` and `demo&interaction`. The main interaction budget
+Use `zero-shot`, `demo-only`, `interaction-only` and `Hybrid`. The main interaction budget
 is 10 starts per task across all its seeds; R1/R3/R5 are optional budgets.
 `zero-shot`/`demo-only` permit no Plus simulator starts. Original RoboMME's dataset
 and simulator may be used freely in every setting, outside this budget.

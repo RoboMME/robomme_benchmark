@@ -5,23 +5,26 @@
   "task": "PickXtimes",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "ff1bb352130459e8a9c1af7a0aa7137fa608cd59123df76f5476bc7a90bfc6e2",
-    "motion_model.py": "67bd6ccf71768113cccde086355058afebf10e485e3d21373e172954595c18ae",
-    "perception.py": "ac9d248e46f15862d9746cb4dca95980e715b7fae0762d46ff5ab8a3e5a90307",
-    "robot.py": "2ba019c9c7fe9eb8f85d33483f5a5eef710d1037c9801ec8f8f12421f94440bd",
-    "scene.py": "357a77bd032b785272231b88b7b101ffea577a3aae129fdea1488e932f6017ed",
-    "servo.py": "085af6e319992198ace0a3fbdf2a2b288f7e4759d6c2d500171546e4bb140e24"
+    "controller.py": "eef16d8c64e0548563b09b568c391a913e3ada3077a745b7d06babdfbed968eb",
+    "periodic.py": "0c58d5042abf9915ceb4885b8a47b1230c2424f4f95c82338c08c287cb45f6a4",
+    "robo.py": "5b3c6118c86ee98eb3cd9a4c456b2625028fb2f45ecc33ee968c6156e6013c0b",
+    "target_model.py": "190e6391cc6749d6aa47dce0524d7792b0beb2547e86f21ba7c825d848fd66cc",
+    "tracking.py": "7368919ed44b82343d4d8269f6a05c14bb607d50f404cf2062de4487ddc93f5c"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "eef16d8c64e0548563b09b568c391a913e3ada3077a745b7d06babdfbed968eb",
+    "periodic.py": "0c58d5042abf9915ceb4885b8a47b1230c2424f4f95c82338c08c287cb45f6a4",
+    "robo.py": "5b3c6118c86ee98eb3cd9a4c456b2625028fb2f45ecc33ee968c6156e6013c0b",
+    "target_model.py": "190e6391cc6749d6aa47dce0524d7792b0beb2547e86f21ba7c825d848fd66cc",
+    "tracking.py": "7368919ed44b82343d4d8269f6a05c14bb607d50f404cf2062de4487ddc93f5c"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "563728de7e5d6cdc33806bc68935f649b45f9c36caf695d234ed3efde1c36cbb",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "ff1bb352130459e8a9c1af7a0aa7137fa608cd59123df76f5476bc7a90bfc6e2",
-    "motion_model.py": "67bd6ccf71768113cccde086355058afebf10e485e3d21373e172954595c18ae",
-    "perception.py": "ac9d248e46f15862d9746cb4dca95980e715b7fae0762d46ff5ab8a3e5a90307",
-    "robot.py": "2ba019c9c7fe9eb8f85d33483f5a5eef710d1037c9801ec8f8f12421f94440bd",
-    "scene.py": "357a77bd032b785272231b88b7b101ffea577a3aae129fdea1488e932f6017ed",
-    "servo.py": "085af6e319992198ace0a3fbdf2a2b288f7e4759d6c2d500171546e4bb140e24"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "4a962d04505f8c7ec4fbb5edd116edbe81b2f57e6aa64fb95ad72b453cac3e78"
+  }
 }

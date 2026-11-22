@@ -1,144 +1,160 @@
-"""Target-disc detection and video->live route mapping."""
-import json, math
+"""Disc (target) detection in the front RGB-D view -> world xy."""
+import json
+from pathlib import Path
 import numpy as np
 from PIL import Image
 
+WS = Path("/workspace")
 
-def qmat(q):
+
+def quat_to_R(q):
     w, x, y, z = q
-    return np.array([[1-2*(y*y+z*z), 2*(x*y-w*z), 2*(x*z+w*y)],
-                     [2*(x*y+w*z), 1-2*(x*x+z*z), 2*(y*z-w*x)],
-                     [2*(x*z-w*y), 2*(y*z+w*x), 1-2*(x*x+y*y)]])
+    return np.array([
+        [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+        [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+        [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
-def backproj(u, v, d, K, pose):
-    fx, cx, fy, cy = K[0][0], K[0][2], K[1][1], K[1][2]
-    pc = np.array([(u-cx)*d/fx, -(v-cy)*d/fy, -d])
-    return qmat(pose['quaternion_wxyz']) @ pc + np.array(pose['position_m'])
+def backproject(depth_m, K, pose):
+    H, W = depth_m.shape
+    fx, fy, cx, cy = K[0][0], K[1][1], K[0][2], K[1][2]
+    u, v = np.meshgrid(np.arange(W), np.arange(H))
+    d = depth_m
+    pc = np.stack([(u - cx) * d / fx, -(v - cy) * d / fy, -d], -1)
+    R = quat_to_R(pose["quaternion_wxyz"])
+    pw = pc @ R.T + np.array(pose["position_m"])
+    return pw
 
 
-def components(mask):
-    """4-connected components of a boolean mask -> list of (ys, xs)."""
-    H, W = mask.shape
-    seen = np.zeros_like(mask, bool)
-    comps = []
-    ys0, xs0 = np.nonzero(mask)
-    for y0, x0 in zip(ys0, xs0):
-        if seen[y0, x0]:
-            continue
-        stack = [(y0, x0)]; seen[y0, x0] = True; cy, cx = [], []
-        while stack:
-            y, x = stack.pop(); cy.append(y); cx.append(x)
-            for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                yy, xx = y+dy, x+dx
-                if 0 <= yy < H and 0 <= xx < W and mask[yy, xx] and not seen[yy, xx]:
-                    seen[yy, xx] = True; stack.append((yy, xx))
-        comps.append((np.array(cy), np.array(cx)))
-    return comps
+def load_frame(frame, cam="front"):
+    files = {(f["camera"], f["kind"]): f["path"] for f in frame["files"]}
+    rgb = np.asarray(Image.open(WS / files[(cam, "rgb")]).convert("RGB"), dtype=np.float32)
+    dep = np.asarray(Image.open(WS / files[(cam, "depth")]), dtype=np.float32) * 0.001
+    K = frame["camera_intrinsics"][cam]["matrix"]
+    pose = frame["camera_poses"][cam]
+    return rgb, dep, K, pose
 
 
-def find_targets(rgb_path, depth_path, K, P, zmax=0.045):
-    rgb = np.array(Image.open(rgb_path).convert('RGB')).astype(int)
-    dep = np.array(Image.open(depth_path)).astype(float) * 0.001
-    mx = rgb.max(2); mn = rgb.min(2)
-    mask = (mn > 150) & (mx - mn < 40)
-    mask[:25] = False
-    out = []
-    for ys, xs in components(mask):
-        if len(xs) < 6 or len(xs) > 400:
-            continue
-        d = dep[ys, xs]; d = d[d > 0]
-        if len(d) == 0:
-            continue
-        w = backproj(xs.mean(), ys.mean(), float(np.median(d)), K, P)
-        if w[2] > zmax:
-            continue
-        out.append({'px': (float(xs.mean()), float(ys.mean())), 'n': int(len(xs)), 'xyz': [float(c) for c in w]})
-    out.sort(key=lambda t: t['xyz'][1])
-    return out
+def detect_discs(frame, cam="front"):
+    rgb, dep, K, pose = load_frame(frame, cam)
+    P = backproject(dep, K, pose)
+    valid = dep > 0
+    mx = rgb.max(-1)
+    mn = rgb.min(-1)
+    sat = (mx - mn) / np.maximum(mx, 1)
+    # table plane height: median z of saturated (orange wood) pixels
+    table = valid & (sat > 0.35)
+    zt = float(np.median(P[..., 2][table])) if table.sum() > 100 else 0.0
+    dz = P[..., 2] - zt
+    cand = valid & (sat < 0.15) & (mx > 120) & (dz > 0.006) & (dz < 0.03) & (P[..., 0] > -0.45)
+    pts = P[cand][:, :2]
+    # greedy clustering in xy
+    clusters = []
+    if len(pts):
+        rem = pts.copy()
+        while len(rem):
+            c = rem[0]
+            for _ in range(3):
+                m = np.linalg.norm(rem - c, axis=1) < 0.025
+                c = rem[m].mean(0)
+            m = np.linalg.norm(rem - c, axis=1) < 0.025
+            clusters.append((c, int(m.sum())))
+            rem = rem[~m]
+    discs = [c for c, n in clusters if n >= 6]
+    return np.array(discs), zt, clusters
 
 
-def frame_targets(frame, ws):
-    files = {(f['camera'], f['kind']): f['path'] for f in frame['files']}
-    K = frame['camera_intrinsics']['front']['matrix']; P = frame['camera_poses']['front']
-    return find_targets(ws / files[('front', 'rgb')], ws / files[('front', 'depth')], K, P)
+def fit_rigid(A, B):
+    """Least-squares 2D rigid transform with B ~ R A + t."""
+    ca, cb = A.mean(0), B.mean(0)
+    H = (A - ca).T @ (B - cb)
+    U, S, Vt = np.linalg.svd(H)
+    R = Vt.T @ U.T
+    if np.linalg.det(R) < 0:
+        Vt[-1] *= -1
+        R = Vt.T @ U.T
+    t = cb - R @ ca
+    return R, t
 
 
-class RouteMapper:
-    """Map video-frame points to the live layout segment by segment along the target line."""
+def match_sets(A, B):
+    """Match two disc sets: try ordering along principal axis, fall back to NN.
+    Returns (Am, Bm) matched arrays."""
+    if len(A) == len(B) and len(A) >= 2:
+        allp = np.vstack([A, B])
+        c = allp.mean(0)
+        _, _, Vt = np.linalg.svd(allp - c)
+        ax = Vt[0]
+        ia = np.argsort((A - c) @ ax)
+        ib = np.argsort((B - c) @ ax)
+        return A[ia], B[ib]
+    # nearest-neighbour mutual matches after centroid alignment
+    Ac = A - A.mean(0) + B.mean(0)
+    pairs = []
+    for i, a in enumerate(Ac):
+        j = int(np.argmin(np.linalg.norm(B - a, axis=1)))
+        i2 = int(np.argmin(np.linalg.norm(Ac - B[j], axis=1)))
+        if i2 == i:
+            pairs.append((i, j))
+    if not pairs:
+        return A[:0], B[:0]
+    return A[[p[0] for p in pairs]], B[[p[1] for p in pairs]]
 
-    def __init__(self, src, dst):
-        self.src = [np.array(p[:2]) for p in src]
-        self.dst = [np.array(p[:2]) for p in dst]
 
-    def map(self, p):
-        q = np.array(p[:2], float)
-        n = len(self.src)
-        if n == 1:
-            r = self.dst[0] + (q - self.src[0])
-            return [float(r[0]), float(r[1]), p[2]]
+def order_discs(D, axis):
+    s = D @ axis
+    return D[np.argsort(s)]
+
+
+class RowWarp:
+    """Map xy points from the video's disc row to the execution's disc row.
+
+    Each point is written as (interval i, fraction f along the row axis, signed normal
+    offset n in metres) relative to consecutive video discs and rebuilt on the
+    corresponding execution discs.  Requires equal disc counts (>=2)."""
+
+    def __init__(self, Dv, De):
+        allv = Dv - Dv.mean(0)
+        _, _, Vt = np.linalg.svd(allv)
+        ax = Vt[0]
+        if ax[1] < 0:
+            ax = -ax
+        Dv = order_discs(Dv, ax)
+        _, _, Vt2 = np.linalg.svd(De - De.mean(0))
+        ax2 = Vt2[0]
+        if ax2 @ ax < 0:
+            ax2 = -ax2
+        De = order_discs(De, ax2)
+        self.Dv, self.De, self.ax = Dv, De, ax
+
+    @staticmethod
+    def _seg(D, i):
+        a, b = D[i], D[i + 1]
+        L = np.linalg.norm(b - a)
+        u = (b - a) / L
+        nrm = np.array([-u[1], u[0]])
+        return a, L, u, nrm
+
+    def __call__(self, p):
+        Dv, De = self.Dv, self.De
+        m = len(Dv)
         best = None
-        for k in range(n - 1):
-            a, b = self.src[k], self.src[k+1]
-            ab = b - a; L = np.linalg.norm(ab); u = ab / L
-            t = float(np.dot(q - a, u)) / L
-            tc = min(1.0, max(0.0, t))
-            dist = np.linalg.norm(q - (a + tc * ab))
-            if best is None or dist < best[0] - 1e-9:
-                best = (dist, k, t, float(np.cross(u, q - a)))
-        _, k, t, lat = best
-        a2, b2 = self.dst[k], self.dst[k+1]
-        ab2 = b2 - a2; u2 = ab2 / np.linalg.norm(ab2); nrm = np.array([-u2[1], u2[0]])
-        r = a2 + t * ab2 + lat * nrm
-        return [float(r[0]), float(r[1]), p[2]]
+        for i in range(m - 1):
+            a, L, u, nrm = self._seg(Dv, i)
+            f = (p - a) @ u / L
+            if (0 <= f <= 1) or (i == 0 and f < 0) or (i == m - 2 and f > 1):
+                cost = 0
+            else:
+                cost = min(abs(f), abs(f - 1))
+            if best is None or cost < best[0]:
+                best = (cost, i, f, (p - a) @ nrm)
+        _, i, f, n = best
+        a2, L2, u2, n2 = self._seg(De, i)
+        return a2 + f * L2 * u2 + n * n2
 
 
-def line_inliers(targets, tol=0.035):
-    """Keep the largest collinear subset (targets lie on one line on the table)."""
-    pts = [np.array(t['xyz'][:2]) for t in targets]
-    n = len(pts)
-    if n <= 2:
-        return targets
-    best = []
-    for i in range(n):
-        for j in range(i + 1, n):
-            d = pts[j] - pts[i]; L = np.linalg.norm(d)
-            if L < 1e-6:
-                continue
-            u = d / L
-            inl = [k for k in range(n) if abs(float(np.cross(u, pts[k] - pts[i]))) < tol]
-            if len(inl) > len(best):
-                best = inl
-    return [targets[k] for k in best]
-
-
-def order_along_line(targets):
-    pts = np.array([t['xyz'][:2] for t in targets])
-    c = pts.mean(0)
-    _, _, vt = np.linalg.svd(pts - c)
-    u = vt[0]
-    if u[1] < 0:
-        u = -u
-    s = (pts - c) @ u
-    return [targets[k] for k in np.argsort(s)]
-
-
-def stick_tip_offset(frame, ws, max_depth=0.3):
-    """World offset (tip - EE position) of the drawing stick, from the wrist depth.
-
-    The stick is the only thing within max_depth of the wrist camera; its tip is
-    the stick point lowest in world z (the stick hangs below the hand).
-    """
-    files = {(f['camera'], f['kind']): f['path'] for f in frame['files']}
-    K = frame['camera_intrinsics']['wrist']['matrix']; P = frame['camera_poses']['wrist']
-    d = np.array(Image.open(ws / files[('wrist', 'depth')])).astype(float) * 0.001
-    m = (d > 0) & (d < max_depth)
-    ys, xs = np.nonzero(m)
-    if len(xs) < 30:
-        return None
-    pts = np.array([backproj(x, y, d[y, x], K, P) for y, x in zip(ys, xs)])
-    zs = pts[:, 2]
-    low = pts[zs <= np.min(zs) + 0.003]
-    tip = low.mean(0)
-    ee = np.array(frame['state'][:3])
-    return [float(c) for c in (tip - ee)], int(len(xs))
+def warp_path(W, warp):
+    out = W.copy()
+    for k in range(len(W)):
+        out[k, :2] = warp(W[k, :2])
+    return out

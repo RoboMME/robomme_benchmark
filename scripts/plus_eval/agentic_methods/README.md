@@ -5,8 +5,8 @@
 - [RAX](rax/README.md): native exploration, rehearsal and frozen bundles.
 
 Each adapter keeps its pinned upstream submodule separate. ASPIRE/RAX include
-copied `solutions/` for `demo-only` (0 attempts), `interaction-only` and
-`demo&interaction` (at most 10 attempts). R1/R3/R5 results are optional.
+copied `solutions/` for `interaction-only` and `Hybrid`, with 16 frozen R10
+policies per setting.
 Development and rollout artifacts live in ignored `runs/` directories.
 Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol)
 and [shared ASPIRE/RAX setup](../benchmark_io/README.md).

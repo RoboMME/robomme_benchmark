@@ -2,47 +2,64 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 class Tracker:
-    """Constant-velocity tracker with Hungarian association; gate grows with time unseen."""
-    def __init__(self, init_xy, t0=0, base_gate=0.025, vmax=0.007):
-        self.pos=[np.array(p,float) for p in init_xy]
-        self.vel=[np.zeros(2) for _ in init_xy]
-        self.last_seen=[t0]*len(init_xy); self.t=t0
-        self.base_gate=base_gate; self.vmax=vmax
-        self.history=[]
-    def update(self, t, dets):
-        dt=max(1,t-self.t); n=len(self.pos)
-        pred=[self.pos[i]+self.vel[i]*dt for i in range(n)]
-        matched=[]
-        if len(dets):
-            dets=[np.asarray(d,float) for d in dets]
-            D=np.array([[np.linalg.norm(pred[i]-d) for d in dets] for i in range(n)])
-            gates=np.array([self.base_gate+self.vmax*min(t-self.last_seen[i],60) for i in range(n)])
-            C=np.where(D<gates[:,None],D,1e3)
-            r,c=linear_sum_assignment(C)
-            usedd=set()
-            for i,j in zip(r,c):
-                if C[i,j]<1e3:
-                    self._set(i,dets[j],t,dt); matched.append(i); usedd.add(j)
-            # re-associate long-lost tracks with leftover detections (any distance)
-            lost=[i for i in range(n) if i not in matched and t-self.last_seen[i]>15]
-            left=[j for j in range(len(dets)) if j not in usedd]
-            if lost and left:
-                D2=np.array([[np.linalg.norm(pred[i]-dets[j]) for j in left] for i in lost])
-                r2,c2=linear_sum_assignment(D2)
-                for a,b in zip(r2,c2):
-                    if D2[a,b]<0.25:
-                        i=lost[a]; self.pos[i]=dets[left[b]].copy(); self.vel[i]=np.zeros(2); self.last_seen[i]=t; matched.append(i)
-        for i in range(n):
-            if i not in matched:
-                self.pos[i]=pred[i]
-                self.vel[i]=self.vel[i]*(0.9**dt)
-        self.t=t
-        self.history.append((t,[p.copy() for p in self.pos],list(matched)))
-        return matched
-    def _set(self,i,d,t,dt):
-        gap=t-self.last_seen[i]
-        newv=(d-self.pos[i])/max(1,dt) if gap<=dt else self.vel[i]
-        sp=np.linalg.norm(newv)
-        if sp>self.vmax: newv=newv*self.vmax/sp
-        self.vel[i]=0.5*self.vel[i]+0.5*newv
-        self.pos[i]=d.copy(); self.last_seen[i]=t
+    """Track N identical containers in the world x-y plane by gated assignment."""
+    def __init__(self, init_xy, gate=0.045):
+        self.p = np.array(init_xy, float)          # N x 2
+        self.v = np.zeros_like(self.p)             # per-step velocity
+        self.t = None
+        self.gate = gate
+        self.missing = np.zeros(len(self.p), int)
+        self.history = []
+        self.reacq = []
+
+    def hist_at(self, step):
+        best = None
+        for s, p, _ in self.history:
+            if s <= step: best = p
+        return best
+
+    def update(self, step, blobs):
+        if self.t is None:
+            self.t = step
+        dt = max(1, step - self.t)
+        pred = self.p + self.v * dt
+        B = np.array([b["xy"] for b in blobs], float).reshape(-1, 2)
+        N = len(self.p)
+        if len(B):
+            C = np.linalg.norm(pred[:, None, :] - B[None, :, :], axis=2)
+            big = 1e3
+            Cg = np.where(C < self.gate + 0.004 * dt, C, big)
+            ri, ci = linear_sum_assignment(Cg)
+        else:
+            ri, ci = [], []
+        matched = set()
+        newp = pred.copy()
+        for i, j in zip(ri, ci):
+            if Cg[i, j] >= 1e3:
+                continue
+            newp[i] = B[j]
+            matched.add(i)
+        # re-acquire: unmatched tracks vs unmatched full-size blobs
+        um_t = [i for i in range(N) if i not in matched]
+        used_b = set(int(j) for i, j in zip(ri, ci) if Cg[i, j] < 1e3)
+        um_b = [j for j in range(len(B)) if j not in used_b and blobs[j].get("n", 999) >= 80]
+        if um_t and um_b:
+            C2 = np.linalg.norm(pred[um_t][:, None, :] - B[um_b][None, :, :], axis=2)
+            r2, c2 = linear_sum_assignment(C2)
+            for a, b in zip(r2, c2):
+                if C2[a, b] < 0.20 or (len(um_t) == 1 and len(um_b) == 1):
+                    i = um_t[a]; newp[i] = B[um_b[b]]; matched.add(i)
+                    self.v[i] = 0
+                    self.reacq.append((step, i, float(C2[a, b])))
+        for i in range(N):
+            if i in matched:
+                nv = (newp[i] - self.p[i]) / dt
+                self.v[i] = 0.5 * self.v[i] + 0.5 * nv
+                self.missing[i] = 0
+            else:
+                self.missing[i] += 1
+                self.v[i] *= 0.5
+        self.p = newp
+        self.t = step
+        self.history.append((step, self.p.copy(), sorted(matched)))
+        return len(matched)

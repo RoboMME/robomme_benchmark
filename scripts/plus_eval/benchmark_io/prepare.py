@@ -11,7 +11,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True)
     parser.add_argument("--method", required=True, help="Your method identifier")
-    parser.add_argument("--setting", choices=SETTINGS, required=True)
+    parser.add_argument("--setting", type=setting_key, choices=SETTINGS, required=True,
+                        metavar="{zero-shot,demo-only,interaction-only,hybrid}")
     parser.add_argument("--tasks", nargs="+")
     parser.add_argument("--budget", type=int, default=10)
     parser.add_argument("--export-demos", action="store_true")

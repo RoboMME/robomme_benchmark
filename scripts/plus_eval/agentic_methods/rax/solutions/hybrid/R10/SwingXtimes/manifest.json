@@ -1,0 +1,26 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "SwingXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "d7b7e994ec199bb4a1f2150d912884bf0026e1ae893df3c573380744865e17b2",
+    "motion.py": "d0e975b78cd45055faa8907b79002150c8a6e3db5d5a5bd363f674c16a79b30a",
+    "robo.py": "68b42beedd72b005ebc913476ba623e50dd53fa10e10d4725890e2e7f8226197"
+  },
+  "source_policy_files": {
+    "controller.py": "d7b7e994ec199bb4a1f2150d912884bf0026e1ae893df3c573380744865e17b2",
+    "motion.py": "d0e975b78cd45055faa8907b79002150c8a6e3db5d5a5bd363f674c16a79b30a",
+    "robo.py": "68b42beedd72b005ebc913476ba623e50dd53fa10e10d4725890e2e7f8226197"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "243495f75c06c8298e7d6c54651584f984d85cdfcc333e95efbb1e47cdfb2a74",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "398598350b94ac4639790152c148c3e55e28dd8470f5808f072f7b7a8173811e"
+  }
+}

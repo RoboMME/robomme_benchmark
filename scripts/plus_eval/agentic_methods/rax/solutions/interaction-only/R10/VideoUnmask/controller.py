@@ -1,176 +1,310 @@
-"""VideoUnmask controller v5 (depth-first cube detection).
-Conditioning video (front+wrist, every frame) -> clustered coloured cube world positions.
-For each colour in instruction order (all instances if 'all ... cubes'), view from above with the wrist
-camera, detect container tops from depth, grasp the container over the cube with a yaw that keeps the
-fingers clear of neighbours, lift, and put it back down before the next one."""
-import math, time, traceback, os
+"""VideoUnmask controller v1: colours from conditioning video -> container lift sequence."""
+import base64, io, json, os, re, sys, time, traceback
+from pathlib import Path
 import numpy as np
-import lib
-from lib import log
+from PIL import Image
 
-VIEW_Z = 0.20
-CAM_OFF = np.array([0.046, 0.020])  # wrist camera xy offset from TCP at yaw 0
-GRASP_Z = 0.045
-PLACE_Z = 0.043
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from motion import Robot, packet, gripper_yaw, rotate_to_yaw, wrap90  # noqa: E402
+from video_cubes import cube_clusters  # noqa: E402
+from perception import (cube_tracks, find_containers, backproject, components, COLOR_HUES)  # noqa: E402
+
+OUT = Path("/workspace/output")
+COLORS = ["red", "orange", "yellow", "green", "blue", "purple"]
 LIFT_Z = 0.20
-MATCH_R = 0.05
+GRASP_BELOW_TOP = 0.03
 
 
-def view_and_detect(r, xy):
-    r.move_to([xy[0] - CAM_OFF[0], xy[1] - CAM_OFF[1], VIEW_Z], yaw=0.0, max_steps=60, tol=0.006)
-    if r.ended:
-        return [], None
-    r.hold(2, -1.0)
-    depth = r.imgs[("wrist", "depth")]
-    dets = lib.detect_containers(r.meta, depth)
-    dets = [d for d in dets if 0.025 < max(d["size"]) < 0.07 and min(d["size"]) > 0.012]
-    P = lib.world_points(r.meta, depth, "wrist")
-    log("view at", np.round(r.state[:3], 3).tolist(), "dets",
-        [(np.round(d["xy"], 3).tolist(), round(math.degrees(d["ang"]), 1), d["npts"]) for d in dets])
-    return dets, P
+def log_factory():
+    OUT.mkdir(parents=True, exist_ok=True)
+    f = open(OUT / "controller_log.txt", "a")
+
+    def log(*a):
+        s = " ".join(str(x) for x in a)
+        print(s)
+        f.write(s + "\n"); f.flush()
+    return log
 
 
-def choose_yaw(r, P, xy, box_ang):
-    cur = r.yaw()
+def parse_targets(instr):
+    s = instr.lower()
+    hits = []
+    for c in COLORS:
+        for m in re.finditer(r"\b" + c + r"\b", s):
+            hits.append((m.start(), c))
+    hits.sort()
+    out = []
+    for _, c in hits:
+        out.append(c)
+    return out
+
+
+def decode_images(reply, pkt):
+    blocks = reply["content"]
+    imgs = {}
+    for a in pkt.get("attachments", []):
+        b = blocks[a["content_index"]]
+        if b.get("type") == "image":
+            imgs[(a["camera"], a["kind"])] = Image.open(io.BytesIO(base64.b64decode(b["data"])))
+    return imgs
+
+
+def live_view(ctx, cam):
+    reply = ctx.call("robomme_observe")
+    pkt = packet(reply)
+    imgs = decode_images(reply, pkt)
+    rgb = imgs[(cam, "rgb")].convert("RGB")
+    hsv = np.asarray(rgb.convert("HSV")).astype(int)
+    depth = np.asarray(imgs[(cam, "depth")]).astype(float) * 0.001
+    return pkt, np.asarray(rgb).astype(int), hsv, depth
+
+
+def container_yaw(ctx_unused, cont):
+    return cont.get("yaw", 0.0)
+
+
+def rect_fit(pts2):
+    c = pts2.mean(0); q = pts2 - c
     best = None
-    for k in range(4):
-        a = box_ang + k * math.pi / 2
-        a = cur + lib.wrap(a - cur)
-        if abs(a) > 2.4:   # keep within a comfortable wrist range
+    for a in np.radians(np.arange(0, 90, 1.0)):
+        R = np.array([[np.cos(a), np.sin(a)], [-np.sin(a), np.cos(a)]])
+        r = q @ R.T; ext = r.max(0) - r.min(0)
+        if best is None or ext[0] * ext[1] < best[0]:
+            best = (ext[0] * ext[1], a, ext, (r.max(0) + r.min(0)) / 2, R)
+    _, a, ext, mid, R = best
+    return c + R.T @ mid, float(a), ext
+
+
+def kmeans(pts, k, iters=20):
+    idx = np.linspace(0, len(pts) - 1, k).astype(int)
+    order = np.argsort(pts[:, 0] + pts[:, 1])
+    cent = pts[order[idx]].copy()
+    for _ in range(iters):
+        lab = np.argmin(((pts[:, None, :] - cent[None]) ** 2).sum(-1), 1)
+        for j in range(k):
+            if (lab == j).any():
+                cent[j] = pts[lab == j].mean(0)
+    return lab
+
+
+def containers_from_arrays(hsv, depth, K, pose, log):
+    H, W = depth.shape
+    vv, uu = np.mgrid[0:H, 0:W]
+    P = backproject(uu.ravel(), vv.ravel(), depth.ravel(), K, pose).reshape(H, W, 3)
+    s, v = hsv[..., 1], hsv[..., 2]
+    table = (depth > 0) & (P[..., 2] < 0.03) & (P[..., 0] > -0.4)
+    tz = float(np.median(P[..., 2][table])) if table.sum() > 100 else 0.0
+    m = (depth > 0) & (P[..., 2] > tz + 0.04) & (P[..., 2] < tz + 0.15) & (P[..., 0] > -0.40) & (P[..., 0] < 0.17) \
+        & (np.abs(P[..., 1]) < 0.40) & (s < 90)
+    raw = []
+    for ys, xs in components(m, 20):
+        pts = P[ys, xs]
+        zt = np.percentile(pts[:, 2], 90)
+        raw.append(pts[pts[:, 2] > zt - 0.006])
+    merged = []
+    for top in raw:
+        c = np.median(top[:, :2], 0)
+        for i, g in enumerate(merged):
+            if np.linalg.norm(np.median(g[:, :2], 0) - c) < 0.03:
+                merged[i] = np.vstack([g, top]); break
+        else:
+            merged.append(top)
+    parts = []
+    for top in merged:
+        if len(top) < 20:
             continue
-        n, zmax = lib.finger_clearance(P, xy, a) if P is not None else (0, 0)
-        cost = n + 30 * abs(lib.wrap(a - cur))
-        log(f"  yaw cand {math.degrees(a):.0f} obstacles {n} zmax {zmax:.3f}")
-        if best is None or cost < best[0]:
-            best = (cost, a)
-    if best is None:
-        return lib.nearest_yaw(box_ang, cur)
-    return best[1]
+        centre, a, ext = rect_fit(top[:, :2])
+        k = int(np.clip(round(ext[0] * ext[1] / 0.0016), 1, 4)) if max(ext) > 0.055 else 1
+        if k > 1:
+            lab = kmeans(top[:, :2], k)
+            log(f"split blob ext={ext.round(3)} into {k}")
+            for j in range(k):
+                sub = top[lab == j]
+                if len(sub) >= 15:
+                    parts.append(sub)
+        else:
+            parts.append(top)
+    out = []
+    for top in parts:
+        centre, a, ext = rect_fit(top[:, :2])
+        out.append({"xy": centre.tolist(), "ztop": float(np.median(top[:, 2])), "yaw": a,
+                    "ext": ext.tolist(), "n": int(len(top))})
+    log(f"table z {tz:.4f}; containers:", "; ".join(
+        f"({o['xy'][0]:.3f},{o['xy'][1]:.3f}) z={o['ztop']:.3f} yaw={np.degrees(o['yaw']):.0f} ext=({o['ext'][0]:.3f},{o['ext'][1]:.3f}) n={o['n']}"
+        for o in out))
+    return out, tz
 
 
-def pick_container(r, cube_xy, picked):
-    """Lift the container over cube_xy. Returns its xy if lifted, 'ended' if the episode ended, None."""
-    for attempt in range(3):
-        if r.ended:
-            return "ended"
-        dets, P = view_and_detect(r, cube_xy)
-        if r.ended:
-            return "ended"
-        rad = MATCH_R if attempt == 0 else MATCH_R + 0.02
-        cand = [d for d in dets if np.linalg.norm(d["xy"] - cube_xy) < rad]
-        if not cand:
-            log("no container near", np.round(cube_xy, 3).tolist(), "attempt", attempt)
-            continue
-        d = min(cand, key=lambda d: np.linalg.norm(d["xy"] - cube_xy))
-        xy = d["xy"]
-        yaw = choose_yaw(r, P, xy, d["ang"])
-        log("target container", np.round(xy, 4).tolist(), "dist", round(float(np.linalg.norm(xy - cube_xy)), 3),
-            "yaw", round(math.degrees(yaw), 1))
-        gz = float(np.clip(d["ztop"] - 0.0275, 0.03, 0.09))
-        r.move_to([xy[0], xy[1], 0.15], yaw=yaw, max_steps=70)
-        r.move_to([xy[0], xy[1], gz], yaw=yaw, max_steps=60, tol=0.003)
-        if r.ended:
-            return "ended"
-        r.hold(8, 1.0)
-        if r.ended:
-            return "ended"
-        log("closed opening", round(r.gripper_open(), 4), "z", round(r.state[2], 4))
-        r.move_to([xy[0], xy[1], LIFT_Z], yaw=yaw, grip=1.0, max_steps=40)
-        if r.ended:
-            return "ended"
-        op = r.gripper_open()
-        log("lifted opening", round(op, 4), "step", r.meta.get("step_id"))
-        if op > 0.03:
-            return (xy, gz)
-        log("grasp failed; reopening")
-        r.hold(5, -1.0)
-        cube_xy = xy
-    return None
+def detect_containers(ctx, log, cam="wrist"):
+    pkt, rgb, hsv, depth = live_view(ctx, cam)
+    K = pkt["camera_intrinsics"][cam]["matrix"]; pose = pkt["camera_poses"][cam]
+    out, tz = containers_from_arrays(hsv, depth, K, pose, log)
+    return out, tz, pkt
 
 
-def place_back(r, xy, gz):
-    yaw = r.yaw()
-    r.move_to([xy[0], xy[1], 0.10], yaw=yaw, grip=1.0, max_steps=40)
-    r.move_to([xy[0], xy[1], gz - 0.002], yaw=yaw, grip=1.0, max_steps=40, tol=0.003)
-    r.hold(6, -1.0)
-    r.move_to([xy[0], xy[1], LIFT_Z], yaw=yaw, grip=-1.0, max_steps=40)
-
-
-def plan(goal, clusters):
-    """Ordered list of (colour, xy)."""
-    seq = []
-    for color, want_all in goal:
-        cs = [c for c in clusters if c["color"] == color and c["n_obs"] >= 3]
-        # merge same-colour clusters closer than a container width (split observations of one cube)
-        merged = []
-        for c in sorted(cs, key=lambda c: -c["n_obs"]):
-            if any(np.linalg.norm(c["xy"] - m["xy"]) < 0.035 for m in merged):
+def choose_grasp_yaw(cont, others):
+    """Gripper yaw (TCP x-axis) aligned with the box; of the two square options pick more finger clearance.
+    Fingers close along TCP y (yaw+90deg)."""
+    a0 = wrap90(cont["yaw"])
+    a1 = a0 + np.pi / 2 if a0 < 0 else a0 - np.pi / 2
+    c = np.array(cont["xy"])
+    def clearance(a):
+        f = np.array([-np.sin(a), np.cos(a)])
+        clear = 1.0
+        for o in others:
+            q = np.array(o["xy"])
+            if np.linalg.norm(q - c) < 0.01:
                 continue
-            merged.append(c)
-        cs = merged
-        if not cs:
-            log("WARNING colour", color, "not seen in video")
-            continue
-        cs.sort(key=lambda c: -c["n_obs"])
-        if not want_all:
-            cs = cs[:1]
-        # nearest-neighbour order starting from previous target
-        prev = seq[-1][1] if seq else np.array([-0.06, 0.0])
-        rest = list(range(len(cs)))
-        while rest:
-            j = min(rest, key=lambda k: np.linalg.norm(cs[k]["xy"] - prev))
-            rest.remove(j)
-            nxt = cs[j]
-            seq.append((color, np.array(nxt["xy"])))
-            prev = nxt["xy"]
-    return seq
+            for sgn in (1, -1):
+                clear = min(clear, np.linalg.norm(q - (c + sgn * 0.05 * f)))
+        return clear
+    c0, c1 = clearance(a0), clearance(a1)
+    best = (0, a1, c1) if (c0 < 0.05 and c1 > c0 + 0.01) else (0, a0, c0)
+    return best[1], best[2]
 
 
-def run(ctx):
-    t0 = time.time()
-    r = lib.Robot(ctx)
-    instr = r.meta.get("instruction", "")
-    log("instruction:", instr)
-    goal = lib.parse_goal(instr)
-    log("goal:", goal)
-    seq_desc = r.meta.get("frame_sequence") or {}
-    try:
-        clusters = lib.analyze_video_v3(seq_desc["manifest_path"])
-    except Exception:
-        log("analyze_video_v3 failed, falling back to v2", traceback.format_exc())
-        clusters = lib.analyze_video_v2(seq_desc["manifest_path"])
-    for c in clusters:
-        log("cube", c["color"], np.round(c["xy"], 3).tolist(), "obs", c["n_obs"], "frames", c["first"], c["last"], c["cams"])
-    seq = plan(goal, clusters)
-    log("plan:", [(c, np.round(xy, 3).tolist()) for c, xy in seq], f"t={time.time()-t0:.1f}")
-    picked = []
-    for i, (c, cube_xy) in enumerate(seq):
-        if r.ended:
-            break
-        log(f"=== target {i} {c} at {np.round(cube_xy, 3).tolist()} step {r.meta.get('step_id')} t={time.time()-t0:.1f}")
-        res = pick_container(r, cube_xy, picked)
-        if isinstance(res, str) or r.ended:
-            break
-        if res is None:
-            log("failed to pick", c)
-            continue
-        picked.append(res[0])
-        if i < len(seq) - 1:
-            place_back(r, res[0], res[1])
-    if not r.ended:
-        r.hold(10, 1.0)
-    log("done: ended", r.ended, "step", r.meta.get("step_id"), "t", round(time.time() - t0, 1))
+FAULT = {"high_grasp": int(os.environ.get("VU_FAULT_HIGH_GRASP", "0"))}  # dev-only fault injection
+
+
+def pick_and_replace(robot, cont, log, others=()):
+    x, y = cont["xy"]; ztop = cont["ztop"]
+    zg = ztop - GRASP_BELOW_TOP
+    if FAULT["high_grasp"] > 0:
+        FAULT["high_grasp"] -= 1
+        zg = ztop + 0.03
+        log("FAULT INJECTION: grasp above container")
+    robot.move_to([x, y, ztop + 0.10], grip=-1)
+    gy, clear = choose_grasp_yaw(cont, others)
+    log(f"grasp yaw {np.degrees(gy):.0f} finger clearance {clear:.3f}")
+    rotate_to_yaw(robot, gy)
+    robot.move_to([x, y, ztop + 0.04], grip=-1, tol=0.004)
+    robot.move_to([x, y, zg], grip=-1, tol=0.003, speed=0.3)
+    log("at grasp", robot.state().round(4).tolist())
+    robot.set_gripper(1, 10)
+    fingers = robot.state()[6:8].sum()
+    log("closed fingers", round(float(fingers), 4))
+    if fingers < 0.01:
+        log("grasp miss")
+        robot.set_gripper(-1, 6)
+        robot.move_to([x, y, ztop + 0.08], grip=-1)
+        return False
+    robot.move_to([x, y, LIFT_Z], grip=1, speed=0.4)
+    fingers = robot.state()[6:8].sum()
+    log("lifted", robot.state().round(4).tolist(), "fingers", round(float(fingers), 4), "complete", robot.complete)
+    held = fingers > 0.01
+    if robot.ended:
+        return held
+    # put it back down where it was
+    robot.move_to([x, y, zg + 0.02], grip=1, speed=0.4)
+    robot.move_to([x, y, zg + 0.004], grip=1, speed=0.2, tol=0.003)
+    robot.set_gripper(-1, 8)
+    robot.move_to([x, y, ztop + 0.10], grip=-1)
+    return held
+
+
+def merge_clusters(cl, radius=0.04):
+    out = []
+    for c in sorted(cl, key=lambda c: -c["count"]):
+        for o in out:
+            if o["color"] == c["color"] and np.linalg.norm(np.array(o["xy"]) - np.array(c["xy"])) < radius:
+                o["count"] += c["count"]
+                break
+        else:
+            out.append(dict(c))
+    return out
+
+
+def plan_targets(instr):
+    """List of (colour, want_all) in instruction order."""
+    s = instr.lower()
+    if "then" in s:
+        s = s.split("then", 1)[1]
+    plan = []
+    for m in re.finditer(r"(all containers?|the container|the one|ones?|containers?)[^,.;]*?\b(" + "|".join(COLORS) + r")\b(\s+cubes?)?", s):
+        phrase = m.group(0)
+        want_all = ("all" in phrase.split()[0]) or (m.group(3) or "").strip() == "cubes"
+        plan.append((m.group(2), want_all))
+    seen = [c for c, _ in plan]
+    for m in re.finditer(r"\b(" + "|".join(COLORS) + r")\b(\s+cubes)?", s):
+        if m.group(1) not in seen:
+            plan.append((m.group(1), bool(m.group(2))))
+            seen.append(m.group(1))
+    return plan
 
 
 def main(ctx):
+    log = log_factory()
+    t0 = time.time()
+    robot = Robot(ctx, log)
+    reply = ctx.call("robomme_observe")
+    pkt = packet(reply)
+    robot.last = pkt
+    instr = pkt.get("instruction", "")
+    plan = plan_targets(instr)
+    log("instruction:", instr); log("plan:", plan)
+    seq = pkt.get("frame_sequence") or {}
+    mpath = seq.get("manifest_path")
+    if not mpath:
+        log("no manifest; abort"); return
+    colors = list(dict.fromkeys([c for c, _ in plan] + ["red", "green", "blue", "yellow", "orange", "purple"]))
+    if "black" in [c for c, _ in plan]:
+        colors.append("black")
     try:
-        run(ctx)
+        clusters = merge_clusters(cube_clusters(mpath, colors, log=log))
     except Exception:
-        log("CONTROLLER EXCEPTION", traceback.format_exc())
-    finally:
-        try:
-            os.makedirs("/workspace/output", exist_ok=True)
-            with open("/workspace/output/controller_log.txt", "w") as f:
-                f.write("\n".join(lib.LOG))
-        except Exception:
-            pass
+        log("cube clustering failed", traceback.format_exc()); clusters = []
+    log(f"perception time {time.time()-t0:.1f}s")
+    conts, tz, _ = detect_containers(ctx, log, "wrist")
+    if len(conts) < 2:
+        conts2, _, _ = detect_containers(ctx, log, "front")
+        if len(conts2) > len(conts):
+            conts = conts2
+    used = set()
+    for colour, want_all in plan:
+        if robot.ended:
+            break
+        cl = [c for c in clusters if c["color"] == colour]
+        if not want_all and len(cl) > 1:
+            cl = sorted(cl, key=lambda c: -c["count"])[:1]
+        if not cl:
+            log("no cube seen for", colour); continue
+        # assign containers
+        jobs = []
+        for c in cl:
+            cxy = np.array(c["xy"])
+            cand = [(np.linalg.norm(np.array(o["xy"]) - cxy), j) for j, o in enumerate(conts) if j not in used]
+            if not cand:
+                continue
+            d, j = min(cand)
+            log(f"target {colour}: cube xy {cxy.round(3)} -> container {j} {np.round(conts[j]['xy'], 3)} d={d:.3f}")
+            used.add(j); jobs.append(j)
+        # nearest-first order
+        while jobs and not robot.ended:
+            pos = robot.state()[:2]
+            jobs.sort(key=lambda j: np.linalg.norm(np.array(conts[j]["xy"]) - pos))
+            j = jobs.pop(0)
+            ok = False
+            for attempt in range(3):
+                if robot.ended:
+                    break
+                try:
+                    ok = pick_and_replace(robot, conts[j], log, conts)
+                    if ok:
+                        break
+                    log(f"attempt {attempt} failed; re-detecting")
+                    robot.move_to([conts[j]["xy"][0], conts[j]["xy"][1], 0.45], grip=-1)
+                    new, _, _ = detect_containers(ctx, log, "wrist")
+                    if new:
+                        dd = [np.linalg.norm(np.array(o["xy"]) - np.array(conts[j]["xy"])) for o in new]
+                        k = int(np.argmin(dd))
+                        if dd[k] < 0.05:
+                            conts[j] = new[k]
+                except Exception:
+                    log("attempt error", traceback.format_exc())
+                    try:
+                        robot.observe()
+                    except Exception:
+                        pass
+            log(f"done {colour} container {j}: ok={ok} complete={robot.complete} ended={robot.ended} "
+                f"step={robot.last.get('step_id')} t={time.time()-t0:.0f}s")
+    log("final complete", robot.complete, "ended", robot.ended)

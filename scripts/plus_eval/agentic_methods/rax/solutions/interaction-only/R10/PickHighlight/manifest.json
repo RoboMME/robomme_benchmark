@@ -5,23 +5,24 @@
   "task": "PickHighlight",
   "evaluation_episodes": 50,
   "policy_files": {
-    "controller.py": "0e8dc1e58770bae306fa90f8cf051aadf0554c1f900473384a3889f3d07a0e01",
-    "motion.py": "df1a1e72a8ea6d93e2428792cbcda39666b6472d7652cb84a6383a6741332543",
-    "obs.py": "2a79eea9041d5bd86b525fdb24bf6f2349f02298b8e75d0b54475e28868a7870",
-    "percept.py": "20d048fadcb6c2973c23d0d418c5f7184fcb2125ce7e3fea533b2ba39efd714d",
-    "skills.py": "dea7f2600ed5ba0d32a5f5e3f484f0fcad2611d3caa9d4b7b7e4b052a9adff94",
-    "tracker.py": "207f569ade566f9fc40495fa9e74ea64424ecd73d9f24d0b0ead6950bca228a0"
+    "controller.py": "cd76b88e77f808c09db2b72a8df3cc3880c7b3d9f15214724c0d19dd224067b2",
+    "lib.py": "0954cde27f1c0606dbae5257aa4e28b4e7f9a1b2ec1a865e054fb55fb74d9ba5",
+    "percep.py": "d015db8a21897fe99dc0ab773dc079c0ca32289f2443d5a008216f4515cf2049",
+    "skills.py": "972477c4bcfbcd154f7fe70873b75e3be9fc339987df6cff590ff78229b9f0f3"
   },
-  "source_experiment": "full_20261116_protocol_v2",
+  "source_policy_files": {
+    "controller.py": "cd76b88e77f808c09db2b72a8df3cc3880c7b3d9f15214724c0d19dd224067b2",
+    "lib.py": "0954cde27f1c0606dbae5257aa4e28b4e7f9a1b2ec1a865e054fb55fb74d9ba5",
+    "percep.py": "d015db8a21897fe99dc0ab773dc079c0ca32289f2443d5a008216f4515cf2049",
+    "skills.py": "972477c4bcfbcd154f7fe70873b75e3be9fc339987df6cff590ff78229b9f0f3"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "1b08e6a8561796a594ac57bfecffa9574d9ed387f220242d754e132bdce541ff",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
   "test_feedback_to_development": false,
   "status": "frozen_policy",
-  "source_policy_files": {
-    "controller.py": "0e8dc1e58770bae306fa90f8cf051aadf0554c1f900473384a3889f3d07a0e01",
-    "motion.py": "df1a1e72a8ea6d93e2428792cbcda39666b6472d7652cb84a6383a6741332543",
-    "obs.py": "2a79eea9041d5bd86b525fdb24bf6f2349f02298b8e75d0b54475e28868a7870",
-    "percept.py": "20d048fadcb6c2973c23d0d418c5f7184fcb2125ce7e3fea533b2ba39efd714d",
-    "skills.py": "dea7f2600ed5ba0d32a5f5e3f484f0fcad2611d3caa9d4b7b7e4b052a9adff94",
-    "tracker.py": "207f569ade566f9fc40495fa9e74ea64424ecd73d9f24d0b0ead6950bca228a0"
-  },
-  "evaluation_benchmark_sha256": "f17f8e60b5134b2d11bea694b0361feaa23b46f5a7f953e84f1a7b379757acc3"
+  "runner_files": {
+    "runner.json": "f8d9a2dfdd7240b77f0a189d2323e601d23c3a242ce2eafc3dd7bb95ca924794"
+  }
 }
