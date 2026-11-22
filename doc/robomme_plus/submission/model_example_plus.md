@@ -25,7 +25,10 @@ fixed revisions so reviewers can inspect the submitted artifacts.
 | Audit record | Agentic development | Both audits, filled in at the [bottom of this file](#agentic-development-audit-record) |
 
 The last three items apply to [agentic development](../../../src/robomme_plus/README.md#evaluation-protocol).
-Otherwise mark them N/A.
+This includes agent-generated task solutions, task-specific prompts learned from
+rollouts, and self-improving agents. Standard policy fine-tuning and direct control
+with fixed prompts (such as Embodied Astra) mark these items N/A unless they also
+use agentic development. Audit requirements follow the development process.
 
 - **Development trajectories and media are optional uploads.**
   Raw action/state trajectories, images and rollout videos may be omitted.

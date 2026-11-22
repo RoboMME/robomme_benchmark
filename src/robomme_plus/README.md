@@ -12,21 +12,30 @@ tests add perceptual and mechanism variations that are mostly unseen in training
 
 ## Getting started
 
+**Who needs audits?** Agentic development requires both audits: agents generating
+or improving task solutions from Plus demonstrations or training rollouts. This
+includes task-specific prompts learned from rollouts and self-improving agents.
+Standard policy fine-tuning and direct control with fixed prompts, such as
+Embodied Astra, do not require these audits unless they also use such development.
+
 1. **Choose your setting** using the [evaluation protocol](#evaluation-protocol) below.
 2. **Install and prepare inputs:** follow [installation](../../readme.md#-installation)
    and the [training-data guide](../../doc/robomme_plus/plus_training_data_format.md).
 3. **Set up the method:** refer to the [baseline instructions](../../scripts/plus_eval/README.md)
    or integrate your own agent with the [development interface](../../doc/robomme_plus/agentic_development.md).
-   Before development, run the [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness).
-4. **Develop and retain every solution revision and its logs**, including failed
-   and interrupted work. Freeze the final policy, prompts, tools and harness.
+   For agentic development, first run the
+   [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness).
+4. **Develop and freeze** the final policy, prompts, tools and harness. Agentic
+   development must retain every solution revision and its logs, including failed
+   and interrupted work.
 5. **Prepare runnable frozen code** with installation and [evaluation instructions](#evaluate).
    The RoboMME team evaluates all 800 test episodes for verification.
-6. **Audit and submit:** run the [development-log audit](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record)
-   if you use an agentic method to iteratively improve your policies. Follow
-   [What to submit](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
+6. **Submit:** follow [What to submit](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
+   For agentic development, include the
+   [development-log audit](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record).
 
-The audits in steps 3 and 6 apply only to [agentic development](#evaluation-protocol).
+All methods follow the [evaluation protocol](#evaluation-protocol), whether or not
+they require audits.
 The [complete guide](../../doc/robomme_plus/README.md) links the audit skills,
 ASPIRE/RAX setup and submission examples.
 
@@ -48,8 +57,11 @@ The [data guide](../../doc/robomme_plus/plus_training_data_format.md) describes 
 ## Evaluation protocol
 
 Choose a setting before development. These rules apply to both tracks.
-**Agentic development** uses agents to improve policies, prompts, skills or memory;
-it also requires full development logs and harness/development audits.
+**Agentic development** uses agents to create or improve policies, code, prompts,
+skills or memory from Plus demonstrations or training rollouts. This includes
+learning task-specific prompts and agent self-improvement, and requires full
+development logs and both audits. Standard fine-tuning or fixed-prompt direct
+control alone does not require these audits.
 
 | Setting | What it may use before testing | Maximum Plus rollouts per task |
 | --- | --- | --- |

@@ -6,7 +6,7 @@ RoboMME-Plus has 50 training demonstrations and 800 tests across 16 tasks.
 - **Prepare data:** [training formats, seeds and replay](plus_training_data_format.md).
 - **Run a baseline:** [installation and commands](../../scripts/plus_eval/README.md).
 - **Build an agentic method:** [development interface and required logs](agentic_development.md).
-- **Audit:** [procedure and copyable prompts](auditing.md)—harness before development,
+- **Audit (agentic development only):** [procedure and copyable prompts](auditing.md)—harness before development,
   then saved development logs.
 - **Submit:** [runnable code, development evidence and audits](submission/model_example_plus.md#what-to-submit).
   The RoboMME team runs verification evaluation and updates the leaderboard.
