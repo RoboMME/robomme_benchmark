@@ -98,13 +98,16 @@ Save every code revision **before** running it, and keep:
 - the full code history, including failed and interrupted work;
 - the ledger: `study.json`, `attempts.sqlite3` and `benchmark_source.json` in the
   study root, plus each rollout's `attempt.json`, `outcome.json` and `events.jsonl`;
-- API usage and costs, with development and evaluation kept separate.
+- frozen policy/harness manifests;
+- development API usage and costs.
 
-**Publish** these text records as the public development-log archive. Raw
-trajectories, images and videos are optional: each rollout's `actions.jsonl`,
-`observations.jsonl` and `rollout.mp4`, and media embedded in API records. Replace
-each omitted payload with its source and hash. Redact a **separate, unpacked
-publication copy**, keeping the original evidence and freeze manifests unchanged:
+**Publish** the development text records and code history, and link runnable frozen
+code in the submission. **Development trajectories, images and videos are optional
+uploads.** Optional payloads include
+`actions.jsonl`, `observations.jsonl`, `rollout.mp4` and embedded API media. Retain
+source identifiers and hashes for omitted payloads; keep commands, code revisions,
+attempt records and development outcomes. Redact a **separate, unpacked publication
+copy**, keeping the original evidence and freeze manifests unchanged:
 
 ```bash
 python scripts/plus_eval/privacy.py audit "<UNPACKED_EXPORT_DIR>" --apply
@@ -135,7 +138,9 @@ for row in db.execute("SELECT task, count(*), sum(ended IS NULL), "
 EOF
 ```
 
-After frozen evaluation, run the [development-log audit](auditing.md#2-review-the-completed-development-record)
-with test timestamps and submit [the required items](submission/model_example_plus.md#what-to-submit).
+Run the [development-log audit](auditing.md#2-review-the-completed-development-record)
+and submit [the required items](submission/model_example_plus.md#what-to-submit).
+The RoboMME team evaluates the frozen code for verification and updates the
+leaderboard. Test-dependent audit checks are completed using that verification run.
 The wrapper alone does not certify compliance. The ASPIRE/RAX 150-minute per-task
 deadline is a method configuration, not a benchmark rule.

@@ -5,6 +5,10 @@ description: Audit a RoboMME-Plus agentic harness before development. Check inpu
 
 # Audit the development harness
 
+Audit one method, setting and rollout budget per report. From the supplied
+harness directory, follow its README and manifests to locate configuration,
+prompts and referenced inputs; the caller need not list every evidence file.
+
 Read [the protocol](../../src/robomme_plus/README.md#evaluation-protocol), the
 [development interface](../robomme_plus/agentic_development.md) and the
 [audit record](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
@@ -44,7 +48,7 @@ Check logging capability here; the final log audit checks the captured records.
 
 | ID | Item | Check |
 | --- | --- | --- |
-| R1 | Complete logs and code history | Capture of prompts, visible responses, commands and outputs, code revisions saved before runs, attempts/outcomes and child/resumed sessions; any path that bypasses logging. Public exports may omit media, but not commands, code revisions or failed attempts. Provider-hidden reasoning is not required. |
+| R1 | Complete logs and code history | Capture of prompts, visible responses, commands and outputs, code revisions saved before runs, development attempts/outcomes and child/resumed sessions; any path that bypasses logging. Development exports may omit raw trajectories, images and videos, but must retain code history, required text logs, attempt metadata and outcomes. Provider-hidden reasoning is not required. |
 | R2 | Resource usage | Per-task starts and steps, and separate development/evaluation API usage and costs, are recorded. |
 | R3 | Human corrections | Operator edits are captured with diffs. |
 
@@ -55,13 +59,15 @@ benchmark rules.
 
 ## Report
 
-Fill in the audit record:
+Write a Markdown report at the requested destination using the audit record.
+Keep this method/setting/budget separate from other reviews. Include:
 
 1. **Conclusion:** PASS only if H1–H7 and R1–R3 are PASS or N/A with a reason;
    any FAIL or GAP blocks PASS. Distinguish breaches from missing evidence.
 2. **Scope:** method, setting, budget, tasks, revisions, auditor (or assistant
    model and version), date, coverage and agent-visible documentation.
-3. **H1–H7 and R1–R3:** status and a short file/line reference for each.
+3. **H1–H7 and R1–R3:** checkboxes, status and a short file/line reference for each;
+   check `[x]` only for PASS.
 4. **Warnings/action table:** the smallest correction and affected scope for each
    FAIL or gap; None if there are none.
 

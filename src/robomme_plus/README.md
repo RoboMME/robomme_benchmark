@@ -21,9 +21,11 @@ tests add perceptual and mechanism variations that are mostly unseen in training
    Before development, run the [harness audit](../../doc/robomme_plus/auditing.md#1-review-the-harness).
 4. **Develop and retain every solution revision and its logs**, including failed
    and interrupted work. Freeze the final policy, prompts, tools and harness.
-5. **[Evaluate all 800 test episodes](#evaluate)** with the frozen system.
+5. **Prepare runnable frozen code** with installation and [evaluation instructions](#evaluate).
+   The RoboMME team evaluates all 800 test episodes for verification.
 6. **Audit and submit:** run the [development-log audit](../../doc/robomme_plus/auditing.md#2-review-the-completed-development-record)
-   after evaluation, then follow [What to submit](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
+   if you use an agentic method to iteratively improve your policies. Follow
+   [What to submit](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
 
 The audits in steps 3 and 6 apply only to [agentic development](#evaluation-protocol).
 The [complete guide](../../doc/robomme_plus/README.md) links the audit skills,
@@ -111,6 +113,10 @@ Evaluate all **50 test episodes per task (800 total)** with default variations
 and execution limits. Keep failures, timeouts and errors in the denominator;
 report changed test conditions separately. Submit through a pull request using the
 [submission template](../../doc/robomme_plus/submission/model_example_plus.md#what-to-submit).
+Provide runnable frozen code; agentic development also requires complete
+development text logs and code history. Development trajectories, images and
+videos are optional uploads. The RoboMME team runs verification evaluation and
+updates the leaderboard after reviewing the submission.
 See the [baseline results](../../doc/robomme_plus/robomme_plus_baseline_results.md)
 and [running instructions](../../scripts/plus_eval/README.md).
 

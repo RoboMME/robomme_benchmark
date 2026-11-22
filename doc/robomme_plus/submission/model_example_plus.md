@@ -9,6 +9,7 @@ settings; 1, 3 and 5 rollouts are optional.
 Report success rates as percentages with two decimal places. Report API costs in
 USD, development and evaluation separately; use N/A when no paid API is used.
 Label estimates and identify missing usage; incomplete required records block an audit PASS.
+Leave evaluation scores and costs PENDING until team verification is complete.
 
 ## What to submit
 
@@ -17,18 +18,26 @@ revision (a commit or dataset revision, not a moving branch).
 
 | Item | Required for | Contents |
 | --- | --- | --- |
-| Code | Every result | Method source at the evaluated revision, including test-time prompts and tools |
-| Test results | Every result | Per-episode task, episode, status and control steps for all 800 episodes, plus start/finish times for agentic development, e.g. `summary.json` from [`scripts/plus_eval/evaluation.py`](../../../scripts/plus_eval/evaluation.py) |
-| Usage log | Any Plus rollouts | Per-task starts, failed/incomplete starts and simulator steps for each budget |
+| Code | Every submission | Runnable method and frozen policy revision, including prompts, tools, dependencies and installation/evaluation commands |
+| Usage log | Any Plus development rollouts | Per-task starts, failed/incomplete starts and simulator steps for each budget |
 | Freeze manifest | Agentic development | Content hashes of the frozen programs, prompts, tools and harness, created before the first test episode |
-| Development logs | Agentic development | The agents' public text archive described in [Preserve evidence](../agentic_development.md#preserve-evidence); raw trajectories, images and videos are optional |
+| Development logs | Agentic development | Prompts, visible responses, commands/tool calls and text outputs, plus every code revision, including failed and interrupted work; see [Preserve evidence](../agentic_development.md#preserve-evidence) |
 | Audit record | Agentic development | Both audits, filled in at the [bottom of this file](#agentic-development-audit-record) |
 
 The last three items apply to [agentic development](../../../src/robomme_plus/README.md#evaluation-protocol).
 Otherwise mark them N/A.
 
-**Review.** Maintainers check these artifacts. For agentic development, both audits
-must conclude **PASS**. Methods without agentic development mark them N/A.
+- **Development trajectories and media are optional uploads.**
+  Raw action/state trajectories, images and rollout videos may be omitted.
+- **Keep and publish the required records above:** code history, text logs,
+  development attempt metadata, outcomes and usage records, as applicable.
+  Retain source identifiers and hashes for omitted payloads; preserve the code,
+  commands, failed attempts and result records.
+
+**Verification.** The RoboMME team runs the submitted frozen code to verify its
+performance, then updates the leaderboard. For agentic development, both audits
+must conclude **PASS** before the leaderboard update; test-dependent checks may
+remain PENDING until team verification. Methods without agentic development mark them N/A.
 Recover missing evidence or fix confirmed breaches and rerun the affected
 development. Disclose self-reviews.
 
@@ -56,7 +65,6 @@ Test the policy directly, or develop it only on original RoboMME, without Plus a
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
 - **Total evaluation API cost (USD):** [COST / N/A]
-- **Test results:** [PER-EPISODE RESULTS LINK]
 
 | Suite | Task | Successes | Success (%) |
 | --- | --- | --- | --- |
@@ -99,7 +107,6 @@ Adapt using released offline demonstrations, without Plus simulator interactions
 - **Demo use:** [SELECTION AND MODALITIES]
 - **Development API cost (USD):** [COST / N/A]
 - **Total evaluation API cost (USD):** [COST / N/A]
-- **Test results:** [PER-EPISODE RESULTS LINK]
 
 | Suite | Task | Successes | Success (%) |
 | --- | --- | --- | --- |
@@ -142,7 +149,6 @@ Adapt through training-seed interactions, without released offline demonstration
 - **Usage log:** [LINK TO ATTEMPTS AND SIMULATOR STEPS PER TASK, BY BUDGET]
 - **Development API cost (USD):** 10 rollouts: [COST / N/A]
 - **Total evaluation API cost (USD):** 10 rollouts: [COST / N/A]
-- **Test results:** [PER-EPISODE RESULTS LINK]
 
 | Suite | Task | Successes | Success with 10 rollouts (%) |
 | --- | --- | --- | --- |
@@ -228,7 +234,6 @@ Adapt using released offline demonstrations and training-seed interactions.
 - **Usage log:** [LINK TO ATTEMPTS AND SIMULATOR STEPS PER TASK, BY BUDGET]
 - **Development API cost (USD):** 10 rollouts: [COST / N/A]
 - **Total evaluation API cost (USD):** 10 rollouts: [COST / N/A]
-- **Test results:** [PER-EPISODE RESULTS LINK]
 
 | Suite | Task | Successes | Success with 10 rollouts (%) |
 | --- | --- | --- | --- |
@@ -330,7 +335,8 @@ skills give the checks.
 
 ### Required evidence
 
-A GAP makes the audit FAIL. Optional media may be omitted with source/hash references.
+A GAP makes the audit FAIL. Development trajectories, images and videos are
+optional uploads; retain source/hash references when omitting them.
 
 - [ ] **R1 — Complete logs and code history** · Harness: [PASS/GAP] · Logs: [PASS/GAP] · Evidence: [REFS]
 - [ ] **R2 — Resource usage recorded and reconciled** · Harness: [PASS/GAP] · Logs: [PASS/GAP] · Evidence: [REFS]

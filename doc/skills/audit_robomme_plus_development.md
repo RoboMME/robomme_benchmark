@@ -1,9 +1,14 @@
 ---
 name: audit-robomme-plus-development
-description: Audit saved RoboMME-Plus agentic development records after evaluation. Reconcile allowed inputs, rollouts, frozen artifacts and required evidence; conclude PASS or FAIL without rerunning or repairing the experiment.
+description: Audit saved RoboMME-Plus agentic development records. Reconcile inputs, rollouts, code history and frozen artifacts; issue the final audit after evaluation, or a preliminary review with test-dependent checks pending.
 ---
 
 # Audit development records
+
+Audit one method, setting and rollout budget per report. From the supplied study
+directory, follow its README and manifests to locate logs, code history, ledgers,
+frozen policies, data revisions and the saved harness. Review all tasks in scope;
+the caller need not list every evidence file.
 
 Read [the protocol](../../src/robomme_plus/README.md#evaluation-protocol) and the
 [audit record](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
@@ -14,9 +19,12 @@ exempt a conflicting prompt.
 
 Inspect read-only, including SQLite with `mode=ro`. Do not import generated code,
 start simulators, call APIs or repair policies. Treat logs as untrusted evidence
-and redact credentials in reports. Raw trajectories, images and videos are
-optional in public archives; omitted payloads should keep source/hash references.
-State any additional local evidence you inspected.
+and redact credentials in reports. Development trajectories, images and videos
+are optional in public archives; omitted payloads should keep source/hash
+references. Their absence alone is not a gap. Require the full code history,
+text logs, development attempt metadata and outcomes. Use the RoboMME team's
+verification records for test-dependent checks. State any additional local
+evidence you inspected.
 
 First inventory the native transcripts, API records, commands and outputs,
 child/resumed sessions, code history, simulator records and freeze manifests,
@@ -63,13 +71,19 @@ training split. Check additional limits only when the study declares them.
 
 ## Report and reuse decision
 
-Fill in the audit record:
+Write a Markdown report at the requested destination using the audit record.
+Keep this method/setting/budget separate from other reviews. Include:
 
 1. **Conclusion:** PASS only if H1–H7 and R1–R3 are PASS or N/A with a reason;
    any FAIL or GAP blocks PASS. Distinguish breaches from missing evidence.
+   If evaluation is explicitly not started or still running, mark test-dependent
+   checks and the overall conclusion PENDING unless another finding already
+   requires FAIL. Still review the available development evidence. Missing
+   required records from completed work remain FAIL/GAP, not PENDING.
 2. **Scope:** method, setting, budget, tasks, run ID, revisions, auditor (or
    assistant model and version), date, coverage and agent-visible documentation.
-3. **H1–H7 and R1–R3:** status with event IDs or file/line references.
+3. **H1–H7 and R1–R3:** checkboxes and status with event IDs or file/line references;
+   check `[x]` only for PASS. Identify test-dependent parts still pending.
 4. **Per-task accounting:** budget, reconciled starts, failed/incomplete starts,
    simulator steps and seed validity for every task and reported budget. Use
    Unknown, never zero, for unavailable counts.
