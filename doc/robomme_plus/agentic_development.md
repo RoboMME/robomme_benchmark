@@ -18,11 +18,11 @@ Use `--setting zero-shot`, `--setting demo-only`, `--setting interaction-only`
 or `--setting hybrid`. `Zero-shot` and `Demo-only` are fixed at 0 starts.
 `--budget` is the total **per task across all its training seeds, workers and
 sessions**: 10 for the leaderboard, or a smaller budget for optional results. Preparation
-pins the training metadata and benchmark source hashes without starting a simulator.
+saves the released training settings and benchmark source hashes without starting a simulator.
 
 In demo settings, `--export-demos --demos <H5_DIR>` writes each task's RGB frames,
 goals and phase labels under `<ROOT>/demonstrations/`. You may instead supply any
-released modality. Record the training-data revision.
+released modality.
 
 Original RoboMME's dataset and simulator may be used freely in every setting,
 outside this budget. Record their use separately.

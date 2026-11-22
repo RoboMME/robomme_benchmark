@@ -7,12 +7,12 @@ description: Audit saved RoboMME-Plus agentic development records. Reconcile inp
 
 Audit one method, setting and rollout budget per report. From the supplied study
 directory, follow its README and manifests to locate logs, code history, ledgers,
-frozen policies, data revisions and the saved harness. Review all tasks in scope;
+frozen policies, training inputs and the saved harness. Review all tasks in scope;
 the caller need not list every evidence file.
 
 Read [the protocol](../../src/robomme_plus/README.md#evaluation-protocol) and the
 [audit record](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
-Establish the method, setting, tasks, budget, run identity, benchmark/data
+Establish the method, setting, tasks, budget, run identity, benchmark/harness
 revisions and evaluated policy hashes. Read the actual prompts and operator
 messages. Map historical setting names explicitly; never relabel budgets or
 exempt a conflicting prompt.
@@ -42,7 +42,7 @@ indirect access through scripts, relays, downloads and shared libraries.
 | H1 | No privileged information | Recorded agent inputs contain only public observations, public feedback and setting-allowed data: no hidden object state, oracle actions or subgoals, or simulator internals. |
 | H2 | No Plus task code | No agent read, import or search output of `robomme_plus` source (except the allowlisted README) or other methods' Plus solutions. **Any confirmed forbidden access is FAIL.** |
 | H3 | No task-code details in prompts | Operator messages, prompts, skills and frozen notes contain no task-specific details beyond the public documentation in protocol rule 2. Exact task parameters in agent-written prompts or skills trace to the agents' own permitted observations, demos or rollouts; values that match task code without such provenance are FAIL. |
-| H4 | No test data | Every start used a released training seed with its full pinned configuration, and no test seed, test metadata or test result reached development or policy selection. |
+| H4 | No test data | Every start used a released training seed with its full configuration, and no test seed, test metadata or test result reached development or policy selection. |
 | H5 | Rollout budget | Ledger reservations reconcile with independent startup/reset records and outcomes across workers and sessions, deduplicated by attempt ID; API calls and file counts are not rollouts. Every start counts: failed setup, previews, verification, rehearsals, retries and a real Plus simulator behind a sandbox. The experience used for the reported result stays within the per-task budget across all seeds (0 for `Zero-shot`/`Demo-only`); unused allowance does not transfer between tasks. For extracted checkpoints, use the per-task cutoff below. |
 | H6 | Demonstrations only in demo settings | No released Plus recording reached a non-demo setting. Offline recordings and synthetic mocks are distinguished from Plus physics replay, which consumes the budget and is forbidden in `Demo-only`. |
 | H7 | Frozen before testing | Frozen hashes match the evaluated artifacts, the freeze manifest predates the first test episode's start, and no development step or selection used test feedback. Code history and shared-skill provenance trace to the frozen policies, including code borrowed across settings or budgets. |
@@ -74,9 +74,9 @@ missing optional media alone is not a gap.
 | R2 | Resource usage | Per-task attempts, steps and API costs reconcile; missing usage is unknown, not zero. |
 | R3 | Human corrections | Operator edits are disclosed with exact diffs, evidence and timing. |
 
-Check documents actually received against protocol rule 2's allowlist. Report data/protocol
-differences: valid historical results do not establish results on a changed
-training split. Check additional limits only when the study declares them.
+Check documents actually received against protocol rule 2's allowlist and verify
+training inputs against the released recordings and seed settings. Check
+additional limits only when the study declares them.
 
 ## Report and reuse decision
 

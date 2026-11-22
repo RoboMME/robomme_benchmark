@@ -23,7 +23,7 @@ The harness audit checks enforcement and logging; the log audit checks the saved
 | H1 | **No privileged information:** agents receive only public observations, public feedback and setting-allowed data | 2 |
 | H2 | **No Plus task code:** package source (except the allowlisted README) and other methods' Plus solutions are unreachable from agents and never read | 2 |
 | H3 | **No task-code details in prompts:** prompts, skills and notes contain no exact task parameters, thresholds or success criteria beyond the public documentation | 2 |
-| H4 | **No test data:** only released training seeds with their pinned settings; no test seeds, metadata or results | 2, 3 |
+| H4 | **No test data:** only released training seeds with their full settings; no test seeds, metadata or results | 2, 3 |
 | H5 | **Rollout budget:** at most the budget per task across all seeds, workers and sessions, counting every start | 1, 5 |
 | H6 | **Demonstrations only in demo settings** | 2 |
 | H7 | **Frozen before testing:** frozen hashes predate the first test episode; no test-feedback tuning or selection | 3 |

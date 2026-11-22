@@ -44,8 +44,7 @@ Credentials remain outside agent containers. Neither method uses our CaP code.
 
 ## Develop and evaluate
 
-Download the [final training H5 data](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5),
-pin the downloaded revision in your run manifest, then:
+Download the [training H5 data](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5), then:
 
 ```bash
 python -m benchmark_io.prepare_unified prepare \
@@ -53,7 +52,7 @@ python -m benchmark_io.prepare_unified prepare \
 python -m benchmark_io.watch_unified --root "<RUN_ROOT>"
 ```
 
-Preparation pins the benchmark, 50 recordings, protocol, runtime and image
+Preparation saves the benchmark, 50 recordings, protocol, runtime and image
 digest without API calls or simulator starts. New studies create **6 configurations**:
 2 methods × (`Demo-only` at 0; each interaction setting at 10).
 Each configuration evaluates 800 episodes: 4,800 tests across both methods.

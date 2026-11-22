@@ -13,8 +13,8 @@ Leave evaluation scores and costs PENDING until team verification is complete.
 
 ## What to submit
 
-Open a pull request containing this Markdown. Link every artifact at a pinned
-revision (a commit or dataset revision, not a moving branch).
+Open a pull request containing this Markdown. Link code and development logs at
+fixed revisions so reviewers can inspect the submitted artifacts.
 
 | Item | Required for | Contents |
 | --- | --- | --- |
@@ -318,7 +318,7 @@ report links are optional.
 | Development logs | [PASS / FAIL / PENDING] | [ONE LINE; REASON FOR ANY FAIL] |
 
 - **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN ID]
-- **Versions:** [BENCHMARK/PROTOCOL, TRAINING DATA AND HARNESS REVISIONS]
+- **Versions:** [BENCHMARK/PROTOCOL AND HARNESS REVISIONS]
 - **Frozen policy:** [CODE LINK AND FREEZE MANIFEST HASHES]
 - **Development logs:** [PUBLIC ARCHIVE LINK]
 - **Auditor / date:** [NAME OR ASSISTANT MODEL AND VERSION, DATE; SELF-REVIEW OR INDEPENDENT]

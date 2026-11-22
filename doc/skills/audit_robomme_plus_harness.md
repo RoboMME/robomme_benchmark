@@ -12,7 +12,7 @@ prompts and referenced inputs; the caller need not list every evidence file.
 Read [the protocol](../../src/robomme_plus/README.md#evaluation-protocol), the
 [development interface](../robomme_plus/agentic_development.md) and the
 [audit record](../robomme_plus/submission/model_example_plus.md#agentic-development-audit-record).
-Establish the method, setting, budget, tasks, code/data revisions and deployed
+Establish the method, setting, budget, tasks, code revisions and deployed
 configuration. Discover the actual tools and boundaries; do not assume a model or
 log format. An old prompt is not an exemption from current rules.
 
@@ -30,7 +30,7 @@ Each must clearly pass. Anything not clearly established is FAIL.
 | H1 | No privileged information | Passes agents only public RGB-D, calibration, robot state, goal, conditioning video, public feedback and setting-allowed data. Trace each value from producer to agent; hidden object state, oracle actions or subgoals and simulator internals never cross the boundary. |
 | H2 | No Plus task code | Makes `robomme_plus` source (except the allowlisted README) and other methods' Plus solutions unreachable. Check checkouts, installed packages, mounts, archives, network fetches and child processes. **A reachable forbidden path is FAIL even if unused.** |
 | H3 | No task-code details in prompts | Gives agents operator prompts, skills and notes with no task-specific details beyond the public documentation in protocol rule 2: no exact parameters, ranges, thresholds or success criteria. |
-| H4 | No test data | Starts only released training episodes with their full pinned settings, and keeps test seeds, test metadata (`env_metadata/test/`) and test results unreachable. |
+| H4 | No test data | Starts only released training episodes with their full settings, and keeps test seeds, test metadata (`env_metadata/test/`) and test results unreachable. |
 | H5 | Rollout budget | Reserves every Plus start, atomically and before startup, against one persistent per-task budget shared by all seeds, workers, sessions and stages. Failed or abandoned starts stay spent, there are no hidden retries or implicit resets, and `Zero-shot`/`Demo-only` cannot start Plus episodes. Enumerate construction, reset, previews, verification, rehearsal tools, retries, subprocesses and restored states. A counter library alone cannot block a direct simulator call. |
 | H6 | Demonstrations only in demo settings | Exposes released Plus recordings only in demo settings; inspect the actual exports. |
 | H7 | Frozen before testing | Freezes final programs, prompts, tools and harness with content hashes before testing, and gives development no access to test results. |

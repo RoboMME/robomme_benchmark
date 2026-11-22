@@ -7,7 +7,6 @@
 - **Website:** `<WEBSITE_URL>`
 - **Blog:** `<BLOG_URL>`
 - **Development model:** Claude Opus 5.5 via AWS Bedrock, high reasoning effort.
-- **Training data:** `Yinpei/robomme_plus_data_h5@63cb9b5b62f5413993845c7d89b82b3bd58dc2fa`.
 - **Run:** `r10_20261121`; at most 10 development starts per task, shared across all training seeds; 150-minute task deadline.
 - **Evaluation:** Frozen policies on the 800 released tests, with default variations. No paid model API calls during frozen execution.
 

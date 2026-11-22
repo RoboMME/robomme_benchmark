@@ -38,8 +38,6 @@ ASPIRE/RAX setup and submission examples.
   25 hard episodes; MoveCube has 10 per method. Train/test seeds are disjoint within each task.
 - **Downloads:** [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
   [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
-  The current `main` contains v2 with atomic training variations and successful
-  joint and end-effector replay. The original data is preserved on each dataset's `v1` branch.
 
 Training seeds and episode settings are in
 [`env_metadata/train/record_dataset_<Task>_metadata.json`](env_metadata/train).
