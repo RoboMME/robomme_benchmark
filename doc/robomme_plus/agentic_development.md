@@ -1,16 +1,17 @@
 # Agentic development guide
 
-Use this guide if agents develop your method on RoboMME-Plus: writing task
-solutions from demonstrations or rollouts, learning task-specific prompts, or
-improving themselves (for example ASPIRE and RAX). Do the steps in order. The
-[rules](../../src/robomme_plus/README.md#evaluation-protocol) are the reference.
+Use this guide if an agent develops your method on RoboMME-Plus: for example, a
+coding agent that writes code-as-policies solutions from demonstrations or
+rollouts, an agent that learns task-specific prompts for Astra, or a system that
+improves its own harness.
 
 One **run** means one method, one setting and one budget, for example
 "ASPIRE · `Interaction-only` · 10 rollouts". Repeat the steps for each run.
 
 ## What is checked
 
-One audit after development checks two things:
+After development, audit each run with the
+[audit skill](../skills/audit_robomme_plus.md). It checks two things:
 
 1. **No forbidden information.** Your agent never had access to the benchmark's
    task or simulator code, other methods' solutions, hidden simulator state, test
@@ -19,25 +20,35 @@ One audit after development checks two things:
 2. **Rollout budget.** At most 10 simulator starts per task (0 in `Zero-shot` and
    `Demo-only`), counting every start.
 
-The RoboMME team re-runs your final code on the 800 tests, so you do not need to
-freeze or fingerprint anything.
+When you submit a pull request with your code, the RoboMME team re-runs the final
+code on the 800 test episodes. Test-time optimization is currently not allowed; if
+your method learns anything from test episodes, disclose it in the pull request.
+
+How you build the harness and store records is up to you. This guide uses
+`benchmark_io`, the tooling behind ASPIRE and RAX, as a working example; file
+names such as `study.json` and `attempts.sqlite3` come from it and are not
+required.
 
 ## Step 1: choose the setting and budget
 
 | Setting | Agent may use | Simulator starts per task |
 | --- | --- | --- |
-| `Zero-shot` | Nothing from Plus | 0 |
+| `Zero-shot` | Nothing from RoboMME-Plus | 0 |
 | `Demo-only` | The 50 released demonstrations | 0 |
-| `Interaction-only` | Training-seed rollouts | 10 (leaderboard) |
-| `Hybrid` | Demonstrations and rollouts | 10 (leaderboard) |
+| `Interaction-only` | Rollouts on the training seeds | up to 10 |
+| `Hybrid` | Demonstrations and rollouts | up to 10 |
 
-The 10 starts are per task, shared across all its training seeds, workers and
+The limit is per task, shared across all its training seeds, workers and
 restarts. Every start counts, including crashes and quick tests of your own code.
-Original RoboMME's dataset and simulator may be used freely in every setting.
+The original RoboMME dataset and simulator may be used freely in every setting.
 
-## Step 2: create the run's ledger
+## Step 2: set up rollout counting
 
-From the repository root, outside anything your agent can see:
+Every RoboMME-Plus simulator start must be recorded before it happens, with its
+task, training seed, time and code revision, so the audit can count starts per task.
+
+With `benchmark_io`, create one record (a "study root") per run, from the
+repository root and outside anything your agent can see:
 
 ```bash
 export PYTHONPATH="$PWD/src:$PWD/scripts/plus_eval"
@@ -53,7 +64,8 @@ start counter. Use one `--root` per run and never delete it. In demo settings,
 
 ## Step 3: build the harness
 
-The harness sits between your agent and the simulator. It must guarantee four things:
+The harness sits between your agent and the simulator. Whatever you use, it must
+guarantee four things:
 
 1. **The agent cannot see benchmark code or test data.** Run the agent in a
    container or sandbox without this repository, without the installed
@@ -62,12 +74,13 @@ The harness sits between your agent and the simulator. It must guarantee four th
 2. **The agent reads only the public documents:** the Markdown files in
    [`scripts/plus_eval/benchmark_io/prompts/current/`](../../scripts/plus_eval/benchmark_io/prompts/current/),
    the [data format](plus_training_data_format.md) and this guide. Give nothing else.
-3. **Every simulator start goes through the counter.** Run `TrainingSession`
-   ([reference below](#simulator-interface)) in a trusted process outside the
-   sandbox and expose only its `status`, `reset`, `observe`, `step` and `close` as
-   the agent's tools. All workers use the same `--root`.
+3. **Every simulator start goes through the counter.** Run the simulator in a
+   trusted process outside the sandbox and give the agent only tools to check
+   status, reset, observe, step and close. All workers share one record. With
+   `benchmark_io`, this is `TrainingSession` ([reference below](#simulator-interface)).
 4. **Everything is logged:** every prompt, response, tool call and output, and a
-   saved copy of the code before each `reset`, with its hash passed as `policy_revision`.
+   saved copy of the code before each reset, identified by a revision ID (for
+   example, its hash).
 
 For a complete example, see ASPIRE's isolated worker,
 [`aspire/isolated.py`](../../scripts/plus_eval/agentic_methods/aspire/isolated.py).
@@ -78,10 +91,10 @@ Build the RoboMME-Plus development harness so that:
 1. The developing agent runs in a sandbox without this repository, the installed
    robomme_plus package, test metadata or other methods' solutions. It receives
    only the allowed public documents.
-2. Every Plus simulator start goes through benchmark_io's TrainingSession, from a
-   trusted process outside the sandbox; all workers share one study root.
+2. Every RoboMME-Plus simulator start is recorded by a trusted process outside the
+   sandbox (for example benchmark_io's TrainingSession); all workers share one record.
 3. Every prompt, response, tool call and output is logged, and the code is saved
-   before each reset with its hash passed as policy_revision.
+   before each reset with a revision ID.
 4. Test results never reach the developing agent or policy selection.
 ```
 
@@ -94,7 +107,7 @@ You are developing a policy for the RoboMME-Plus task <TASK> in the <SETTING> se
 The documents in <DOCS_DIR> are your only source of task information.
 You may start at most <BUDGET> training episodes of this task with the simulator
 tools. Every reset counts, including failed runs and tests of your own code.
-Before each reset, save your code and pass its revision hash as policy_revision.
+Before each reset, save your code and pass its revision ID.
 Do not look for the simulator's or the task's source code, test episodes or other
 methods' solutions; they are unavailable by design.
 Use only numbers you measured from observations, demonstrations or your own
@@ -107,35 +120,43 @@ When finished, put the final policy in <FINAL_DIR> and write a short report.
 Let the agent work. Do not look at, or give the agent, any test result. If you edit
 the agent's code or the harness by hand, keep the diff.
 
+We suggest setting a per-task time limit so development cannot run indefinitely;
+[ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md) and
+[RAX](../../scripts/plus_eval/agentic_methods/rax/README.md), for example, stop each task after 150 minutes.
+
 ## Step 6: evaluate your final code
 
 Run your final policy on all 800 test episodes and record the results. Do not use
 test results to change the policy or to choose among versions. The RoboMME team
 re-runs this final code for the leaderboard.
 
-## Step 7: preserve evidence
+## Step 7: keep the development record
 
 Keep, and publish with the submission:
 
-- prompts, visible model responses, commands/tool calls and their text outputs,
-  including child and resumed sessions (provider-hidden reasoning is not required);
-- the full code history, including failed and interrupted work;
-- the ledger: `study.json`, `attempts.sqlite3` and `benchmark_source.json` in the
-  study root, plus each rollout's `attempt.json`, `outcome.json` and `events.jsonl`;
-- the final solutions used for evaluation, with dependencies and evaluation commands;
-- an estimate of development API cost.
+- **Agent logs:** prompts, visible model responses, commands or tool calls and
+  their text outputs, including child and resumed sessions (provider-hidden
+  reasoning is not required);
+- **Code history:** every saved revision, including failed and interrupted work;
+- **Rollout record:** every simulator start with its task, seed, time, code
+  revision and outcome. With `benchmark_io` these are, for example, `study.json`,
+  `attempts.sqlite3` and `benchmark_source.json` in the study root, plus each
+  rollout's `attempt.json`, `outcome.json` and `events.jsonl`;
+- **Final solutions** used for evaluation, with dependencies and evaluation commands;
+- **An estimate** of development API cost.
 
-Trajectories, images and videos (`actions.jsonl`, `observations.jsonl`,
-`rollout.mp4`) are optional. Never remove development records. Redact credentials
-in a separate copy, keeping the originals unchanged:
+Trajectories, images and videos (with `benchmark_io`: `actions.jsonl`,
+`observations.jsonl`, `rollout.mp4`) are optional. Never remove development
+records. Redact credentials in a separate copy, keeping the originals unchanged:
 
 ```bash
 python scripts/plus_eval/privacy.py audit "<UNPACKED_EXPORT_DIR>" --apply
 python scripts/plus_eval/privacy.py audit "<UNPACKED_EXPORT_DIR>"
 ```
 
-This helper scans text files, not `.tar.gz` archives or SQLite databases.
-Per-task starts, unfinished starts and simulator steps come from the ledger:
+This helper scans text files, not `.tar.gz` archives or SQLite databases. With
+`benchmark_io`, per-task starts, unfinished starts and simulator steps come from
+the study root:
 
 ```bash
 python - runs/aspire/interaction-only <<'EOF'
@@ -150,8 +171,8 @@ EOF
 ## Step 8: audit
 
 Use a fresh coding-assistant session for each run. Point it to the run's folder
-(agent logs, code history, ledger and harness configuration) and send, from the
-repository root:
+(agent logs, code history, rollout record and harness configuration) and send, from
+the repository root:
 
 ```text
 Use doc/skills/audit_robomme_plus.md to audit the <METHOD> run in the <SETTING>
@@ -160,9 +181,9 @@ Save the report to <REPORT_PATH>.
 ```
 
 The report concludes **PASS** or **FAIL** on the two checks above. It does not
-judge freezing, your method's design, development outcomes or cost accuracy.
-Disclose that it is a self-review. You can also run the same prompt on your
-harness before step 5 as a pre-flight check.
+judge your method's design, development outcomes or cost accuracy. Disclose that it
+is a self-review. You can also run the same prompt on your harness before step 5 as
+a pre-flight check.
 
 ## Step 9: submit
 
@@ -173,9 +194,11 @@ and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md>).
 
 ## Simulator interface
 
-`TrainingSession` runs in your trusted simulator service. Expose its methods to the
-agent through your harness's tools or RPC; never pass the session object, ledger
-files, simulator internals, test data or host access to the agent.
+This section describes `benchmark_io`'s `TrainingSession`, the reference
+implementation used by ASPIRE and RAX. It runs in your trusted simulator service.
+Expose its methods to the agent through your harness's tools or RPC; never pass the
+session object, record files, simulator internals, test data or host access to the
+agent.
 
 ```python
 from benchmark_io.training import TrainingSession
@@ -209,4 +232,3 @@ with TrainingSession("runs/aspire/interaction-only", "BinFill") as sim:
   must share the same study root; a new directory grants no extra starts.
 - For optional smaller budgets, see the
   [submission template](submission/model_example_plus.md#3-interaction-only).
-- The ASPIRE/RAX 150-minute per-task deadline is a method configuration, not a rule.

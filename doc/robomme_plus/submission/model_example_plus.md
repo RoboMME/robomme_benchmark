@@ -24,11 +24,11 @@ artifacts at fixed revisions.
 | Code and checkpoints | Every submission | Public runnable code and all method-specific checkpoints at fixed revisions, including prompts, tools, dependencies and installation/evaluation commands; methods without learned weights provide their final programs and prompts |
 | Method description | Every submission | At least one public paper, blog post or project website explaining the method |
 | Final evaluation solutions | Agentic development | Public final task programs, prompts, skills and tools, with their dependency versions and evaluation commands |
-| Usage log | Any Plus development rollouts | Per-task simulator starts for each budget |
-| Development logs | Agentic development | Public complete prompts, visible responses, commands/tool calls and text outputs, plus every code/prompt revision, including failed and interrupted work; see [Preserve evidence](../agentic_development.md#step-7-preserve-evidence) |
+| Usage log | Simulator rollouts without agentic development (for example RL fine-tuning in `Interaction-only`) | Per-task simulator starts for each budget; agentic development records these in its development logs instead |
+| Development logs | Agentic development | Public complete prompts, visible responses, commands/tool calls and text outputs, plus every code/prompt revision, including failed and interrupted work, and every simulator start; see [Keep the development record](../agentic_development.md#step-7-keep-the-development-record) |
 | Audit record | Agentic development | The development audit, filled in at the [bottom of this file](#agentic-development-audit-record) |
 
-[Agentic development](../../../src/robomme_plus/README.md#evaluation-protocol)
+Agentic development
 includes agent-generated task solutions, task-specific prompts learned from
 rollouts, and self-improving agents. Standard policy fine-tuning and direct control
 with general prompts (such as Embodied Astra) mark the agentic-development-only
@@ -165,7 +165,7 @@ Adapt through training-seed interactions, without released offline demonstration
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
 - **Adaptation:** [BRIEF DESCRIPTION]
-- **Usage log:** [LINK TO ATTEMPTS AND SIMULATOR STEPS PER TASK, BY BUDGET]
+- **Usage log:** [LINK TO SIMULATOR STARTS AND STEPS PER TASK, BY BUDGET] / In the development logs (agentic development)
 - **Development API cost (USD):** 10 rollouts: [COST / N/A]
 - **Total evaluation API cost (USD):** 10 rollouts: [COST / N/A]
 
@@ -224,7 +224,7 @@ report successes and success rates per task. Remove unused columns.
 
 For budget R, either run a separate development capped at R attempts per task, or
 use each task's code as saved before its (R+1)th start in a 10-attempt run. State which.
-For each budget, link the usage log and final code revision and add a matching
+For each budget, link its rollout usage (usage log or development logs) and final code revision and add a matching
 audit below. Test outcomes cannot select checkpoints.
 
 </details>
@@ -250,7 +250,7 @@ Adapt using released offline demonstrations and training-seed interactions.
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
 - **Adaptation:** [BRIEF DESCRIPTION]
 - **Demo use:** [SELECTION AND MODALITIES]
-- **Usage log:** [LINK TO ATTEMPTS AND SIMULATOR STEPS PER TASK, BY BUDGET]
+- **Usage log:** [LINK TO SIMULATOR STARTS AND STEPS PER TASK, BY BUDGET] / In the development logs (agentic development)
 - **Development API cost (USD):** 10 rollouts: [COST / N/A]
 - **Total evaluation API cost (USD):** 10 rollouts: [COST / N/A]
 
@@ -309,7 +309,7 @@ report successes and success rates per task. Remove unused columns.
 
 For budget R, either run a separate development capped at R attempts per task, or
 use each task's code as saved before its (R+1)th start in a 10-attempt run. State which.
-For each budget, link the usage log and final code revision and add a matching
+For each budget, link its rollout usage (usage log or development logs) and final code revision and add a matching
 audit below. Test outcomes cannot select checkpoints.
 
 </details>
@@ -322,15 +322,15 @@ budget. [How to audit](../agentic_development.md#step-8-audit) gives the prompt;
 
 **Conclusion:** [PASS / FAIL] — [ONE LINE; REASON FOR ANY FAIL]
 
-- **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN ID]
+- **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN IDENTIFIER, IF ANY]
 - **Development logs:** [PUBLIC ARCHIVE LINK]
 - **Auditor / date:** [ASSISTANT MODEL AND VERSION, DATE; SELF-REVIEW OR INDEPENDENT]
 - **Documents the agent received:** [FILES FROM THE PROTOCOL'S ALLOWED DOCUMENTATION]
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| 1. No forbidden information: no task/simulator code, other methods' solutions, hidden state, test seeds/data/results, demos outside demo settings, or task-code details in prompts | [PASS / FAIL] | [FILE:LINE OR LOG EVENT IDS] |
-| 2. Rollout budget: at most the per-task budget, every start counted, training seeds only | [PASS / FAIL] | [LEDGER AND RECORD IDS] |
+| 1. No forbidden information: no task/simulator code, other methods' solutions, hidden state, test seeds/data/results, demos outside demo settings, or task-code details in prompts | [PASS / FAIL] | [FILE AND LINE, OR LOG ENTRY] |
+| 2. Rollout budget: at most the per-task budget, every start counted, training seeds only | [PASS / FAIL] | [ROLLOUT RECORD REFERENCES] |
 
 ### Per-task rollouts
 

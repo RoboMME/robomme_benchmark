@@ -97,7 +97,7 @@ policies, test results and logs. Runs with 0 or 10 rollouts save full test media
 The packaged ASPIRE/RAX policies and result tables contain only R10.
 All development history is retained. `progress.json` aggregates the study.
 
-See [Preserve evidence](../../../doc/robomme_plus/agentic_development.md#step-7-preserve-evidence)
+See [Keep the development record](../../../doc/robomme_plus/agentic_development.md#step-7-keep-the-development-record)
 for what to publish; raw trajectories, images and videos are optional.
 
 Report demo use, actual attempts and simulator steps per task, and separate
