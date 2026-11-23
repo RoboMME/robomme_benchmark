@@ -1,9 +1,8 @@
 # Agentic development guide
 
 Use this guide if an agent develops your method on RoboMME-Plus: for example, a
-coding agent that writes code-as-policies solutions from demonstrations or
-rollouts, an agent that learns task-specific prompts for Astra, or a system that
-improves its own harness.
+coding agent that writes policy code from demonstrations or rollouts, an agent that
+learns task-specific prompts for Astra, or a system that improves its own harness.
 
 One **run** means one method, one setting and one budget, for example
 "ASPIRE · `Interaction-only` · 10 rollouts". Repeat the steps for each run.
@@ -60,10 +59,10 @@ python -m benchmark_io.prepare --root runs/aspire/interaction-only \
 ```
 
 `--setting` takes `zero-shot`, `demo-only`, `interaction-only` or `hybrid`
-(case-insensitive). This records the released training episodes and creates the
-start counter. Use one `--root` per run and never delete it. In demo settings,
+(case-insensitive). This saves the list of training episodes and creates the start
+counter. Use one `--root` per run and never delete it. In demo settings,
 `--export-demos --demos <H5_DIR>` writes RGB frames, goals and phase labels under
-`<ROOT>/demonstrations/`; you may instead supply any released modality.
+`<ROOT>/demonstrations/`; you may give the agent any other released data instead.
 
 ## Step 3: build the harness
 
@@ -142,16 +141,16 @@ While the agent works, keep everything below; you publish it with the submission
 
 Trajectories, images and videos (with `benchmark_io`: `actions.jsonl`,
 `observations.jsonl`, `rollout.mp4`) are optional. Never remove development
-records. Redact credentials in a separate copy, keeping the originals unchanged:
+records. Remove credentials from a separate copy and keep the originals unchanged:
 
 ```bash
 python scripts/plus_eval/privacy.py audit "<UNPACKED_EXPORT_DIR>" --apply
 python scripts/plus_eval/privacy.py audit "<UNPACKED_EXPORT_DIR>"
 ```
 
-This helper scans text files, not `.tar.gz` archives or SQLite databases. With
-`benchmark_io`, per-task starts, unfinished starts and simulator steps come from
-the study root:
+The helper checks text files only, not `.tar.gz` archives or SQLite databases.
+With `benchmark_io`, this prints each task's starts, unfinished starts and simulator
+steps:
 
 ```bash
 python - runs/aspire/interaction-only <<'EOF'
@@ -216,22 +215,22 @@ with TrainingSession("runs/aspire/interaction-only", "BinFill") as sim:
 
 | Call | Behavior |
 | --- | --- |
-| `status()` | Released seeds, budget, attempts used and remaining; no simulation. |
-| `reset(policy_revision=..., seed=...)` | Reserve one attempt, then start the selected released episode. |
-| `reset(policy_revision=...)` | Rotate through released episodes in order; the cursor survives resumes. |
-| `observe()` | Read the latest public observations; no physics step or new attempt. |
-| `step(action)` | Execute one control action; native limits and termination apply. |
-| `close()` | End the attempt, including an early stop; no refund. |
+| `status()` | Training seeds, budget, and starts used and left; runs no simulation. |
+| `reset(policy_revision=..., seed=...)` | Count one start, then start that training episode. |
+| `reset(policy_revision=...)` | Same, cycling through the training episodes in order, also across restarts. |
+| `observe()` | Return the latest observations; no physics step and no new start. |
+| `step(action)` | Execute one control action; the episode's step limit and end conditions apply. |
+| `close()` | End the rollout, even early; the start still counts. |
 
-- `episode=` may replace `seed=` to select a released training index; do not
-  supply both. Any allocation among seeds is allowed.
+- `episode=` (a training-episode index) may replace `seed=`; do not pass both. The
+  starts may be spread over the seeds in any way.
 - Actions default to `ee_pose` (`[x,y,z,roll,pitch,yaw,gripper]`, metres/radians,
   -1 closed/+1 open); use `action_space="joint_angle"` for seven joints plus gripper.
-- Observations contain phase-tagged front/wrist RGB-D, calibration, robot state,
-  goal, control limits and public success/error feedback. The task's conditioning
-  video is an observation in every setting.
-- The attempt is recorded before the simulator is built, so failed setup, previews,
-  early stops, timeouts and retries all count. All workers and resumed sessions
-  must share the same study root; a new directory grants no extra starts.
+- Observations contain front and wrist RGB-D (marked as conditioning video or
+  execution), camera calibration, robot state, the goal, control limits and
+  success/error feedback. The task's conditioning video is available in every setting.
+- The start is recorded before the simulator is built, so failed setup, previews,
+  early stops, timeouts and retries all count. All workers and resumed sessions must
+  share the same study root; a new directory does not reset the count.
 - For optional smaller budgets, see the
   [submission template](submission/model_example_plus.md#smaller-rollout-budgets).

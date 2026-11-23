@@ -7,7 +7,7 @@ RAX is an agentic framework that explores each task through rollouts, rehearses 
   - Original: [robot-agent-exploration/rax](https://github.com/robot-agent-exploration/rax) at [`d49c8ad`](https://github.com/robot-agent-exploration/rax/tree/d49c8ad605008bb5a87e909d0473cc3f5e3600a6).
   - Our adapter: [`scripts/plus_eval/agentic_methods/rax/`](../../../scripts/plus_eval/agentic_methods/rax/README.md).
 - **Final evaluation solutions:** [Final solutions](../../../scripts/plus_eval/agentic_methods/rax/solutions/README.md).
-- **Development logs:** `<DEVELOPMENT_LOGS_URL>` (public upload pending).
+- **Development logs:** [RoboMME-plus-agentic-development_logs](https://huggingface.co/datasets/Yinpei/RoboMME-plus-agentic-development_logs).
 - **Paper / website / blog:** `<PAPER_URL>` · `<WEBSITE_URL>` · `<BLOG_URL>`
 - **Model / checkpoint:** Claude Opus 5.5 develops the policies; the final programs make no model API calls at test time.
 - **Parameters:** N/A (API model).

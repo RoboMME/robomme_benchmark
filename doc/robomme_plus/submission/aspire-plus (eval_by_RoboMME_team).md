@@ -7,7 +7,7 @@ ASPIRE is an agentic coding framework: a coordinator and task workers write task
   - Original: [NVlabs/ASPIRE](https://github.com/NVlabs/ASPIRE) at [`fa00f0e`](https://github.com/NVlabs/ASPIRE/tree/fa00f0ef2bc1d91d594b9aa502c22133c9f538f7).
   - Our adapter: [`scripts/plus_eval/agentic_methods/aspire/`](../../../scripts/plus_eval/agentic_methods/aspire/README.md).
 - **Final evaluation solutions:** [Final solutions](../../../scripts/plus_eval/agentic_methods/aspire/solutions/README.md).
-- **Development logs:** `<DEVELOPMENT_LOGS_URL>` (public upload pending).
+- **Development logs:** [RoboMME-plus-agentic-development_logs](https://huggingface.co/datasets/Yinpei/RoboMME-plus-agentic-development_logs).
 - **Paper / website / blog:** `<PAPER_URL>` · `<WEBSITE_URL>` · `<BLOG_URL>`
 - **Model / checkpoint:** Claude Opus 5.5 develops the policies; the final programs make no model API calls at test time.
 - **Parameters:** N/A (API model).
@@ -49,7 +49,7 @@ ASPIRE is an agentic coding framework: a coordinator and task workers write task
 
 | Setting | 1 rollout | 3 rollouts | 5 rollouts |
 | --- | ---: | ---: | ---: |
-| `Interaction-only` | 117/800 (14.63%) | 142/800 (17.75%) | 193/800 (24.12%) |
+| `Interaction-only` | 117/800 (14.63%) | 142/800 (17.75%) | 193/800 (24.13%) |
 | `Hybrid` | 155/800 (19.38%) | 274/800 (34.25%) | 304/800 (38.00%) |
 
 <details>
@@ -101,7 +101,7 @@ R3 and R5 use independent development runs capped at the reported budget.
 | InsertPeg | 0/50 (0.00%) | 11/50 (22.00%) |
 | PatternLock | 10/50 (20.00%) | 10/50 (20.00%) |
 | RouteStick | 10/50 (20.00%) | 10/50 (20.00%) |
-| Overall | 142/800 (17.75%) | 193/800 (24.12%) |
+| Overall | 142/800 (17.75%) | 193/800 (24.13%) |
 
 </details>
 

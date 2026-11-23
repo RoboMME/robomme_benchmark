@@ -1,9 +1,9 @@
 # RoboMME-Plus baseline results
 
-Finalized results on the same **800 test episodes**: 16 tasks × 50 episodes.
-The split contains 514 episodes without added variation, 182 with perceptual
-variation and 104 with mechanism variation. Only simulator success counts;
-failures, timeouts and errors remain in the denominator.
+Final results on the same **800 test episodes** (16 tasks × 50). Of these, 514
+have no added variation, 182 have a perceptual variation and 104 a mechanism
+variation. Only a simulator success counts; failures, timeouts and errors stay in
+the denominator.
 
 ## Evaluation settings
 
@@ -22,8 +22,8 @@ for permitted inputs, rollout accounting, audits and reporting.
 
 ## `Zero-shot`
 
-These baselines use their pretrained models without RoboMME-Plus training demos
-or simulator adaptation.
+These baselines use their pretrained models with no RoboMME-Plus demonstrations
+or simulator rollouts.
 
 | Method | Successes | Success rate |
 |---|---:|---:|
@@ -35,9 +35,9 @@ or simulator adaptation.
 
 ## `Demo-only`
 
-One-shot Astra receives one selected training example for the task
-(medium when labelled; episode 1 for InsertPeg), and none for MoveCube. ASPIRE and RAX
-develop from all 50 released demonstrations, with no simulator rollouts.
+One-shot Astra sees one training example per task (the medium one where labelled;
+episode 1 for InsertPeg) and none for MoveCube. ASPIRE and RAX develop from all 50
+released demonstrations, with no simulator rollouts.
 
 | Method | Training input | Successes | Success rate |
 |---|---|---:|---:|
@@ -47,20 +47,21 @@ develop from all 50 released demonstrations, with no simulator rollouts.
 
 ## `Interaction-only`
 
-| Maximum attempts per task | ASPIRE | RAX |
+| Rollouts per task | ASPIRE | RAX |
 |---|---:|---:|
 | 10 rollouts | 302/800 (37.75%) | 372/800 (46.50%) |
 
 ## `Hybrid`
 
-| Maximum attempts per task | ASPIRE | RAX |
+| Rollouts per task | ASPIRE | RAX |
 |---|---:|---:|
 | 10 rollouts | 342/800 (42.75%) | 327/800 (40.88%) |
 
 ## Agentic development audit status
 
-All six ASPIRE and RAX runs (`Demo-only`, `Interaction-only` and `Hybrid`) pass the
-development audit: no forbidden information, and at most the allowed simulator starts.
+All six ASPIRE and RAX runs (`Demo-only`, `Interaction-only` and `Hybrid`) pass all
+three audit checks: no forbidden information, within the rollout budget, and no
+test-time optimization.
 The full reports are in the [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
 and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
 submissions. See the [audit procedure](agentic_development.md#step-7-audit).
@@ -190,20 +191,23 @@ without inference:
 
 ### Reporting and artifacts
 
-Report successes/800, per-task successes/50, setting, demo use, R, actual attempts
-and simulator steps per task, and separate development/evaluation API costs in USD.
-Use the [submission template](submission/model_example_plus.md). Cost estimates
-use saved provider usage and rate cards; missing usage is not zero cost.
+Report successes out of 800 and per task out of 50, the setting, the
+demonstrations used, the rollout budget, the rollouts and simulator steps actually
+used per task, and development and evaluation API costs in USD, using the
+[submission template](submission/model_example_plus.md). Our cost estimates come
+from saved provider token counts and price lists; missing usage records are
+estimated, not counted as zero.
 
-ASPIRE/RAX retain development code, commands, transcripts and training rollouts.
-The current R10 runs retain full test media. Frozen manifests
-record the evaluated source hashes and policy provenance. The summaries below
-contain the final evaluation results.
+ASPIRE and RAX keep their development code, commands, transcripts and training
+rollouts. The 10-rollout runs also keep full test videos. Frozen manifests record
+the hash and origin of each evaluated policy. The sources below hold the final
+evaluation results.
 
 ## Sources
 
 - [Model baseline summaries](../../scripts/plus_eval/results/model_baselines.json)
 - [ASPIRE/RAX overall and per-task counts](../../scripts/plus_eval/results/agentic_current.json)
+- [ASPIRE/RAX development logs, audits and evaluation results](https://huggingface.co/datasets/Yinpei/RoboMME-plus-agentic-development_logs)
 - Frozen solutions: [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/solutions/README.md), [RAX](../../scripts/plus_eval/agentic_methods/rax/solutions/README.md)
 - [Logs and rollout locations](../../scripts/plus_eval/results/README.md)
 - [Training data format and replay](plus_training_data_format.md)

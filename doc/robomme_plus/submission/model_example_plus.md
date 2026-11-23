@@ -2,17 +2,17 @@
 
 Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol).
 Copy the [template](#template) into a new Markdown file, keep only the rows and
-columns for the settings you report, and replace the bracketed placeholders.
+columns for the settings you report, and fill in the bracketed placeholders.
 Either track may use any setting. Each result covers all **800 test episodes
-(16 tasks × 50)**. The leaderboard uses 10 rollouts per task for interaction
-settings. Results with other rollout budgets are optional.
+(16 tasks × 50)**. The leaderboard uses 10 rollouts per task in the interaction
+settings; results with other budgets are optional.
 
-Report success rates as percentages with two decimal places. Only simulator success
-counts; failures, timeouts, model stops and errors stay in the denominator. Report
-estimated API costs in USD, development and evaluation separately; a reasonable
-estimate (for example rounded to the nearest $10, excluding local compute) is
-enough. Use N/A when no paid API is used.
-Leave evaluation scores and costs PENDING until team verification is complete.
+Report success rates as percentages with two decimal places. Only a simulator
+success counts; failures, timeouts, early stops by the model and errors stay in
+the denominator. Estimate API costs in USD, separately for development and
+evaluation. A rough estimate is enough, for example rounded to the nearest $10 and
+without local compute. Write N/A when no paid API is used, and PENDING for scores
+and costs the RoboMME team has not yet verified.
 
 ## What to submit
 
@@ -35,31 +35,24 @@ solutions and development logs.
 | Development logs | Agentic development | Public complete prompts, visible responses, commands/tool calls and text outputs, plus every code/prompt revision, including failed and interrupted work, and every simulator start; see [Develop and keep the record](../agentic_development.md#step-5-develop-and-keep-the-record) |
 | Audit record | Agentic development | The development audit, filled in at the [bottom of this file](#agentic-development-audit-record) |
 
-Agentic development
-includes agent-generated task solutions, task-specific prompts learned from
-rollouts, and self-improving agents. Standard policy fine-tuning and direct control
-with general prompts (such as Embodied Astra) mark the agentic-development-only
-items N/A unless they also use agentic development.
+Agentic development covers agent-written task solutions, task-specific prompts
+learned from rollouts, and self-improving agents. Standard fine-tuning and direct
+control with a general prompt (such as Embodied Astra) mark the agentic-only items N/A.
 
-- **Development trajectories and media are optional uploads.**
-  Raw action/state trajectories, images and rollout videos may be omitted.
-- **Keep and publish the required records above:** code history, text logs,
-  development attempt metadata, outcomes and usage records, as applicable.
-  Retain source identifiers and hashes for omitted payloads; preserve the code,
-  commands, failed attempts and result records.
+Raw action and state trajectories, images and rollout videos are optional; if you
+leave them out, keep their file names or hashes in the records. Everything else in
+the table must be published, including failed and interrupted work.
 
-**Evaluation access.** If testing requires a closed API or gated model, email
-[robomme2026@gmail.com](mailto:robomme2026@gmail.com) after opening the PR. Include its link,
-confirm that the RoboMME team has the required access, and arrange private delivery
-of a dedicated API credential with enough quota for one full **800-episode
-evaluation per submitted setting**. Never put credentials in the PR. Proprietary
-model weights may be accessed through their API; credentials are unnecessary for
-models used only during development.
+**Evaluation access.** If testing needs a closed API or gated model, email
+[robomme2026@gmail.com](mailto:robomme2026@gmail.com) with the PR link after
+opening it. Send a dedicated API key privately, with enough quota for one full
+**800-episode evaluation per submitted setting**. Never put keys in the PR. Models
+used only during development need no key.
 
 **Verification.** The RoboMME team re-runs the submitted final code on all 800
 tests and uses that run for the leaderboard. For agentic development, the audit
-must conclude **PASS** first; methods without agentic development mark it N/A.
-Disclose self-reviews.
+must conclude **PASS** first and state whether it is a self-review; other methods
+mark it N/A.
 
 ### Tracks and settings
 
@@ -78,15 +71,16 @@ Disclose self-reviews.
 ### Smaller rollout budgets
 
 Results with fewer than 10 rollouts per task are optional and do not enter the
-leaderboard; the ASPIRE and RAX references use 1, 3 and 5. For budget R, either run
-a separate development capped at R attempts per task, or use each task's code as
-saved before its (R+1)th start in a 10-attempt run, and state which. Each budget
-evaluates all 800 tests and needs its own audit. Test outcomes cannot select checkpoints.
+leaderboard; the ASPIRE and RAX references use 1, 3 and 5. For a budget of R,
+either run a separate development capped at R starts per task, or take each task's
+code as saved before its (R+1)th start in a 10-start run, and say which. Each budget
+is evaluated on all 800 tests and needs its own audit. Do not use test results to
+choose which version to report.
 
 ### Audit record
 
 Agentic development pastes one full report per setting and budget under **Full
-audit reports**, using the prompt in [How to audit](../agentic_development.md#step-7-audit).
+audit reports**, using the prompt in [Step 7: audit](../agentic_development.md#step-7-audit).
 Methods without agentic development replace the section's content with "Not
 applicable: no agentic development."
 

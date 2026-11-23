@@ -1,7 +1,8 @@
 # Agentic development and evaluation
 
-Shared simulator I/O, budget ledger, frozen evaluation, queue and API accounting
-for agentic methods, including [ASPIRE](../agentic_methods/aspire/README.md) and [RAX](../agentic_methods/rax/README.md).
+Shared tooling for agentic methods such as [ASPIRE](../agentic_methods/aspire/README.md)
+and [RAX](../agentic_methods/rax/README.md): simulator access, rollout counting,
+frozen-policy evaluation, job scheduling and API cost tracking.
 Follow the [evaluation protocol](../../../src/robomme_plus/README.md#evaluation-protocol);
 [baseline settings and results](../../../doc/robomme_plus/robomme_plus_baseline_results.md) describe
 the finalized runs. [ASPIRE](../agentic_methods/aspire/README.md#adaptation) and
@@ -10,11 +11,10 @@ and runtime limits. Saved agent-facing prompts are in [`prompts/current`](prompt
 
 ## Integrate your own method
 
-Use the [development interface](../../../doc/robomme_plus/agentic_development.md)
-for a minimal preparation command, seed-selectable API, logging requirements and
-audits. Keep your own harness; run the simulator service outside the agent workspace.
-The [audit walkthrough](../../../doc/robomme_plus/agentic_development.md#step-7-audit) provides prompts
-for the harness review and completed-development review.
+Follow the [agentic development guide](../../../doc/robomme_plus/agentic_development.md):
+it covers setup, the simulator interface, what to log and the
+[audit](../../../doc/robomme_plus/agentic_development.md#step-7-audit). You can keep
+your own harness; run the simulator outside the agent's workspace.
 
 ## Setup
 

@@ -1,51 +1,51 @@
 # RoboMME-Plus training data
 
 The training split contains **50 successful episodes, 57,056 frames at 20 Hz**:
-one easy, medium and hard episode for 15 tasks, and five MoveCube methods.
-Some episodes include perceptual or mechanism variation.
-H5 and LeRobot represent the same recordings. Download [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5) and
-[LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot).
+one easy, one medium and one hard episode for each of 15 tasks, plus one for each
+of MoveCube's five methods. Some episodes include a perceptual or mechanism
+variation. The [H5](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5)
+and [LeRobot](https://huggingface.co/datasets/Yinpei/robomme_plus_data_lerobot)
+downloads contain the same recordings.
 
-Use these recordings as offline data in `Demo-only` or
-`Hybrid` settings.
+Use these recordings as offline data in the `Demo-only` and `Hybrid` settings.
 
 ## Dataset Replay
 
-Replay the saved joint and end-effector actions to check the training data and
-export front/wrist videos:
+Replay the saved joint and end-effector actions to check the data and export
+front and wrist videos:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 .venv/bin/python scripts/plus_eval/dataset_replay.py \
   --h5-data-dir data/plus_train/h5 --tasks PatternLock --episodes 0
 ```
 
-Omit `--tasks` and `--episodes` to replay all 50 training episodes in both action
-spaces. Use `--action-space joint_angle` or `--action-space ee_pose`
-to check only one format. Videos are saved to
-`runs/plus_dataset_replay/<Task>/episode_<k>_<action_space>.mp4` at the recorded control rate;
-demonstration frames have a red border. The script checks episode metadata and
-stops each replay when the simulator terminates. It exits nonzero if a replay fails.
+Omit `--tasks` and `--episodes` to replay all 50 episodes in both action spaces,
+or pass `--action-space joint_angle` or `--action-space ee_pose` to check one.
+Videos are saved to `runs/plus_dataset_replay/<Task>/episode_<k>_<action_space>.mp4`
+at the recorded control rate, with a red border on conditioning-video frames. The
+script checks episode metadata, stops each replay when the episode ends, and exits
+with an error if any replay fails.
 
 ## Seeds and episode mapping
 
-The source of training seeds is
-[`src/robomme_plus/env_metadata/train/`](../../src/robomme_plus/env_metadata/train),
-in `record_dataset_<Task>_metadata.json`. Record `k` corresponds to H5
-`episode_<k>`; `BenchmarkEnvBuilder(task, dataset="train")` loads it.
-Dataset copies of `train_plan.json`, `train_seeds.csv` and `metadata/train/`
-include the task, episode, seed, difficulty/method and measured execution length.
-Selected rows also include a versioned `perceptual_variation` or
-`mechanism_variation` atomic preset. Seed values and difficulty levels are unchanged.
-LeRobot `meta/source_episodes.json` maps global episode indices back to these rows.
+Training seeds are listed in
+[`src/robomme_plus/env_metadata/train/record_dataset_<Task>_metadata.json`](../../src/robomme_plus/env_metadata/train).
+Record `k` is H5 `episode_<k>`, and `BenchmarkEnvBuilder(task, dataset="train")`
+loads it. The dataset's `train_plan.json`, `train_seeds.csv` and `metadata/train/`
+list each episode's task, index, seed, difficulty or method, and execution length.
+Episodes with a variation name it in `perceptual_variation` or
+`mechanism_variation`; the variation does not change the seed or difficulty.
+In LeRobot, `meta/source_episodes.json` maps global episode indices back to these rows.
 
 ## Conventions
 
 - Observations precede their paired actions: `obs[t+1]` follows `action[t]`.
-- Conditioning-video frames come first (`is_video_demo`); execution follows.
-  Return-to-home motion between phases is unrecorded. The native step index can jump.
-- Evaluator demo observations follow their actions, so their image sequence is
-  shifted one frame relative to H5. The first execution observation matches the
-  final reset observation.
+- Conditioning-video frames come first (`is_video_demo`), then execution. The
+  robot's return to its home pose between the two is not recorded, so the native
+  step index can jump.
+- In the simulator, the conditioning-video frames returned by `reset()` are shifted
+  one frame relative to H5. The first execution observation matches the last frame
+  returned by `reset()`.
 - Positions use metres, angles radians, quaternions `wxyz`, and extrinsic `xyz` Euler angles.
 
 ## H5
@@ -67,10 +67,11 @@ Each `h5/record_dataset_<Task>.h5` contains `episode_<k>/setup` and
 | `action/waypoint_action` | Current 7-value keyframe target when `waypoint_action_valid` is true |
 | `info` | Subgoal text, grounding, demo/completion/boundary flags and native control step |
 
-MoveCube native commands are `[q(7), dq(7), gripper]`; other tasks omit velocities.
-Action gripper commands use −1 closed and +1 open. Observed finger widths use
-0–0.04 m. Choice actions are unused. Replay execution with `action/joint_action`
-or `action/eef_action`; environment reset already performs the demonstration.
+MoveCube native commands are `[q(7), dq(7), gripper]`; other tasks omit the
+velocities. Gripper commands use −1 for closed and +1 for open; observed finger
+widths range from 0 to 0.04 m. Choice actions are unused. To replay an episode,
+send `action/joint_action` or `action/eef_action` after `reset()`; reset already
+plays the conditioning video.
 
 ## LeRobot
 
@@ -91,10 +92,10 @@ Parquet file and front/wrist H264 videos. Each row corresponds to one H5 timeste
 | `episode_index`, `frame_index`, `timestamp`, `index` | Episode, local frame, seconds and global row |
 | `next.done` | True only on the last row |
 
-`meta/native_action_format.json` describes native command packing. LeRobot omits
-depth, camera extrinsics, observed TCP poses and waypoints; use H5 for these. H264 images
-are lossy, so they are not pixel-identical to the H5 RGB arrays.
+`meta/native_action_format.json` describes how native commands are packed.
+LeRobot omits depth, camera extrinsics, observed TCP poses and waypoints; use H5 for
+these. H264 video is lossy, so its frames are not pixel-identical to the H5 RGB arrays.
 
-All 50 episodes passed joint and end-effector replay (100/100 checks),
-export consistency and dataset-loader checks. Published manifests record
-file checksums and the matching code revision.
+All 50 episodes pass joint and end-effector replay (100/100 checks) as well as
+export and loader checks. The published manifests record file checksums and the
+matching code revision.
