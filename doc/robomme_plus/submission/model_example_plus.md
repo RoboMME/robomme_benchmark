@@ -46,8 +46,7 @@ the table must be published, including failed and interrupted work.
 **Evaluation access.** If testing needs a closed API or gated model, email
 [robomme2026@gmail.com](mailto:robomme2026@gmail.com) with the PR link after
 opening it. Send a dedicated API key privately, with enough quota for one full
-**800-episode evaluation per submitted setting**. Never put keys in the PR. Models
-used only during development need no key.
+**800-episode evaluation per submitted setting**. Never put keys in the PR.
 
 **Verification.** The RoboMME team re-runs the submitted final code on all 800
 tests and uses that run for the leaderboard. For agentic development, the audit
