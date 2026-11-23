@@ -18,11 +18,13 @@ Each method link below provides setup and running instructions.
 
 ## Agentic adaptation
 
-ASPIRE and RAX use at most **10 development rollouts per task**, shared across
-training seeds. The packaged solutions and results cover the current R10 runs.
+`Demo-only` uses the 50 released demonstrations and no simulator rollouts. The
+interaction settings use at most **10 development rollouts per task**, shared across
+training seeds. The packaged solutions cover the R10 runs.
 
 | Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
 |---|---|---:|---:|
+| `Demo-only` | 0 | 140/800 (17.50%) | 139/800 (17.38%) |
 | `Interaction-only` | 10 | 302/800 (37.75%) | 372/800 (46.50%) |
 | `Hybrid` | 10 | 342/800 (42.75%) | 327/800 (40.88%) |
 

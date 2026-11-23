@@ -6,9 +6,11 @@ Either track may use any setting. Each result covers all **800 test episodes
 (16 tasks × 50)**. The leaderboard uses 10 rollouts per task for interaction
 settings. Results with other rollout budgets are optional.
 
-Report success rates as percentages with two decimal places. Report estimated API
-costs in USD, development and evaluation separately; a reasonable estimate (for
-example rounded to the nearest $10) is enough. Use N/A when no paid API is used.
+Report success rates as percentages with two decimal places. Only simulator success
+counts; failures, timeouts, model stops and errors stay in the denominator. Report
+estimated API costs in USD, development and evaluation separately; a reasonable
+estimate (for example rounded to the nearest $10, excluding local compute) is
+enough. Use N/A when no paid API is used.
 Leave evaluation scores and costs PENDING until team verification is complete.
 
 ## What to submit
@@ -18,6 +20,10 @@ checkpoints and at least one paper, blog post or project website are required fo
 PR acceptance. Agentic development also requires public release of the complete
 development logs and the final solutions used for evaluation. Link released
 artifacts at fixed revisions.
+
+**Keep this Markdown self-contained.** Put the results, costs and the full audit
+report in this file. Link only to external artifacts: code, checkpoints, final
+solutions and development logs.
 
 | Item | Required for | Contents |
 | --- | --- | --- |

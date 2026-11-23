@@ -10,7 +10,7 @@
 
 **Track:** Agentic Track.
 
-**Final evaluation API cost:** ≈$840 for all 800 test episodes (rough estimate; excludes local GPU compute).
+**Final evaluation API cost:** ≈$840 for all 800 test episodes.
 
 **Evaluated by:** RoboMME Team. **Evaluation:** Final RoboMME-Plus test split (800 episodes).
 
@@ -20,9 +20,9 @@
 
 **Rollout budget:** 0; 0 training-seed attempts.
 
-> Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`joint_angle`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
+> Evaluated on all 800 test episodes with **`joint_angle`** actions.
 
-Success rates are percentages on the RoboMME-Plus test split. Only simulator success counts as success. All 800 episodes remain in the denominator, including failures, timeouts, model stops and errors.
+### Per-task success
 
 | Suite | Task | Successes | Success (%) |
 | --- | --- | --- | --- |
@@ -45,8 +45,6 @@ Success rates are percentages on the RoboMME-Plus test split. Only simulator suc
 | **Overall** | **All tasks** | **70/800** | **8.75** |
 
 **Overall:** 70/800 successes (**8.75%**); 466 failures and 264 timeouts.
-
-[Baseline results](../robomme_plus_baseline_results.md).
 
 ### Training Details
 

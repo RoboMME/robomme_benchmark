@@ -1,6 +1,239 @@
 {
-  "source_experiment": "r10_20261121",
+  "source_experiment": [
+    "demo_only_20261121",
+    "r10_20261121"
+  ],
   "rows": [
+    {
+      "method": "aspire",
+      "setting": "demo-only",
+      "budget": 0,
+      "run_id": "demo_only_20261121",
+      "total": 800,
+      "successes": 140,
+      "success_rate": 0.175,
+      "tasks": {
+        "BinFill": {
+          "total": 50,
+          "successes": 18
+        },
+        "ButtonUnmask": {
+          "total": 50,
+          "successes": 23
+        },
+        "ButtonUnmaskSwap": {
+          "total": 50,
+          "successes": 2
+        },
+        "InsertPeg": {
+          "total": 50,
+          "successes": 0
+        },
+        "MoveCube": {
+          "total": 50,
+          "successes": 1
+        },
+        "PatternLock": {
+          "total": 50,
+          "successes": 0
+        },
+        "PickHighlight": {
+          "total": 50,
+          "successes": 0
+        },
+        "PickXtimes": {
+          "total": 50,
+          "successes": 0
+        },
+        "RouteStick": {
+          "total": 50,
+          "successes": 10
+        },
+        "StopCube": {
+          "total": 50,
+          "successes": 17
+        },
+        "SwingXtimes": {
+          "total": 50,
+          "successes": 17
+        },
+        "VideoPlaceButton": {
+          "total": 50,
+          "successes": 11
+        },
+        "VideoPlaceOrder": {
+          "total": 50,
+          "successes": 10
+        },
+        "VideoRepick": {
+          "total": 50,
+          "successes": 0
+        },
+        "VideoUnmask": {
+          "total": 50,
+          "successes": 31
+        },
+        "VideoUnmaskSwap": {
+          "total": 50,
+          "successes": 0
+        }
+      },
+      "training_starts": {
+        "BinFill": 0,
+        "ButtonUnmask": 0,
+        "ButtonUnmaskSwap": 0,
+        "InsertPeg": 0,
+        "MoveCube": 0,
+        "PatternLock": 0,
+        "PickHighlight": 0,
+        "PickXtimes": 0,
+        "RouteStick": 0,
+        "StopCube": 0,
+        "SwingXtimes": 0,
+        "VideoPlaceButton": 0,
+        "VideoPlaceOrder": 0,
+        "VideoRepick": 0,
+        "VideoUnmask": 0,
+        "VideoUnmaskSwap": 0
+      },
+      "training_starts_total": 0,
+      "infrastructure_errors": 42,
+      "development_api_cost_usd": 210,
+      "pending_usage_requests": 0,
+      "incomplete_requests": 1,
+      "evaluation_api_cost_usd": 0,
+      "frozen_manifests": {
+        "evaluation/frozen_evaluation.json": "50225a1b5192b25d1e02a46c463b982ac62113c70220c83685024c3891d67013"
+      },
+      "source_setting": "demo-only",
+      "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
+      "notes": "42 test episodes that failed before the first action during a SAM3 outage were rerun; 40 that failed after the policy acted keep their original outcomes.",
+      "audit": "PASS",
+      "audit_review": "2026-11-22 self-review: no forbidden information and rollout budget both PASS",
+      "audit_summary": "doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record"
+    },
+    {
+      "method": "rax",
+      "setting": "demo-only",
+      "budget": 0,
+      "run_id": "demo_only_20261121",
+      "total": 800,
+      "successes": 139,
+      "success_rate": 0.17375,
+      "tasks": {
+        "BinFill": {
+          "total": 50,
+          "successes": 15
+        },
+        "ButtonUnmask": {
+          "total": 50,
+          "successes": 26
+        },
+        "ButtonUnmaskSwap": {
+          "total": 50,
+          "successes": 2
+        },
+        "InsertPeg": {
+          "total": 50,
+          "successes": 0
+        },
+        "MoveCube": {
+          "total": 50,
+          "successes": 2
+        },
+        "PatternLock": {
+          "total": 50,
+          "successes": 10
+        },
+        "PickHighlight": {
+          "total": 50,
+          "successes": 1
+        },
+        "PickXtimes": {
+          "total": 50,
+          "successes": 0
+        },
+        "RouteStick": {
+          "total": 50,
+          "successes": 3
+        },
+        "StopCube": {
+          "total": 50,
+          "successes": 23
+        },
+        "SwingXtimes": {
+          "total": 50,
+          "successes": 3
+        },
+        "VideoPlaceButton": {
+          "total": 50,
+          "successes": 11
+        },
+        "VideoPlaceOrder": {
+          "total": 50,
+          "successes": 12
+        },
+        "VideoRepick": {
+          "total": 50,
+          "successes": 31
+        },
+        "VideoUnmask": {
+          "total": 50,
+          "successes": 0
+        },
+        "VideoUnmaskSwap": {
+          "total": 50,
+          "successes": 0
+        }
+      },
+      "training_starts": {
+        "BinFill": 0,
+        "ButtonUnmask": 0,
+        "ButtonUnmaskSwap": 0,
+        "InsertPeg": 0,
+        "MoveCube": 0,
+        "PatternLock": 0,
+        "PickHighlight": 0,
+        "PickXtimes": 0,
+        "RouteStick": 0,
+        "StopCube": 0,
+        "SwingXtimes": 0,
+        "VideoPlaceButton": 0,
+        "VideoPlaceOrder": 0,
+        "VideoRepick": 0,
+        "VideoUnmask": 0,
+        "VideoUnmaskSwap": 0
+      },
+      "training_starts_total": 0,
+      "infrastructure_errors": 0,
+      "development_api_cost_usd": 80,
+      "pending_usage_requests": 0,
+      "incomplete_requests": 0,
+      "evaluation_api_cost_usd": 0,
+      "frozen_manifests": {
+        "evaluation/BinFill/frozen_evaluation.json": "54a0dfaf794ee3a6e1d5ab185f4250380e66c2eba312fe7bb44d5234e652a832",
+        "evaluation/ButtonUnmask/frozen_evaluation.json": "29e1a9dc5f0e95de889e5865972e1ae8a90a43e0dd058af3881ec6769cfa61b6",
+        "evaluation/ButtonUnmaskSwap/frozen_evaluation.json": "c7f48bd7343f16ae24a855239d1c2f7dae1e4ca79abf1d38cb5dc49d3c2cda9c",
+        "evaluation/InsertPeg/frozen_evaluation.json": "7b08cff6b2d9067ff105e9566f2f6a9b93587949d25bff1ba814aeb08743f66e",
+        "evaluation/MoveCube/frozen_evaluation.json": "c6f90b5d567eaf70308c698babd26b6583104b6fe861fc2603383e65e3a3a882",
+        "evaluation/PatternLock/frozen_evaluation.json": "bf2f2f07cbf2ef1928e3558f6eb0a2c0f98ffbbf5ab87579b02699b800b0380f",
+        "evaluation/PickHighlight/frozen_evaluation.json": "0c015976cc6eb605fd2ae46c2fa3de081749b1d890b976cb39a8b984e326b721",
+        "evaluation/PickXtimes/frozen_evaluation.json": "c76a24b64b1f6f81717d42ddfdacb2ebdf93cd9d33bbf482660bff5ada5c6b8f",
+        "evaluation/RouteStick/frozen_evaluation.json": "1dd61424dcee1d74b5567b9c85e406708814fc0fcf0ba9530f637514bb4373a1",
+        "evaluation/StopCube/frozen_evaluation.json": "bba2acf739d05b2a961fb7271e886f9b68dae9f4a090cb0c006534f4898009f9",
+        "evaluation/SwingXtimes/frozen_evaluation.json": "836ba8cc685816722c9bbe168ba6595fab3953ba33b5dab01ebc21567700d5e9",
+        "evaluation/VideoPlaceButton/frozen_evaluation.json": "5be67a8c4828a8f9c52417d2feb514ac3b53cbc4b1334244798eb4aa5305ce22",
+        "evaluation/VideoPlaceOrder/frozen_evaluation.json": "21a6087fe9e0a36a0187e91c25bb2802412c7d4623539880c31cf5484a1d4f8a",
+        "evaluation/VideoRepick/frozen_evaluation.json": "8ea09f7fef24e2f3c77a5373a1e8503fced4fade595a3d6cc938b706471cf2e8",
+        "evaluation/VideoUnmask/frozen_evaluation.json": "43dfd10cdf59676c3f89e51bc73fbf36a32d4c24b4f3e3b558fedaa807880fa3",
+        "evaluation/VideoUnmaskSwap/frozen_evaluation.json": "581c89048d5414a36ba2900c7d3f0624cf9a92804b3a9c0d6063ed1c5d669256"
+      },
+      "source_setting": "demo-only",
+      "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
+      "audit": "PASS",
+      "audit_review": "2026-11-22 self-review: no forbidden information and rollout budget both PASS",
+      "audit_summary": "doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record"
+    },
     {
       "method": "aspire",
       "setting": "interaction-only",
@@ -105,12 +338,9 @@
       "summary_sha256": "e737d3eb3a6104b476109c962fc030f5ccab10d2c9fa1f384033f67a18bce7e9",
       "source_setting": "interaction-only",
       "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
-      "audits": {
-        "harness": "PASS",
-        "development": "PASS"
-      },
-      "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
-      "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json"
+      "audit_review": "2026-11-22 self-review: no forbidden information and rollout budget both PASS",
+      "audit_summary": "doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record",
+      "audit": "PASS"
     },
     {
       "method": "rax",
@@ -231,13 +461,10 @@
       "summary_sha256": "a49f4ca7c137eb4b1f9654d79c5288603ee372639c4f92d92542f54e4501d765",
       "source_setting": "interaction-only",
       "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
-      "audits": {
-        "harness": "PASS",
-        "development": "PASS"
-      },
-      "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
-      "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json",
-      "infrastructure_error_basis": "Confirmed CUDA-OOM episodes were retried with unchanged frozen policies and seeds; retry outcomes replace them. Other execution errors are not automatically classified as infrastructure."
+      "audit_review": "2026-11-22 self-review: no forbidden information and rollout budget both PASS",
+      "audit_summary": "doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record",
+      "infrastructure_error_basis": "Confirmed CUDA-OOM episodes were retried with unchanged frozen policies and seeds; retry outcomes replace them. Other execution errors are not automatically classified as infrastructure.",
+      "audit": "PASS"
     },
     {
       "method": "aspire",
@@ -343,12 +570,9 @@
       "summary_sha256": "cce0fc689a78b357655b61238f7c37686368f24090fee09e97c3c87c14374f96",
       "source_setting": "demo&interaction",
       "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
-      "audits": {
-        "harness": "PASS",
-        "development": "PASS"
-      },
-      "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
-      "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json"
+      "audit_review": "2026-11-22 self-review: no forbidden information and rollout budget both PASS",
+      "audit_summary": "doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record",
+      "audit": "PASS"
     },
     {
       "method": "rax",
@@ -469,13 +693,10 @@
       "summary_sha256": "b4238e34d607d045ff22fea90ad9ba3113103bd6e1d2bcdcdf22e2df33223127",
       "source_setting": "demo&interaction",
       "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
-      "audits": {
-        "harness": "PASS",
-        "development": "PASS"
-      },
-      "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
-      "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json",
-      "infrastructure_error_basis": "Confirmed CUDA-OOM episodes were retried with unchanged frozen policies and seeds; retry outcomes replace them. Other execution errors are not automatically classified as infrastructure."
+      "audit_review": "2026-11-22 self-review: no forbidden information and rollout budget both PASS",
+      "audit_summary": "doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record",
+      "infrastructure_error_basis": "Confirmed CUDA-OOM episodes were retried with unchanged frozen policies and seeds; retry outcomes replace them. Other execution errors are not automatically classified as infrastructure.",
+      "audit": "PASS"
     }
   ]
 }

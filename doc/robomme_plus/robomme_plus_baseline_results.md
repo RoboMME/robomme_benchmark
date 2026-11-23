@@ -36,11 +36,14 @@ or simulator adaptation.
 ## `Demo-only`
 
 One-shot Astra receives one selected training example for the task
-(medium when labelled; episode 1 for InsertPeg), and none for MoveCube.
+(medium when labelled; episode 1 for InsertPeg), and none for MoveCube. ASPIRE and RAX
+develop from all 50 released demonstrations, with no simulator rollouts.
 
 | Method | Training input | Successes | Success rate |
 |---|---|---:|---:|
 | [One-shot Embodied Astra](<submission/one-shot-embodied-astra-plus (eval_by_RoboMME_team).md>) | One selected example per task | 281/800 | 35.13% |
+| [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md>) | All 50 demonstrations | 140/800 | 17.50% |
+| [RAX](<submission/rax-plus (eval_by_RoboMME_team).md>) | All 50 demonstrations | 139/800 | 17.38% |
 
 ## `Interaction-only`
 
@@ -56,14 +59,15 @@ One-shot Astra receives one selected training example for the task
 
 ## Agentic development audit status
 
-The current R10 runs passed the follow-up harness and development audits, with
-warnings disclosed in the [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
+All six ASPIRE and RAX runs (`Demo-only`, `Interaction-only` and `Hybrid`) pass the
+development audit: no forbidden information, and at most the allowed simulator starts.
+The full reports are in the [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
 and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
 submissions. See the [audit procedure](agentic_development.md#step-8-audit).
 
 ## Per-task success rates
 
-Each cell uses 50 episodes. ASPIRE/RAX report only the current R10 runs.
+Each cell uses 50 episodes.
 
 <details>
 <summary><code>Zero-shot</code></summary>
@@ -92,24 +96,24 @@ Each cell uses 50 episodes. ASPIRE/RAX report only the current R10 runs.
 <details>
 <summary><code>Demo-only</code></summary>
 
-| Task | One-shot Astra |
-|---|---:|
-| BinFill | 26.0% |
-| ButtonUnmask | 78.0% |
-| ButtonUnmaskSwap | 26.0% |
-| InsertPeg | 28.0% |
-| MoveCube | 18.0% |
-| PatternLock | 18.0% |
-| PickHighlight | 42.0% |
-| PickXtimes | 80.0% |
-| RouteStick | 8.0% |
-| StopCube | 38.0% |
-| SwingXtimes | 98.0% |
-| VideoPlaceButton | 36.0% |
-| VideoPlaceOrder | 22.0% |
-| VideoRepick | 16.0% |
-| VideoUnmask | 28.0% |
-| VideoUnmaskSwap | 0.0% |
+| Task | One-shot Astra | ASPIRE | RAX |
+|---|---:|---:|---:|
+| BinFill | 26.0% | 36.0% | 30.0% |
+| ButtonUnmask | 78.0% | 46.0% | 52.0% |
+| ButtonUnmaskSwap | 26.0% | 4.0% | 4.0% |
+| InsertPeg | 28.0% | 0.0% | 0.0% |
+| MoveCube | 18.0% | 2.0% | 4.0% |
+| PatternLock | 18.0% | 0.0% | 20.0% |
+| PickHighlight | 42.0% | 0.0% | 2.0% |
+| PickXtimes | 80.0% | 0.0% | 0.0% |
+| RouteStick | 8.0% | 20.0% | 6.0% |
+| StopCube | 38.0% | 34.0% | 46.0% |
+| SwingXtimes | 98.0% | 34.0% | 6.0% |
+| VideoPlaceButton | 36.0% | 22.0% | 22.0% |
+| VideoPlaceOrder | 22.0% | 20.0% | 24.0% |
+| VideoRepick | 16.0% | 0.0% | 62.0% |
+| VideoUnmask | 28.0% | 62.0% | 0.0% |
+| VideoUnmaskSwap | 0.0% | 0.0% | 0.0% |
 </details>
 
 <details>
