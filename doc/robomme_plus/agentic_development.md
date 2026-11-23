@@ -231,4 +231,4 @@ with TrainingSession("runs/aspire/interaction-only", "BinFill") as sim:
   early stops, timeouts and retries all count. All workers and resumed sessions
   must share the same study root; a new directory grants no extra starts.
 - For optional smaller budgets, see the
-  [submission template](submission/model_example_plus.md#3-interaction-only).
+  [submission template](submission/model_example_plus.md#smaller-rollout-budgets).
