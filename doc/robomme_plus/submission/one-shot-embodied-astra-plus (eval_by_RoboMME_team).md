@@ -6,7 +6,7 @@ One-shot Embodied-Astra uses the same `gpt-6-astra` waypoint policy as Embodied-
 - **Code:** [Code](https://github.com/jackbjed/embodied-astra-robomme) · [Run instructions](../../../scripts/plus_eval/agentic_methods/astra/embodied/README.md#one-shot).
 - **Final evaluation solutions:** N/A (no agentic development).
 - **Development logs:** N/A (no agentic development).
-- **Paper / website / blog:** N/A
+- **Paper / website / blog:** [Paper](https://arxiv.org/abs/2610.17350) · [Website](https://embodied-astra.github.io/)
 - **Model / checkpoint:** The underlying Astra model is accessed through its API. Adaptation uses the [RoboMME-Plus training set](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5); this entry does not produce a fine-tuned checkpoint.
 - **Parameters:** N/A (API model)
 - **Evaluated by:** RoboMME Team.

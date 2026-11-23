@@ -13,7 +13,7 @@ and runtime limits. Saved agent-facing prompts are in [`prompts/current`](prompt
 Use the [development interface](../../../doc/robomme_plus/agentic_development.md)
 for a minimal preparation command, seed-selectable API, logging requirements and
 audits. Keep your own harness; run the simulator service outside the agent workspace.
-The [audit walkthrough](../../../doc/robomme_plus/agentic_development.md#step-8-audit) provides prompts
+The [audit walkthrough](../../../doc/robomme_plus/agentic_development.md#step-7-audit) provides prompts
 for the harness review and completed-development review.
 
 ## Setup
@@ -97,7 +97,7 @@ policies, test results and logs. Runs with 0 or 10 rollouts save full test media
 The packaged ASPIRE/RAX policies and result tables contain only R10.
 All development history is retained. `progress.json` aggregates the study.
 
-See [Keep the development record](../../../doc/robomme_plus/agentic_development.md#step-7-keep-the-development-record)
+See [Develop and keep the record](../../../doc/robomme_plus/agentic_development.md#step-5-develop-and-keep-the-record)
 for what to publish; raw trajectories, images and videos are optional.
 
 Report demo use, actual attempts and simulator steps per task, and separate

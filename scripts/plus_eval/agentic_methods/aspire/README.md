@@ -29,7 +29,7 @@ The model, time limits and input sampling are implementation choices.
 
 | Area | Configuration |
 | --- | --- |
-| Development model | Opus 5.5 via AWS Bedrock, high reasoning effort; development/evaluation usage and cost logged separately. |
+| Development model | Opus 5.5, high reasoning effort; development/evaluation usage and cost logged separately. |
 | Budgets | `Demo-only`: 0 starts. Interaction settings: at most 10 starts per task. All starts, including failed setup and verification, share the budget. |
 | Training demos | `Demo-only`/`Hybrid` receive front/wrist RGB recordings, goals, phases and timestamps for offline analysis. `Interaction-only` receives none. Simulator replay counts toward the development budget. |
 | Live interface | Public RGB-D, calibration, robot state, actions, conditioning videos and terminal/error feedback; task source and hidden object state remain outside agent workspaces. |

@@ -6,7 +6,7 @@ Embodied-Astra uses the `gpt-6-astra` API model directly as a robot policy. Give
 - **Code:** [Code](https://github.com/jackbjed/embodied-astra-robomme) · [Run instructions](../../../scripts/plus_eval/agentic_methods/astra/embodied/README.md).
 - **Final evaluation solutions:** N/A (no agentic development).
 - **Development logs:** N/A (no agentic development).
-- **Paper / website / blog:** N/A
+- **Paper / website / blog:** [Paper](https://arxiv.org/abs/2610.17350) · [Website](https://embodied-astra.github.io/)
 - **Model / checkpoint:** Astra is accessed through its API; no local model checkpoint is released with this entry. The original policy, prompts, and waypoint interface are available in the [Embodied-Astra repository](https://github.com/jackbjed/embodied-astra-robomme).
 - **Parameters:** N/A (API model)
 - **Evaluated by:** RoboMME Team.

@@ -1,15 +1,16 @@
 ---
 name: audit-robomme-plus
-description: Audit one RoboMME-Plus agentic development run after development. Check two things from the harness setup and saved logs, namely that the coding agent had no access to forbidden information and used at most the allowed Plus simulator starts, and conclude PASS or FAIL.
+description: Audit one RoboMME-Plus agentic development run after development and testing. Check three things from the harness setup and saved logs, namely that the coding agent had no access to forbidden information, used at most the allowed Plus simulator starts, and that the policy did not change during the test evaluation (no test-time optimization), and conclude PASS or FAIL.
 ---
 
 # Audit an agentic development run
 
-Audit one method, setting and rollout budget per report. Only two things decide
-the result: **no forbidden information** and **the rollout budget**. Be strict about
-these and lenient about everything else. From the supplied run directory, find the
-harness setup, the agent logs and the rollout record (and the code history, if an
-optional smaller budget is reported). Read
+Audit one method, setting and rollout budget per report. Only three things decide
+the result: **no forbidden information**, **the rollout budget** and **no test-time
+optimization**. Be strict about these and lenient about everything else. From the
+supplied run directory, find the harness setup, the agent logs, the rollout record
+and the test-evaluation record (and the code history, if an optional smaller budget
+is reported). Read
 [the protocol](../../src/robomme_plus/README.md#evaluation-protocol).
 
 Methods store their evidence in their own formats; judge what the records show,
@@ -60,36 +61,58 @@ file counts are not starts. Every start must use a released training seed. If an
 optional smaller budget R is reported from a longer run, the code reported for each
 task must have been saved before that task's (R+1)th start.
 
+## Check 3: no test-time optimization
+
+PASS when the evaluated policy stayed the same for the whole test evaluation: every
+test episode ran the same final code, prompts, skills, tools and weights, and nothing
+learned from one test episode reached a later one or development. Within an episode
+the policy may keep any memory of that episode; that is the task.
+
+FAIL when the policy changed while testing was under way, for example:
+- code, prompts, skills or weights were edited, retrained or regenerated between or
+  during test episodes;
+- memory, notes or learned state carried from one test episode to the next;
+- the agent or an operator saw test results and adjusted the policy, or test results
+  were used to choose among policy versions.
+
+Evidence can be any record that ties each test episode to the policy that ran it, for
+example identical code hashes at the start and end of testing, or evaluation logs
+with no agent or development activity while testing ran. Re-running an episode with
+the same, unchanged policy is not optimization. Report a method that declares
+test-time learning as FAIL for this protocol, and say that it was disclosed.
+
 ## Evidence
 
-The evidence must be enough to support both checks: what the agent saw and did
-(including child and resumed sessions) for check 1, and every simulator start for
-check 2. Any format is fine. A gap fails the affected check (missing evidence) only
-if it could hide a forbidden read or an uncounted start; otherwise record it as a
+The evidence must be enough to support all three checks: what the agent saw and did
+(including child and resumed sessions) for check 1, every simulator start for check
+2, and which policy ran each test episode for check 3. Any format is fine. A gap
+fails the affected check (missing evidence) only if it could hide a forbidden read,
+an uncounted start or a policy change during testing; otherwise record it as a
 note. Raw trajectories, images and videos are optional.
 
 ## Not judged
 
 - How the evidence is stored: file names, formats, directory layout, logging tools,
   and how code versions are saved or identified (git, snapshots, hashes).
-- How the harness is built, as long as it supports checks 1 and 2.
+- How the harness is built, as long as it supports checks 1 to 3.
 - The method's own design: time limits, restarts, interrupted or rejected commands,
   tool permissions, prompts within the allowed documentation.
+- How the policy was fixed before testing (freeze manifests, fingerprints).
 - Development outcomes, step counts and penalties; the accuracy of API cost
-  estimates; freezing; and test-time evaluation, which the RoboMME team re-runs from
+  estimates; and the test scores themselves, which the RoboMME team reproduces from
   the submitted final code.
 
-Mention these only where they affect check 1 or 2.
+Mention these only where they affect checks 1 to 3.
 
 ## Report
 
 Write a Markdown report at the requested destination:
 
-1. **Conclusion:** PASS only if both checks pass; otherwise FAIL, saying whether it
-   is a breach or missing evidence.
+1. **Conclusion:** PASS only if all three checks pass; otherwise FAIL, saying whether
+   it is a breach or missing evidence.
 2. **Scope:** method, setting, budget, tasks, run identifier if any, auditor
    (assistant model and version), date, and the documents the agent received.
-3. **Check 1 and check 2:** status and evidence (file and line, or log entry).
+3. **Checks 1, 2 and 3:** status and evidence (file and line, or log entry).
 4. **Per-task rollouts:** budget, starts and seed validity for every task.
 5. **Notes:** anything worth reporting that is not a failure, one line each.
 

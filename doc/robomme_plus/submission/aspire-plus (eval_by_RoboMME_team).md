@@ -3,7 +3,9 @@
 ASPIRE is an agentic coding framework: a coordinator and task workers write task programs from demonstrations and rollouts, verify them, and share skills across tasks. We run the unchanged NVlabs/ASPIRE system with its SAM3, Contact-GraspNet, PyRoki and cuRobo providers.
 
 - **Track:** Agentic.
-- **Code:** [Code](https://github.com/NVlabs/ASPIRE) · [Run instructions](../../../scripts/plus_eval/agentic_methods/aspire/README.md).
+- **Code:**
+  - Original: [NVlabs/ASPIRE](https://github.com/NVlabs/ASPIRE) at [`fa00f0e`](https://github.com/NVlabs/ASPIRE/tree/fa00f0ef2bc1d91d594b9aa502c22133c9f538f7).
+  - Our adapter: [`scripts/plus_eval/agentic_methods/aspire/`](../../../scripts/plus_eval/agentic_methods/aspire/README.md).
 - **Final evaluation solutions:** [Final solutions](../../../scripts/plus_eval/agentic_methods/aspire/solutions/README.md).
 - **Development logs:** `<DEVELOPMENT_LOGS_URL>` (public upload pending).
 - **Paper / website / blog:** `<PAPER_URL>` · `<WEBSITE_URL>` · `<BLOG_URL>`
@@ -77,7 +79,7 @@ ASPIRE is an agentic coding framework: a coordinator and task workers write task
 
 ## Method details
 
-- **Development:** Claude Opus 5.5 via AWS Bedrock with high reasoning effort; 150-minute deadline per task.
+- **Development:** Claude Opus 5.5 with high reasoning effort; 150-minute deadline per task.
 - **Demo use:** `Demo-only` and `Hybrid` use all 50 released demonstrations (front/wrist RGB frames, goals and phase labels); `Interaction-only` uses none.
 - **Test time:** each task runs its final program; no model API calls.
 
@@ -136,7 +138,7 @@ Skill: `doc/skills/audit_robomme_plus.md`. `<root>` = `demo_only_20261121`,
 - **Method / setting / budget:** ASPIRE; `Demo-only` (stored as `demo-only`); 0 Plus starts per task.
 - **Tasks:** all 16.
 - **Run ID:** `aspire/demo-only/R0` in study `demo_only_20261121`. There was a single development job, `develop/aspire/demo-only/R0` (`<root>/queue.sqlite3`), from 2026-11-22 02:21:41Z to 06:24:54Z.
-- **Model and versions:** Opus 5.5 via Bedrock, high effort. ASPIRE `fa00f0ef…` plus two patches (`<root>/runtime_source_manifest.json`). Agent image `sha256:d143d08a…7f0b` (`<root>/study_plan.json`). Dataset `Yinpei/robomme_plus_data_h5@63cb9b5b…`.
+- **Model and versions:** Opus 5.5, high effort. ASPIRE `fa00f0ef…` plus two patches (`<root>/runtime_source_manifest.json`). Agent image `sha256:d143d08a…7f0b` (`<root>/study_plan.json`). Dataset `Yinpei/robomme_plus_data_h5@63cb9b5b…`.
 - **Auditor / date:** Claude Opus 5.5 (`us.anthropic.claude-opus-5-5`), 2026-11-22. This is a self-review by the RoboMME team's assistant.
 - **Documents the agent received** (`<dev>/workspace`, initial snapshot in `<dev>/history/snapshots.jsonl` line 1):
   - **Operator text:** the launch prompt (`<dev>/development_prompt.txt`) and the campaign brief `CLAUDE.md`.

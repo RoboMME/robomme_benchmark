@@ -32,7 +32,7 @@ solutions and development logs.
 | Method description | Every submission | At least one public paper, blog post or project website explaining the method |
 | Final evaluation solutions | Agentic development | Public final task programs, prompts, skills and tools, with their dependency versions and evaluation commands |
 | Usage log | Simulator rollouts without agentic development (for example RL fine-tuning in `Interaction-only`) | Per-task simulator starts for each budget; agentic development records these in its development logs instead |
-| Development logs | Agentic development | Public complete prompts, visible responses, commands/tool calls and text outputs, plus every code/prompt revision, including failed and interrupted work, and every simulator start; see [Keep the development record](../agentic_development.md#step-7-keep-the-development-record) |
+| Development logs | Agentic development | Public complete prompts, visible responses, commands/tool calls and text outputs, plus every code/prompt revision, including failed and interrupted work, and every simulator start; see [Develop and keep the record](../agentic_development.md#step-5-develop-and-keep-the-record) |
 | Audit record | Agentic development | The development audit, filled in at the [bottom of this file](#agentic-development-audit-record) |
 
 Agentic development
@@ -86,7 +86,7 @@ evaluates all 800 tests and needs its own audit. Test outcomes cannot select che
 ### Audit record
 
 Agentic development pastes one full report per setting and budget under **Full
-audit reports**, using the prompt in [How to audit](../agentic_development.md#step-8-audit).
+audit reports**, using the prompt in [How to audit](../agentic_development.md#step-7-audit).
 Methods without agentic development replace the section's content with "Not
 applicable: no agentic development."
 
@@ -188,11 +188,11 @@ Auditor: [ASSISTANT MODEL AND VERSION], [DATE] ([SELF-REVIEW / INDEPENDENT]).
 
 ### Audit summary
 
-| Setting | Budget per task | Development starts | 1. No forbidden information | 2. Rollout budget | Conclusion |
-| --- | ---: | ---: | --- | --- | --- |
-| `Demo-only` | 0 | 0 | [PASS / FAIL] | [PASS / FAIL] | **[PASS / FAIL]** |
-| `Interaction-only` | 10 | [STARTS] | [PASS / FAIL] | [PASS / FAIL] | **[PASS / FAIL]** |
-| `Hybrid` | 10 | [STARTS] | [PASS / FAIL] | [PASS / FAIL] | **[PASS / FAIL]** |
+| Setting | Budget per task | Development starts | 1. No forbidden information | 2. Rollout budget | 3. No test-time optimization | Conclusion |
+| --- | ---: | ---: | --- | --- | --- | --- |
+| `Demo-only` | 0 | 0 | [PASS / FAIL] | [PASS / FAIL] | [PASS / FAIL] | **[PASS / FAIL]** |
+| `Interaction-only` | 10 | [STARTS] | [PASS / FAIL] | [PASS / FAIL] | [PASS / FAIL] | **[PASS / FAIL]** |
+| `Hybrid` | 10 | [STARTS] | [PASS / FAIL] | [PASS / FAIL] | [PASS / FAIL] | **[PASS / FAIL]** |
 
 ### Development starts per task
 

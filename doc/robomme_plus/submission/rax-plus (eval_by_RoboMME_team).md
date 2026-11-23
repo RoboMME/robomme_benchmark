@@ -3,7 +3,9 @@
 RAX is an agentic framework that explores each task through rollouts, rehearses candidate controllers and submits a final program bundle per task. We run the unchanged upstream RAX core.
 
 - **Track:** Agentic.
-- **Code:** [Code](https://github.com/robot-agent-exploration/rax) · [Run instructions](../../../scripts/plus_eval/agentic_methods/rax/README.md).
+- **Code:**
+  - Original: [robot-agent-exploration/rax](https://github.com/robot-agent-exploration/rax) at [`d49c8ad`](https://github.com/robot-agent-exploration/rax/tree/d49c8ad605008bb5a87e909d0473cc3f5e3600a6).
+  - Our adapter: [`scripts/plus_eval/agentic_methods/rax/`](../../../scripts/plus_eval/agentic_methods/rax/README.md).
 - **Final evaluation solutions:** [Final solutions](../../../scripts/plus_eval/agentic_methods/rax/solutions/README.md).
 - **Development logs:** `<DEVELOPMENT_LOGS_URL>` (public upload pending).
 - **Paper / website / blog:** `<PAPER_URL>` · `<WEBSITE_URL>` · `<BLOG_URL>`
@@ -77,7 +79,7 @@ RAX is an agentic framework that explores each task through rollouts, rehearses 
 
 ## Method details
 
-- **Development:** Claude Opus 5.5 via AWS Bedrock with high reasoning effort; 150-minute deadline per task.
+- **Development:** Claude Opus 5.5 with high reasoning effort; 150-minute deadline per task.
 - **Demo use:** `Demo-only` and `Hybrid` use all 50 released demonstrations (front/wrist RGB frames, goals and phase labels); `Interaction-only` uses none.
 - **Test time:** each task runs its final program; no model API calls.
 

@@ -11,7 +11,7 @@ One **run** means one method, one setting and one budget, for example
 ## What is checked
 
 After development, audit each run with the
-[audit skill](../skills/audit_robomme_plus.md). It checks two things:
+[audit skill](../skills/audit_robomme_plus.md). It checks three things:
 
 1. **No forbidden information.** Your agent never had access to the benchmark's
    task or simulator code, other methods' solutions, hidden simulator state, test
@@ -19,10 +19,13 @@ After development, audit each run with the
    restate task-code details.
 2. **Rollout budget.** At most 10 simulator starts per task (0 in `Zero-shot` and
    `Demo-only`), counting every start.
+3. **No test-time optimization.** The policy stays the same for the whole test
+   evaluation: no changes to its code, prompts, skills or weights, and no memory
+   carried from one test episode to the next. If your method learns from test
+   episodes, disclose it in the pull request; such results are outside this protocol.
 
 When you submit a pull request with your code, the RoboMME team re-runs the final
-code on the 800 test episodes. Test-time optimization is currently not allowed; if
-your method learns anything from test episodes, disclose it in the pull request.
+code on the 800 test episodes.
 
 How you build the harness and store records is up to you. This guide uses
 `benchmark_io`, the tooling behind ASPIRE and RAX, as a working example; file
@@ -115,7 +118,7 @@ rollouts; do not guess hidden task parameters.
 When finished, put the final policy in <FINAL_DIR> and write a short report.
 ```
 
-## Step 5: develop
+## Step 5: develop and keep the record
 
 Let the agent work. Do not look at, or give the agent, any test result. If you edit
 the agent's code or the harness by hand, keep the diff.
@@ -124,15 +127,7 @@ We suggest setting a per-task time limit so development cannot run indefinitely;
 [ASPIRE](../../scripts/plus_eval/agentic_methods/aspire/README.md) and
 [RAX](../../scripts/plus_eval/agentic_methods/rax/README.md), for example, stop each task after 150 minutes.
 
-## Step 6: evaluate your final code
-
-Run your final policy on all 800 test episodes and record the results. Do not use
-test results to change the policy or to choose among versions. The RoboMME team
-re-runs this final code for the leaderboard.
-
-## Step 7: keep the development record
-
-Keep, and publish with the submission:
+While the agent works, keep everything below; you publish it with the submission:
 
 - **Agent logs:** prompts, visible model responses, commands or tool calls and
   their text outputs, including child and resumed sessions (provider-hidden
@@ -168,7 +163,15 @@ for row in db.execute("SELECT task, count(*), sum(ended IS NULL), "
 EOF
 ```
 
-## Step 8: audit
+## Step 6: evaluate your final code
+
+Run your final policy on all 800 test episodes and record the results. Do not use
+test results to change the policy or to choose among versions, and keep the policy
+unchanged until testing ends. Keep a record of which policy version ran each test
+episode (for example, the code hash in the evaluation log) for check 3. The RoboMME
+team re-runs this final code for the leaderboard.
+
+## Step 7: audit
 
 Use a fresh coding-assistant session for each run. Point it to the run's folder
 (agent logs, code history, rollout record and harness configuration) and send, from
@@ -180,12 +183,12 @@ setting with a per-task rollout budget of <BUDGET>, using the evidence in <RUN_D
 Save the report to <REPORT_PATH>.
 ```
 
-The report concludes **PASS** or **FAIL** on the two checks above. It does not
+The report concludes **PASS** or **FAIL** on the three checks above. It does not
 judge your method's design, development outcomes or cost accuracy. Disclose that it
 is a self-review. You can also run the same prompt on your harness before step 5 as
 a pre-flight check.
 
-## Step 9: submit
+## Step 8: submit
 
 Copy the [submission template](submission/model_example_plus.md), fill in the
 results, link your final code and development record, and paste the audit report

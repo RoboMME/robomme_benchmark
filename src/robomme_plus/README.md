@@ -28,23 +28,24 @@ to control the robot (e.g., Embodied Astra). Development audits are not required
 For agents developing task solutions from demonstrations or rollouts, learning
 task-specific prompts, or improving themselves (e.g., ASPIRE and RAX). One
 development audit is required, even if the final solution controls the robot directly.
-It checks two things: the agent had no access to forbidden information, and it used
-at most the allowed simulator rollouts.
+It checks three things: the agent had no access to forbidden information, it used
+at most the allowed simulator rollouts, and the policy did not change during testing
+(no test-time optimization).
 
 Follow the **[agentic development guide](../../doc/robomme_plus/agentic_development.md)**:
-create the run's ledger, build the harness, give the agent its instructions, develop,
+set up rollout counting, build the harness, give the agent its instructions, develop,
 evaluate, audit the development record and submit your final code.
 
 ### Submission requirements
 
 For PR acceptance and leaderboard inclusion:
 
+- **Method description:** link at least one paper, blog post or project website.  
 - **Code and checkpoints:** publicly release runnable code, all method-specific
   weights and final programs/prompts at fixed revisions, with setup and evaluation instructions.
 - **Agentic development:** also release final evaluation solutions and complete
   text logs, code/prompt history and rollout accounting, including failed and
   interrupted work. Media and raw trajectories are optional.
-- **Method description:** link at least one paper, blog post or project website.
 - **Evaluation access:** for closed APIs or gated models needed at test time,
   email [robomme2026@gmail.com](mailto:robomme2026@gmail.com) with the PR link and access
   confirmation. Arrange private API credentials with quota for **800 episodes per
@@ -52,8 +53,6 @@ For PR acceptance and leaderboard inclusion:
 
 Use the [submission template](../../doc/robomme_plus/submission/model_example_plus.md).
 The RoboMME team verifies all 800 tests before leaderboard inclusion.
-
-**Reference:** [baseline results](../../doc/robomme_plus/robomme_plus_baseline_results.md) · [ASPIRE/RAX setup](../../scripts/plus_eval/benchmark_io/README.md) · [release manifest](../../doc/robomme_plus/plus_release_manifest.json)
 
 ## Splits and training data
 
@@ -92,7 +91,7 @@ and is forbidden in `Demo-only`. The interaction leaderboard allows **at most
    selection. Respect the per-task budget and episode step limits. Agentic
    development uses the [agentic development guide](../../doc/robomme_plus/agentic_development.md),
    keeps logs of every agent session and simulator start, and includes the
-   [development audit](../../doc/robomme_plus/agentic_development.md#step-8-audit).
+   [development audit](../../doc/robomme_plus/agentic_development.md#step-7-audit).
 
 2. **Use only permitted resources.** Use the setting's allowed data and training
    seeds. Do not use privileged information, reverse-engineer Plus task code or

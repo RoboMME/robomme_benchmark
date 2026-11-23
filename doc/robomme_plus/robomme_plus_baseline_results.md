@@ -63,7 +63,7 @@ All six ASPIRE and RAX runs (`Demo-only`, `Interaction-only` and `Hybrid`) pass 
 development audit: no forbidden information, and at most the allowed simulator starts.
 The full reports are in the [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
 and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
-submissions. See the [audit procedure](agentic_development.md#step-8-audit).
+submissions. See the [audit procedure](agentic_development.md#step-7-audit).
 
 ## Per-task success rates
 
