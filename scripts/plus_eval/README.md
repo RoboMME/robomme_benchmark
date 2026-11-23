@@ -23,8 +23,8 @@ training seeds. The packaged solutions and results cover the current R10 runs.
 
 | Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
 |---|---|---:|---:|
-| `Interaction-only` | 10 | 302/800 (37.75%) | 370/800 (46.25%) |
-| `Hybrid` | 10 | 342/800 (42.75%) | 326/800 (40.75%) |
+| `Interaction-only` | 10 | 302/800 (37.75%) | 372/800 (46.50%) |
+| `Hybrid` | 10 | 342/800 (42.75%) | 327/800 (40.88%) |
 
 The submissions include the [ASPIRE](<../../doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
 and [RAX](<../../doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>) audit records.

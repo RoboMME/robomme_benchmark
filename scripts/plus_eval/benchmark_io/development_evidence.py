@@ -43,7 +43,10 @@ class EvidenceRecorder:
                     digest = hashlib.sha256(content).hexdigest()
                     target = self.root/'objects'/digest
                     if not target.exists():
-                        target.write_bytes(content)
+                        # Content-addressed: a partial write must never occupy the digest name.
+                        partial = target.with_name(f'{digest}.{uuid.uuid4().hex}.tmp')
+                        partial.write_bytes(content)
+                        partial.replace(target)
                     files[str(path.relative_to(self.workspace))] = digest
             revision = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
             record = dict(id=uuid.uuid4().hex, time=time.time(), revision=revision, files=files, event=event)

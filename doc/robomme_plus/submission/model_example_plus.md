@@ -6,30 +6,33 @@ Either track may use any setting. Each result covers all **800 test episodes
 (16 tasks × 50)**. The leaderboard uses 10 rollouts per task for interaction
 settings. Results with other rollout budgets are optional.
 
-Report success rates as percentages with two decimal places. Report API costs in
-USD, development and evaluation separately; use N/A when no paid API is used.
-For estimates, rounding to the nearest $10 is sufficient. Disclose missing usage
-from provider errors as a warning; see the [audit record](#agentic-development-audit-record).
+Report success rates as percentages with two decimal places. Report estimated API
+costs in USD, development and evaluation separately; a reasonable estimate (for
+example rounded to the nearest $10) is enough. Use N/A when no paid API is used.
 Leave evaluation scores and costs PENDING until team verification is complete.
 
 ## What to submit
 
-Open a pull request containing this Markdown. Link code and development logs at
-fixed revisions so reviewers can inspect the submitted artifacts.
+Open a pull request containing this Markdown. Public code, method-specific
+checkpoints and at least one paper, blog post or project website are required for
+PR acceptance. Agentic development also requires public release of the complete
+development logs and the final solutions used for evaluation. Link released
+artifacts at fixed revisions.
 
 | Item | Required for | Contents |
 | --- | --- | --- |
-| Code | Every submission | Runnable method and frozen policy revision, including prompts, tools, dependencies and installation/evaluation commands |
-| Usage log | Any Plus development rollouts | Per-task starts, failed/incomplete starts and simulator steps for each budget |
-| Freeze manifest | Agentic development | Content hashes of the frozen programs, prompts, tools and harness, created before the first test episode |
-| Development logs | Agentic development | Prompts, visible responses, commands/tool calls and text outputs, plus every code revision, including failed and interrupted work; see [Preserve evidence](../agentic_development.md#preserve-evidence) |
-| Audit record | Agentic development | Both audits, filled in at the [bottom of this file](#agentic-development-audit-record) |
+| Code and checkpoints | Every submission | Public runnable code and all method-specific checkpoints at fixed revisions, including prompts, tools, dependencies and installation/evaluation commands; methods without learned weights provide their final programs and prompts |
+| Method description | Every submission | At least one public paper, blog post or project website explaining the method |
+| Final evaluation solutions | Agentic development | Public final task programs, prompts, skills and tools, with their dependency versions and evaluation commands |
+| Usage log | Any Plus development rollouts | Per-task simulator starts for each budget |
+| Development logs | Agentic development | Public complete prompts, visible responses, commands/tool calls and text outputs, plus every code/prompt revision, including failed and interrupted work; see [Preserve evidence](../agentic_development.md#step-7-preserve-evidence) |
+| Audit record | Agentic development | The development audit, filled in at the [bottom of this file](#agentic-development-audit-record) |
 
-The last three items apply to [agentic development](../../../src/robomme_plus/README.md#evaluation-protocol).
-This includes agent-generated task solutions, task-specific prompts learned from
+[Agentic development](../../../src/robomme_plus/README.md#evaluation-protocol)
+includes agent-generated task solutions, task-specific prompts learned from
 rollouts, and self-improving agents. Standard policy fine-tuning and direct control
-with general prompts (such as Embodied Astra) mark these items N/A unless they also
-use agentic development. Audit requirements follow the development process.
+with general prompts (such as Embodied Astra) mark the agentic-development-only
+items N/A unless they also use agentic development.
 
 - **Development trajectories and media are optional uploads.**
   Raw action/state trajectories, images and rollout videos may be omitted.
@@ -38,12 +41,18 @@ use agentic development. Audit requirements follow the development process.
   Retain source identifiers and hashes for omitted payloads; preserve the code,
   commands, failed attempts and result records.
 
-**Verification.** The RoboMME team runs the submitted frozen code to verify its
-performance, then updates the leaderboard. For agentic development, both audits
-must conclude **PASS** before the leaderboard update; test-dependent checks may
-remain PENDING until team verification. Methods without agentic development mark them N/A.
-Recover missing evidence or fix confirmed breaches and rerun the affected
-development. Disclose self-reviews.
+**Evaluation access.** If testing requires a closed API or gated model, email
+[robomme2026@gmail.com](mailto:robomme2026@gmail.com) after opening the PR. Include its link,
+confirm that the RoboMME team has the required access, and arrange private delivery
+of a dedicated API credential with enough quota for one full **800-episode
+evaluation per submitted setting**. Never put credentials in the PR. Proprietary
+model weights may be accessed through their API; credentials are unnecessary for
+models used only during development.
+
+**Verification.** The RoboMME team re-runs the submitted final code on all 800
+tests and uses that run for the leaderboard. For agentic development, the audit
+must conclude **PASS** first; methods without agentic development mark it N/A.
+Disclose self-reviews.
 
 
 **Track (select one):**
@@ -64,7 +73,9 @@ Test the policy directly, or develop it only on original RoboMME, without Plus a
 - **Paper:** [Paper](PAPER_URL) / N/A
 - **Website:** [Project website](WEBSITE_URL) / N/A
 - **Blog:** [Blog post](BLOG_URL) / N/A
-- **Code:** [Repository and frozen revision](CODE_URL)
+- **Code:** [Repository and final revision](CODE_URL)
+- **Checkpoints:** [Released weights and fixed revision](CHECKPOINT_URL) / N/A (no learned weights)
+- **Final evaluation solutions:** [Final solutions and revision](SOLUTION_URL) / N/A (no agentic development)
 - **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
@@ -103,7 +114,9 @@ Adapt using released offline demonstrations, without Plus simulator interactions
 - **Paper:** [Paper](PAPER_URL) / N/A
 - **Website:** [Project website](WEBSITE_URL) / N/A
 - **Blog:** [Blog post](BLOG_URL) / N/A
-- **Code:** [Repository and frozen revision](CODE_URL)
+- **Code:** [Repository and final revision](CODE_URL)
+- **Checkpoints:** [Released weights and fixed revision](CHECKPOINT_URL) / N/A (no learned weights)
+- **Final evaluation solutions:** [Final solutions and revision](SOLUTION_URL) / N/A (no agentic development)
 - **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
@@ -145,7 +158,9 @@ Adapt through training-seed interactions, without released offline demonstration
 - **Paper:** [Paper](PAPER_URL) / N/A
 - **Website:** [Project website](WEBSITE_URL) / N/A
 - **Blog:** [Blog post](BLOG_URL) / N/A
-- **Code:** [Repository and frozen revision](CODE_URL)
+- **Code:** [Repository and final revision](CODE_URL)
+- **Checkpoints:** [Released weights and fixed revision](CHECKPOINT_URL) / N/A (no learned weights)
+- **Final evaluation solutions:** [Final solutions and revision](SOLUTION_URL) / N/A (no agentic development)
 - **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
@@ -203,20 +218,14 @@ report successes and success rates per task. Remove unused columns.
 
 | Budget per task | Development API cost (USD) | Evaluation API cost (USD) | Results and code |
 | --- | --- | --- | --- |
-| 1 rollout | ___ | ___ | [LINK] |
-| 3 rollouts | ___ | ___ | [LINK] |
-| 5 rollouts | ___ | ___ | [LINK] |
+| [N] rollouts | ___ | ___ | [LINK] |
 
 **Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
-Both are valid: run an independent experiment capped at R attempts per task, or
-extract checkpoints from a 10-attempt development run.
-For each budget, link the usage log and frozen code revision and add a matching
-audit below. Select each task's R checkpoint after at most R attempts and before
-**that task's** (R+1)th start. It may include offline revisions using the preceding
-attempts' feedback, or be saved immediately after an attempt. Tasks can freeze
-independently; preserve the checkpoint's dependency versions and audit shared
-components against the same per-task budget. Test outcomes cannot select checkpoints.
+For budget R, either run a separate development capped at R attempts per task, or
+use each task's code as saved before its (R+1)th start in a 10-attempt run. State which.
+For each budget, link the usage log and final code revision and add a matching
+audit below. Test outcomes cannot select checkpoints.
 
 </details>
 
@@ -233,7 +242,9 @@ Adapt using released offline demonstrations and training-seed interactions.
 - **Paper:** [Paper](PAPER_URL) / N/A
 - **Website:** [Project website](WEBSITE_URL) / N/A
 - **Blog:** [Blog post](BLOG_URL) / N/A
-- **Code:** [Repository and frozen revision](CODE_URL)
+- **Code:** [Repository and final revision](CODE_URL)
+- **Checkpoints:** [Released weights and fixed revision](CHECKPOINT_URL) / N/A (no learned weights)
+- **Final evaluation solutions:** [Final solutions and revision](SOLUTION_URL) / N/A (no agentic development)
 - **Development logs:** [Public archive](DEVELOPMENT_LOGS_URL) / N/A
 - **Model / version:** [CHECKPOINT OR API MODEL AND VERSION]
 - **Parameters (Non-Agentic track):** [SIZE IN B / N/A]
@@ -292,20 +303,14 @@ report successes and success rates per task. Remove unused columns.
 
 | Budget per task | Development API cost (USD) | Evaluation API cost (USD) | Results and code |
 | --- | --- | --- | --- |
-| 1 rollout | ___ | ___ | [LINK] |
-| 3 rollouts | ___ | ___ | [LINK] |
-| 5 rollouts | ___ | ___ | [LINK] |
+| [N] rollouts | ___ | ___ | [LINK] |
 
 **Budget construction:** [SAVED CHECKPOINTS / SEPARATE DEVELOPMENT RUNS]
 
-Both are valid: run an independent experiment capped at R attempts per task, or
-extract checkpoints from a 10-attempt development run.
-For each budget, link the usage log and frozen code revision and add a matching
-audit below. Select each task's R checkpoint after at most R attempts and before
-**that task's** (R+1)th start. It may include offline revisions using the preceding
-attempts' feedback, or be saved immediately after an attempt. Tasks can freeze
-independently; preserve the checkpoint's dependency versions and audit shared
-components against the same per-task budget. Test outcomes cannot select checkpoints.
+For budget R, either run a separate development capped at R attempts per task, or
+use each task's code as saved before its (R+1)th start in a 10-attempt run. State which.
+For each budget, link the usage log and final code revision and add a matching
+audit below. Test outcomes cannot select checkpoints.
 
 </details>
 
@@ -313,61 +318,24 @@ components against the same per-task budget. Test outcomes cannot select checkpo
 ## Agentic development audit record
 
 Keep this section at the **bottom of your submission**, one per setting and
-budget. [How to audit](../auditing.md) gives the procedure and prompts; full
-report links are optional.
+budget. [How to audit](../agentic_development.md#step-8-audit) gives the prompt; paste the report here.
 
-| Audit | Conclusion | Summary |
-| --- | --- | --- |
-| Development harness | [PASS / FAIL / PENDING] | [ONE LINE; REASON FOR ANY FAIL] |
-| Development logs | [PASS / FAIL / PENDING] | [ONE LINE; REASON FOR ANY FAIL] |
+**Conclusion:** [PASS / FAIL] — [ONE LINE; REASON FOR ANY FAIL]
 
 - **Scope:** [METHOD, SETTING, BUDGET, TASKS AND RUN ID]
-- **Versions:** [BENCHMARK/PROTOCOL AND HARNESS REVISIONS]
-- **Frozen policy:** [CODE LINK AND FREEZE MANIFEST HASHES]
 - **Development logs:** [PUBLIC ARCHIVE LINK]
-- **Auditor / date:** [NAME OR ASSISTANT MODEL AND VERSION, DATE; SELF-REVIEW OR INDEPENDENT]
-- **Coverage:** [RECORDS INSPECTED; OMITTED PAYLOADS AND ANY ADDITIONAL LOCAL EVIDENCE]
-- **Agent-visible documentation:** [FILES AND REVISIONS FROM THE PROTOCOL'S ALLOWLIST]
+- **Auditor / date:** [ASSISTANT MODEL AND VERSION, DATE; SELF-REVIEW OR INDEPENDENT]
+- **Documents the agent received:** [FILES FROM THE PROTOCOL'S ALLOWED DOCUMENTATION]
 
-Each audit concludes **PASS** only if H1–H7 pass and R1–R3 are PASS, WARN or N/A
-with a reason. Any FAIL or GAP blocks PASS. Distinguish breaches from missing evidence.
-Check `[x]` only when an item passes in both audits.
-The [hard requirements](../auditing.md#hard-requirements) define H1–H7; the
-skills give the checks.
+| Check | Status | Evidence |
+| --- | --- | --- |
+| 1. No forbidden information: no task/simulator code, other methods' solutions, hidden state, test seeds/data/results, demos outside demo settings, or task-code details in prompts | [PASS / FAIL] | [FILE:LINE OR LOG EVENT IDS] |
+| 2. Rollout budget: at most the per-task budget, every start counted, training seeds only | [PASS / FAIL] | [LEDGER AND RECORD IDS] |
 
-### Hard requirements
+### Per-task rollouts
 
-- [ ] **H1 — No privileged information** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
-- [ ] **H2 — No Plus task code or other methods' Plus solutions** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
-- [ ] **H3 — No task-code details in prompts, skills or notes** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
-- [ ] **H4 — Training seeds only; no test seeds, metadata or results** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
-- [ ] **H5 — At most the rollout budget per task, every start counted** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
-- [ ] **H6 — Demonstrations only in demo settings** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
-- [ ] **H7 — Frozen before testing; no test-feedback tuning** · Harness: [PASS/FAIL] · Logs: [PASS/FAIL] · Evidence: [REFS]
+| Task | Budget | Starts | Seeds valid |
+| --- | ---: | ---: | --- |
+| [TASK] | [LIMIT] | [COUNT] | [YES / NO] |
 
-### Required evidence
-
-A GAP makes the audit FAIL. Development trajectories, images and videos are
-optional uploads; retain source/hash references when omitting them.
-API costs may be rough estimates: missing usage after a logged provider timeout
-or service error is WARN when the estimate's basis and uncertainty are disclosed.
-Keep unknown token usage unknown, not zero.
-
-- [ ] **R1 — Complete logs and code history** · Harness: [PASS/GAP] · Logs: [PASS/GAP] · Evidence: [REFS]
-- [ ] **R2 — Resource usage recorded and reconciled** · Harness: [PASS/WARN/GAP] · Logs: [PASS/WARN/GAP] · Evidence: [REFS]
-- [ ] **R3 — Human corrections disclosed with diffs** · Harness: [PASS/GAP/N/A] · Logs: [PASS/GAP/N/A] · Evidence: [REFS]
-
-### Per-task accounting
-
-Include every task in scope for each reported budget. Use Unknown for unavailable
-counts rather than zero. Failed/incomplete starts are included in Starts.
-
-| Task | Budget | Starts | Failed/incomplete starts | Steps | Seed validity | Status |
-| --- | --- | --- | --- | --- | --- | --- |
-| [TASK] | [LIMIT] | [COUNT] | [COUNT] | [COUNT / UNKNOWN] | [STATUS] | [STATUS] |
-
-### Warnings and required action
-
-| Finding | Affected tasks/settings | Evidence | Required action |
-| --- | --- | --- | --- |
-| [FAIL, GAP, WARNING OR DISCLOSED CORRECTION; NONE IF NONE] | [SCOPE] | [REFERENCE] | [ACTION] |
+**Notes:** [ONE LINE EACH, OR NONE]

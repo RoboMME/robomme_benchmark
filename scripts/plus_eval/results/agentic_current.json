@@ -118,8 +118,8 @@
       "budget": 10,
       "run_id": "r10_20261121",
       "total": 800,
-      "successes": 370,
-      "success_rate": 0.4625,
+      "successes": 372,
+      "success_rate": 0.465,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -127,7 +127,7 @@
         },
         "ButtonUnmask": {
           "total": 50,
-          "successes": 31
+          "successes": 32
         },
         "ButtonUnmaskSwap": {
           "total": 50,
@@ -163,7 +163,7 @@
         },
         "SwingXtimes": {
           "total": 50,
-          "successes": 32
+          "successes": 33
         },
         "VideoPlaceButton": {
           "total": 50,
@@ -205,7 +205,7 @@
         "VideoUnmaskSwap": 7
       },
       "training_starts_total": 123,
-      "infrastructure_errors": 6,
+      "infrastructure_errors": 0,
       "development_api_cost_usd": 90,
       "pending_usage_requests": 0,
       "incomplete_requests": 0,
@@ -228,7 +228,7 @@
         "evaluation/SwingXtimes/frozen_evaluation.json": "54444b650c167a36fc28e53f7a192a58f8c642d861843d19470bd7b547c08c1e",
         "evaluation/ButtonUnmaskSwap/frozen_evaluation.json": "f84c8a44525f498ad00e7b815f02a5c1cebae8933e82e33933f7d1e590cdbf9d"
       },
-      "summary_sha256": "195ed6f7d8c19c71bd1bed68861e967fa6c6853d717205cc020d32463908e907",
+      "summary_sha256": "a49f4ca7c137eb4b1f9654d79c5288603ee372639c4f92d92542f54e4501d765",
       "source_setting": "interaction-only",
       "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
       "audits": {
@@ -237,7 +237,7 @@
       },
       "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
       "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json",
-      "infrastructure_error_basis": "Confirmed native CUDA-OOM startup logs; other formal execution errors are not automatically classified as infrastructure."
+      "infrastructure_error_basis": "Confirmed CUDA-OOM episodes were retried with unchanged frozen policies and seeds; retry outcomes replace them. Other execution errors are not automatically classified as infrastructure."
     },
     {
       "method": "aspire",
@@ -356,8 +356,8 @@
       "budget": 10,
       "run_id": "r10_20261121",
       "total": 800,
-      "successes": 326,
-      "success_rate": 0.4075,
+      "successes": 327,
+      "success_rate": 0.40875,
       "tasks": {
         "BinFill": {
           "total": 50,
@@ -413,7 +413,7 @@
         },
         "VideoRepick": {
           "total": 50,
-          "successes": 31
+          "successes": 32
         },
         "VideoUnmask": {
           "total": 50,
@@ -443,7 +443,7 @@
         "VideoUnmaskSwap": 7
       },
       "training_starts_total": 121,
-      "infrastructure_errors": 6,
+      "infrastructure_errors": 0,
       "development_api_cost_usd": 100,
       "pending_usage_requests": 0,
       "incomplete_requests": 0,
@@ -466,7 +466,7 @@
         "evaluation/SwingXtimes/frozen_evaluation.json": "243495f75c06c8298e7d6c54651584f984d85cdfcc333e95efbb1e47cdfb2a74",
         "evaluation/ButtonUnmaskSwap/frozen_evaluation.json": "09c1f8191fe69ee9a14f74a505b75f6dd5f951221b96f423f0c8866a13226744"
       },
-      "summary_sha256": "985737a8edf81530d9c4797b58306c892bdf04bcda1ea1c512a336450ba932eb",
+      "summary_sha256": "b4238e34d607d045ff22fea90ad9ba3113103bd6e1d2bcdcdf22e2df33223127",
       "source_setting": "demo&interaction",
       "cost_basis": "Approximate USD from recorded usage plus a mean-request allowance for logged provider-error requests, rounded to $10; exact missing token usage remains unknown. Excludes local compute.",
       "audits": {
@@ -475,7 +475,7 @@
       },
       "audit_review": "2026-11-22 follow-up self-review; warnings and evidence supplements retained",
       "audit_summary": "doc/robomme_plus/audits/current/evidence/reaudit_summary.json",
-      "infrastructure_error_basis": "Confirmed native CUDA-OOM startup logs; other formal execution errors are not automatically classified as infrastructure."
+      "infrastructure_error_basis": "Confirmed CUDA-OOM episodes were retried with unchanged frozen policies and seeds; retry outcomes replace them. Other execution errors are not automatically classified as infrastructure."
     }
   ]
 }

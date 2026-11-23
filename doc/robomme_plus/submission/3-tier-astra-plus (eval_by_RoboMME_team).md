@@ -22,7 +22,7 @@
 
 > Multi-task evaluation on the RoboMME-Plus test split: **16 tasks × 50 episodes = 800 episodes**, using **`joint_angle`** actions. Each episode uses its supplied execution budget, `ceil(1.5 * oracle_policy_step) + 200` control steps.
 
-Success rates are percentages on the RoboMME-Plus V2 test split. Only simulator success counts as success. All 800 episodes remain in the denominator, including failures, timeouts, model stops and errors.
+Success rates are percentages on the RoboMME-Plus test split. Only simulator success counts as success. All 800 episodes remain in the denominator, including failures, timeouts, model stops and errors.
 
 | Suite | Task | Successes | Success (%) |
 | --- | --- | --- | --- |

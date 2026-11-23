@@ -46,20 +46,20 @@ One-shot Astra receives one selected training example for the task
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
-| 10 rollouts | 302/800 (37.75%) | 370/800 (46.25%) |
+| 10 rollouts | 302/800 (37.75%) | 372/800 (46.50%) |
 
 ## `Hybrid`
 
 | Maximum attempts per task | ASPIRE | RAX |
 |---|---:|---:|
-| 10 rollouts | 342/800 (42.75%) | 326/800 (40.75%) |
+| 10 rollouts | 342/800 (42.75%) | 327/800 (40.88%) |
 
 ## Agentic development audit status
 
 The current R10 runs passed the follow-up harness and development audits, with
 warnings disclosed in the [ASPIRE](<submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
 and [RAX](<submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
-submissions. See the [audit procedure](auditing.md).
+submissions. See the [audit procedure](agentic_development.md#step-8-audit).
 
 ## Per-task success rates
 
@@ -118,7 +118,7 @@ Each cell uses 50 episodes. ASPIRE/RAX report only the current R10 runs.
 | Task | ASPIRE | RAX |
 | --- | ---: | ---: |
 | BinFill | 50.0% | 62.0% |
-| ButtonUnmask | 70.0% | 62.0% |
+| ButtonUnmask | 70.0% | 64.0% |
 | ButtonUnmaskSwap | 8.0% | 30.0% |
 | InsertPeg | 24.0% | 32.0% |
 | MoveCube | 6.0% | 0.0% |
@@ -127,7 +127,7 @@ Each cell uses 50 episodes. ASPIRE/RAX report only the current R10 runs.
 | PickXtimes | 48.0% | 70.0% |
 | RouteStick | 20.0% | 20.0% |
 | StopCube | 80.0% | 52.0% |
-| SwingXtimes | 54.0% | 64.0% |
+| SwingXtimes | 54.0% | 66.0% |
 | VideoPlaceButton | 18.0% | 62.0% |
 | VideoPlaceOrder | 30.0% | 32.0% |
 | VideoRepick | 48.0% | 66.0% |
@@ -154,7 +154,7 @@ Each cell uses 50 episodes. ASPIRE/RAX report only the current R10 runs.
 | SwingXtimes | 66.0% | 66.0% |
 | VideoPlaceButton | 18.0% | 38.0% |
 | VideoPlaceOrder | 40.0% | 36.0% |
-| VideoRepick | 72.0% | 62.0% |
+| VideoRepick | 72.0% | 64.0% |
 | VideoUnmask | 68.0% | 58.0% |
 | VideoUnmaskSwap | 76.0% | 64.0% |
 

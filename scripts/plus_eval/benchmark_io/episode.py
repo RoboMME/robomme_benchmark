@@ -82,7 +82,6 @@ class Episode:
         self.study, self.task = study, task
         self.action_space, self.env = action_space, None
         self.output = Path(output).resolve()
-        self.output.mkdir(parents=True, exist_ok=False)
         self.video = None
         self.closed, self.terminated, self.truncated = False, False, False
         self.success, self.steps = False, 0
@@ -92,8 +91,19 @@ class Episode:
             reservation["seed"] = seed
         if policy_revision is not None:
             reservation["policy_revision"] = policy_revision
+        # Reserve first: a refused request (e.g. an exhausted budget) must not
+        # leave a rollout directory that looks like an unrecorded attempt.
         self.attempt = study.reserve(task, episode, purpose=purpose, **reservation)
-        (self.output / "attempt.json").write_text(json.dumps(self.attempt, indent=2))
+        try:
+            self.output.mkdir(parents=True, exist_ok=False)
+            (self.output / "attempt.json").write_text(json.dumps(self.attempt, indent=2))
+        except BaseException as exc:
+            # The reserved start stays spent; record why it produced no rollout.
+            self.closed = True
+            study.finish(self.attempt["id"], dict(success=False, terminated=False, truncated=False,
+                                                  control_steps=0, error=f"{type(exc).__name__}: {exc}",
+                                                  purpose=self.attempt["purpose"]))
+            raise
         self.full_artifacts = study.config.get("artifact_profile", "full") == "full"
         self.actions = (self.output / "actions.jsonl" if self.full_artifacts else Path(os.devnull)).open("w")
         self.observations = (self.output / "observations.jsonl" if self.full_artifacts else Path(os.devnull)).open("w")

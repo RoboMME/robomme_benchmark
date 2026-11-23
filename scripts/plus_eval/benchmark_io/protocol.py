@@ -16,8 +16,12 @@ SETTINGS = ("zero-shot", "demo-only", "interaction-only", "demo&interaction")
 
 
 def setting_key(setting):
-    # Keep persisted study IDs stable while accepting the public setting name.
-    if setting.lower() == 'hybrid':
+    # Keep persisted study IDs stable while accepting the public setting names,
+    # which the docs capitalize (e.g. `Zero-shot`, `Hybrid`).
+    if not isinstance(setting, str):
+        raise ValueError("Unknown adaptation setting")
+    setting = setting.lower()
+    if setting == 'hybrid':
         setting = 'demo&interaction'
     if setting not in SETTINGS:
         raise ValueError("Unknown adaptation setting")

@@ -223,12 +223,13 @@ def process_episode(
 
     outcome = "unknown"
     for seq_idx, action in enumerate(action_sequence):
-        try:
-            obs, _, terminated, truncated, info = env.step(action)
-            frames.extend(_extract_frames(obs))
-        except Exception as e:
-            print(f"Error at seq_idx {seq_idx}: {e}")
+        obs, _, terminated, truncated, info = env.step(action)
+        if info.get("status") == "error":
+            # FailAwareWrapper returns no observation for a failed step.
+            outcome = "error"
+            print(f"Error at seq_idx {seq_idx}: {info.get('error_message')}")
             break
+        frames.extend(_extract_frames(obs))
 
         if GUI_RENDER:
             env.render()

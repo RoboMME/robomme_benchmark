@@ -16,10 +16,11 @@ def main():
             if not response.get('ok'):
                 raise RuntimeError('Operator could not archive development evidence')
     except Exception:
-        # PreToolUse exit 2 prevents the unrecorded tool call. Other events retain
-        # the native transcript; reconciliation must flag any missing response.
+        # PreToolUse exit 2 prevents the unrecorded tool call. On Stop/SubagentStop,
+        # exit 2 would forbid the agent from ever stopping, so other events report
+        # a non-blocking error; reconciliation must flag the missing record.
         print('Development audit recorder unavailable; preserve this failure.', file=sys.stderr)
-        return 2
+        return 2 if event.get('hook_event_name') == 'PreToolUse' else 1
     return 0
 
 

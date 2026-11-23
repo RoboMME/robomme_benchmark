@@ -36,6 +36,7 @@ The model, time limits and input sampling are implementation choices.
 | Video transport | Long conditioning videos are uniformly sampled to 512 timestamps, retaining endpoints, both cameras and a separate initial live frame. Training recordings are unchanged. |
 | Frozen evaluation | Selected Python policies and local providers; no frontier-model API calls, test-driven revisions or cross-episode adaptive memory. |
 | Reset recovery | One setup attempt per reserved training start; up to three identical test setup attempts. Policy execution is not retried automatically. |
+| Terminal reporting | Map adapter stop labels to ASPIRE's artifact schema so ended episodes retain their simulator outcome and step count. |
 | SAM3 recovery | At most three HTTP attempts per request for transient service/connection errors, with 1-second then 2-second backoff. Each attempt retains the 60-second timeout; episode watchdogs still apply. No retries for empty detections or invalid prompts. |
 | Provider supervision | Restart from recorded installation/checkpoint paths, verify replacement files before stopping a service, and recheck transient health failures. ASPIRE test jobs start only on GPUs with healthy providers; RAX can continue independently. |
 

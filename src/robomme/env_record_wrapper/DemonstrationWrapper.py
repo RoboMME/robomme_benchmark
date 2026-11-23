@@ -694,10 +694,9 @@ class DemonstrationWrapper(gym.Wrapper):
 
         obs_batch is dict[str, list]; info is a flat dict (last values only).
 
-        If an exception occurs during _step_batch(), the exception is caught and
-        returned as a structured error via info["status"] = "error" and
-        info["error_message"] = "<ExceptionType>: <message>", instead of propagating.
-        Callers should check ``info.get("status") == "error"`` to detect step failures.
+        Exceptions from _step_batch() propagate. The builder's outer
+        FailAwareWrapper converts them to info["status"] = "error" with an
+        error_message, so callers should check ``info.get("status") == "error"``.
         """
         batch = self._step_batch(action)
         obs_batch, reward_batch, terminated_batch, truncated_batch, info_batch = batch

@@ -13,7 +13,7 @@ and runtime limits. Saved agent-facing prompts are in [`prompts/current`](prompt
 Use the [development interface](../../../doc/robomme_plus/agentic_development.md)
 for a minimal preparation command, seed-selectable API, logging requirements and
 audits. Keep your own harness; run the simulator service outside the agent workspace.
-The [audit walkthrough](../../../doc/robomme_plus/auditing.md) provides prompts
+The [audit walkthrough](../../../doc/robomme_plus/agentic_development.md#step-8-audit) provides prompts
 for the harness review and completed-development review.
 
 ## Setup
@@ -58,15 +58,8 @@ digest without API calls or simulator starts. New studies create **6 configurati
 Each configuration evaluates 800 episodes: 4,800 tests across both methods.
 Use `--settings interaction-only hybrid --budgets 10` to develop the four released configurations.
 
-Use these public setting names:
-
-| Setting | Main budget |
-| --- | --- |
-| `Demo-only` | 0 |
-| `Interaction-only` | 10 |
-| `Hybrid` | 10 |
-
-Use `--setting hybrid` in commands. Saved development ledgers preserve their original identifiers.
+Setting names in commands are case-insensitive. Saved ledgers store `Hybrid` under
+its original identifier, `demo&interaction`.
 
 Worker allocation is configurable. Evaluation requires frozen policies.
 Example `<RUN_ROOT>/schedule_policy.json` for two GPUs:
@@ -104,7 +97,7 @@ policies, test results and logs. Runs with 0 or 10 rollouts save full test media
 The packaged ASPIRE/RAX policies and result tables contain only R10.
 All development history is retained. `progress.json` aggregates the study.
 
-See [Preserve evidence](../../../doc/robomme_plus/agentic_development.md#preserve-evidence)
+See [Preserve evidence](../../../doc/robomme_plus/agentic_development.md#step-7-preserve-evidence)
 for what to publish; raw trajectories, images and videos are optional.
 
 Report demo use, actual attempts and simulator steps per task, and separate
