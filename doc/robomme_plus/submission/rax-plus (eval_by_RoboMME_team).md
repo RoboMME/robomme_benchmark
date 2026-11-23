@@ -49,8 +49,8 @@ RAX is an agentic framework that explores each task through rollouts, rehearses 
 
 | Setting | 1 rollout | 3 rollouts | 5 rollouts |
 | --- | ---: | ---: | ---: |
-| `Interaction-only` | 26/800 (3.25%) | pending | pending |
-| `Hybrid` | 156/800 (19.50%) | pending | pending |
+| `Interaction-only` | 26/800 (3.25%) | 282/800 (35.25%) | 295/800 (36.88%) |
+| `Hybrid` | 156/800 (19.50%) | 302/800 (37.75%) | 298/800 (37.25%) |
 
 <details>
 <summary>Per-task success with 1 rollout</summary>
@@ -76,6 +76,61 @@ RAX is an agentic framework that explores each task through rollouts, rehearses 
 | **Overall** | **All tasks** | **26/800 (3.25%)** | **156/800 (19.50%)** |
 
 </details>
+
+<!-- optional-r35-tasks:start -->
+R3 and R5 use independent development runs capped at the reported budget.
+
+<details>
+<summary><code>Interaction-only</code> · R3/R5 per task</summary>
+
+| Task | 3 rollouts | 5 rollouts |
+| --- | ---: | ---: |
+| BinFill | 18/50 (36.00%) | 35/50 (70.00%) |
+| PickXtimes | 21/50 (42.00%) | 19/50 (38.00%) |
+| SwingXtimes | 8/50 (16.00%) | 30/50 (60.00%) |
+| StopCube | 26/50 (52.00%) | 27/50 (54.00%) |
+| VideoUnmask | 29/50 (58.00%) | 33/50 (66.00%) |
+| VideoUnmaskSwap | 25/50 (50.00%) | 25/50 (50.00%) |
+| ButtonUnmask | 31/50 (62.00%) | 27/50 (54.00%) |
+| ButtonUnmaskSwap | 11/50 (22.00%) | 0/50 (0.00%) |
+| PickHighlight | 30/50 (60.00%) | 17/50 (34.00%) |
+| VideoRepick | 22/50 (44.00%) | 33/50 (66.00%) |
+| VideoPlaceButton | 21/50 (42.00%) | 1/50 (2.00%) |
+| VideoPlaceOrder | 18/50 (36.00%) | 25/50 (50.00%) |
+| MoveCube | 3/50 (6.00%) | 4/50 (8.00%) |
+| InsertPeg | 0/50 (0.00%) | 0/50 (0.00%) |
+| PatternLock | 9/50 (18.00%) | 9/50 (18.00%) |
+| RouteStick | 10/50 (20.00%) | 10/50 (20.00%) |
+| Overall | 282/800 (35.25%) | 295/800 (36.88%) |
+
+</details>
+
+<details>
+<summary><code>Hybrid</code> · R3/R5 per task</summary>
+
+| Task | 3 rollouts | 5 rollouts |
+| --- | ---: | ---: |
+| BinFill | 26/50 (52.00%) | 29/50 (58.00%) |
+| PickXtimes | 36/50 (72.00%) | 12/50 (24.00%) |
+| SwingXtimes | 44/50 (88.00%) | 37/50 (74.00%) |
+| StopCube | 36/50 (72.00%) | 30/50 (60.00%) |
+| VideoUnmask | 32/50 (64.00%) | 23/50 (46.00%) |
+| VideoUnmaskSwap | 31/50 (62.00%) | 26/50 (52.00%) |
+| ButtonUnmask | 30/50 (60.00%) | 31/50 (62.00%) |
+| ButtonUnmaskSwap | 2/50 (4.00%) | 9/50 (18.00%) |
+| PickHighlight | 1/50 (2.00%) | 17/50 (34.00%) |
+| VideoRepick | 27/50 (54.00%) | 36/50 (72.00%) |
+| VideoPlaceButton | 8/50 (16.00%) | 5/50 (10.00%) |
+| VideoPlaceOrder | 12/50 (24.00%) | 21/50 (42.00%) |
+| MoveCube | 1/50 (2.00%) | 3/50 (6.00%) |
+| InsertPeg | 0/50 (0.00%) | 9/50 (18.00%) |
+| PatternLock | 10/50 (20.00%) | 0/50 (0.00%) |
+| RouteStick | 6/50 (12.00%) | 10/50 (20.00%) |
+| Overall | 302/800 (37.75%) | 298/800 (37.25%) |
+
+</details>
+
+<!-- optional-r35-tasks:end -->
 
 ## Method details
 

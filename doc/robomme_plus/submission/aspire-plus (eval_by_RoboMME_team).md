@@ -49,8 +49,8 @@ ASPIRE is an agentic coding framework: a coordinator and task workers write task
 
 | Setting | 1 rollout | 3 rollouts | 5 rollouts |
 | --- | ---: | ---: | ---: |
-| `Interaction-only` | 117/800 (14.63%) | pending | pending |
-| `Hybrid` | 155/800 (19.38%) | pending | pending |
+| `Interaction-only` | 117/800 (14.63%) | 142/800 (17.75%) | 193/800 (24.12%) |
+| `Hybrid` | 155/800 (19.38%) | 274/800 (34.25%) | 304/800 (38.00%) |
 
 <details>
 <summary>Per-task success with 1 rollout</summary>
@@ -76,6 +76,61 @@ ASPIRE is an agentic coding framework: a coordinator and task workers write task
 | **Overall** | **All tasks** | **117/800 (14.63%)** | **155/800 (19.38%)** |
 
 </details>
+
+<!-- optional-r35-tasks:start -->
+R3 and R5 use independent development runs capped at the reported budget.
+
+<details>
+<summary><code>Interaction-only</code> · R3/R5 per task</summary>
+
+| Task | 3 rollouts | 5 rollouts |
+| --- | ---: | ---: |
+| BinFill | 10/50 (20.00%) | 23/50 (46.00%) |
+| PickXtimes | 4/50 (8.00%) | 8/50 (16.00%) |
+| SwingXtimes | 9/50 (18.00%) | 9/50 (18.00%) |
+| StopCube | 30/50 (60.00%) | 21/50 (42.00%) |
+| VideoUnmask | 24/50 (48.00%) | 2/50 (4.00%) |
+| VideoUnmaskSwap | 8/50 (16.00%) | 26/50 (52.00%) |
+| ButtonUnmask | 4/50 (8.00%) | 19/50 (38.00%) |
+| ButtonUnmaskSwap | 0/50 (0.00%) | 12/50 (24.00%) |
+| PickHighlight | 2/50 (4.00%) | 9/50 (18.00%) |
+| VideoRepick | 13/50 (26.00%) | 8/50 (16.00%) |
+| VideoPlaceButton | 0/50 (0.00%) | 6/50 (12.00%) |
+| VideoPlaceOrder | 16/50 (32.00%) | 19/50 (38.00%) |
+| MoveCube | 2/50 (4.00%) | 0/50 (0.00%) |
+| InsertPeg | 0/50 (0.00%) | 11/50 (22.00%) |
+| PatternLock | 10/50 (20.00%) | 10/50 (20.00%) |
+| RouteStick | 10/50 (20.00%) | 10/50 (20.00%) |
+| Overall | 142/800 (17.75%) | 193/800 (24.12%) |
+
+</details>
+
+<details>
+<summary><code>Hybrid</code> · R3/R5 per task</summary>
+
+| Task | 3 rollouts | 5 rollouts |
+| --- | ---: | ---: |
+| BinFill | 35/50 (70.00%) | 18/50 (36.00%) |
+| PickXtimes | 7/50 (14.00%) | 10/50 (20.00%) |
+| SwingXtimes | 13/50 (26.00%) | 36/50 (72.00%) |
+| StopCube | 30/50 (60.00%) | 36/50 (72.00%) |
+| VideoUnmask | 10/50 (20.00%) | 31/50 (62.00%) |
+| VideoUnmaskSwap | 30/50 (60.00%) | 25/50 (50.00%) |
+| ButtonUnmask | 27/50 (54.00%) | 30/50 (60.00%) |
+| ButtonUnmaskSwap | 10/50 (20.00%) | 11/50 (22.00%) |
+| PickHighlight | 13/50 (26.00%) | 35/50 (70.00%) |
+| VideoRepick | 26/50 (52.00%) | 29/50 (58.00%) |
+| VideoPlaceButton | 8/50 (16.00%) | 12/50 (24.00%) |
+| VideoPlaceOrder | 23/50 (46.00%) | 10/50 (20.00%) |
+| MoveCube | 1/50 (2.00%) | 0/50 (0.00%) |
+| InsertPeg | 21/50 (42.00%) | 8/50 (16.00%) |
+| PatternLock | 10/50 (20.00%) | 3/50 (6.00%) |
+| RouteStick | 10/50 (20.00%) | 10/50 (20.00%) |
+| Overall | 274/800 (34.25%) | 304/800 (38.00%) |
+
+</details>
+
+<!-- optional-r35-tasks:end -->
 
 ## Method details
 
