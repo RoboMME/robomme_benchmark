@@ -966,6 +966,7 @@ from robomme_plus.tasks.imitation.utils.environment import ImitationMixin
 @register_env(TASKS["RouteStick"].gym_id)
 class RouteStick(ImitationMixin, _TaskScene):
     """Repeat a visible seeded route; medium/hard shorten the execution stick."""
+    PERCEPTUAL_VARIATIONS = True
 
     task_name = "RouteStick"
 

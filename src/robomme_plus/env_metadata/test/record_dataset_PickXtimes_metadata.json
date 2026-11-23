@@ -101,7 +101,8 @@
       "oracle_policy_step": 1206,
       "suite": "counting",
       "episode": 10,
-      "oracle_wall_seconds": 41.785
+      "oracle_wall_seconds": 41.785,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickXtimes",
@@ -110,7 +111,8 @@
       "oracle_policy_step": 1040,
       "suite": "counting",
       "episode": 11,
-      "oracle_wall_seconds": 31.57
+      "oracle_wall_seconds": 31.57,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickXtimes",
@@ -128,7 +130,8 @@
       "oracle_policy_step": 1067,
       "suite": "counting",
       "episode": 13,
-      "oracle_wall_seconds": 37.938
+      "oracle_wall_seconds": 37.938,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickXtimes",
@@ -137,7 +140,8 @@
       "oracle_policy_step": 1170,
       "suite": "counting",
       "episode": 14,
-      "oracle_wall_seconds": 40.19
+      "oracle_wall_seconds": 40.19,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickXtimes",
@@ -173,7 +177,8 @@
       "oracle_policy_step": 1257,
       "suite": "counting",
       "episode": 18,
-      "oracle_wall_seconds": 38.11
+      "oracle_wall_seconds": 38.11,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "PickXtimes",
@@ -242,19 +247,27 @@
       "task": "PickXtimes",
       "seed": 525134230,
       "difficulty": "hard",
-      "oracle_policy_step": 2117,
+      "oracle_policy_step": 1681,
       "suite": "counting",
       "episode": 26,
-      "oracle_wall_seconds": 60.166
+      "oracle_wall_seconds": 60.166,
+      "base_oracle_policy_step": 2117,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "PickXtimes",
       "seed": 1003108771,
       "difficulty": "hard",
-      "oracle_policy_step": 1388,
+      "oracle_policy_step": 1666,
       "suite": "counting",
       "episode": 27,
-      "oracle_wall_seconds": 43.972
+      "oracle_wall_seconds": 43.972,
+      "base_oracle_policy_step": 1388,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "PickXtimes",
@@ -263,7 +276,8 @@
       "oracle_policy_step": 1665,
       "suite": "counting",
       "episode": 28,
-      "oracle_wall_seconds": 55.319
+      "oracle_wall_seconds": 55.319,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickXtimes",
@@ -278,10 +292,14 @@
       "task": "PickXtimes",
       "seed": 987340656,
       "difficulty": "hard",
-      "oracle_policy_step": 1572,
+      "oracle_policy_step": 1683,
       "suite": "counting",
       "episode": 30,
-      "oracle_wall_seconds": 51.302
+      "oracle_wall_seconds": 51.302,
+      "base_oracle_policy_step": 1572,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "PickXtimes",
@@ -290,7 +308,8 @@
       "oracle_policy_step": 1640,
       "suite": "counting",
       "episode": 31,
-      "oracle_wall_seconds": 52.351
+      "oracle_wall_seconds": 52.351,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickXtimes",
@@ -299,7 +318,8 @@
       "oracle_policy_step": 1623,
       "suite": "counting",
       "episode": 32,
-      "oracle_wall_seconds": 46.791
+      "oracle_wall_seconds": 46.791,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickXtimes",
@@ -308,16 +328,21 @@
       "oracle_policy_step": 1447,
       "suite": "counting",
       "episode": 33,
-      "oracle_wall_seconds": 43.351
+      "oracle_wall_seconds": 43.351,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickXtimes",
       "seed": 442911144,
       "difficulty": "hard",
-      "oracle_policy_step": 1593,
+      "oracle_policy_step": 2007,
       "suite": "counting",
       "episode": 34,
-      "oracle_wall_seconds": 47.196
+      "oracle_wall_seconds": 47.196,
+      "base_oracle_policy_step": 1593,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "PickXtimes",
@@ -326,7 +351,8 @@
       "oracle_policy_step": 1461,
       "suite": "counting",
       "episode": 35,
-      "oracle_wall_seconds": 46.26
+      "oracle_wall_seconds": 46.26,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickXtimes",
@@ -344,7 +370,8 @@
       "oracle_policy_step": 1804,
       "suite": "counting",
       "episode": 37,
-      "oracle_wall_seconds": 58.15
+      "oracle_wall_seconds": 58.15,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickXtimes",
@@ -353,7 +380,8 @@
       "oracle_policy_step": 1844,
       "suite": "counting",
       "episode": 38,
-      "oracle_wall_seconds": 52.631
+      "oracle_wall_seconds": 52.631,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickXtimes",
@@ -371,7 +399,8 @@
       "oracle_policy_step": 1764,
       "suite": "counting",
       "episode": 40,
-      "oracle_wall_seconds": 55.025
+      "oracle_wall_seconds": 55.025,
+      "perceptual_variation": "full"
     },
     {
       "task": "PickXtimes",
@@ -386,19 +415,27 @@
       "task": "PickXtimes",
       "seed": 468848711,
       "difficulty": "hard",
-      "oracle_policy_step": 1650,
+      "oracle_policy_step": 1976,
       "suite": "counting",
       "episode": 42,
-      "oracle_wall_seconds": 42.563
+      "oracle_wall_seconds": 42.563,
+      "base_oracle_policy_step": 1650,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "PickXtimes",
       "seed": 409855477,
       "difficulty": "hard",
-      "oracle_policy_step": 1471,
+      "oracle_policy_step": 1691,
       "suite": "counting",
       "episode": 43,
-      "oracle_wall_seconds": 41.533
+      "oracle_wall_seconds": 41.533,
+      "base_oracle_policy_step": 1471,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "PickXtimes",
@@ -413,10 +450,14 @@
       "task": "PickXtimes",
       "seed": 537525027,
       "difficulty": "hard",
-      "oracle_policy_step": 1632,
+      "oracle_policy_step": 1675,
       "suite": "counting",
       "episode": 45,
-      "oracle_wall_seconds": 52.433
+      "oracle_wall_seconds": 52.433,
+      "base_oracle_policy_step": 1632,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "PickXtimes",
@@ -449,10 +490,14 @@
       "task": "PickXtimes",
       "seed": 35369300,
       "difficulty": "hard",
-      "oracle_policy_step": 1532,
+      "oracle_policy_step": 1661,
       "suite": "counting",
       "episode": 49,
-      "oracle_wall_seconds": 41.718
+      "oracle_wall_seconds": 41.718,
+      "base_oracle_policy_step": 1532,
+      "mechanism_variation": {
+        "version": 1
+      }
     }
   ]
 }

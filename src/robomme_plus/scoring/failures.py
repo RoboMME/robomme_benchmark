@@ -24,7 +24,7 @@ MESSAGES = {
     "stopped_off_target": "Stopped the cube away from the target.",
     "missed_requested_pass": "Missed the requested stopping pass.",
     "repeated_button_press": "Pressed the same button more than once.",
-    "button_deadline_missed": "Did not press both buttons before the deadline.",
+    "button_deadline_missed": "Did not press all required buttons before the deadline.",
     "early_container_opening": "Exposed a cube before both buttons were pressed.",
     "wrong_placement": "Placed the cube outside the required target.",
     "incomplete_highlights": "Finished before picking up every highlighted cube.",

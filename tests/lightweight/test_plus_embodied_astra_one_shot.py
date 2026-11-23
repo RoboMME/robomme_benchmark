@@ -15,10 +15,10 @@ import h5py
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-FOLDER = ROOT / 'scripts/plus_eval/embodied-astra'
-sys.path[:0] = [str(FOLDER), str(FOLDER.parent)]
+FOLDER = ROOT / 'scripts/plus_eval/agentic_methods/astra/embodied'
+sys.path[:0] = [str(FOLDER), str(ROOT / 'scripts/plus_eval')]
 from one_shot_examples import TrainingExample, TrainingExamples, phase_sampling
-from astra_image_sampling import image_count
+from agentic_methods.astra.image_sampling import image_count
 
 
 def sample(root, task='PatternLock', episode=1, difficulty='medium', seed=41, frames=12, demo=5):

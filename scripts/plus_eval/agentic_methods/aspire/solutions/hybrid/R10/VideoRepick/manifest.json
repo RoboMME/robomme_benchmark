@@ -1,0 +1,19 @@
+{
+  "method": "aspire",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "VideoRepick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "999256f33ea3279798afd779ed7a92502af705b1338f3f9818c2b8ec94f2ef12"
+  },
+  "source_policy_files": {
+    "VideoRepick.py": "999256f33ea3279798afd779ed7a92502af705b1338f3f9818c2b8ec94f2ef12"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "7fcaf7676f967fe98354aa33c6c56b6a6377b3b13ca409d2d7f1a8d57af004d6",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy"
+}

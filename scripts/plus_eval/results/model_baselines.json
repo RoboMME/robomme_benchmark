@@ -1,0 +1,69 @@
+{
+  "repository": "Yinpei/RoboMME-plus-model-rollout",
+  "revision": "ebef7bcd1abe4cc1748c3257cd787434489265fc",
+  "rows": [
+    {
+      "counts": {
+        "success": 194,
+        "fail": 527,
+        "timeout": 79
+      },
+      "success_rate": 0.2425,
+      "method": "embodied-astra",
+      "evaluation_api_cost_usd": 760,
+      "evaluation_api_cost_approximate": true,
+      "evaluation_api_cost_basis": "Maintainer-provided rounded estimate for the final 800-episode evaluation, as reported on the RoboMME-Plus website; excludes local GPU compute."
+    },
+    {
+      "counts": {
+        "success": 281,
+        "fail": 481,
+        "timeout": 38
+      },
+      "success_rate": 0.35125,
+      "method": "embodied-astra-fs",
+      "evaluation_api_cost_usd": 2100,
+      "evaluation_api_cost_approximate": true,
+      "evaluation_api_cost_basis": "Maintainer-provided rounded estimate for the final 800-episode evaluation, as reported on the RoboMME-Plus website; excludes local GPU compute."
+    },
+    {
+      "counts": {
+        "fail": 466,
+        "timeout": 264,
+        "success": 70
+      },
+      "success_rate": 0.0875,
+      "method": "3-tier-astra",
+      "evaluation_api_cost_usd": 840,
+      "evaluation_api_cost_approximate": true,
+      "evaluation_api_cost_basis": "Maintainer-provided rounded estimate for the final 800-episode evaluation, as reported on the RoboMME-Plus website; excludes local GPU compute."
+    },
+    {
+      "counts": {
+        "fail": 645,
+        "timeout": 136,
+        "success": 19
+      },
+      "success_rate": 0.02375,
+      "method": "framesamp-modul"
+    },
+    {
+      "counts": {
+        "timeout": 129,
+        "fail": 657,
+        "success": 14
+      },
+      "success_rate": 0.0175,
+      "method": "simplememvla"
+    },
+    {
+      "counts": {
+        "fail": 603,
+        "success": 20,
+        "timeout": 177
+      },
+      "success_rate": 0.025,
+      "method": "ponderpounce"
+    }
+  ]
+}

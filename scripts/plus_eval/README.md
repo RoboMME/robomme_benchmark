@@ -1,57 +1,35 @@
-# RoboMME-Plus evaluation
+# RoboMME-Plus baselines
 
-Run commands from the repository root after the [simulator installation](../../readme.md#-installation).
-Initialize only the submodule needed by your model.
+Final results on **800 test episodes** with the default benchmark variations.
+See the [evaluation guide](../../src/robomme_plus/README.md) for rules and
+[per-task results](../../doc/robomme_plus/robomme_plus_baseline_results.md) for the full breakdown.
+Each method link below provides setup and running instructions.
 
-| Method | Entry point | Inference |
-| --- | --- | --- |
-| [Embodied Astra](embodied-astra/README.md) | `embodied-astra/eval_plus.py` | Astra API; one simulator GPU |
-| [One-shot Astra](embodied-astra/README.md#one-shot) | `embodied-astra/eval_plus_fs.py` | Astra API + one training example |
-| [3-tier Astra](3-tier-astra/README.md) | `3-tier-astra/eval_plus.py` | Astra API + local monitor and VLA |
-| [FrameSamp+Modul](robomme_vla/README.md) | `robomme_vla/eval_plus.py` | Local VLA server |
-| [SimpleMemVLA](simplememvla/README.md) | `simplememvla/eval_plus.py` | Local model |
-| [PonderPounce](ponderpounce/README.md) | `ponderpounce/eval_plus.py` | Local Ponder and Pounce |
+## Model baselines
 
-## Run options
+| Method | Setting | Successes (rate) |
+|---|---|---:|
+| [Embodied Astra](agentic_methods/astra/embodied/README.md) | `Zero-shot` | 194/800 (24.25%) |
+| [One-shot Astra](agentic_methods/astra/embodied/README.md#one-shot) | `Demo-only` | 281/800 (35.13%) |
+| [3-tier Astra](agentic_methods/astra/three_tier/README.md) | `Zero-shot` | 70/800 (8.75%) |
+| [FrameSamp+Modul](non_agentic_methods/framesamp_modul/README.md) | `Zero-shot` | 19/800 (2.38%) |
+| [SimpleMemVLA](non_agentic_methods/simplememvla/README.md) | `Zero-shot` | 14/800 (1.75%) |
+| [PonderPounce](non_agentic_methods/ponderpounce/README.md) | `Zero-shot` | 20/800 (2.50%) |
 
-All adapters accept `--tasks BinFill --episodes 0 --output-dir runs/METHOD`.
-Omit task and episode filters for all **800 test episodes**, evaluated sequentially.
-Use `--help` for model-specific options.
+## Agentic adaptation
 
-| Option | Behavior |
-| --- | --- |
-| `--resume` | Continue missing/interrupted episodes; retry errors and incompatible saved outcomes |
-| `--retry-errors` | Retry selected saved errors only |
-| `--rerun` | Replace every selected episode |
-| `--fail-fast` | Stop on the first episode error |
+`Demo-only` uses the 50 released demonstrations and no simulator rollouts. The
+interaction settings use at most **10 development rollouts per task**, shared across
+training seeds. The packaged solutions cover the R10 runs.
 
-Use one continuation mode at a time. Keep inference settings unchanged when
-continuing; use a new output directory for another model, checkpoint or prompt.
-Replacements archive old episodes under `.history/`. Only one evaluator may
-write to an output directory at a time.
+| Setting | Budget | [ASPIRE](agentic_methods/aspire/README.md) | [RAX](agentic_methods/rax/README.md) |
+|---|---|---:|---:|
+| `Demo-only` | 0 | 140/800 (17.50%) | 139/800 (17.38%) |
+| `Interaction-only` | 10 | 302/800 (37.75%) | 372/800 (46.50%) |
+| `Hybrid` | 10 | 342/800 (42.75%) | 327/800 (40.88%) |
 
-## Protocol and outputs
+The submissions include the [ASPIRE](<../../doc/robomme_plus/submission/aspire-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>)
+and [RAX](<../../doc/robomme_plus/submission/rax-plus (eval_by_RoboMME_team).md#agentic-development-audit-record>) audit records.
 
-[`evaluation.py`](evaluation.py) supplies the shared rollout, scoring and recording
-protocol. Only environment `status == "success"` counts as success. Failures,
-timeouts, model stops and errors remain in the requested-episode denominator.
-The execution limit is `ceil(1.5 * oracle_policy_step) + 200` control steps;
-reset demonstrations do not consume it. Test oracle annotations are never policy inputs.
-
-Each run saves `config.json`, `summary.json` and `run.log`. Episode directories
-contain `result.json`, `metadata.json`, `episode.mp4`, `actions.npz` and policy-call
-artifacts. Results include task failure reasons, timing, usage and stop source.
-Credentials and private paths are redacted from recorded artifacts.
-Rebuild summaries without inference with:
-
-```bash
-.venv/bin/python scripts/plus_eval/evaluation.py summarize runs/METHOD
-```
-
-Zero-shot evaluation needs no training data. One-shot Astra uses the
-[H5 training dataset](https://huggingface.co/datasets/Yinpei/robomme_ood_data_h5);
-see the [data format and seed mapping](../../doc/plus_training_data_format.md).
-Use [`dataset_replay.py`](dataset_replay.py) to replay training actions and save
-front/wrist videos; see the [replay command](../../doc/plus_training_data_format.md#replay).
-Report zero-shot and few-shot results separately using the
-[submission template](../../doc/submission/model_example_plus.md).
+Final summaries: [model baselines](results/model_baselines.json) ·
+[ASPIRE/RAX](results/agentic_current.json).

@@ -8,10 +8,10 @@
       "task": "VideoRepick",
       "seed": 1470886341,
       "difficulty": "easy",
-      "oracle_policy_step": 566,
+      "oracle_policy_step": 550,
       "suite": "reference",
       "episode": 0,
-      "oracle_wall_seconds": 108.581,
+      "oracle_wall_seconds": 88.953,
       "control_freq": 20
     },
     {
@@ -21,8 +21,12 @@
       "oracle_policy_step": 527,
       "suite": "reference",
       "episode": 1,
-      "oracle_wall_seconds": 84.235,
-      "control_freq": 20
+      "oracle_wall_seconds": 74.949,
+      "control_freq": 20,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "light_moving_patches"
+      }
     },
     {
       "task": "VideoRepick",
@@ -31,7 +35,7 @@
       "oracle_policy_step": 439,
       "suite": "reference",
       "episode": 2,
-      "oracle_wall_seconds": 73.761,
+      "oracle_wall_seconds": 62.072,
       "control_freq": 20
     }
   ]

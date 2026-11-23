@@ -9,8 +9,8 @@ My cool model leverages a novel representation of historical keyframes and maint
 
 **Track (select one):**
 
-- [ ] Standard Track
-- [ ] Agentic Track
+- [ ] Non-agentic Track: fine-tuned robot policies (e.g., VLAs, WAMs) that directly predict actions.
+- [ ] Agentic Track: systems using pretrained foundation models for planning, action, or coding.
 
 **Total Params — Standard Track:** ___ B parameters across all models used at
 inference, including frozen parameters; count shared weights once.

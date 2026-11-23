@@ -101,7 +101,8 @@
       "oracle_policy_step": 560,
       "suite": "counting",
       "episode": 10,
-      "oracle_wall_seconds": 41.569
+      "oracle_wall_seconds": 41.569,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "BinFill",
@@ -110,7 +111,8 @@
       "oracle_policy_step": 527,
       "suite": "counting",
       "episode": 11,
-      "oracle_wall_seconds": 37.724
+      "oracle_wall_seconds": 37.724,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "BinFill",
@@ -119,7 +121,8 @@
       "oracle_policy_step": 543,
       "suite": "counting",
       "episode": 12,
-      "oracle_wall_seconds": 44.645
+      "oracle_wall_seconds": 44.645,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "BinFill",
@@ -155,7 +158,8 @@
       "oracle_policy_step": 604,
       "suite": "counting",
       "episode": 16,
-      "oracle_wall_seconds": 44.799
+      "oracle_wall_seconds": 44.799,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "BinFill",
@@ -173,7 +177,8 @@
       "oracle_policy_step": 563,
       "suite": "counting",
       "episode": 18,
-      "oracle_wall_seconds": 40.707
+      "oracle_wall_seconds": 40.707,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "BinFill",
@@ -236,7 +241,8 @@
       "oracle_policy_step": 576,
       "suite": "counting",
       "episode": 25,
-      "oracle_wall_seconds": 49.567
+      "oracle_wall_seconds": 49.567,
+      "perceptual_variation": "full"
     },
     {
       "task": "BinFill",
@@ -254,7 +260,11 @@
       "oracle_policy_step": 729,
       "suite": "counting",
       "episode": 27,
-      "oracle_wall_seconds": 64.247
+      "oracle_wall_seconds": 64.247,
+      "base_oracle_policy_step": 729,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "BinFill",
@@ -263,7 +273,8 @@
       "oracle_policy_step": 579,
       "suite": "counting",
       "episode": 28,
-      "oracle_wall_seconds": 50.868
+      "oracle_wall_seconds": 50.868,
+      "perceptual_variation": "full"
     },
     {
       "task": "BinFill",
@@ -290,7 +301,8 @@
       "oracle_policy_step": 563,
       "suite": "counting",
       "episode": 31,
-      "oracle_wall_seconds": 43.357
+      "oracle_wall_seconds": 43.357,
+      "perceptual_variation": "full"
     },
     {
       "task": "BinFill",
@@ -299,7 +311,8 @@
       "oracle_policy_step": 685,
       "suite": "counting",
       "episode": 32,
-      "oracle_wall_seconds": 54.386
+      "oracle_wall_seconds": 54.386,
+      "perceptual_variation": "full"
     },
     {
       "task": "BinFill",
@@ -308,16 +321,24 @@
       "oracle_policy_step": 912,
       "suite": "counting",
       "episode": 33,
-      "oracle_wall_seconds": 81.39
+      "oracle_wall_seconds": 81.39,
+      "base_oracle_policy_step": 912,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "BinFill",
       "seed": 743874919,
       "difficulty": "hard",
-      "oracle_policy_step": 861,
+      "oracle_policy_step": 853,
       "suite": "counting",
       "episode": 34,
-      "oracle_wall_seconds": 74.54
+      "oracle_wall_seconds": 74.54,
+      "base_oracle_policy_step": 861,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "BinFill",
@@ -326,7 +347,8 @@
       "oracle_policy_step": 713,
       "suite": "counting",
       "episode": 35,
-      "oracle_wall_seconds": 61.062
+      "oracle_wall_seconds": 61.062,
+      "perceptual_variation": "full"
     },
     {
       "task": "BinFill",
@@ -335,7 +357,8 @@
       "oracle_policy_step": 841,
       "suite": "counting",
       "episode": 36,
-      "oracle_wall_seconds": 76.984
+      "oracle_wall_seconds": 76.984,
+      "perceptual_variation": "full"
     },
     {
       "task": "BinFill",
@@ -344,7 +367,8 @@
       "oracle_policy_step": 946,
       "suite": "counting",
       "episode": 37,
-      "oracle_wall_seconds": 83.961
+      "oracle_wall_seconds": 83.961,
+      "perceptual_variation": "full"
     },
     {
       "task": "BinFill",
@@ -353,7 +377,11 @@
       "oracle_policy_step": 550,
       "suite": "counting",
       "episode": 38,
-      "oracle_wall_seconds": 41.813
+      "oracle_wall_seconds": 41.813,
+      "base_oracle_policy_step": 550,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "BinFill",
@@ -371,16 +399,24 @@
       "oracle_policy_step": 509,
       "suite": "counting",
       "episode": 40,
-      "oracle_wall_seconds": 42.208
+      "oracle_wall_seconds": 42.208,
+      "base_oracle_policy_step": 509,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "BinFill",
       "seed": 230183048,
       "difficulty": "hard",
-      "oracle_policy_step": 694,
+      "oracle_policy_step": 695,
       "suite": "counting",
       "episode": 41,
-      "oracle_wall_seconds": 53.055
+      "oracle_wall_seconds": 53.055,
+      "base_oracle_policy_step": 694,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "BinFill",
@@ -389,7 +425,8 @@
       "oracle_policy_step": 712,
       "suite": "counting",
       "episode": 42,
-      "oracle_wall_seconds": 58.666
+      "oracle_wall_seconds": 58.666,
+      "perceptual_variation": "full"
     },
     {
       "task": "BinFill",
@@ -398,7 +435,11 @@
       "oracle_policy_step": 586,
       "suite": "counting",
       "episode": 43,
-      "oracle_wall_seconds": 53.604
+      "oracle_wall_seconds": 53.604,
+      "base_oracle_policy_step": 586,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "BinFill",
@@ -434,7 +475,11 @@
       "oracle_policy_step": 812,
       "suite": "counting",
       "episode": 47,
-      "oracle_wall_seconds": 73.789
+      "oracle_wall_seconds": 73.789,
+      "base_oracle_policy_step": 812,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "BinFill",

@@ -23,11 +23,17 @@ def make_episode(
     episode_metadata=None,
     action_space="waypoint",
     gui_render=False,
+    perceptual_variations=True,
+    mechanism_variations=True,
     **observation_options,
 ):
     """Build a task lazily using its supplied execution budget."""
     if episode_metadata is None:
         raise ValueError("Evaluation requires supplied episode metadata")
+    if type(perceptual_variations) is not bool:
+        raise TypeError("perceptual_variations must be a boolean")
+    if type(mechanism_variations) is not bool:
+        raise TypeError("mechanism_variations must be a boolean")
     if action_space not in ACTION_SPACES:
         raise ValueError(f"action_space must be one of {ACTION_SPACES}")
     unknown = set(observation_options) - OBSERVATION_OPTIONS
@@ -37,6 +43,8 @@ def make_episode(
 
     index = episode_metadata.get("episode", 0) if isinstance(episode_metadata, dict) else 0
     episode_metadata = normalize_episode(task, episode_metadata, index)
+    from robomme_plus.variation.mechanism import effective_metadata
+    episode_metadata = effective_metadata(episode_metadata, mechanism_variations)
     for name, supplied in (("seed", seed), ("difficulty", difficulty),
                            ("variant", variant), ("native_difficulty", native_difficulty)):
         # Historical InsertPeg seed-only records denote the retained hard tier.
@@ -56,11 +64,14 @@ def make_episode(
     from robomme_plus.evaluation.demonstration import DemonstrationWrapper
     from robomme_plus.control.ee_pose import EndeffectorDemonstrationWrapper
     from robomme_plus.evaluation.failure import FailAwareWrapper
+    from robomme_plus.evaluation.reset import ResetRetryWrapper
     from robomme_plus.control.waypoint import MultiStepDemonstrationWrapper
 
     spec = get_task(task)
     register_envs(task)
     options = {"variant": variant} if spec.variants else {}
+    if perceptual_variations and episode_metadata.get("perceptual_variation") is not None:
+        options["_perceptual_variation"] = episode_metadata["perceptual_variation"]
     if task == 'ButtonUnmaskSwap':
         options['continuous_motion'] = episode_metadata.get('continuous_motion', False)
         options['motion_workspace'] = episode_metadata.get('motion_workspace', 'legacy')
@@ -98,30 +109,39 @@ def make_episode(
     if (task == "MoveCube" and options.get("_scene_parameters", {}).get("schema")
             in ("robomme-ood-move-cube/2", "robomme-ood-move-cube/3")):
         control_mode = "pd_joint_pos_vel"
-    env = gym.make(
-        spec.gym_id,
-        seed=seed,
-        difficulty=difficulty,
-        **options,
-        obs_mode="rgb+depth+segmentation",
-        control_mode=control_mode,
-        render_mode="rgb_array",
-        reward_mode="dense",
-    )
-    try:
-        env = DemonstrationWrapper(
-            env,
-            episode_metadata=episode_metadata,
-            gui_render=gui_render,
-            **observation_options,
+    if mechanism_variations and episode_metadata.get("mechanism_variation") is not None:
+        from robomme_plus.variation.mechanism.runtime import make_env
+        def construct(**kwargs):
+            return make_env(spec, profile=episode_metadata["mechanism_variation"], **kwargs)
+    else:
+        def construct(**kwargs):
+            return gym.make(spec.gym_id, **kwargs)
+    def build():
+        env = construct(
+            seed=seed,
+            difficulty=difficulty,
+            **options,
+            obs_mode="rgb+depth+segmentation",
+            control_mode=control_mode,
+            render_mode="rgb_array",
+            reward_mode="dense",
         )
-        if action_space == "ee_pose":
-            env = EndeffectorDemonstrationWrapper(env, action_repr="rpy")
-        elif action_space == "waypoint":
-            env = MultiStepDemonstrationWrapper(
-                env, gui_render=gui_render, vis=gui_render
+        try:
+            env = DemonstrationWrapper(
+                env,
+                episode_metadata=episode_metadata,
+                gui_render=gui_render,
+                **observation_options,
             )
-        return FailAwareWrapper(env)
-    except Exception:
-        env.close()
-        raise
+            if action_space == "ee_pose":
+                env = EndeffectorDemonstrationWrapper(env, action_repr="rpy")
+            elif action_space == "waypoint":
+                env = MultiStepDemonstrationWrapper(
+                    env, gui_render=gui_render, vis=gui_render
+                )
+            return env
+        except Exception:
+            env.close()
+            raise
+
+    return FailAwareWrapper(ResetRetryWrapper(build(), rebuild=build))

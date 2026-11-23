@@ -1,0 +1,24 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "RouteStick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "5bd033344b4b464079b323e86a9eae2aca7d6a1d9a8985b668e6292073331592",
+    "perception.py": "5249d8db6df939eb81c1d3dc1161b6da75963de2b007d453ae6016b1dfbf845c"
+  },
+  "source_policy_files": {
+    "controller.py": "5bd033344b4b464079b323e86a9eae2aca7d6a1d9a8985b668e6292073331592",
+    "perception.py": "5249d8db6df939eb81c1d3dc1161b6da75963de2b007d453ae6016b1dfbf845c"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "7968d15921194f27201572ca47004a8af9138e846022f97d84fd6b38958845ba",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "98cdbaecdb934456f36f9bb4088b3b02bffb231af110724ab5cf24673734c9fb"
+  }
+}

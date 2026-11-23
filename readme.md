@@ -7,8 +7,8 @@
 
 ## 📢 Announcements
 
+[11/2026] 🧗 We release [RoboMME-Plus](https://robomme.github.io/plus.html), an extended benchmark for robot memory generalization and adaptation. Start with the [RoboMME-Plus guide](src/robomme_plus/README.md#getting-started) for setup, development, audits and submission.<br>
 [11/2026] We provide an `ood_test` split in the original RoboMME to evaluate OOD generalization of models trained on regular setups. See the [OOD guide](doc/ood_split.md) for details.<br>
-[10/2026] 🧗 We release [RoboMME-Plus](https://robomme.github.io/plus.html) preview version, an extended benchmark for robot memory under more demanding conditions. See the [evaluation guides](scripts/plus_eval/README.md) and the [Tasks](src/robomme_plus).<br>
 [05/2026] 🎉 RoboMME has been selected for ICML 2026 Oral presentation (Top 0.7%)!   
 [04/2026] 🎉 RoboMME has been accepted to ICML 2026 as a Spotlight (Top 2.2%)!  
 [03/2026] 🚀 RoboMME Challenge is live at CVPR 2026! 🤖 Check our [website](https://robomme.github.io/challenge.html) and the [`challenge_interface`](challenge_interface) directory for all the details. Let’s build stronger memory-augmented robotic generalists together! 💪  
@@ -82,7 +82,7 @@ uv run scripts/dataset_replay.py --h5-data-dir <your_downloaded_data_dir>
 ```
 
 For the 50-episode RoboMME-Plus training split, see the
-[RoboMME-Plus data and replay guide](doc/plus_training_data_format.md#replay).
+[RoboMME-Plus data and replay guide](doc/robomme_plus/plus_training_data_format.md#dataset-replay).
 
 ### 📊 Evaluation
 
@@ -145,7 +145,7 @@ The [MME Policy Learning](https://github.com/RoboMME/robomme_policy_learning) re
 
 
 ## 🏆 Submit Your Models
-Want to add your model? Download the [dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) from Hugging Face, run evaluation using our [eval scripts](scripts/evaluation.py), then submit a PR with your results by adding `<your_model>.md` to the [submission directory](doc/submission/). We will review it and update our leaderboard.
+Want to add your model? Download the [dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) from Hugging Face, run evaluation using our [eval scripts](scripts/evaluation.py), then submit a PR with your results by adding `<your_model>.md` to the [submission directory](doc/submission). We will review it and update our leaderboard.
 
 
 ## 🔧 Troubleshooting
@@ -165,7 +165,7 @@ Alternatively, you can install RoboMME via Docker by following the [instructions
 
 **Q3: I want to participate in the RoboMME Challenge. How should I get started?** 
 
-A3: We are finalizing the submission instructions and will announce details by the end of March. In the meantime, you can get started by exploring the benchmark repository and the [MME-VLA policy learning repo](https://github.com/RoboMME/robomme_policy_learning/tree/main); the challenge will use held-out test episodes similar to the standard [test episodes](src/robomme/env_metadata/test/), but not publicly accessible during the competition.
+A3: We are finalizing the submission instructions and will announce details by the end of March. In the meantime, you can get started by exploring the benchmark repository and the [MME-VLA policy learning repo](https://github.com/RoboMME/robomme_policy_learning/tree/main); the challenge will use held-out test episodes similar to the standard [test episodes](src/robomme/env_metadata/test), but not publicly accessible during the competition.
 
 
 ## 🙏 Acknowledgements

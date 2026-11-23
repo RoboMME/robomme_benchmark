@@ -155,7 +155,8 @@
       "oracle_policy_step": 626,
       "suite": "counting",
       "episode": 16,
-      "oracle_wall_seconds": 21.988
+      "oracle_wall_seconds": 21.988,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "SwingXtimes",
@@ -164,7 +165,8 @@
       "oracle_policy_step": 823,
       "suite": "counting",
       "episode": 17,
-      "oracle_wall_seconds": 26.443
+      "oracle_wall_seconds": 26.443,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "SwingXtimes",
@@ -173,7 +175,8 @@
       "oracle_policy_step": 714,
       "suite": "counting",
       "episode": 18,
-      "oracle_wall_seconds": 23.356
+      "oracle_wall_seconds": 23.356,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "SwingXtimes",
@@ -191,7 +194,8 @@
       "oracle_policy_step": 724,
       "suite": "counting",
       "episode": 20,
-      "oracle_wall_seconds": 26.087
+      "oracle_wall_seconds": 26.087,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "SwingXtimes",
@@ -209,7 +213,8 @@
       "oracle_policy_step": 604,
       "suite": "counting",
       "episode": 22,
-      "oracle_wall_seconds": 20.008
+      "oracle_wall_seconds": 20.008,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "SwingXtimes",
@@ -236,7 +241,8 @@
       "oracle_policy_step": 1223,
       "suite": "counting",
       "episode": 25,
-      "oracle_wall_seconds": 43.165
+      "oracle_wall_seconds": 43.165,
+      "perceptual_variation": "full"
     },
     {
       "task": "SwingXtimes",
@@ -245,7 +251,8 @@
       "oracle_policy_step": 713,
       "suite": "counting",
       "episode": 26,
-      "oracle_wall_seconds": 22.488
+      "oracle_wall_seconds": 22.488,
+      "perceptual_variation": "full"
     },
     {
       "task": "SwingXtimes",
@@ -254,7 +261,8 @@
       "oracle_policy_step": 1287,
       "suite": "counting",
       "episode": 27,
-      "oracle_wall_seconds": 41.952
+      "oracle_wall_seconds": 41.952,
+      "perceptual_variation": "full"
     },
     {
       "task": "SwingXtimes",
@@ -263,25 +271,34 @@
       "oracle_policy_step": 1176,
       "suite": "counting",
       "episode": 28,
-      "oracle_wall_seconds": 40.469
+      "oracle_wall_seconds": 40.469,
+      "perceptual_variation": "full"
     },
     {
       "task": "SwingXtimes",
       "seed": 410231661,
       "difficulty": "hard",
-      "oracle_policy_step": 1066,
+      "oracle_policy_step": 841,
       "suite": "counting",
       "episode": 29,
-      "oracle_wall_seconds": 36.013
+      "oracle_wall_seconds": 36.013,
+      "base_oracle_policy_step": 1066,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "SwingXtimes",
       "seed": 1018643208,
       "difficulty": "hard",
-      "oracle_policy_step": 922,
+      "oracle_policy_step": 706,
       "suite": "counting",
       "episode": 30,
-      "oracle_wall_seconds": 30.673
+      "oracle_wall_seconds": 30.673,
+      "base_oracle_policy_step": 922,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "SwingXtimes",
@@ -290,25 +307,34 @@
       "oracle_policy_step": 1243,
       "suite": "counting",
       "episode": 31,
-      "oracle_wall_seconds": 38.548
+      "oracle_wall_seconds": 38.548,
+      "perceptual_variation": "full"
     },
     {
       "task": "SwingXtimes",
       "seed": 624812369,
       "difficulty": "hard",
-      "oracle_policy_step": 1055,
+      "oracle_policy_step": 833,
       "suite": "counting",
       "episode": 32,
-      "oracle_wall_seconds": 32.693
+      "oracle_wall_seconds": 32.693,
+      "base_oracle_policy_step": 1055,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "SwingXtimes",
       "seed": 725487899,
       "difficulty": "hard",
-      "oracle_policy_step": 852,
+      "oracle_policy_step": 694,
       "suite": "counting",
       "episode": 33,
-      "oracle_wall_seconds": 26.638
+      "oracle_wall_seconds": 26.638,
+      "base_oracle_policy_step": 852,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "SwingXtimes",
@@ -317,7 +343,8 @@
       "oracle_policy_step": 1076,
       "suite": "counting",
       "episode": 34,
-      "oracle_wall_seconds": 34.377
+      "oracle_wall_seconds": 34.377,
+      "perceptual_variation": "full"
     },
     {
       "task": "SwingXtimes",
@@ -353,16 +380,21 @@
       "oracle_policy_step": 1269,
       "suite": "counting",
       "episode": 38,
-      "oracle_wall_seconds": 38.108
+      "oracle_wall_seconds": 38.108,
+      "perceptual_variation": "full"
     },
     {
       "task": "SwingXtimes",
       "seed": 1007957781,
       "difficulty": "hard",
-      "oracle_policy_step": 886,
+      "oracle_policy_step": 584,
       "suite": "counting",
       "episode": 39,
-      "oracle_wall_seconds": 27.16
+      "oracle_wall_seconds": 27.16,
+      "base_oracle_policy_step": 886,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "SwingXtimes",
@@ -386,10 +418,14 @@
       "task": "SwingXtimes",
       "seed": 68700977,
       "difficulty": "hard",
-      "oracle_policy_step": 1008,
+      "oracle_policy_step": 772,
       "suite": "counting",
       "episode": 42,
-      "oracle_wall_seconds": 26.187
+      "oracle_wall_seconds": 26.187,
+      "base_oracle_policy_step": 1008,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "SwingXtimes",
@@ -398,25 +434,34 @@
       "oracle_policy_step": 953,
       "suite": "counting",
       "episode": 43,
-      "oracle_wall_seconds": 25.482
+      "oracle_wall_seconds": 25.482,
+      "perceptual_variation": "full"
     },
     {
       "task": "SwingXtimes",
       "seed": 674514616,
       "difficulty": "hard",
-      "oracle_policy_step": 1084,
+      "oracle_policy_step": 880,
       "suite": "counting",
       "episode": 44,
-      "oracle_wall_seconds": 35.206
+      "oracle_wall_seconds": 35.206,
+      "base_oracle_policy_step": 1084,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "SwingXtimes",
       "seed": 554860879,
       "difficulty": "hard",
-      "oracle_policy_step": 937,
+      "oracle_policy_step": 601,
       "suite": "counting",
       "episode": 45,
-      "oracle_wall_seconds": 31.334
+      "oracle_wall_seconds": 31.334,
+      "base_oracle_policy_step": 937,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "SwingXtimes",

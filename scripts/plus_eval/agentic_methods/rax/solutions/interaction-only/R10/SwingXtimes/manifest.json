@@ -1,0 +1,24 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "SwingXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "72391e07c7d9fe5543baa9a6f482851ec9273ba946cfa36d609edac987f549fd",
+    "percept.py": "16487393bf05a3ff84075c2c88c82c9216945d94dc62cd0b7f65259e82fd7e5d"
+  },
+  "source_policy_files": {
+    "controller.py": "72391e07c7d9fe5543baa9a6f482851ec9273ba946cfa36d609edac987f549fd",
+    "percept.py": "16487393bf05a3ff84075c2c88c82c9216945d94dc62cd0b7f65259e82fd7e5d"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "54444b650c167a36fc28e53f7a192a58f8c642d861843d19470bd7b547c08c1e",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "65d0ee3cf0d5824ebefca674fd942ab117eb8522d6836ccdde747aed7ee24903"
+  }
+}

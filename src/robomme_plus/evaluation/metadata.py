@@ -113,6 +113,16 @@ def normalize_episode(task, record, index):
     if not spec.difficulties and level is not None:
         raise ValueError(f"{task} is seed-only and has no difficulty")
     result["difficulty"] = level
+    from robomme_plus.variation import validate_profile
+    validate_profile(task, level, result.get("perceptual_variation"))
+    from robomme_plus.variation.mechanism import validate_profile as validate_mechanism
+    validate_mechanism(task, level, result.get("mechanism_variation"), result.get("perceptual_variation"))
+    if (isinstance(result.get('mechanism_variation'),dict)
+            and result['mechanism_variation'].get('atomic')=='container_speed_2x'
+            and result.get('continuous_motion')):
+        raise ValueError('Atomic container_speed_2x requires a finite-swap episode')
+    if result.get("mechanism_variation") is not None:
+        positive_integer(result.get("base_oracle_policy_step"), "base_oracle_policy_step")
     if task == "InsertPeg" and "hole_width_m" in result:
         from robomme_plus.tasks.imitation.utils.geometry import resolve_config
 
@@ -172,6 +182,7 @@ def replay_identity(task, record):
         "execution_stick_angle_deg", "execution_grid_scale", "scene_parameters",
         "demonstration_actions", "highlight_mode", "layout_version",
         "local_adjustments", "color_mode",
+        "mechanism_variation", "base_oracle_policy_step",
     }
     if task == "InsertPeg":
         from robomme_plus.tasks.imitation.utils.geometry import resolve_config

@@ -12,7 +12,7 @@
       "suite": "permanence",
       "episode": 0,
       "control_freq": 20,
-      "oracle_wall_seconds": 105.167
+      "oracle_wall_seconds": 29.553
     },
     {
       "task": "VideoUnmask",
@@ -22,7 +22,7 @@
       "suite": "permanence",
       "episode": 1,
       "control_freq": 20,
-      "oracle_wall_seconds": 170.941
+      "oracle_wall_seconds": 36.068
     },
     {
       "task": "VideoUnmask",
@@ -32,7 +32,11 @@
       "suite": "permanence",
       "episode": 2,
       "control_freq": 20,
-      "oracle_wall_seconds": 168.798
+      "oracle_wall_seconds": 35.818,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "light_ring_pattern"
+      }
     }
   ]
 }

@@ -925,5 +925,6 @@ from robomme_plus.tasks.counting.utils.environment import CountingMixin
 @register_env(TASKS["SwingXtimes"].gym_id)
 class SwingXtimes(CountingMixin, _TaskScene):
     """Swing a cube between evasive targets the requested number of cycles."""
+    PERCEPTUAL_VARIATIONS = True
 
     task_name = "SwingXtimes"

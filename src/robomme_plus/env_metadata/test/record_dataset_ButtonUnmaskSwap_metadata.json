@@ -480,7 +480,8 @@
       "suite": "permanence",
       "episode": 13,
       "control_freq": 20,
-      "oracle_wall_seconds": 30.971
+      "oracle_wall_seconds": 30.971,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -549,7 +550,8 @@
       "suite": "permanence",
       "episode": 15,
       "control_freq": 20,
-      "oracle_wall_seconds": 29.819
+      "oracle_wall_seconds": 29.819,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -618,7 +620,8 @@
       "suite": "permanence",
       "episode": 17,
       "control_freq": 20,
-      "oracle_wall_seconds": 33.048
+      "oracle_wall_seconds": 33.048,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -789,7 +792,8 @@
       "suite": "permanence",
       "episode": 22,
       "control_freq": 20,
-      "oracle_wall_seconds": 33.802
+      "oracle_wall_seconds": 33.802,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -858,7 +862,8 @@
       "suite": "permanence",
       "episode": 24,
       "control_freq": 20,
-      "oracle_wall_seconds": 101.814
+      "oracle_wall_seconds": 101.814,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -893,7 +898,8 @@
       "suite": "permanence",
       "episode": 25,
       "control_freq": 20,
-      "oracle_wall_seconds": 111.221
+      "oracle_wall_seconds": 111.221,
+      "perceptual_variation": "full"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -927,13 +933,14 @@
       "suite": "permanence",
       "episode": 26,
       "control_freq": 20,
-      "oracle_wall_seconds": 38.034
+      "oracle_wall_seconds": 38.034,
+      "perceptual_variation": "full"
     },
     {
       "task": "ButtonUnmaskSwap",
       "seed": 1494530601,
       "difficulty": "hard",
-      "oracle_policy_step": 884,
+      "oracle_policy_step": 918,
       "continuous_motion": false,
       "motion_workspace": {
         "bounds_xy_m": [
@@ -961,7 +968,11 @@
       "suite": "permanence",
       "episode": 27,
       "control_freq": 20,
-      "oracle_wall_seconds": 38.938
+      "oracle_wall_seconds": 38.938,
+      "base_oracle_policy_step": 884,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -996,7 +1007,8 @@
       "suite": "permanence",
       "episode": 28,
       "control_freq": 20,
-      "oracle_wall_seconds": 122.092
+      "oracle_wall_seconds": 122.092,
+      "perceptual_variation": "full"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -1031,7 +1043,8 @@
       "suite": "permanence",
       "episode": 29,
       "control_freq": 20,
-      "oracle_wall_seconds": 177.949
+      "oracle_wall_seconds": 177.949,
+      "perceptual_variation": "full"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -1204,7 +1217,8 @@
       "suite": "permanence",
       "episode": 34,
       "control_freq": 20,
-      "oracle_wall_seconds": 124.653
+      "oracle_wall_seconds": 124.653,
+      "perceptual_variation": "full"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -1238,13 +1252,14 @@
       "suite": "permanence",
       "episode": 35,
       "control_freq": 20,
-      "oracle_wall_seconds": 45.935
+      "oracle_wall_seconds": 45.935,
+      "perceptual_variation": "full"
     },
     {
       "task": "ButtonUnmaskSwap",
       "seed": 441057739,
       "difficulty": "hard",
-      "oracle_policy_step": 1081,
+      "oracle_policy_step": 1336,
       "continuous_motion": true,
       "continuous_motion_version": 6,
       "motion_workspace": {
@@ -1273,7 +1288,11 @@
       "suite": "permanence",
       "episode": 36,
       "control_freq": 20,
-      "oracle_wall_seconds": 122.355
+      "oracle_wall_seconds": 122.355,
+      "base_oracle_policy_step": 1081,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -1314,7 +1333,7 @@
       "task": "ButtonUnmaskSwap",
       "seed": 708300880,
       "difficulty": "hard",
-      "oracle_policy_step": 1097,
+      "oracle_policy_step": 1129,
       "continuous_motion": true,
       "continuous_motion_version": 6,
       "motion_workspace": {
@@ -1343,13 +1362,17 @@
       "suite": "permanence",
       "episode": 38,
       "control_freq": 20,
-      "oracle_wall_seconds": 138.798
+      "oracle_wall_seconds": 138.798,
+      "base_oracle_policy_step": 1097,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "ButtonUnmaskSwap",
       "seed": 142908439,
       "difficulty": "hard",
-      "oracle_policy_step": 961,
+      "oracle_policy_step": 971,
       "continuous_motion": false,
       "motion_workspace": {
         "bounds_xy_m": [
@@ -1377,13 +1400,17 @@
       "suite": "permanence",
       "episode": 39,
       "control_freq": 20,
-      "oracle_wall_seconds": 36.281
+      "oracle_wall_seconds": 36.281,
+      "base_oracle_policy_step": 961,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "ButtonUnmaskSwap",
       "seed": 224508584,
       "difficulty": "hard",
-      "oracle_policy_step": 700,
+      "oracle_policy_step": 782,
       "continuous_motion": false,
       "motion_workspace": {
         "bounds_xy_m": [
@@ -1411,7 +1438,11 @@
       "suite": "permanence",
       "episode": 40,
       "control_freq": 20,
-      "oracle_wall_seconds": 35.097
+      "oracle_wall_seconds": 35.097,
+      "base_oracle_policy_step": 700,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -1445,7 +1476,8 @@
       "suite": "permanence",
       "episode": 41,
       "control_freq": 20,
-      "oracle_wall_seconds": 38.349
+      "oracle_wall_seconds": 38.349,
+      "perceptual_variation": "full"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -1549,7 +1581,8 @@
       "suite": "permanence",
       "episode": 44,
       "control_freq": 20,
-      "oracle_wall_seconds": 170.343
+      "oracle_wall_seconds": 170.343,
+      "perceptual_variation": "full"
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -1590,7 +1623,7 @@
       "task": "ButtonUnmaskSwap",
       "seed": 153500234,
       "difficulty": "hard",
-      "oracle_policy_step": 1098,
+      "oracle_policy_step": 1061,
       "continuous_motion": true,
       "continuous_motion_version": 6,
       "motion_workspace": {
@@ -1619,7 +1652,11 @@
       "suite": "permanence",
       "episode": 46,
       "control_freq": 20,
-      "oracle_wall_seconds": 141.307
+      "oracle_wall_seconds": 141.307,
+      "base_oracle_policy_step": 1098,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "ButtonUnmaskSwap",
@@ -1659,7 +1696,7 @@
       "task": "ButtonUnmaskSwap",
       "seed": 259404825,
       "difficulty": "hard",
-      "oracle_policy_step": 1051,
+      "oracle_policy_step": 1031,
       "continuous_motion": true,
       "continuous_motion_version": 6,
       "motion_workspace": {
@@ -1688,13 +1725,17 @@
       "suite": "permanence",
       "episode": 48,
       "control_freq": 20,
-      "oracle_wall_seconds": 120.067
+      "oracle_wall_seconds": 120.067,
+      "base_oracle_policy_step": 1051,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "ButtonUnmaskSwap",
       "seed": 175184600,
       "difficulty": "hard",
-      "oracle_policy_step": 1432,
+      "oracle_policy_step": 1215,
       "continuous_motion": true,
       "continuous_motion_version": 6,
       "motion_workspace": {
@@ -1723,7 +1764,11 @@
       "suite": "permanence",
       "episode": 49,
       "control_freq": 20,
-      "oracle_wall_seconds": 159.709
+      "oracle_wall_seconds": 159.709,
+      "base_oracle_policy_step": 1432,
+      "mechanism_variation": {
+        "version": 1
+      }
     }
   ]
 }

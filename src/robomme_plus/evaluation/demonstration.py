@@ -380,6 +380,9 @@ class DemonstrationWrapper(gym.Wrapper):
                 _intr = _intr.squeeze(0)
             new_info["wrist_camera_intrinsic"] = _intr
 
+        variation = getattr(self.unwrapped, "_perceptual_variation", None)
+        if variation is not None and variation.noise is not None:
+            new_obs, new_info = variation.noise.transform(new_obs, new_info)
         return new_obs, new_info
 
 
@@ -694,40 +697,26 @@ class DemonstrationWrapper(gym.Wrapper):
 
             self.evaluate(solve_complete_eval=True)
 
-            def _solve_task_without_hard_fail():
-                # Avoid solve returning -1 causing _collect_dense_steps to discard collected steps of this task
+            def _solve_task():
                 try:
                     solve_result = solve_callable(self, planner)
                 except ScrewPlanFailure as exc:
-                    self._current_demo_task_screw_failed = True
-                    logger.debug(
-                        f"[DemonstrationWrapper] task '{task_name}' screw failure: {exc}"
-                    )
-                    return None
-                if isinstance(solve_result, int) and solve_result == -1:
-                    self._current_demo_task_screw_failed = True
-                    logger.debug(
-                        f"[DemonstrationWrapper] task '{task_name}' returned -1 after screw->RRT* retries"
-                    )
-                    return None
+                    raise RuntimeError(f"Demonstration task '{task_name}' failed") from exc
+                if ((isinstance(solve_result, int) and solve_result == -1)
+                        or self._current_demo_task_screw_failed):
+                    raise RuntimeError(f"Demonstration task '{task_name}' failed after planning retries")
                 return solve_result
 
-            task_steps = planner_denseStep._collect_dense_steps(
-                planner,
-                _solve_task_without_hard_fail,
-            )
-            if task_steps == -1:
-                # Theoretically should not hit (_solve_task_without_hard_fail has swallowed -1)
-                logger.debug(
-                    f"[DemonstrationWrapper] task '{task_name}' returned -1 from collector; continuing"
+            try:
+                task_steps = planner_denseStep._collect_dense_steps(
+                    planner,
+                    _solve_task,
                 )
-            else:
-                all_collected_steps.extend(task_steps)
-
-            if self._current_demo_task_screw_failed:
-                logger.debug(
-                    f"[DemonstrationWrapper] task '{task_name}' marked failed after screw->RRT* retries; continuing"
-                )
+            except Exception:
+                # Never provide a partial demonstration to an evaluated policy.
+                self.unwrapped.demonstration_record_traj = False
+                raise
+            all_collected_steps.extend(task_steps)
             self.evaluate(solve_complete_eval=True)
 
         self.unwrapped.demonstration_record_traj = False  # Demonstration ends, subsequent steps perform subgoal judgment normally

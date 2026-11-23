@@ -13,9 +13,11 @@ import urllib.error
 SCRIPTS = Path(__file__).resolve().parents[2] / 'scripts/plus_eval'
 sys.path.insert(0, str(SCRIPTS))
 from evaluation import EpisodeStop
+sys.path.insert(0, str(SCRIPTS / "agentic_methods/astra/three_tier"))
+
 from three_tier_images import demonstration_indices, request_image_budget
 
-spec = importlib.util.spec_from_file_location('ood_three_tier_adapter', SCRIPTS / '3-tier-astra/eval_plus.py')
+spec = importlib.util.spec_from_file_location('ood_three_tier_adapter', SCRIPTS / 'agentic_methods/astra/three_tier/eval_plus.py')
 adapter = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(adapter)
 

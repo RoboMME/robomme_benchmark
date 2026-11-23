@@ -1,0 +1,28 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "VideoUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "3a98305eb225214bde39ca440fbfeb5adaba338fc5b7532aeb2ceeb0a605b907",
+    "geom.py": "fcdc90a541313af03d45553ce1bb0a8905ff2fcb29d3ba5a1bd67ae84fd2efeb",
+    "motion.py": "ecb211632159b828ccfad7a9388af2e00726d94b8f61ec404401c1fe7de35198",
+    "track.py": "da1d051a05ffba72e8b81ed3258b9832fd71d979177e987e0ba54a1fc75379b0"
+  },
+  "source_policy_files": {
+    "controller.py": "3a98305eb225214bde39ca440fbfeb5adaba338fc5b7532aeb2ceeb0a605b907",
+    "geom.py": "fcdc90a541313af03d45553ce1bb0a8905ff2fcb29d3ba5a1bd67ae84fd2efeb",
+    "motion.py": "ecb211632159b828ccfad7a9388af2e00726d94b8f61ec404401c1fe7de35198",
+    "track.py": "da1d051a05ffba72e8b81ed3258b9832fd71d979177e987e0ba54a1fc75379b0"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "36bf2d4c2aeeb66a4437e510dd2324ff4d5abdc7794f1dc5ee12db5a85a32a15",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "14bbe0b6d57b6d601d9fff3b495cd930443e57b68cbdeba8a86b6f6707338b7d"
+  }
+}

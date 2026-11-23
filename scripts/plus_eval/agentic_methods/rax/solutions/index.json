@@ -1,0 +1,198 @@
+{
+  "method": "rax",
+  "source_experiment": "r10_20261121",
+  "entries": [
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "BinFill",
+      "path": "interaction-only/R10/BinFill"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "ButtonUnmask",
+      "path": "interaction-only/R10/ButtonUnmask"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "ButtonUnmaskSwap",
+      "path": "interaction-only/R10/ButtonUnmaskSwap"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "InsertPeg",
+      "path": "interaction-only/R10/InsertPeg"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "MoveCube",
+      "path": "interaction-only/R10/MoveCube"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "PatternLock",
+      "path": "interaction-only/R10/PatternLock"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "PickHighlight",
+      "path": "interaction-only/R10/PickHighlight"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "PickXtimes",
+      "path": "interaction-only/R10/PickXtimes"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "RouteStick",
+      "path": "interaction-only/R10/RouteStick"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "StopCube",
+      "path": "interaction-only/R10/StopCube"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "SwingXtimes",
+      "path": "interaction-only/R10/SwingXtimes"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "VideoPlaceButton",
+      "path": "interaction-only/R10/VideoPlaceButton"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "VideoPlaceOrder",
+      "path": "interaction-only/R10/VideoPlaceOrder"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "VideoRepick",
+      "path": "interaction-only/R10/VideoRepick"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "VideoUnmask",
+      "path": "interaction-only/R10/VideoUnmask"
+    },
+    {
+      "setting": "interaction-only",
+      "budget": 10,
+      "task": "VideoUnmaskSwap",
+      "path": "interaction-only/R10/VideoUnmaskSwap"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "BinFill",
+      "path": "hybrid/R10/BinFill"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "ButtonUnmask",
+      "path": "hybrid/R10/ButtonUnmask"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "ButtonUnmaskSwap",
+      "path": "hybrid/R10/ButtonUnmaskSwap"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "InsertPeg",
+      "path": "hybrid/R10/InsertPeg"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "MoveCube",
+      "path": "hybrid/R10/MoveCube"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "PatternLock",
+      "path": "hybrid/R10/PatternLock"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "PickHighlight",
+      "path": "hybrid/R10/PickHighlight"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "PickXtimes",
+      "path": "hybrid/R10/PickXtimes"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "RouteStick",
+      "path": "hybrid/R10/RouteStick"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "StopCube",
+      "path": "hybrid/R10/StopCube"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "SwingXtimes",
+      "path": "hybrid/R10/SwingXtimes"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "VideoPlaceButton",
+      "path": "hybrid/R10/VideoPlaceButton"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "VideoPlaceOrder",
+      "path": "hybrid/R10/VideoPlaceOrder"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "VideoRepick",
+      "path": "hybrid/R10/VideoRepick"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "VideoUnmask",
+      "path": "hybrid/R10/VideoUnmask"
+    },
+    {
+      "setting": "hybrid",
+      "budget": 10,
+      "task": "VideoUnmaskSwap",
+      "path": "hybrid/R10/VideoUnmaskSwap"
+    }
+  ]
+}

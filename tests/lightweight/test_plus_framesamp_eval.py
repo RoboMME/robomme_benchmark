@@ -15,7 +15,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location("framesamp_ood", ROOT / "scripts/plus_eval/robomme_vla/eval_plus.py")
+SPEC = importlib.util.spec_from_file_location("framesamp_ood", ROOT / "scripts/plus_eval/non_agentic_methods/framesamp_modul/eval_plus.py")
 adapter = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(adapter)
 
@@ -127,7 +127,7 @@ class FrameSampOODTest(unittest.TestCase):
         self.assertEqual(summary["success_rate"], 0)
 
     def test_finetuned_identity_retains_demo_cap_and_resume_compatibility(self):
-        from demonstration_sampling import configuration_for_method
+        from non_agentic_methods.framesamp_modul.demonstration_sampling import configuration_for_method
         from run_storage import requires_demonstration_resampling
         for method in ("framesamp-modul-plus", "framesamp-modul-ood"):
             with self.subTest(method=method):

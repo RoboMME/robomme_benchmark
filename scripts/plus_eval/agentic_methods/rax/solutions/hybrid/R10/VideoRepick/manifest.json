@@ -1,0 +1,30 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "VideoRepick",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "8bb3457a6476a3bd8165b775a11c307db8dc8982d06e57122f3b5a32e174146e",
+    "geom.py": "ddb217df9dab92e574c21355fb615550f2f9baeffdbeac4c16df58dd40c36621",
+    "motion.py": "7e3b6135fb4df0740261aeb17612ae1b045b29172682262757e8fa43e57289f6",
+    "percep.py": "7a3193784b5f1276d7c4dbab1bfac595094e9eb3d32db623c0642dbde11bfd06",
+    "track.py": "6bb15adaacf37c0d2108543df8d1175708db98655c79ce45373621439c97806f"
+  },
+  "source_policy_files": {
+    "controller.py": "8bb3457a6476a3bd8165b775a11c307db8dc8982d06e57122f3b5a32e174146e",
+    "geom.py": "ddb217df9dab92e574c21355fb615550f2f9baeffdbeac4c16df58dd40c36621",
+    "motion.py": "7e3b6135fb4df0740261aeb17612ae1b045b29172682262757e8fa43e57289f6",
+    "percep.py": "7a3193784b5f1276d7c4dbab1bfac595094e9eb3d32db623c0642dbde11bfd06",
+    "track.py": "6bb15adaacf37c0d2108543df8d1175708db98655c79ce45373621439c97806f"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "3b707d15cac723a9dbce621ea63abd246b7e8ac9aebe79657d5ff4bb1ef85a96",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "b103f43377ed260c6539a0b9176b5360adf7375ce1abb4f063c841c1eb8af7d2"
+  }
+}

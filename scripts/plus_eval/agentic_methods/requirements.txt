@@ -1,0 +1,12 @@
+# Host-side dependencies for the ASPIRE/RAX adapters. Install in the simulator
+# environment. Native providers keep their upstream, separate environments.
+boto3>=1.40
+requests>=2.32
+numpy>=1.26,<3
+scipy>=1.12
+h5py>=3.11
+Pillow>=10
+imageio[ffmpeg]>=2.34
+msgpack>=1.1
+PyYAML>=6
+pytest>=8

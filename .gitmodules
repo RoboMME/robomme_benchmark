@@ -1,15 +1,22 @@
 [submodule "scripts/plus_eval/3-tier-astra/Astra-on-RoboMME"]
-	path = scripts/plus_eval/3-tier-astra/Astra-on-RoboMME
+	path = scripts/plus_eval/agentic_methods/astra/three_tier/Astra-on-RoboMME
 	url = https://github.com/YinpeiDai/Astra-on-RoboMME.git
 [submodule "scripts/plus_eval/embodied-astra/embodied-astra-robomme"]
-	path = scripts/plus_eval/embodied-astra/embodied-astra-robomme
+	path = scripts/plus_eval/agentic_methods/astra/embodied/embodied-astra-robomme
 	url = https://github.com/jackbjed/embodied-astra-robomme.git
 [submodule "scripts/plus_eval/robomme_vla/robomme_policy_learning"]
-	path = scripts/plus_eval/robomme_vla/robomme_policy_learning
+	path = scripts/plus_eval/non_agentic_methods/framesamp_modul/robomme_policy_learning
 	url = https://github.com/RoboMME/robomme_policy_learning.git
 [submodule "scripts/plus_eval/simplememvla/SimpleMemVLA"]
-	path = scripts/plus_eval/simplememvla/SimpleMemVLA
+	path = scripts/plus_eval/non_agentic_methods/simplememvla/SimpleMemVLA
 	url = https://github.com/YinpeiDai/SimpleMemVLA.git
 [submodule "scripts/plus_eval/ponderpounce/PonderPounce"]
-	path = scripts/plus_eval/ponderpounce/PonderPounce
+	path = scripts/plus_eval/non_agentic_methods/ponderpounce/PonderPounce
 	url = https://github.com/worv-ai/PonderPounce.git
+[submodule "scripts/plus_eval/aspire/ASPIRE"]
+	path = scripts/plus_eval/agentic_methods/aspire/ASPIRE
+	url = https://github.com/NVlabs/ASPIRE.git
+[submodule "scripts/plus_eval/rax/rax"]
+	path = scripts/plus_eval/agentic_methods/rax/rax
+	url = https://github.com/robot-agent-exploration/rax.git
+	update = none

@@ -1,0 +1,387 @@
+diff --git a/harness/claude_cli/auto_research.py b/harness/claude_cli/auto_research.py
+index 277eccf..8185136 100644
+--- a/harness/claude_cli/auto_research.py
++++ b/harness/claude_cli/auto_research.py
+@@ -186,6 +186,10 @@ def claude_arguments(deployed, *, prompt, interactive=False, json_output=False):
+         denied += SUBAGENT_TOOLS
+     args = ['--model', deployed['model'], '--effort', deployed.get('effort', EFFORT), '--mcp-config', '/claude-home/mcp.json', '--strict-mcp-config',
+             '--permission-mode', 'bypassPermissions', '--disallowedTools', *denied]
++    if deployed.get('deadline_wrapup'):
++        # MCP lifecycle tools are separately gated by the host frontend. No
++        # shell or file-editing tool is available during final reporting.
++        args += ['--tools', 'Read,Glob,Grep']
+     if deployed.get('resume_session'):
+         args += ['--resume', deployed['resume_session']]  # Continue the session's own conversation.
+     if not interactive:
+@@ -223,7 +227,7 @@ def container_command(config, deployed, relay_directory, name, *, prompt, intera
+         *thread_env(lim.cpus)]
+     if interactive:
+         command.append('--tty')
+-    mounts = [(deployed['workspace'], '/workspace', False), (deployed['claude_home'], '/claude-home', False),
++    mounts = [(deployed['workspace'], '/workspace', bool(deployed.get('deadline_wrapup'))), (deployed['claude_home'], '/claude-home', False),
+         (deployed['claude_home']/'settings.json', '/claude-home/settings.json', True),
+         (deployed['claude_home']/'mcp.json', '/claude-home/mcp.json', True),
+         *published_mounts(config, deployed),
+@@ -339,11 +343,57 @@ def launch(config, deployed, *, gemini_key_file=None, prompt, interactive=False,
+                         raise frontend_failure(server, log, 30)
+                     time.sleep(.05)
+                 if capture:
++                    clock = None
++                    if config.benchmark == 'robomme_plus':
++                        from benchmark_io.development_deadline import rax_clock, WRAPUP, WRAPUP_SECONDS
++                        clock = rax_clock(config)
++                        if clock:
++                            clock.update(enforcement_pid=os.getpid())
+                     command = container_command(config, deployed, relay_dir, name, prompt=prompt,
+                                                 interactive=interactive, json_output=True)
+-                    agent = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+-                    stdout, stderr = agent.communicate()
+-                    return subprocess.CompletedProcess(command, agent.returncode, stdout, stderr)
++                    stdout = stderr = ''
++                    try:
++                        if clock and clock.remaining() <= 0:
++                            raise subprocess.TimeoutExpired(command, 0)
++                        agent = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
++                        stdout, stderr = agent.communicate(timeout=clock.remaining() if clock else None)
++                        return subprocess.CompletedProcess(command, agent.returncode, stdout, stderr)
++                    except subprocess.TimeoutExpired:
++                        clock.expire()
++                        # Stop the whole sandbox, including background mock tests,
++                        # and the host simulator before granting reporting only.
++                        stop_services(name, agent, server, None)
++                        if agent is not None:
++                            stdout, stderr = agent.communicate(timeout=10)
++                        server = None
++                        frozen = config.root / 'deadline_frozen_state.json'
++                        if not frozen.exists():
++                            frozen.write_text((config.root / 'state.json').read_text())
++                        (config.root / 'deadline_wrapup_prompt.txt').write_text(WRAPUP)
++                        deployed = {**deployed, 'deadline_wrapup': True,
++                                    'resume_session': latest_claude_session(deployed['claude_home'])}
++                        (relay_dir/'mcp.sock').unlink(missing_ok=True)
++                        server = start_frontend(args, log)
++                        ready = time.monotonic() + 30
++                        while not (relay_dir/'mcp.sock').exists():
++                            if server.poll() is not None or time.monotonic() >= ready:
++                                raise frontend_failure(server, log, 30)
++                            time.sleep(.05)
++                        wrap_command = container_command(config, deployed, relay_dir, name, prompt=WRAPUP,
++                                                         json_output=True)
++                        (config.root/'deadline_wrapup_command.json').write_text(json.dumps(wrap_command, indent=2))
++                        agent = subprocess.Popen(wrap_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
++                        try:
++                            wrap_out, wrap_err = agent.communicate(timeout=WRAPUP_SECONDS)
++                        except subprocess.TimeoutExpired:
++                            subprocess.run(['docker', 'rm', '-f', name], capture_output=True, timeout=30)
++                            wrap_out, wrap_err = agent.communicate(timeout=10)
++                        (config.root/'deadline_wrapup_stdout.jsonl').write_text(wrap_out)
++                        (config.root/'deadline_wrapup_stderr.log').write_text(wrap_err)
++                        clock.update(wrapup_finished=time.time(), wrapup_returncode=agent.returncode)
++                        # A deadline is an experimental outcome, not a broken
++                        # queue worker. Missing submissions remain explicit.
++                        return subprocess.CompletedProcess(command, 0, stdout + wrap_out, stderr + wrap_err)
+                 def run(prompt):
+                     nonlocal agent
+                     subprocess.run(['docker', 'rm', '--force', name], capture_output=True, timeout=30)
+diff --git a/harness/codex_cli/auto_research.py b/harness/codex_cli/auto_research.py
+index 46189b5..6565054 100644
+--- a/harness/codex_cli/auto_research.py
++++ b/harness/codex_cli/auto_research.py
+@@ -403,6 +403,12 @@ def start_frontend(args, log):
+     whose cleanup then stops the frontend (and through it the simulators) in order."""
+     environment = {k: v for k, v in os.environ.items() if not k.startswith('RAX_')}
+     environment['PYTHONPATH'] = str(PROJECT)
++    # The operator's RoboMME-Plus backend imports its sibling benchmark IO module.
++    # This is the trusted host frontend, never an agent container mount.
++    if os.environ.get('ROBOMME_PLUS_STUDY'):
++        environment['PYTHONPATH'] += os.pathsep + str(PROJECT.parent)
++        if os.environ.get('RAX_ARTIFACT_ROOT'):
++            environment['RAX_ARTIFACT_ROOT'] = os.environ['RAX_ARTIFACT_ROOT']
+     return subprocess.Popen(args, cwd=PROJECT, env=environment, stdout=log, stderr=log, start_new_session=True)
+ 
+ 
+diff --git a/services/artifact_io.py b/services/artifact_io.py
+index a288d18..04c0c16 100644
+--- a/services/artifact_io.py
++++ b/services/artifact_io.py
+@@ -3,10 +3,24 @@
+ from __future__ import annotations
+ 
+ import os
++from contextlib import contextmanager
+ from pathlib import Path
+ 
+ 
+ def write_artifacts(directory: Path, files: dict[str, bytes]) -> None:
++    _validate_names(files)
++    with stream_artifacts(directory) as write:
++        write(files)
++
++
++def _validate_names(files):
++    for name in files:
++        if not name or name in {".", ".."} or "/" in name or "\\" in name:
++            raise ValueError("Artifact filenames must be single path components")
++
++
++@contextmanager
++def stream_artifacts(directory: Path):
+     """Create a fresh directory and files using pinned, no-follow directory FDs.
+ 
+     All ancestors are walked from / without resolving symlinks. The trusted
+@@ -17,9 +31,6 @@ def write_artifacts(directory: Path, files: dict[str, bytes]) -> None:
+     directory = Path(directory)
+     if not directory.is_absolute() or ".." in directory.parts:
+         raise ValueError("Artifact directory must be absolute without '..'")
+-    for name in files:
+-        if not name or name in {".", ".."} or "/" in name or "\\" in name:
+-            raise ValueError("Artifact filenames must be single path components")
+     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+     fd = os.open("/", flags)
+     try:
+@@ -32,14 +43,17 @@ def write_artifacts(directory: Path, files: dict[str, bytes]) -> None:
+             child = os.open(component, flags, dir_fd=fd)
+             os.close(fd)
+             fd = child
+-        for name, data in files.items():
+-            output = os.open(
+-                name,
+-                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+-                0o600,
+-                dir_fd=fd,
+-            )
+-            with os.fdopen(output, "wb") as stream:
+-                stream.write(data)
++        def write(files):
++            _validate_names(files)
++            for name, data in files.items():
++                output = os.open(
++                    name,
++                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
++                    0o600,
++                    dir_fd=fd,
++                )
++                with os.fdopen(output, "wb") as stream:
++                    stream.write(data)
++        yield write
+     finally:
+         os.close(fd)
+diff --git a/services/benchmarks.py b/services/benchmarks.py
+index b3e23eb..482bc73 100644
+--- a/services/benchmarks.py
++++ b/services/benchmarks.py
+@@ -7,7 +7,7 @@ setup defaults and fixed fields, capabilities), and its adapter module
+ code dispatches through the entry and never compares benchmark names. The benchmark is fixed
+ at session creation; configurations and manifests without the field use DEFAULT.
+ """
+-from dataclasses import dataclass, field
++from dataclasses import dataclass, field, replace
+ import importlib
+ 
+ DEFAULT = 'libero_pro'  # Configurations and manifests without a benchmark field.
+@@ -33,6 +33,7 @@ class Benchmark:
+     startup_seconds: int            # Environment creation deadline (seconds).
+     # Words shared workspace sources use for the simulated robot instead of branching on it.
+     robot: dict = field(default_factory=dict)
++    offline_submission: bool = False  # A benchmark can permit R0 demo-only compilation.
+     partial_credit: bool = False    # Episodes are scored with partial credit, which workspaces may name.
+     # Formal episodes earn a graded native score (partial credit in the average); False: each
+     # episode succeeds or fails and the result is the share of successes.
+@@ -155,6 +156,24 @@ BENCHMARKS = {
+         },
+     ),
+ }
++# RoboMME-Plus is a peer backend using the same RAX method and controller lifecycle.
++ROBOMME_PLUS_TOOLS = frozenset({'robomme_status', 'robomme_observe', 'robomme_step', 'robomme_pixel_to_position'})
++BENCHMARKS['robomme_plus'] = replace(
++    BENCHMARKS['libero_pro'], name='robomme_plus', label='RoboMME-Plus',
++    adapter='services.robomme_plus.benchmark', robot_tools=ROBOMME_PLUS_TOOLS, offline_submission=True,
++    geometry_tools=frozenset({'robomme_pixel_to_position'}), mutating=frozenset({'robomme_step'}),
++    status_tool='robomme_status', observe_tool='robomme_observe', tool_prefixes=('robomme_',),
++    episode_tool_prefixes=('robomme_',), simulator_modules=('services.robomme_plus.server',),
++    planner_files=('services/robomme_plus/session.py', 'services/simulator/protocol.py'),
++    robot={**BENCHMARKS['libero_pro'].robot, 'benchmark': 'RoboMME-Plus',
++           'status': 'robomme_status', 'observe': 'robomme_observe', 'step': 'robomme_step',
++           'pixel': 'robomme_pixel_to_position', 'overview_camera': 'front',
++           'cameras': ('front', 'wrist'), 'wrist_images': '`wrist`'},
++    vocabulary=r'robomme_', task_nouns='', task_tag='RoboMME-Plus',
++    score_label='Held-out success rate', layout_note='Released train and test episodes only.',
++    setup_defaults={**BENCHMARKS['libero_pro'].setup_defaults, 'demonstration_context': 'none'},
++    cli_defaults={**BENCHMARKS['libero_pro'].cli_defaults, 'agent_cli': 'claude', 'agent_effort': 'medium'},
++)
+ ALL_ROBOT_TOOLS = frozenset().union(*(b.robot_tools for b in BENCHMARKS.values()))
+ ALL_MUTATING = frozenset().union(*(b.mutating for b in BENCHMARKS.values()))
+ ALL_UNSCOPED_TOOLS = frozenset().union(*(b.unscoped_tools for b in BENCHMARKS.values()))
+diff --git a/services/controller/config.py b/services/controller/config.py
+index 089cf17..0f3fe6b 100644
+--- a/services/controller/config.py
++++ b/services/controller/config.py
+@@ -12,7 +12,7 @@ from services.demonstration_io import DEMONSTRATION_CONTEXTS
+ FORMAL_EPISODES = 50  # Default held-out formal episodes of a new session.
+ # Reasoning efforts both agent CLIs (Codex model_reasoning_effort, Claude Code --effort)
+ # and OpenRouter accept; xhigh is the established default.
+-AGENT_EFFORTS = ('xhigh', 'max')
++AGENT_EFFORTS = ('medium', 'high', 'xhigh', 'max')
+ # What the mounted expert episodes hold: 'full' (commanded references, measured motion, object
+ # states and camera) or 'images' (front-camera video, previews and depth only).
+ EXPERT_CONTENTS = ('full', 'images')
+@@ -203,7 +203,7 @@ class Configuration:
+             raise ValueError("Use a locally provisioned, digest-pinned image")
+         if not re.fullmatch(r"[A-Za-z0-9_]+", self.task):
+             raise ValueError("Invalid task")
+-        if not self.exploration_seeds or len(self.exploration_seeds) > MAX_EXPLORATION_EPISODES:
++        if (not self.exploration_seeds and not (bench.offline_submission and self.demonstration_context != "none")) or len(self.exploration_seeds) > MAX_EXPLORATION_EPISODES:
+             raise ValueError(f"Provide 1..{MAX_EXPLORATION_EPISODES} exploration episodes")
+         if any(type(s) is not int or s < 0 for s in (*self.exploration_seeds, self.formal_seed, self.eval_seed)):
+             raise ValueError("Seeds must be nonnegative integers")
+diff --git a/services/controller/frontend.py b/services/controller/frontend.py
+index a6d8c94..859d64a 100644
+--- a/services/controller/frontend.py
++++ b/services/controller/frontend.py
+@@ -63,6 +63,11 @@ def for_config(tools, config):
+     if not benchmark_for(config).graded_score:
+         tools = [{**tool, 'description': tool['description'].replace(GRADED_FORMAL, BINARY_FORMAL)}
+                  if tool['name'] == 'submit' else tool for tool in tools]
++    if config.benchmark == 'robomme_plus' and not config.exploration_seeds:
++        tools = [{**tool, 'description': tool['description'].replace(
++            'freeze the exact cleanly rehearsed bundle', 'freeze the offline-developed bundle')
++            + ' RoboMME-Plus demo-only has zero simulator starts: no rehearsal is required or allowed.'}
++            if tool['name'] == 'submit' else tool for tool in tools]
+     if not config.agent_formal:
+         return tools
+     return [{**tool, 'description': LIVE_COPY_DESCRIPTIONS.get(tool['name'], tool['description'])}
+@@ -213,6 +218,10 @@ class ResearchFrontend:
+                 return ('Exploration is complete. Update memory/PROGRESS.md, report your exploration results, '
+                         'then end your turn. Your work is then frozen and the formal batch runs your submitted '
+                         'bundle on the held-out layouts; you do not see its result.')
++            if config.benchmark == 'robomme_plus' and not config.exploration_seeds:
++                return ('demo-only permits no simulator starts. Register your offline-developed controller, '
++                        'then call submit with your chosen bundle; no rehearsal is required. '
++                        'After submission, update memory/PROGRESS.md and end your turn.')
+             if any(self.s._has_qualifying_rehearsal(ident, m) for ident, m in state['bundles'].items()):
+                 return ('No exploration episode remains and you have not submitted a bundle. Call submit with '
+                         'the rehearsal-qualified bundle you choose (status lists them); without a submission '
+@@ -276,6 +285,11 @@ class ResearchFrontend:
+         return response['result']
+ 
+     def call(self, name, args):
++        if self.s.config.benchmark == 'robomme_plus':
++            from benchmark_io.development_deadline import rax_clock, DevelopmentExpired, WRAPUP
++            clock = rax_clock(self.s.config)
++            if clock and clock.remaining() <= 0 and name not in ('status', 'finish', 'register', 'submit'):
++                raise DevelopmentExpired(WRAPUP)
+         if name in ALL_ROBOT_TOOLS or name == 'gemini_generate':
+             self.contract.require_robot(name, args)
+             return self.robot(name, args)
+@@ -325,7 +339,7 @@ class ResearchFrontend:
+         elif name == 'submit':
+             manifest = self.s.state['bundles'][args['bundle']]
+             verify(self.s.config.root/'bundles'/manifest['directory'], manifest)
+-            if not self.s._has_qualifying_rehearsal(args['bundle'], manifest):
++            if self.s.config.exploration_seeds and not self.s._has_qualifying_rehearsal(args['bundle'], manifest):
+                 raise RuntimeError('Exact clean rehearsal required')
+             self.s.preflight(args['bundle'], formal=True, live_episode_ok=True)  # A failure leaves exploration open.
+             if self.s.state.get('active'):
+diff --git a/services/controller/sandbox.py b/services/controller/sandbox.py
+index 07f1d59..a74c7c9 100644
+--- a/services/controller/sandbox.py
++++ b/services/controller/sandbox.py
+@@ -177,6 +177,12 @@ class DockerSandbox:
+         seen = {"stdout": 0, "stderr": 0}
+         log_details = None
+         primary = None
++        watchdog = None
++        runtime_limits = None
++        if (os.environ.get('ROBOMME_AGENTIC_RUNTIME_POLICY') and gateway is not None
++                and getattr(getattr(gateway.backend, 'config', None), 'benchmark', None)=='robomme_plus'):
++            from benchmark_io.runtime_policy import configured, ProgressWatchdog
++            runtime_limits = configured()
+         def log(stream, data):
+             seen[stream] += len(data)
+             logs[stream].extend(data[:max(0, 1024 * 1024 - len(logs[stream]))])
+@@ -189,6 +195,8 @@ class DockerSandbox:
+                 raise ExecutionDeadline()
+             with deadline(remaining):
+                 execution_started = time.monotonic()
++                if runtime_limits:
++                    watchdog = ProgressWatchdog(runtime_limits)
+                 process = subprocess.Popen(self.command(name, bundle, mode, entrypoint, sdk=sdk, frames=frames,
+                                            writable=writable, workspace_path=workspace_path), stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+@@ -198,6 +206,11 @@ class DockerSandbox:
+                 pending = bytearray()
+                 try:
+                     while selector.get_map():
++                        if watchdog and not finalizing:
++                            stalled = watchdog.check(gateway.backend.sim.step_id)
++                            if stalled:
++                                reason = stalled
++                                raise ExecutionDeadline()
+                         for key, _ in selector.select(timeout=1):
+                             block = os.read(key.fileobj.fileno(), 65536)
+                             if not block:
+@@ -223,7 +236,11 @@ class DockerSandbox:
+                                     response = {'jsonrpc': '2.0', 'id': request.get('id'),
+                                                 'error': {'code': -32000, 'message': 'Episode ended; artifact cleanup only'}}
+                                 else:
+-                                    response = gateway.handle(token, request)
++                                    if runtime_limits:
++                                        with deadline(runtime_limits.simulator_rpc_seconds):
++                                            response = gateway.handle(token, request)
++                                    else:
++                                        response = gateway.handle(token, request)
+                                 if response is not None:
+                                     process.stdin.write(json.dumps(response, allow_nan=False).encode() + b"\n")
+                                     process.stdin.flush()
+@@ -235,7 +252,8 @@ class DockerSandbox:
+                 finally:
+                     selector.close()
+         except ExecutionDeadline:
+-            reason = "finalization_timeout" if finalizing else "timeout"
++            if reason not in ('controller_no_progress','controller_wall_timeout'):
++                reason = "finalization_timeout" if finalizing else "timeout"
+         except BaseException as exc:
+             primary = exc
+             raise
+diff --git a/services/controller/supervisor.py b/services/controller/supervisor.py
+index 9f2b50a..5108261 100644
+--- a/services/controller/supervisor.py
++++ b/services/controller/supervisor.py
+@@ -522,7 +522,7 @@ class Supervisor:
+         manifest = self.state["bundles"][bundle_id]
+         verify(self.config.root / "bundles" / manifest["directory"], manifest)
+         project_directory(manifest['workspace_path'])
+-        if formal and not self._has_qualifying_rehearsal(bundle_id, manifest):
++        if formal and self.config.exploration_seeds and not self._has_qualifying_rehearsal(bundle_id, manifest):
+             raise RuntimeError("A clean rehearsal of this exact bundle is required before formal submission")
+         self.runner_factory(self.config.image, self.config.formal).preflight()
+ 
+@@ -532,7 +532,7 @@ class Supervisor:
+         bundle = self.config.root / "bundles" / manifest["directory"]
+         verify(bundle, manifest)
+         project_directory(manifest['workspace_path'])
+-        if formal and not self._has_qualifying_rehearsal(bundle_id, manifest):
++        if formal and self.config.exploration_seeds and not self._has_qualifying_rehearsal(bundle_id, manifest):
+             raise RuntimeError("A clean rehearsal of this exact bundle is required before formal submission")
+         if not formal or self.config.formal_episodes == 1:
+             return self._run_episode(bundle_id, formal=formal)
+@@ -653,6 +653,8 @@ class Supervisor:
+         try:
+             if self.config.formal_workers == 1 and driver == 'bundle':
+                 for index in range(self.config.formal_episodes):
++                    if index + 1 in done:
++                        continue
+                     self._record_formal(batch, self._run_episode(bundle_id, formal=True, formal_index=index))
+             else:
+                 self._run_parallel_formal(bundle_id, batch, driver=driver, done=done)
+@@ -955,6 +957,10 @@ class Supervisor:
+             result.update(reason="session_stopped", session_stopped={'stage': timeout_stage})
+             raise
+         finally:
++            if result.get('reason') in ('controller_no_progress','controller_wall_timeout'):
++                result['watchdog_reason']=result['reason']
++                result['failure_kind']='policy_timeout'
++                result['reason']='timeout'
+             if result.get("reason") == "finalization_timeout":
+                 # The episode already ended; only process exit overran. Evaluate it normally.
+                 result.update(reason="episode_ended", finalization_timeout=True)

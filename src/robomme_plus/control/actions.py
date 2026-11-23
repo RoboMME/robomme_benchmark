@@ -11,6 +11,8 @@ def normalize_joint_action(native, action):
     env_id = getattr(native, "task_name", getattr(getattr(native, "spec", None), "id", "<unknown_env>"))
     size = 7 if env_id in ("PatternLock", "RouteStick") else 8
     values = np.asarray(action, dtype=np.float64).reshape(-1)
+    if not np.isfinite(values).all():
+        raise ValueError(f"[{env_id}] action values must be finite")
     if values.size < size:
         raise ValueError(f"[{env_id}] action must have at least {size} elements, got {values.size}")
     return values[:size]

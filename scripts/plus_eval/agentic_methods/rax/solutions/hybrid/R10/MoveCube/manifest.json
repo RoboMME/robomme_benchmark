@@ -1,0 +1,28 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "MoveCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "5e3fed1009f4ae393447a3440baf749f1388a3725598351b9837fe9d21e75330",
+    "motion.py": "dd5edad2e0bf1c0a3d36e9d8b088519258a25158e19193673eca69b0614862fa",
+    "percep.py": "cb57c06307660a19e82ec1c810fd71717b6898680c47178f8a0744de668bf428",
+    "plan.py": "075d631269234d334c2f6cf984d4283687bb2c3be33ab9ca1fa04a61dc2695f3"
+  },
+  "source_policy_files": {
+    "controller.py": "5e3fed1009f4ae393447a3440baf749f1388a3725598351b9837fe9d21e75330",
+    "motion.py": "dd5edad2e0bf1c0a3d36e9d8b088519258a25158e19193673eca69b0614862fa",
+    "percep.py": "cb57c06307660a19e82ec1c810fd71717b6898680c47178f8a0744de668bf428",
+    "plan.py": "075d631269234d334c2f6cf984d4283687bb2c3be33ab9ca1fa04a61dc2695f3"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "e6b46ce43575e745569a8537cf3a9ef5f482193ec18ae4d6141a5a6864ec2704",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "4174324e1a6b314b7e4fea1fbbd623dd2ff74256da6c58f55eb6e3f051b1a897"
+  }
+}

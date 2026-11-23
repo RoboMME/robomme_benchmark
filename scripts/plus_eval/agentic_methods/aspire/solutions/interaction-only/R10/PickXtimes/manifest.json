@@ -1,0 +1,19 @@
+{
+  "method": "aspire",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "PickXtimes",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "582bcfe59bb5c97dfdfd6a6f70ab113ce4b32feb9ebdc6ad5447399c9b228c02"
+  },
+  "source_policy_files": {
+    "PickXtimes.py": "582bcfe59bb5c97dfdfd6a6f70ab113ce4b32feb9ebdc6ad5447399c9b228c02"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "af1fd98dde91910aa4e850862f48805d31cc7d240f2f37a1edf4f554c94c51d1",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy"
+}

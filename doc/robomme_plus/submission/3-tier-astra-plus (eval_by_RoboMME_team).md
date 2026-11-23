@@ -1,0 +1,61 @@
+# 3-tier Astra on RoboMME-Plus (eval_by_RoboMME_team)
+
+3-tier Astra separates planning, monitoring, and action. GPT-6 Astra proposes grounded subtasks, a Qwen3-VL-4B completion monitor decides when to replan, and a GroundSG Pi0.5 policy executes joint actions. We transfer the released system to RoboMME-Plus.
+
+- **Track:** Agentic.
+- **Code:** [Code](https://github.com/bingaochen/Astra-on-RoboMME) · [Run instructions](../../../scripts/plus_eval/agentic_methods/astra/three_tier/README.md).
+- **Final evaluation solutions:** N/A (no agentic development).
+- **Development logs:** N/A (no agentic development).
+- **Paper / website / blog:** [Website](https://bingaochen.github.io/Astra-on-RoboMME/)
+- **Model / checkpoint:** The local components are [Yinpei/mme_vla_suite: symbolic-grounded-subgoal](https://huggingface.co/Yinpei/mme_vla_suite/tree/main/symbolic-grounded-subgoal), [Qwen/Qwen3-VL-4B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct), and [bingaochen/Astra-on-RoboMME-Monitor](https://huggingface.co/bingaochen/Astra-on-RoboMME-Monitor). Astra remains an API model.
+- **Parameters:** N/A (API model)
+- **Evaluated by:** RoboMME Team.
+
+## Results
+
+### Overall results
+
+| Setting | Rollouts per task | Success | Development starts | Development API cost | Evaluation API cost |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `Zero-shot` | 0 | 70/800 (8.75%) | 0 | N/A | ≈$840 |
+
+Outcomes: 70 successes, 466 failures and 264 timeouts.
+
+### Per-task success
+
+| Suite | Task | `Zero-shot` |
+| --- | --- | ---: |
+| Counting | BinFill | 3/50 (6.00%) |
+| Counting | PickXtimes | 3/50 (6.00%) |
+| Counting | SwingXtimes | 5/50 (10.00%) |
+| Counting | StopCube | 1/50 (2.00%) |
+| Permanence | VideoUnmask | 2/50 (4.00%) |
+| Permanence | VideoUnmaskSwap | 0/50 (0.00%) |
+| Permanence | ButtonUnmask | 0/50 (0.00%) |
+| Permanence | ButtonUnmaskSwap | 0/50 (0.00%) |
+| Reference | PickHighlight | 1/50 (2.00%) |
+| Reference | VideoRepick | 2/50 (4.00%) |
+| Reference | VideoPlaceButton | 28/50 (56.00%) |
+| Reference | VideoPlaceOrder | 25/50 (50.00%) |
+| Imitation | MoveCube | 0/50 (0.00%) |
+| Imitation | InsertPeg | 0/50 (0.00%) |
+| Imitation | PatternLock | 0/50 (0.00%) |
+| Imitation | RouteStick | 0/50 (0.00%) |
+| **Overall** | **All tasks** | **70/800 (8.75%)** |
+
+## Method details
+
+- **Action space:** `joint_angle`.
+- **Demo use:** No released RoboMME-Plus training demonstrations.
+- **RoboMME-Plus adaptation:** none. The RoboMME-trained GroundSG policy and completion monitor are reused without RoboMME-Plus fine-tuning or training examples.
+- **Components:** the Astra API planner, Qwen3-VL-4B with the released monitor adapter, and `symbolic-grounded-subgoal/79999`; model sampling seed 42.
+- **Planner input:** visual history uses contact sheets with up to 16 frames each. Initial planner inputs are capped at 750 API images, and independent requests at 1,500 images. Oversized requests count as unsuccessful episodes.
+
+## Agentic development audit record
+
+Not applicable: no agentic development.
+
+## Citations
+
+- [Astra on RoboMME](https://bingaochen.github.io/Astra-on-RoboMME/).
+- [RoboMME: Benchmarking and Understanding Memory for Robotic Generalist Policies](https://arxiv.org/abs/2603.04639).

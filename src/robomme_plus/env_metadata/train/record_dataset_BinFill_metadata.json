@@ -11,8 +11,12 @@
       "oracle_policy_step": 1080,
       "suite": "counting",
       "episode": 0,
-      "oracle_wall_seconds": 266.159,
-      "control_freq": 20
+      "oracle_wall_seconds": 38.457,
+      "control_freq": 20,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "light_dim"
+      }
     },
     {
       "task": "BinFill",
@@ -21,7 +25,7 @@
       "oracle_policy_step": 845,
       "suite": "counting",
       "episode": 1,
-      "oracle_wall_seconds": 247.349,
+      "oracle_wall_seconds": 82.39,
       "control_freq": 20
     },
     {
@@ -31,7 +35,7 @@
       "oracle_policy_step": 654,
       "suite": "counting",
       "episode": 2,
-      "oracle_wall_seconds": 194.988,
+      "oracle_wall_seconds": 57.462,
       "control_freq": 20
     }
   ]

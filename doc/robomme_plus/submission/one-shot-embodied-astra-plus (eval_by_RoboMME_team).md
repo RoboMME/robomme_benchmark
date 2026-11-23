@@ -1,0 +1,62 @@
+# One-shot Embodied-Astra on RoboMME-Plus (eval_by_RoboMME_team)
+
+One-shot Embodied-Astra uses the same `gpt-6-astra` waypoint policy as Embodied-Astra, with a successful training episode prepended as context. The example supplies the task goal and sampled RGB frames, allowing adaptation within the prompt without updating model weights.
+
+- **Track:** Agentic.
+- **Code:** [Code](https://github.com/jackbjed/embodied-astra-robomme) · [Run instructions](../../../scripts/plus_eval/agentic_methods/astra/embodied/README.md#one-shot).
+- **Final evaluation solutions:** N/A (no agentic development).
+- **Development logs:** N/A (no agentic development).
+- **Paper / website / blog:** [Paper](https://arxiv.org/abs/2610.17350) · [Website](https://embodied-astra.github.io/)
+- **Model / checkpoint:** The underlying Astra model is accessed through its API. Adaptation uses the [RoboMME-Plus training set](https://huggingface.co/datasets/Yinpei/robomme_plus_data_h5); this entry does not produce a fine-tuned checkpoint.
+- **Parameters:** N/A (API model)
+- **Evaluated by:** RoboMME Team.
+
+## Results
+
+### Overall results
+
+| Setting | Rollouts per task | Success | Development starts | Development API cost | Evaluation API cost |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `Demo-only` | 0 | 281/800 (35.13%) | 0 | N/A | ≈$2,100 |
+
+Outcomes: 281 successes, 481 failures and 38 timeouts.
+
+### Per-task success
+
+| Suite | Task | `Demo-only` |
+| --- | --- | ---: |
+| Counting | BinFill | 13/50 (26.00%) |
+| Counting | PickXtimes | 40/50 (80.00%) |
+| Counting | SwingXtimes | 49/50 (98.00%) |
+| Counting | StopCube | 19/50 (38.00%) |
+| Permanence | VideoUnmask | 14/50 (28.00%) |
+| Permanence | VideoUnmaskSwap | 0/50 (0.00%) |
+| Permanence | ButtonUnmask | 39/50 (78.00%) |
+| Permanence | ButtonUnmaskSwap | 13/50 (26.00%) |
+| Reference | PickHighlight | 21/50 (42.00%) |
+| Reference | VideoRepick | 8/50 (16.00%) |
+| Reference | VideoPlaceButton | 18/50 (36.00%) |
+| Reference | VideoPlaceOrder | 11/50 (22.00%) |
+| Imitation | MoveCube | 9/50 (18.00%) |
+| Imitation | InsertPeg | 14/50 (28.00%) |
+| Imitation | PatternLock | 9/50 (18.00%) |
+| Imitation | RouteStick | 4/50 (8.00%) |
+| **Overall** | **All tasks** | **281/800 (35.13%)** |
+
+## Method details
+
+- **Action space:** `waypoint`.
+- **Demo use:** One selected training episode per task, except MoveCube; RGB images and task goals.
+- **Adaptation:** one medium training example for each of 15 tasks. InsertPeg uses training episode 1; MoveCube receives no training example.
+- **Example format:** front and wrist images are paired side by side, with demonstration/execution phase labels and the training goal. The context includes RGB images and the goal; recorded actions and subgoal annotations are excluded.
+- **Current episode:** the same front-camera history, current wrist view, robot state, camera calibration, and `lr_note` prompt as the `Zero-shot` policy.
+- **Image budget:** 1,100 images in the initial request, with up to 550 allocated to the example, and 1,500 images across the conversation. No gradient updates or RoboMME-Plus checkpoint training are performed.
+
+## Agentic development audit record
+
+Not applicable: no agentic development.
+
+## Citations
+
+- [Embodied Astra on RoboMME](https://github.com/jackbjed/embodied-astra-robomme).
+- [RoboMME: Benchmarking and Understanding Memory for Robotic Generalist Policies](https://arxiv.org/abs/2603.04639).

@@ -58,7 +58,7 @@ class ButtonBoard:
 
 
 class ButtonDeadline:
-    """Accept either order; count a repeat only after the gripper withdraws."""
+    """Enforce a press deadline independently of whether motion ever stops."""
 
     PRESS_DEPTH_M = 0.005
     RELEASE_DEPTH_M = 0.002
@@ -66,11 +66,14 @@ class ButtonDeadline:
     RELEASE_STEPS = 2
 
     def __init__(self, names, start, stop, post_press_steps=POST_BUTTON_MOTION_STEPS,
-                 *, fixed_motion_stop=False, continuous_motion=False):
+                 *, fixed_motion_stop=False, continuous_motion=False,
+                 repeat_press_allowed=False, motion_stop_step=None):
         self.names, self.start, self.stop = tuple(names), int(start), int(stop)
+        self.motion_limit = self.stop if motion_stop_step is None else int(motion_stop_step)
         self.post_press_steps = int(post_press_steps)
         self.fixed_motion_stop = bool(fixed_motion_stop)
         self.continuous_motion = bool(continuous_motion)
+        self.repeat_press_allowed = bool(repeat_press_allowed)
         self.presses = {}
         self.depressed = set()
         self._press_tcp = {}
@@ -85,6 +88,8 @@ class ButtonDeadline:
         tcp = np.asarray(tcp_position, dtype=float)
         if not self.failed and step >= self.start:
             for name in self.names:
+                if self.repeat_press_allowed and name in self.presses:
+                    continue
                 depth = depths.get(name, 0)
                 if name in self.depressed:
                     delta = tcp - self._press_tcp[name]
@@ -110,10 +115,10 @@ class ButtonDeadline:
                     self.failure_reason = "repeated_button_press"
                     self.repeated_button = name
                     break
-                if moving and (self.continuous_motion or step < self.stop):
+                if moving and step < self.stop:
                     self.presses[name] = int(step)
                     self.press_events.append(dict(button=name, control_step=int(step), repeated=False))
-        if (not self.continuous_motion and not self.failed
+        if (not self.failed
                 and step >= self.stop and len(self.presses) != len(self.names)):
             self.failed = True
             self.failed_at = int(step)
@@ -125,8 +130,8 @@ class ButtonDeadline:
         if self.continuous_motion:
             return None
         if not self.fixed_motion_stop and len(self.presses) == len(self.names) and not self.failed:
-            return min(self.stop, max(self.presses.values()) + self.post_press_steps)
-        return self.stop
+            return min(self.motion_limit, max(self.presses.values()) + self.post_press_steps)
+        return self.motion_limit
 
     def snapshot(self):
         return {
@@ -134,13 +139,13 @@ class ButtonDeadline:
             "press_control_steps": dict(self.presses),
             "press_events": list(self.press_events),
             "order": "either",
-            "repeat_press_allowed": False,
+            "repeat_press_allowed": self.repeat_press_allowed,
             "press_depth_threshold_m": self.PRESS_DEPTH_M,
             "release_depth_threshold_m": self.RELEASE_DEPTH_M,
             "repeat_requires_gripper_withdrawal_m": self.WITHDRAWAL_M,
             "release_debounce_control_steps": self.RELEASE_STEPS,
             "motion_start_control_step": self.start,
-            "deadline_control_step": None if self.continuous_motion else self.stop,
+            "deadline_control_step": self.stop,
             "motion_stop_control_step": self.motion_stop,
             "post_button_motion_steps": self.post_press_steps,
             "fixed_motion_stop": self.fixed_motion_stop,

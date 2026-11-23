@@ -1,0 +1,24 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "VideoPlaceOrder",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "6eb938629ac8f72dd5e7e62e10471c8c4598e978c80e4289735c222d6834f792",
+    "vlib.py": "8ebc7c04d655bbbbeadfc9c40a694743337eed979b088ff6c748bc2086d3ecb5"
+  },
+  "source_policy_files": {
+    "controller.py": "6eb938629ac8f72dd5e7e62e10471c8c4598e978c80e4289735c222d6834f792",
+    "vlib.py": "8ebc7c04d655bbbbeadfc9c40a694743337eed979b088ff6c748bc2086d3ecb5"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "6a4d1aebb513a42c04c4bc290f6956398c521b5f0f7fa4fa80c186702456b971",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "ffc1d9f9670ca43200a69e0bbb96c5d5d97c679b9725e42d4a889ce0ae5de9c0"
+  }
+}

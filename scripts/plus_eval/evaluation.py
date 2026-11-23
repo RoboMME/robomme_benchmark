@@ -31,7 +31,7 @@ import traceback
 import numpy as np
 
 from privacy import RedactingWriter, refresh_secrets, safe_items, scrub, write_text
-from demonstration_sampling import configuration_for_method, prepare_demonstration
+from non_agentic_methods.framesamp_modul.demonstration_sampling import configuration_for_method, prepare_demonstration
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
@@ -352,7 +352,7 @@ async def maybe_await(value):
     return await value if inspect.isawaitable(value) else value
 
 
-def select_cases(builder_class, tasks=None, episodes=None, action_space="joint_angle"):
+def select_cases(builder_class, tasks=None, episodes=None, action_space="joint_angle", *, perceptual_variations=None):
     available = builder_class.get_task_list()
     tasks = available if tasks is None else tasks
     if not tasks or len(set(tasks)) != len(tasks) or set(tasks) - set(available):
@@ -361,7 +361,8 @@ def select_cases(builder_class, tasks=None, episodes=None, action_space="joint_a
         raise ValueError("Episode indices must be distinct and nonempty.")
     builders, cases = {}, []
     for task in tasks:
-        builder = builder_class(task, dataset="test", action_space=action_space, gui_render=False)
+        options = {} if perceptual_variations is None else {'perceptual_variations': perceptual_variations}
+        builder = builder_class(task, dataset="test", action_space=action_space, gui_render=False, **options)
         builders[task] = builder
         for episode in range(builder.get_episode_num()) if episodes is None else episodes:
             if not 0 <= episode < builder.get_episode_num():
@@ -389,14 +390,20 @@ def aggregate_metrics(results):
                     "usage": {k: sum(a["usage"][k] for a in api) for k in api_usage({})}}}
 
 
-def summarize(cases, results, method=None):
+def summarize(cases, results, method=None, benchmark=None):
     # Disk records are authoritative; never count a replaced episode twice.
     expected = {(c['task'], c['episode']) for c in cases}
     rows = {(r['task'], r['episode']): r for r in results if (r['task'], r['episode']) in expected}
     results = list(rows.values())
     finished = [r for r in results if not r.get('interrupted')]
     counts = Counter(r["status"] for r in finished)
-    report = {"schema_version": SCHEMA_VERSION, "benchmark": "robomme_plus", "dataset": "test",
+    benchmarks = {r.get('benchmark', 'robomme_plus') for r in results}
+    if len(benchmarks) > 1:
+        raise ValueError('Cannot aggregate different benchmarks into one score')
+    benchmark = benchmark or next(iter(benchmarks), 'robomme_plus')
+    if benchmarks and benchmarks != {benchmark}:
+        raise ValueError('Result benchmark does not match the requested summary')
+    report = {"schema_version": SCHEMA_VERSION, "benchmark": benchmark, "dataset": "test",
               "method": method, "requested": len(cases), "completed": len(finished),
               "pending": len(cases) - len(finished), "complete": len(cases) == len(finished),
               "interrupted": len(results) - len(finished),
@@ -418,6 +425,13 @@ class Evaluation:
     action_space = "joint_angle"
     api_applicable = False
     observation_options = {}
+    benchmark = 'robomme_plus'
+    budget_rule = 'ceil(1.5 * oracle_policy_step) + 200'
+    enforce_budget_in_runner = True
+
+    def builder_class(self):
+        from robomme_plus.env_record_wrapper import BenchmarkEnvBuilder
+        return BenchmarkEnvBuilder
 
     def __init__(self, args):
         self.args = args
@@ -445,7 +459,7 @@ class Evaluation:
         self.recorder = rec = EpisodeRecorder(directory, pricing, self.api_applicable)
         self.task, self.episode = task, episode
         self.goal = None
-        result = {"schema_version": SCHEMA_VERSION, "benchmark": "robomme_plus", "dataset": "test",
+        result = {"schema_version": SCHEMA_VERSION, "benchmark": self.benchmark, "dataset": "test",
                   "method": self.method, "task": task, "episode": episode, "status": "error",
                   "success": False, "steps": 0, "max_steps": builder.episode_max_steps(episode),
                   "action_space": self.action_space, "started_utc": utc_now()}
@@ -455,7 +469,13 @@ class Evaluation:
         with capture_log(rec.directory / "episode.log"):
             try:
                 if hasattr(builder, "get_episode_metadata"):
-                    write_json(rec.directory / "metadata.json", builder.get_episode_metadata(episode))
+                    metadata = dict(builder.get_episode_metadata(episode))
+                    if self.benchmark == 'robomme_plus':
+                        enabled = bool(getattr(self.args, 'perceptual_variations', True))
+                        if not enabled:metadata.pop('perceptual_variation', None)
+                        result.update(perceptual_variations_enabled=enabled,
+                                      perceptual_variation=metadata.get('perceptual_variation'))
+                    write_json(rec.directory / "metadata.json", metadata)
                 t = time.perf_counter()
                 try:
                     env = builder.make_env_for_episode(episode, **self.observation_options)
@@ -480,7 +500,7 @@ class Evaluation:
                 print(f"{self.method}: {task} episode {episode}: {self.goal} (budget {result['max_steps']})", flush=True)
                 await maybe_await(self.start_episode(obs, info))
                 trial_step = int(info.get("execution_control_steps", 0))
-                while trial_step < result["max_steps"]:
+                while not self.enforce_budget_in_runner or trial_step < result["max_steps"]:
                     try:
                         proposed_action = await maybe_await(self.act(obs, info))
                     except PolicyStop as stop:
@@ -551,7 +571,7 @@ class Evaluation:
                     if len(actions) % 100 == 0:
                         print(f"{task} episode {episode}: {rec.step}/{result['max_steps']} control steps", flush=True)
                 else:
-                    result.update(status="timeout", end_reason="ood_control_step_budget")
+                    result.update(status="timeout", end_reason="benchmark_control_step_budget")
             except PolicyStop as exc:
                 result.update(status="fail", end_reason=str(exc))
             except BaseException as exc:
@@ -593,7 +613,7 @@ class Evaluation:
 
     async def run(self):
         refresh_secrets()
-        from robomme_plus.env_record_wrapper import BenchmarkEnvBuilder
+        BenchmarkEnvBuilder = self.builder_class()
         from run_storage import run_lock, read, rebuild_batch
         directory = self.args.output_dir
         parent_batch = directory.parent / 'batch.json'
@@ -622,7 +642,11 @@ class Evaluation:
         tasks = args.tasks
         if old and tasks is None:
             tasks = list(dict.fromkeys(c['task'] for c in old['cases']))
-        builders, document = select_cases(builder_class, tasks, args.episodes, self.action_space)
+        varied = bool(getattr(args, 'perceptual_variations', True)) if self.benchmark == 'robomme_plus' else None
+        builders, document = select_cases(builder_class, tasks, args.episodes, self.action_space,
+                                          perceptual_variations=varied)
+        document['perceptual_variations'] = bool(varied)
+        document['benchmark'] = self.benchmark
         if old and args.tasks is None and args.episodes is None:
             available = {(c['task'], c['episode']) for c in document['cases']}
             if any((c['task'], c['episode']) not in available for c in old['cases']):
@@ -636,20 +660,20 @@ class Evaluation:
         config = {"schema_version": SCHEMA_VERSION, "method": self.method, **document,
                   "arguments": vars(args), "api_pricing": pricing, "started_utc": utc_now(),
                   "video_fps": 20, "demonstration_preprocessing": configuration_for_method(self.method),
-                  "budget_rule": "ceil(1.5 * oracle_policy_step) + 200",
+                  "budget_rule": self.budget_rule,
                   "runtime": {"python": platform.python_version(), "executable": sys.executable,
                               "platform": platform.platform(), "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES")}}
         if os.environ.get('OOD_QUEUE_MANAGED'):
             config['runtime']['queue_workers'] = int(os.environ.get('OOD_TASK_WORKERS', '1'))
         source_files = [Path(__file__), Path(__file__).with_name("privacy.py"),
                         Path(__file__).with_name('run_storage.py'),
-                        Path(__file__).with_name('demonstration_sampling.py'), Path(inspect.getfile(type(self)))]
+                        Path(inspect.getfile(prepare_demonstration)), Path(inspect.getfile(type(self)))]
         if self.method == 'embodied-astra':
-            source_files.append(Path(__file__).with_name('astra_image_sampling.py'))
+            source_files.append(Path(__file__).parent / 'agentic_methods/astra/image_sampling.py')
         source_files.extend(getattr(self, 'source_dependencies', ()))
         config["source_sha256"] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files}
-        config["benchmark_source_sha256"] = benchmark_sources()
-        metadata = ROOT / "src/robomme_plus/env_metadata/test"
+        config["benchmark_source_sha256"] = benchmark_sources(self.benchmark)
+        metadata = ROOT / 'src' / self.benchmark / 'env_metadata/test'
         config["metadata_sha256"] = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(metadata.glob("*.json"))}
         config["episode_metadata"] = {
             f"{case['task']}_ep{case['episode']}": builders[case['task']].get_episode_metadata(case['episode'])
@@ -714,6 +738,8 @@ def common_parser(description):
     parser.add_argument("--output-dir", "--run-dir", dest="output_dir", type=Path, required=True)
     parser.add_argument("--api-pricing-json", type=Path, help="Optional model rate card; absent/unmatched pricing means unknown cost.")
     parser.add_argument("--fail-fast", action="store_true", help="Stop after the first episode error; default: record it and continue sequentially.")
+    parser.add_argument('--perceptual-variations', action=argparse.BooleanOptionalAction, default=True,
+                        help='Enable marked Plus test profiles (default); --no-perceptual-variations disables appearance profiles only; use a separate output directory.')
     add_run_modes(parser)
     return parser
 

@@ -1,0 +1,24 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "PatternLock",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "2d82b0309f8e184a063ca4a90727c22654fe7b41e7fc6261ad6c323f8be405ac",
+    "geom.py": "73d594c1783f966791ff8d23611e9c7bd6664cce2d652b16077eb07b79adc170"
+  },
+  "source_policy_files": {
+    "controller.py": "2d82b0309f8e184a063ca4a90727c22654fe7b41e7fc6261ad6c323f8be405ac",
+    "geom.py": "73d594c1783f966791ff8d23611e9c7bd6664cce2d652b16077eb07b79adc170"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "e9daacad6977b5fcd8a43001abb2ac9c7df0f84fc73e9d91be764ea5be386ff6",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "89feb90a92bfebccd683070493e1d5d582ebf4356138391c2cdf82029137e106"
+  }
+}

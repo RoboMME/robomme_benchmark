@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"active\": true, \"finished\": false, \"task\": \"SyntheticTask\", \"episode_id\": \"synthetic-episode\", \"step_id\": 0, \"instruction\": \"Synthetic format example; no task to solve.\", \"robot\": \"Franka Panda arm with a parallel-jaw gripper\", \"action_layout\": {\"dim\": 7, \"fields\": [{\"slice\": [0, 3], \"name\": \"end_effector_position_delta\", \"frame\": \"world\", \"scale\": \"1.0 = 0.05 m\"}, {\"slice\": [3, 6], \"name\": \"end_effector_rotation_delta\", \"frame\": \"world\", \"note\": \"axis-angle\", \"scale\": \"1.0 = 0.5 rad\"}, {\"slice\": [6, 7], \"name\": \"gripper\", \"values\": \"-1 opens, +1 closes\"}], \"range\": [-1.0, 1.0], \"semantics\": \"each row is a relative command: the public ee_pose wrapper targets the measured end-effector pose plus the scaled delta for one control step\"}, \"state_layout\": {\"dim\": 8, \"fields\": [{\"slice\": [0, 3], \"name\": \"end_effector_position_m\", \"frame\": \"world\"}, {\"slice\": [3, 6], \"name\": \"end_effector_orientation_axis_angle_rad\", \"frame\": \"world\"}, {\"slice\": [6, 8], \"name\": \"gripper_finger_positions_m\"}]}, \"cameras\": [\"front\", \"wrist\"], \"image_size\": [256, 256], \"max_action_rows\": 100, \"control_frequency_hz\": 20, \"episode_limits\": {\"episode_step_limit\": 100, \"remaining_episode_steps\": 100}, \"episode_ended\": false}"
+    }
+  ]
+}

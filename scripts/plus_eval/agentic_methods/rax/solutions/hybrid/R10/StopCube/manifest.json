@@ -1,0 +1,26 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "StopCube",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "ba88c00f35ff1402ad9fea44181d228d6c27e6876e92c24f963b56ead4978ea4",
+    "percep.py": "04d0112ca5db831ea49a6dd6cd98d2fcad2c7d95fe6dbcce2185487ccf6b7de1",
+    "rlib.py": "5941619d3b59ca9aac11cad20aabf508afe46bdd1617dca3c021876530a8f224"
+  },
+  "source_policy_files": {
+    "controller.py": "ba88c00f35ff1402ad9fea44181d228d6c27e6876e92c24f963b56ead4978ea4",
+    "percep.py": "04d0112ca5db831ea49a6dd6cd98d2fcad2c7d95fe6dbcce2185487ccf6b7de1",
+    "rlib.py": "5941619d3b59ca9aac11cad20aabf508afe46bdd1617dca3c021876530a8f224"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "331673cdd68301931f7e32402e436217fb1126fe36605ec349a707344c8d52e1",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "7a6ad36005e7cadf23278b742c763e0563ee541113fbce6a352ff36c6a6a9bd6"
+  }
+}

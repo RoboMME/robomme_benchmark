@@ -1,0 +1,26 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "InsertPeg",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "bab94020b0112b9622e95fa6a18277ef64765766c3f4a2517752ea2d0ad8e26e",
+    "geom.py": "5c28021317937226c71526cff842fb4b84d2eed0ba74b92a3fadd2d83707b669",
+    "holestat.py": "8ac5ca19a35aea38bc462272466a445ab68b9abdcc4bc8fa75575a85a1b5f0e7"
+  },
+  "source_policy_files": {
+    "controller.py": "bab94020b0112b9622e95fa6a18277ef64765766c3f4a2517752ea2d0ad8e26e",
+    "geom.py": "5c28021317937226c71526cff842fb4b84d2eed0ba74b92a3fadd2d83707b669",
+    "holestat.py": "8ac5ca19a35aea38bc462272466a445ab68b9abdcc4bc8fa75575a85a1b5f0e7"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "7ed8345ee7421a2637524210a9ea0d8d96ba7f8e6c86f47148765a00efb8fc43",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "9138fe3f33954f5785694060c249e5cea92ea7bdea68632a4e7936676dfbdb36"
+  }
+}

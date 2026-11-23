@@ -782,6 +782,7 @@ from robomme_plus.common.sim import position, scalar, step_number
 @register_env(TASKS["PickXtimes"].gym_id)
 class PickXtimes(CountingMixin, _TaskScene):
     """Repeat fully lifted pick-and-place cycles onto the level's target."""
+    PERCEPTUAL_VARIATIONS = True
 
     task_name = "PickXtimes"
 

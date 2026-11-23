@@ -1,0 +1,28 @@
+{
+  "synthetic": true,
+  "generator": "benchmark_io.protocol_fixtures",
+  "workspace_root": "rax_workspace",
+  "initial_manifest": "runtime/autonomous_controller/runs/rehearsal-00000000000000000000000000000000/frames/sequence_000000/manifest.json",
+  "expected_rgb": {
+    "front": [
+      40,
+      50,
+      60
+    ],
+    "wrist": [
+      80,
+      90,
+      100
+    ]
+  },
+  "expected_depth_m": {
+    "front": 0.5,
+    "wrist": 0.8
+  },
+  "front_center_pixel_world_m": [
+    1.0,
+    2.0,
+    2.5
+  ],
+  "notes": "Blank images and invented values; no simulator, demonstration or policy execution."
+}

@@ -60,6 +60,7 @@ class PatternScoringTest(unittest.TestCase):
         self.assertTrue(self.env._pattern_dwell.success)
         from robomme_plus.tasks.imitation.utils.tracing import final_target_is_red
         self.assertTrue(final_target_is_red(self.env))
+        self.assertNotIn('execution', self.env._trace_completion_started)
 
     def test_lifting_between_correct_nodes_cannot_skip_the_drawn_segment(self):
         self.sample(self.nodes[0], count=7)

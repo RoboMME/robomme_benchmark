@@ -567,6 +567,7 @@ from robomme_plus.tasks.counting.utils.variations import STOP_TARGET_SCALES
 @register_env(TASKS["StopCube"].gym_id)
 class StopCube(CountingMixin, _TaskScene):
     """Press the button when the moving cube reaches the target on the requested visit."""
+    PERCEPTUAL_VARIATIONS = True
 
     task_name = "StopCube"
 

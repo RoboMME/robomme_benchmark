@@ -1,0 +1,24 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "InsertPeg",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "cd8c3c0f2d2bd187e32f6e8fcead248c1a68457a58994d09c6697503be878412",
+    "perception.py": "2a6053769560a33233573541114e7c68627130683d8c7bfe969f739402a7b985"
+  },
+  "source_policy_files": {
+    "controller.py": "cd8c3c0f2d2bd187e32f6e8fcead248c1a68457a58994d09c6697503be878412",
+    "perception.py": "2a6053769560a33233573541114e7c68627130683d8c7bfe969f739402a7b985"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "265559fdd0b28b99f47472009e1b99459e0d7510b16f678db5156bb610b53a09",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "b567a9c33cdecd81b36cdd657ca70cfcfac8ba05ba4857a1d6213774b34ceef7"
+  }
+}

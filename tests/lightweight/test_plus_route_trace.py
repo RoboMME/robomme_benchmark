@@ -110,7 +110,7 @@ class RouteTraceTest(unittest.TestCase):
             env._drawing = Drawing()
             env._drawing.begin("execution", 0)
             env._drawing.update(10, [*xy, .07])
-            with patch("robomme_plus.tasks.imitation.utils.tracing.final_target_is_red", return_value=True), \
+            with patch("robomme_plus.tasks.imitation.utils.tracing.final_feedback_ready", return_value=True), \
                  patch("robomme_plus.tasks.imitation.utils.split_stick.tip_position", return_value=np.array([*world_xy, .07])):
                 result = env.evaluate()
             self.assertEqual(bool(result["success"]), reason is None)

@@ -12,7 +12,7 @@
       "suite": "permanence",
       "episode": 0,
       "control_freq": 20,
-      "oracle_wall_seconds": 104.517
+      "oracle_wall_seconds": 24.857
     },
     {
       "task": "ButtonUnmask",
@@ -22,7 +22,7 @@
       "suite": "permanence",
       "episode": 1,
       "control_freq": 20,
-      "oracle_wall_seconds": 106.965
+      "oracle_wall_seconds": 32.559
     },
     {
       "task": "ButtonUnmask",
@@ -32,7 +32,11 @@
       "suite": "permanence",
       "episode": 2,
       "control_freq": 20,
-      "oracle_wall_seconds": 65.781
+      "oracle_wall_seconds": 25.226,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "button_colors"
+      }
     }
   ]
 }

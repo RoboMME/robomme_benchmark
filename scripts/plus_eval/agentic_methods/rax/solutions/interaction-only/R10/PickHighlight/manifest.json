@@ -1,0 +1,28 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "PickHighlight",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "cd76b88e77f808c09db2b72a8df3cc3880c7b3d9f15214724c0d19dd224067b2",
+    "lib.py": "0954cde27f1c0606dbae5257aa4e28b4e7f9a1b2ec1a865e054fb55fb74d9ba5",
+    "percep.py": "d015db8a21897fe99dc0ab773dc079c0ca32289f2443d5a008216f4515cf2049",
+    "skills.py": "972477c4bcfbcd154f7fe70873b75e3be9fc339987df6cff590ff78229b9f0f3"
+  },
+  "source_policy_files": {
+    "controller.py": "cd76b88e77f808c09db2b72a8df3cc3880c7b3d9f15214724c0d19dd224067b2",
+    "lib.py": "0954cde27f1c0606dbae5257aa4e28b4e7f9a1b2ec1a865e054fb55fb74d9ba5",
+    "percep.py": "d015db8a21897fe99dc0ab773dc079c0ca32289f2443d5a008216f4515cf2049",
+    "skills.py": "972477c4bcfbcd154f7fe70873b75e3be9fc339987df6cff590ff78229b9f0f3"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "1b08e6a8561796a594ac57bfecffa9574d9ed387f220242d754e132bdce541ff",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "f8d9a2dfdd7240b77f0a189d2323e601d23c3a242ce2eafc3dd7bb95ca924794"
+  }
+}

@@ -53,6 +53,8 @@ class EndeffectorDemonstrationWrapper(gym.Wrapper):
 
     def step(self, action):
         action = np.asarray(action, dtype=np.float64).flatten()
+        if not np.isfinite(action).all():
+            raise ValueError("End-effector action values must be finite")
         env_spec = getattr(self.env.unwrapped, "spec", None)
         env_id = getattr(
             self.unwrapped, "task_name", getattr(env_spec, "id", "<unknown_env>")

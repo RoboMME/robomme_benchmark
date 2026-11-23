@@ -1,0 +1,19 @@
+{
+  "method": "aspire",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "ButtonUnmaskSwap",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "policy.py": "500b36b6e5da8ac9a463c7df273404bad1117ca3a71034963739f677f5920531"
+  },
+  "source_policy_files": {
+    "ButtonUnmaskSwap.py": "500b36b6e5da8ac9a463c7df273404bad1117ca3a71034963739f677f5920531"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "af1fd98dde91910aa4e850862f48805d31cc7d240f2f37a1edf4f554c94c51d1",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy"
+}

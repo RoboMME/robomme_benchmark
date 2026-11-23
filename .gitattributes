@@ -1,0 +1,4 @@
+
+scripts/plus_eval/**/solutions/** -whitespace
+
+scripts/plus_eval/**/patches/*.patch -whitespace

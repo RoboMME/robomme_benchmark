@@ -1,0 +1,28 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "VideoUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "6bf15972aec679dccc4ffa1277915f7b70461edef0fcfee3efd90af75391355d",
+    "motion.py": "fbd69dc0f078bcff28bedddfe9f3cfa9e35bba9c0d6a228edb4d1bc19af2034a",
+    "perception.py": "c2d1d27b30f087f122d9be91f84512490730938b7bb1e48271fc9c42a3569e3f",
+    "video_cubes.py": "2b9f50213c360fe4ddb454ca8a887b8cc40cd08b9a37141777eede9a427ec158"
+  },
+  "source_policy_files": {
+    "controller.py": "6bf15972aec679dccc4ffa1277915f7b70461edef0fcfee3efd90af75391355d",
+    "motion.py": "fbd69dc0f078bcff28bedddfe9f3cfa9e35bba9c0d6a228edb4d1bc19af2034a",
+    "perception.py": "c2d1d27b30f087f122d9be91f84512490730938b7bb1e48271fc9c42a3569e3f",
+    "video_cubes.py": "2b9f50213c360fe4ddb454ca8a887b8cc40cd08b9a37141777eede9a427ec158"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "0b3dede2cc04f1d7ec26880580b797040b925be204ef57e0b4e43ae92a07d125",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "98baab3412eb94d3ece33337e39a625a56e4418660b2ea62eb7aa3fe385d191a"
+  }
+}

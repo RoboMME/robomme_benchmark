@@ -1,0 +1,28 @@
+{
+  "method": "rax",
+  "setting": "hybrid",
+  "budget": 10,
+  "task": "ButtonUnmask",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "ec737d2baecb14502a0f55e39dd08d99cc8e20475e5b815c9ccc1b900473b47d",
+    "lib.py": "f8ef57eed453b8b0ca638cb27aec6f7bfe5065ad698816231e9d0db342a05b03",
+    "percep.py": "56ff772790d5ff3353ba28feadfafaeae0fd0562ac22d22b68cbe5ffc5c85e88",
+    "skills.py": "12bcf11c4a142e78c4401f61aab0f57f8ddc3e43495d38e8d0faebf986558d16"
+  },
+  "source_policy_files": {
+    "controller.py": "ec737d2baecb14502a0f55e39dd08d99cc8e20475e5b815c9ccc1b900473b47d",
+    "lib.py": "f8ef57eed453b8b0ca638cb27aec6f7bfe5065ad698816231e9d0db342a05b03",
+    "percep.py": "56ff772790d5ff3353ba28feadfafaeae0fd0562ac22d22b68cbe5ffc5c85e88",
+    "skills.py": "12bcf11c4a142e78c4401f61aab0f57f8ddc3e43495d38e8d0faebf986558d16"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "demo&interaction",
+  "source_frozen_manifest_sha256": "17ce7ada560a6c0efaddc608b74e6b32f14b0d57579a5d34e41c1411b65284cb",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "768c3b05a2b4ccd07aaaf5bc1dcb48ee3d1b9ba1f90c251259c3dde00fdcc28b"
+  }
+}

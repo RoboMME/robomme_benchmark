@@ -1,0 +1,28 @@
+{
+  "method": "rax",
+  "setting": "interaction-only",
+  "budget": 10,
+  "task": "VideoPlaceButton",
+  "evaluation_episodes": 50,
+  "policy_files": {
+    "controller.py": "403a2e8ef549461ffd6a917667f8865be1931b67cadc9cc770d428aeb2bacfb6",
+    "lib.py": "898d5ad7eea6e059c236d36d69efda0739841c9c3c2e97949a86fead310412c0",
+    "tracker.py": "9fc8eb19793cf2ae212344e8854dd60164915dc5e91ef8c90f710972f1d61e90",
+    "video.py": "11c50afd401a1e905002bfaa2532f777854e56afd1b48407a77a61b96b08b1fe"
+  },
+  "source_policy_files": {
+    "controller.py": "403a2e8ef549461ffd6a917667f8865be1931b67cadc9cc770d428aeb2bacfb6",
+    "lib.py": "898d5ad7eea6e059c236d36d69efda0739841c9c3c2e97949a86fead310412c0",
+    "tracker.py": "9fc8eb19793cf2ae212344e8854dd60164915dc5e91ef8c90f710972f1d61e90",
+    "video.py": "11c50afd401a1e905002bfaa2532f777854e56afd1b48407a77a61b96b08b1fe"
+  },
+  "source_experiment": "r10_20261121",
+  "source_setting": "interaction-only",
+  "source_frozen_manifest_sha256": "83bcfca0f6b46fb06337a527483a5d2e895efe2b8c6a4f255a5985adf9986bc2",
+  "evaluation_benchmark_sha256": "b34d910c7a8a8153145a88403826fb5427a076b766766d4f6edad0f6f7fd1a72",
+  "test_feedback_to_development": false,
+  "status": "frozen_policy",
+  "runner_files": {
+    "runner.json": "f597a9be258f48fc88b7719e95d3b44083b2726b9f5d6259deaf8cebfa5c346c"
+  }
+}

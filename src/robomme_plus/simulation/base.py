@@ -12,7 +12,20 @@ from robomme_plus.scoring.failures import clear_failure, failure_message
 
 
 class MemoryTask(BaseEnv):
+    PERCEPTUAL_VARIATIONS = False
+
+    def __init__(self, *args, _perceptual_variation=None, **kwargs):
+        self._perceptual_variation = None
+        if _perceptual_variation is not None and self.PERCEPTUAL_VARIATIONS:
+            from robomme_plus.variation.runtime import PerceptualVariation
+            self._perceptual_variation = PerceptualVariation(
+                self.task_name, self.seed, _perceptual_variation)
+            kwargs = self._perceptual_variation.sensor_options(kwargs)
+        super().__init__(*args, **kwargs)
+
     def reset(self, *args, **kwargs):
+        if self._perceptual_variation is not None:
+            self._perceptual_variation.reset(self)
         clear_failure(self)
         self.timestep = 0
         self._last_task_index = None
@@ -21,6 +34,23 @@ class MemoryTask(BaseEnv):
         if hasattr(self, "first_timestep"):
             del self.first_timestep
         return super().reset(*args, **kwargs)
+
+    def _load_lighting(self, options):
+        if self._perceptual_variation is not None and self._perceptual_variation.load_lighting(self):
+            return
+        return super()._load_lighting(options)
+
+    def _get_obs_sensor_data(self, *args, **kwargs):
+        if self._perceptual_variation is not None:
+            self._perceptual_variation.apply(self)
+        return super()._get_obs_sensor_data(*args, **kwargs)
+
+    def close(self):
+        try:
+            return super().close()
+        finally:
+            if self._perceptual_variation is not None:
+                self._perceptual_variation.close()
 
     def get_info(self):
         info = super().get_info()

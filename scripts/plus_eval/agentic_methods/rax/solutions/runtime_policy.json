@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "controller_seconds": 1200,
+  "startup_seconds": 600,
+  "initial_no_progress_seconds": 600,
+  "no_progress_seconds": 180,
+  "provider_seconds": 60,
+  "simulator_rpc_seconds": 180,
+  "worker_seconds": 2100,
+  "development_idle_seconds": 1800,
+  "development_seconds": 172800,
+  "minimum_worker_memory_gib": 8,
+  "memory_headroom_gib": 3,
+  "conditioning_video_frames": 512
+}

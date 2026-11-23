@@ -8,4 +8,5 @@ from robomme_plus.tasks.permanence.utils.environment import PermanenceTask
 
 @register_env(TASKS["VideoUnmaskSwap"].gym_id)
 class VideoUnmaskSwap(PermanenceTask):
+    PERCEPTUAL_VARIATIONS = True
     task_name = "VideoUnmaskSwap"

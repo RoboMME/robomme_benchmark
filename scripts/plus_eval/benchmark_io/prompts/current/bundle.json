@@ -1,0 +1,9 @@
+{
+  "version": 9,
+  "scope": "public development protocol and synthetic interface examples",
+  "supersedes": 8,
+  "changes": [
+    "Allow public development archives to omit raw trajectory and media payloads while retaining text logs, code history, attempt metadata and source references",
+    "Require code and development-log links and audit results within the submission Markdown"
+  ]
+}

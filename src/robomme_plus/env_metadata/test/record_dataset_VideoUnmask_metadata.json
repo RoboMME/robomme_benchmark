@@ -152,7 +152,8 @@
       "suite": "permanence",
       "episode": 14,
       "control_freq": 20,
-      "oracle_wall_seconds": 6.443
+      "oracle_wall_seconds": 6.443,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmask",
@@ -172,7 +173,8 @@
       "suite": "permanence",
       "episode": 16,
       "control_freq": 20,
-      "oracle_wall_seconds": 11.859
+      "oracle_wall_seconds": 11.859,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmask",
@@ -212,7 +214,8 @@
       "suite": "permanence",
       "episode": 20,
       "control_freq": 20,
-      "oracle_wall_seconds": 6.123
+      "oracle_wall_seconds": 6.123,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmask",
@@ -222,7 +225,8 @@
       "suite": "permanence",
       "episode": 21,
       "control_freq": 20,
-      "oracle_wall_seconds": 10.913
+      "oracle_wall_seconds": 10.913,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmask",
@@ -232,7 +236,8 @@
       "suite": "permanence",
       "episode": 22,
       "control_freq": 20,
-      "oracle_wall_seconds": 10.767
+      "oracle_wall_seconds": 10.767,
+      "perceptual_variation": "non_lighting"
     },
     {
       "task": "VideoUnmask",
@@ -258,11 +263,15 @@
       "task": "VideoUnmask",
       "seed": 991194028,
       "difficulty": "hard",
-      "oracle_policy_step": 513,
+      "oracle_policy_step": 512,
       "suite": "permanence",
       "episode": 25,
       "control_freq": 20,
-      "oracle_wall_seconds": 7.298
+      "oracle_wall_seconds": 7.298,
+      "base_oracle_policy_step": 513,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoUnmask",
@@ -282,7 +291,8 @@
       "suite": "permanence",
       "episode": 27,
       "control_freq": 20,
-      "oracle_wall_seconds": 11.009
+      "oracle_wall_seconds": 11.009,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmask",
@@ -292,17 +302,22 @@
       "suite": "permanence",
       "episode": 28,
       "control_freq": 20,
-      "oracle_wall_seconds": 10.56
+      "oracle_wall_seconds": 10.56,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmask",
       "seed": 41006990,
       "difficulty": "hard",
-      "oracle_policy_step": 811,
+      "oracle_policy_step": 827,
       "suite": "permanence",
       "episode": 29,
       "control_freq": 20,
-      "oracle_wall_seconds": 11.814
+      "oracle_wall_seconds": 11.814,
+      "base_oracle_policy_step": 811,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoUnmask",
@@ -312,7 +327,8 @@
       "suite": "permanence",
       "episode": 30,
       "control_freq": 20,
-      "oracle_wall_seconds": 8.145
+      "oracle_wall_seconds": 8.145,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmask",
@@ -322,7 +338,8 @@
       "suite": "permanence",
       "episode": 31,
       "control_freq": 20,
-      "oracle_wall_seconds": 11.52
+      "oracle_wall_seconds": 11.52,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmask",
@@ -332,7 +349,8 @@
       "suite": "permanence",
       "episode": 32,
       "control_freq": 20,
-      "oracle_wall_seconds": 9.465
+      "oracle_wall_seconds": 9.465,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmask",
@@ -362,7 +380,8 @@
       "suite": "permanence",
       "episode": 35,
       "control_freq": 20,
-      "oracle_wall_seconds": 9.036
+      "oracle_wall_seconds": 9.036,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmask",
@@ -372,17 +391,22 @@
       "suite": "permanence",
       "episode": 36,
       "control_freq": 20,
-      "oracle_wall_seconds": 6.78
+      "oracle_wall_seconds": 6.78,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmask",
       "seed": 135167129,
       "difficulty": "hard",
-      "oracle_policy_step": 643,
+      "oracle_policy_step": 650,
       "suite": "permanence",
       "episode": 37,
       "control_freq": 20,
-      "oracle_wall_seconds": 8.714
+      "oracle_wall_seconds": 8.714,
+      "base_oracle_policy_step": 643,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoUnmask",
@@ -392,7 +416,8 @@
       "suite": "permanence",
       "episode": 38,
       "control_freq": 20,
-      "oracle_wall_seconds": 12.149
+      "oracle_wall_seconds": 12.149,
+      "perceptual_variation": "full"
     },
     {
       "task": "VideoUnmask",
@@ -408,21 +433,29 @@
       "task": "VideoUnmask",
       "seed": 358059848,
       "difficulty": "hard",
-      "oracle_policy_step": 828,
+      "oracle_policy_step": 890,
       "suite": "permanence",
       "episode": 40,
       "control_freq": 20,
-      "oracle_wall_seconds": 12.93
+      "oracle_wall_seconds": 12.93,
+      "base_oracle_policy_step": 828,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoUnmask",
       "seed": 274933184,
       "difficulty": "hard",
-      "oracle_policy_step": 827,
+      "oracle_policy_step": 901,
       "suite": "permanence",
       "episode": 41,
       "control_freq": 20,
-      "oracle_wall_seconds": 12.193
+      "oracle_wall_seconds": 12.193,
+      "base_oracle_policy_step": 827,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoUnmask",
@@ -438,11 +471,15 @@
       "task": "VideoUnmask",
       "seed": 117963731,
       "difficulty": "hard",
-      "oracle_policy_step": 842,
+      "oracle_policy_step": 855,
       "suite": "permanence",
       "episode": 43,
       "control_freq": 20,
-      "oracle_wall_seconds": 11.79
+      "oracle_wall_seconds": 11.79,
+      "base_oracle_policy_step": 842,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoUnmask",
@@ -458,21 +495,29 @@
       "task": "VideoUnmask",
       "seed": 433895572,
       "difficulty": "hard",
-      "oracle_policy_step": 470,
+      "oracle_policy_step": 456,
       "suite": "permanence",
       "episode": 45,
       "control_freq": 20,
-      "oracle_wall_seconds": 6.431
+      "oracle_wall_seconds": 6.431,
+      "base_oracle_policy_step": 470,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoUnmask",
       "seed": 117505333,
       "difficulty": "hard",
-      "oracle_policy_step": 481,
+      "oracle_policy_step": 419,
       "suite": "permanence",
       "episode": 46,
       "control_freq": 20,
-      "oracle_wall_seconds": 7.333
+      "oracle_wall_seconds": 7.333,
+      "base_oracle_policy_step": 481,
+      "mechanism_variation": {
+        "version": 1
+      }
     },
     {
       "task": "VideoUnmask",

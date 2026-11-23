@@ -17,13 +17,17 @@
       "suite": "reference",
       "episode": 0,
       "control_freq": 20,
-      "oracle_wall_seconds": 82.807
+      "oracle_wall_seconds": 74.151,
+      "perceptual_variation": {
+        "version": 1,
+        "atomic": "table_light_oak"
+      }
     },
     {
       "task": "PickHighlight",
       "seed": 1794738199,
       "difficulty": "medium",
-      "oracle_policy_step": 1397,
+      "oracle_policy_step": 1345,
       "native_difficulty": "xhard2",
       "highlight_mode": "simultaneous",
       "layout_version": 4,
@@ -32,13 +36,13 @@
       "suite": "reference",
       "episode": 1,
       "control_freq": 20,
-      "oracle_wall_seconds": 103.474
+      "oracle_wall_seconds": 153.586
     },
     {
       "task": "PickHighlight",
       "seed": 1650955332,
       "difficulty": "hard",
-      "oracle_policy_step": 1253,
+      "oracle_policy_step": 1318,
       "native_difficulty": "xhard4",
       "highlight_mode": "simultaneous",
       "layout_version": 4,
@@ -47,7 +51,7 @@
       "suite": "reference",
       "episode": 2,
       "control_freq": 20,
-      "oracle_wall_seconds": 115.575
+      "oracle_wall_seconds": 162.92
     }
   ]
 }

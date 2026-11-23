@@ -1241,6 +1241,18 @@ def setup_occlusion(cls):
         first = env.task_list[0]
         if first.get("demonstration") and first.get("name") == "NO RECORD":
             first["name"] = first["subgoal_segment"] = "move to the starting target"
+        # Keep the demo's last activated target in its recording. H5 images
+        # precede their actions; execution retains its original termination.
+        from .tracing import finish_reference_feedback
+        last = [entry for entry in env.task_list
+                if entry['demonstration'] and entry['name'] != 'NO RECORD'][-1]
+        solve = last['solve']
+        def finish(wrapped, planner):
+            result = solve(wrapped, planner)
+            if not (isinstance(result, int) and result == -1):
+                finish_reference_feedback(wrapped, planner)
+            return result
+        last['solve'] = finish
         from robomme_plus.tasks.imitation.utils import (
             split_stick as split_stick,
         )
@@ -1464,6 +1476,7 @@ def setup_occlusion(cls):
                            if entry.get("demonstration") == demonstration and "expected_dir" in entry]
                 env._route_curve_tasks[phase] = dict(zip(entries, range(len(entries))))
         env._trace_feedback_step = None
+        env._trace_completion_started = {}
         env._limit_diagnostics.pop("stick", None)
         if env._limit_diagnostics["occluder"] is None:
             return
@@ -1478,7 +1491,7 @@ def setup_occlusion(cls):
     original_evaluate = cls.evaluate
 
     def evaluate(env, solve_complete_eval=False):
-        from robomme_plus.tasks.imitation.utils.tracing import final_target_is_red
+        from robomme_plus.tasks.imitation.utils.tracing import final_feedback_ready
 
         drawing = getattr(env, "_drawing", None)
         phase = drawing.phase if drawing is not None else None
@@ -1500,7 +1513,7 @@ def setup_occlusion(cls):
             trace.update(phase, curve, step_number(env), xy, draws)
             if trace.failure is not None:
                 drawing.failure = trace.failure
-        if scalar(result["success"]) and not final_target_is_red(env):
+        if scalar(result["success"]) and not final_feedback_ready(env):
             env.successflag = env.successflag.new_tensor([False])
             result = dict(result, success=env.successflag)
         if scalar(result["success"]) and trace is not None:

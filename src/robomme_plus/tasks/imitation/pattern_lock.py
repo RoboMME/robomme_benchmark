@@ -594,6 +594,7 @@ from robomme_plus.tasks.imitation.utils.environment import ImitationMixin
 @register_env(TASKS["PatternLock"].gym_id)
 class PatternLock(ImitationMixin, _TaskScene):
     """Confirm seeded pattern endpoints on the level's moved grid with a dwell."""
+    PERCEPTUAL_VARIATIONS = True
 
     task_name = "PatternLock"
 

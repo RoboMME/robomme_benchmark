@@ -17,18 +17,19 @@ using `config_ood` in the [original task implementations](../src/robomme/robomme
 It is for testing only, with no new training split; the original train, validation
 and test splits are unchanged.
 
-### What's difference from RoboMME-plus
+### Difference from RoboMME-Plus
 
 Use `ood_test` to test whether a model trained on regular RoboMME generalizes to
 extrapolated parameters without further training. It changes counts, sequence
 lengths and geometry while retaining the original task mechanisms and success
 criteria.
 
-Use [RoboMME-Plus](../src/robomme_plus/README.md) to evaluate robot memory across
-a broader range of demanding conditions, including moving targets, stronger
-occlusion and additional manipulation methods. Its separate training and test
-splits support both zero-shot evaluation and few-shot adaptation. The easy-level test episodes in RoboMME-plus
-is similar to `ood_test`, but the medium- and hard-level episodes contain more diverse changes.
+[RoboMME-Plus](../src/robomme_plus/README.md) evaluates memory generalization and
+adaptation with changed task mechanisms and perceptual variations. Its 50 training
+demos and 800 test episodes support `Zero-shot`, `Demo-only`, `Interaction-only`
+and `Hybrid`. Interaction settings allow at most 10 starts per task
+across all training seeds combined; R1/R3/R5 results are optional. It is separate
+from `ood_test`.
 
 ## Parameter changes
 
@@ -94,22 +95,22 @@ Source code:
 - SimpleMemVLA: [OpenBMB/SimpleMemVLA](https://github.com/OpenBMB/SimpleMemVLA).
 - PonderPounce: [worv-ai/PonderPounce](https://github.com/worv-ai/PonderPounce/tree/723df35762bb641e1d520e4fa9359b98644adc21).
 
-| Task | FrameSamp+Modul | SimpleMemVLA | PonderPounce |
-|---|---:|---:|---:|
-| BinFill | 0/20 | 2/20 | 0/20 |
-| ButtonUnmask | 0/20 | 20/20 | 18/20 |
-| ButtonUnmaskSwap | 1/20 | 5/20 | 2/20 |
-| InsertPeg | 0/20 | 12/20 | 0/20 |
-| MoveCube | 13/20 | 19/20 | 11/20 |
-| PatternLock | 0/20 | 0/20 | 0/20 |
-| PickHighlight | 0/20 | 4/20 | 2/20 |
-| PickXtimes | 0/20 | 0/20 | 18/20 |
-| RouteStick | 0/20 | 10/20 | 1/20 |
-| StopCube | 0/20 | 0/20 | 0/20 |
-| SwingXtimes | 0/20 | 4/20 | 5/20 |
-| VideoPlaceButton | 5/20 | 9/20 | 9/20 |
-| VideoPlaceOrder | 4/20 | 6/20 | 4/20 |
-| VideoRepick | 0/20 | 0/20 | 7/20 |
-| VideoUnmask | 0/20 | 19/20 | 17/20 |
-| VideoUnmaskSwap | 3/20 | 2/20 | 6/20 |
-| **Overall** | 26/320 (8.1%) | 112/320 (35.0%) | 100/320 (31.2%) |
+| Task | FrameSamp+Modul | SimpleMemVLA | PonderPounce | Embodied-Astra |
+|---|---:|---:|---:| ---: |
+| BinFill | 0/20 | 2/20 | 0/20 | 20/20 |
+| ButtonUnmask | 0/20 | 20/20 | 18/20 | 19/20 |
+| ButtonUnmaskSwap | 1/20 | 5/20 | 2/20 | 17/20 |
+| InsertPeg | 0/20 | 12/20 | 0/20 | 19/20 |
+| MoveCube | 13/20 | 19/20 | 11/20 | 3/20 |
+| PatternLock | 0/20 | 0/20 | 0/20 | 20/20 |
+| PickHighlight | 0/20 | 4/20 | 2/20 | 9/20 |
+| PickXtimes | 0/20 | 0/20 | 18/20 | 20/20 |
+| RouteStick | 0/20 | 10/20 | 1/20 | 20/20 |
+| StopCube | 0/20 | 0/20 | 0/20 | 10/20 |
+| SwingXtimes | 0/20 | 4/20 | 5/20 | 19/20 |
+| VideoPlaceButton | 5/20 | 9/20 | 9/20 | 20/20 |
+| VideoPlaceOrder | 4/20 | 6/20 | 4/20 | 20/20 |
+| VideoRepick | 0/20 | 0/20 | 7/20 | 20/20 |
+| VideoUnmask | 0/20 | 19/20 | 17/20 | 14/20 |
+| VideoUnmaskSwap | 3/20 | 2/20 | 6/20 | 19/20 |
+| **Overall** | 26/320 (8.1%) | 112/320 (35.0%) | 100/320 (31.2%) | 269/320 (84.06%) |
