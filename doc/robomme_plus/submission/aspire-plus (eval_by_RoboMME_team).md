@@ -89,11 +89,11 @@ Auditor: Claude Opus 5.5, 2026-11-22 (self-review by the RoboMME team's assistan
 
 ### Audit summary
 
-| Setting | Budget per task | Development starts | 1. No forbidden information | 2. Rollout budget | Conclusion |
-| --- | ---: | ---: | --- | --- | --- |
-| `Demo-only` | 0 | 0 | PASS | PASS | **PASS** |
-| `Interaction-only` | 10 | 157 | PASS | PASS | **PASS** |
-| `Hybrid` | 10 | 134 | PASS | PASS | **PASS** |
+| Setting | Budget per task | Development starts | 1. No forbidden information | 2. Rollout budget | 3. No test-time optimization | Conclusion |
+| --- | ---: | ---: | --- | --- | --- | --- |
+| `Demo-only` | 0 | 0 | PASS | PASS | PASS | **PASS** |
+| `Interaction-only` | 10 | 157 | PASS | PASS | PASS | **PASS** |
+| `Hybrid` | 10 | 134 | PASS | PASS | PASS | **PASS** |
 
 ### Development starts per task
 
@@ -238,6 +238,27 @@ Skill: `doc/skills/audit_robomme_plus.md`. `<root>` = `demo_only_20261121`,
 - The evidence-hook socket mount (`/run/robomme-audit`, read-only) was never accessed by the agent.
 - Development API use was 2,687 requests, about $206.65 (`<case>/api_cost_summary.json`). One request (`development_api/2518_57058693`) failed with Bedrock ServiceUnavailable, leaving its usage unknown. Evaluation made no API calls. Cost accuracy is not judged.
 
+#### Check 3 (added 2026-11-23 under the updated skill)
+
+**Check 3: no test-time optimization — PASS**
+
+ASPIRE · Demo-only · budget 0. `<root>` = `demo_only_20261121`, `<case>` = `<root>/aspire/demo-only/R0`. Times are UTC. Inspection was read-only; no code, simulator or API was run.
+
+- **The frozen policy ran every test episode.** All 800 `submitted_program.py` files under `<case>/evaluation/episodes/*/episode_*/artifacts/**/` hash to `policy_sha256` in `<case>/evaluation/frozen_evaluation.json`, with 0 mismatches. So do all 82 archived pre-rerun originals in `<root>/audit/corrections/provider_restart_20261122/outage_episodes/`. The `source/dependency-lock.json` is identical in all 800 runs and equals the hashed `runtime_source/aspire/ASPIRE/configs/dependency-lock.json`. All 800 runs used image `sha256:d143d08a…`.
+- **The manifest rewrite did not change the policy.** The original manifest (`<root>/audit/corrections/empty_storage_lock_20261122/before/aspire/demo-only/R0/evaluation/frozen_evaluation.json`, sha `917f41d3…`) was compared key by key with the current one (sha `50225a1b…`). Only two things differ: the `operator_harness_corrections` entry and one execution hash, `runtime_source/benchmark_io/evaluation.py` (`e0a17366…` → `5e0d34c6…`). `policy_sha256`, the episodes, the config and the other 755 execution hashes are identical. `evaluation.patch` only drops the empty `runtime_source/rax/runtime/workspace-storage.lock` (0 bytes now) from the execution hash. That is a checker change, not a policy change.
+- **Integrity was re-checked during testing.** `verify_frozen` checks the policy hashes, the execution hashes and the development attempt count on every reservation (`runtime_source/benchmark_io/evaluation.py:87-101`). The check rejected 790 jobs with `Frozen harness/protocol changed` before any reservation (06:28:54Z–07:34:06Z; `blocked_episodes/`). The 10 earlier reservations are unchanged in the current ledger. Today, every policy, `selected_policies/` and execution file matches the manifest. The only hashed file with an mtime or ctime after the first test is `evaluation.py` (14:27:56Z).
+- **There was no development during testing.** Freeze and `development_complete.json` are at 06:24:47Z. The last API record (`development_api/2687_244d99f4`) ended at 06:24:41Z. Testing ran from 06:28:10Z to 16:51:07Z. No file under `development/`, `development_job/`, `study/`, `selected_policies/` or `development_api/` was modified after 06:28:10Z. The study ledger has 0 attempts, matching `development_attempt_count` = 0. `evaluation/api_usage.json` reports 0 requests.
+- **The reruns used the unchanged policy.** All 82 outage reruns (`retry_records/*/*.json`) kept the same seed and got a new reservation id, so the ledger ids span 1–882 for 800 rows. `operator/retry_provider_outage.py:45` calls `verify_frozen()` before each requeue. The rerun programs match the frozen hashes.
+- **No state crossed test episodes.** Each episode ran in a new worker process (800 distinct pids) and a new `docker run` (`aspire/isolated.py:177-203`, `worker_command.json` in every run). Each run had `--network=none` and `--read-only`, a tmpfs `/tmp`, and read-only mounts of a per-episode temporary runtime and the program. All host outputs go to per-episode run directories. The shared providers (`ASPIRE/src/cap_harness/providers/*/service.py`) keep only model and planner instances. cuRobo purges and reloads the scene on every planning request (`curobo/service.py:509-526, 565-569`), and IK requests carry no scene (`curobo/client.py:135`).
+- **No test results were fed back.** `selection.json` and all 16 policies predate the freeze and are byte-identical in `selected_policies/` and `evaluation/policy/`. `development_complete.json` has `test_feedback_to_development: false`.
+
+Notes
+- Episodes re-run after a provider outage used the same frozen policy. The reported score keeps the original outcome of every episode in which the policy had already acted.
+- The scheduler and monitor overlay (`<root>/operator/provider_scheduler/`, `full_study.py.patch`, `unified_study.py.patch`) changes only dispatch and provider restarts. Workers import the frozen `runtime_source`.
+- The GPU0 SAM3 provider restarted at 15:59:27Z (`<root>/runtime/providers/gpu0_sam3.json`) with the same venv and checkpoint.
+- The provider venvs, vendor trees and weights were not in the pre-test manifest. A post-test supplement covers them (`freeze_supplement_20261122/aspire_demo_only_providers.json`, with 0 files changed after the first test). A spot `find -newerct` also found 0 changes.
+- The development container mounted only this case's paths and ran with `--network=none` (`development/launch_command.json`). The ASPIRE R10 tests ran at the same time but were not reachable from it.
+
 </details>
 
 <details>
@@ -360,6 +381,26 @@ No forbidden read was observed in the inspected logs. The harness also kept ever
 - The campaign receives a `--demos` path even in `interaction-only`. It is unused and not mounted.
 - Freezing, provider pinning, test-time infrastructure errors and API cost accuracy are not judged under this skill. Earlier observations on them remain in the prior reports.
 
+#### Check 3 (added 2026-11-23 under the updated skill)
+
+**Check 3: no test-time optimization — PASS**
+
+ASPIRE · Interaction-only · budget 10. `<root>` = `r10_20261121`, `<case>` = `<root>/aspire/interaction-only/R10`. Times are UTC. Inspection was read-only; no code, simulator or API was run.
+
+- **The frozen policy ran every test episode.** All 800 `submitted_program.py` files under `<case>/evaluation/episodes/*/episode_*/artifacts/**/` hash to `policy_sha256` in `<case>/evaluation/frozen_evaluation.json` (sha `af1fd98d…`, created 02:15:31Z), with 0 mismatches. The per-run `source/provenance.json` gives 16 program hashes × 50 episodes and one dependency-lock hash (`05b40506…`, equal to the hashed `configs/dependency-lock.json`). All 800 runs used image `sha256:d143d08a…`, the one pinned in `<root>/study_plan.json`.
+- **Nothing hashed changed during testing.** `verify_frozen` checks the policy, all 757 execution files and the development attempt count on every reservation (`runtime_source/benchmark_io/evaluation.py:79-93`). Today, all policy, `selected_policies/` and execution files match the manifest. None has an mtime or ctime at or after the first test (04:05:13Z). The manifest itself was not rewritten (no `operator_harness_corrections`).
+- **There was no development during testing.** Development completed and the policy was frozen at 02:15:31Z (`development_complete.json`). The last API record ended at 02:15:22Z (`development_api/2047_42438980`). Testing ran from 04:05:13Z to 06:27:39Z. No file under `development/`, `development_job/`, `study/`, `selected_policies/` or `development_api/` was modified after 04:05:13Z. The study ledger has 157 attempts, the last ending at 02:11:13Z, which equals `development_attempt_count` = 157. The queue (`<root>/queue.sqlite3`) holds one develop job, finished at 02:15:36Z.
+- **There were no reruns.** `<case>/evaluation/evaluation_attempts.sqlite3` has 800 rows with contiguous ids 1–800. All are closed, all have purpose `frozen_full_evaluation_v2`, and all seeds equal the frozen records. The 6 provider-infrastructure failures in `results.json` stay as recorded. `oom_retry_20261122/plan.json` does not target this case.
+- **No state crossed test episodes.** Each episode ran in a new worker process (800 distinct pids) and a new `docker run` (`runtime_source/aspire/isolated.py:177-203`). Each run had `--network=none` and `--read-only`, a tmpfs `/tmp`, and only read-only mounts (`worker_command.json` in all 800 runs). Host outputs are per episode. The shared providers keep only model and planner instances: cuRobo reloads the scene on every planning request (`curobo/service.py:509-526, 565-569`), and IK requests send no scene (`curobo/client.py:135`).
+- **No test results were fed back.** The frozen `selection.json` and policies predate the freeze and are byte-identical to `selected_policies/`. The ASPIRE R10 cases were excluded from evaluation until 04:05:12Z (`orchestration_20261121/transitions.jsonl`). `test_feedback_to_development` is `false`.
+
+Notes
+- The GPU1 SAM3 provider restarted during testing, at 06:11:22Z (`<root>/runtime/providers/gpu1_sam3.json`). It used the same interpreter, module and checkpoint symlink as before, and its code loads from the hashed `runtime_source/aspire/ASPIRE/src`. This is runtime continuity, not a policy change.
+- Three `.pyc` files in `runtime_source/benchmark_io/__pycache__/` (evaluation, `__init__`, protocol) were written at 04:35Z. They are not hashed, but their headers match the sources and their code objects are structurally equal to the compiled hashed sources. This is evaluation tooling, not policy code.
+- The provider venvs, vendor trees and weights were not in the pre-test manifest. A post-test supplement covers them (`freeze_supplement_20261122/aspire_providers.json`, with 0 changes after the first test), and a spot `find -newerct` also found 0 changes.
+- The R10 scheduler overlay `<root>/runtime/operator_scheduler_20/benchmark_io/unified_study.py` is identical to the frozen copy.
+- The R3/R5 extractions (`extracted_r35_20261121`) are out of scope.
+
 </details>
 
 <details>
@@ -464,5 +505,25 @@ This report applies the simplified skill `doc/skills/audit_robomme_plus.md` and 
 - An operator-requested MoveCube submission-only session (02:22–02:23Z) copied the existing `code/v04_wrist_unwind.py` byte-for-byte to `fix_code.py` and added `final_submission.md`. It made no starts and was logged.
 - The first job attempt failed on a provider-port conflict before any agent session started (0 API calls, 0 starts). The fix is disclosed in `audit/corrections/provider_ports/`.
 - The bundle also includes non-Markdown synthetic fixtures. They contain blank images and invented values, with no task data.
+
+#### Check 3 (added 2026-11-23 under the updated skill)
+
+**Check 3: no test-time optimization — PASS**
+
+ASPIRE · Hybrid (`demo&interaction`) · budget 10. `<root>` = `r10_20261121`, `<case>` = `<root>/aspire/demo&interaction/R10`. Times are UTC. Inspection was read-only; no code, simulator or API was run.
+
+- **The frozen policy ran every test episode.** All 800 `submitted_program.py` files under `<case>/evaluation/episodes/*/episode_*/artifacts/**/` hash to `policy_sha256` in `<case>/evaluation/frozen_evaluation.json` (sha `7fcaf767…`, created 02:24:38Z), with 0 mismatches. The per-run `source/provenance.json` gives 16 program hashes × 50 episodes and one dependency-lock hash (`05b40506…`, equal to the hashed `configs/dependency-lock.json`). All 800 runs used image `sha256:d143d08a…`, the one pinned in `<root>/study_plan.json`.
+- **Nothing hashed changed during testing.** `verify_frozen` checks the policy, all 757 execution files and the development attempt count on every reservation (`runtime_source/benchmark_io/evaluation.py:79-93`). Today, all policy, `selected_policies/` and execution files match the manifest. None has an mtime or ctime at or after the first test (04:05:13Z). The manifest was not rewritten.
+- **There was no development during testing.** The last API record ended at 02:23:43Z (`development_api/2159_eae87a1e`). The freeze and `development_complete.json` are at 02:24:38Z. Testing ran from 04:05:13Z to 06:07:31Z. No file under `development/`, `development_job/`, `study/`, `selected_policies/` or `development_api/` was modified after 04:05:13Z. The study ledger has 134 attempts, the last ending at 02:02:17Z, which equals `development_attempt_count` = 134.
+- **The MoveCube submission handoff happened before the freeze and testing.** It ran from 02:22:40Z to 02:23:45Z (`<root>/audit/movecube_submission_20261121/{before,completed,freeze_handoff}.json`). It copied the existing `code/v04_wrist_unwind.py` (`77b60c2d…`), which is the frozen `MoveCube.py` hash. The other 15 frozen hashes equal `before.json:other_policies`, and attempts stayed at 134.
+- **There were no reruns.** `<case>/evaluation/evaluation_attempts.sqlite3` has 800 rows with contiguous ids 1–800. All are closed, all have purpose `frozen_full_evaluation_v2`, and all seeds equal the frozen records. `results.json` has 0 infrastructure failures. `oom_retry_20261122/plan.json` does not target this case.
+- **No state crossed test episodes.** Each episode ran in a new worker process (800 distinct pids) and a new `docker run` (`runtime_source/aspire/isolated.py:177-203`). Each run had `--network=none` and `--read-only`, a tmpfs `/tmp`, and only read-only mounts (`worker_command.json` in all 800 runs). The frozen study refuses demonstrations at test time (`runtime_source/benchmark_io/evaluation.py:106`). Host outputs are per episode. The shared providers keep only model and planner instances, and cuRobo reloads the scene on every planning request (`curobo/service.py:509-526, 565-569`).
+- **No test results were fed back.** `evaluation/policy/selection.json` and all policies predate the freeze and match `selected_policies/`. The ButtonUnmaskSwap entry points to `../deadline_frozen/` and was also set before the freeze. Evaluation for this case opened only at 04:05:12Z (`orchestration_20261121/transitions.jsonl`). `test_feedback_to_development` is `false`.
+
+Notes
+- The GPU1 SAM3 restart at 06:11:22Z (`<root>/runtime/providers/gpu1_sam3.json`) came after this case's last test ended (06:07:31Z). It used the same argv and checkpoint.
+- Three unhashed `.pyc` files in `runtime_source/benchmark_io/__pycache__/` were written at 04:35Z. They are structurally equal to the compiled hashed sources, and they are evaluation tooling, not policy code.
+- The provider venvs, vendor trees and weights were not in the pre-test manifest. A post-test supplement covers them (`freeze_supplement_20261122/aspire_providers.json`, with 0 changes after the first test), and a spot `find -newerct` also found 0 changes.
+- Whether the operator's MoveCube prompt was appropriate is a development-phase question for Checks 1 and 2, not Check 3.
 
 </details>

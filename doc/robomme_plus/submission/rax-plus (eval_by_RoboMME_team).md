@@ -89,11 +89,11 @@ Auditor: Claude Opus 5.5, 2026-11-22 (self-review by the RoboMME team's assistan
 
 ### Audit summary
 
-| Setting | Budget per task | Development starts | 1. No forbidden information | 2. Rollout budget | Conclusion |
-| --- | ---: | ---: | --- | --- | --- |
-| `Demo-only` | 0 | 0 | PASS | PASS | **PASS** |
-| `Interaction-only` | 10 | 123 | PASS | PASS | **PASS** |
-| `Hybrid` | 10 | 121 | PASS | PASS | **PASS** |
+| Setting | Budget per task | Development starts | 1. No forbidden information | 2. Rollout budget | 3. No test-time optimization | Conclusion |
+| --- | ---: | ---: | --- | --- | --- | --- |
+| `Demo-only` | 0 | 0 | PASS | PASS | PASS | **PASS** |
+| `Interaction-only` | 10 | 123 | PASS | PASS | PASS | **PASS** |
+| `Hybrid` | 10 | 121 | PASS | PASS | PASS | **PASS** |
 
 ### Development starts per task
 
@@ -271,6 +271,40 @@ Every task had a budget of 0 and used 0 starts. Seed validity is N/A because no 
 - **Compaction transcripts:** they are not saved as separate files, but their API requests and responses are in `development_api/`.
 - **Cost (reported, accuracy not judged):** development API used 1,156 requests, estimated at $84.17. Evaluation used 0 requests.
 
+#### Check 3 (added 2026-11-23 under the updated skill)
+
+**Check 3: no test-time optimization — PASS**
+
+Scope: RAX · Demo-only · budget 0 · 16 tasks × 50 = 800 test episodes. `<CASE>` = `demo_only_20261121/rax/demo-only/R0`, `<ROOT>` = its study root `demo_only_20261121/`. Auditor: Claude Opus 5.5, 2026-11-22. Read-only inspection. Times are host local (EST, UTC−5).
+
+Evidence
+- **Same policy in every episode.** For all 16 tasks, `<CASE>/evaluation/<Task>/policy/` (42 files) recomputes to `policy_sha256` in `frozen_evaluation.json`. That equals the development submission bundle in `<CASE>/development/<Task>/state.json` (`submission.bundle`), and `development/<Task>/bundles/<id>/` recomputes to the same files. Each of the 800 `evaluation/episodes/<Task>/episode_NNN/state.json` files registers exactly one bundle, and its copied files recompute to the frozen hashes. Each task's 50 `result.json` files carry a single `native_result.sha256`. All 800 episodes use the same SDK snapshot (`rax-controller-*/runtime.py`, sha256 `33e2e976…`) and the image digest `sha256:d143d08a…` pinned in `<ROOT>/study_plan.json`.
+- **Checks run per episode.** `<ROOT>/runtime_source/benchmark_io/evaluation.py:87-98` (`verify_frozen`: policy hashes, 756 execution-file hashes, development attempt count) runs on every `reserve` (`:100-101`) and at simulator reset (`runtime_source/rax/services/robomme_plus/session.py:52`). `benchmark_io/unified_study.py:200,210` also re-verifies the bundle against the submission. Today the current `runtime_source/`, `protocol/`, `runtime_policy.json` and `study_plan.json` hash to every manifest's `execution_sha256` with 0 differences.
+- **The mid-test checker patch did not change the policy.** In `<ROOT>/audit/corrections/empty_storage_lock_20261122/`, `evaluation.patch` adds only an exclusion for the empty file `runtime_source/rax/runtime/workspace-storage.lock`. That file was created at 01:28:26, as testing began. I compared `before/rax/demo-only/R0/evaluation/<Task>/frozen_evaluation.json` with the current manifest for all 16 tasks:
+  - `policy_sha256` is identical;
+  - `execution_sha256` differs only for `runtime_source/benchmark_io/evaluation.py` (`e0a17366…` → `5e0d34c6…`);
+  - the only other change is the appended `operator_harness_corrections` entry.
+
+  `<ROOT>/operator/fix_storage_lock.py:39-49,61-69,92-96` required evaluation to be held with no running jobs, asserted the policies were unchanged, and allowed only the lock filter to change.
+- **Episodes before and after the patch ran the same bundle.** The 10 RAX episodes that ran before the patch (episode 0 of BinFill through StopCube, from 2026-11-22 01:28) use the same bundle sha256 as the 790 after it. Their `result.json` hashes still equal those in `recovery_plan.json`. The 790 rejected jobs never reserved an episode: each ledger `evaluation/<Task>/evaluation_attempts.sqlite3` has 50 rows with contiguous ids 1–50, purpose `frozen_full_evaluation_v2`, and seeds equal to the manifest records.
+- **Development ended before testing.**
+  - The last development API call ended 2026-11-21 23:03:09. Of 1,156 records in `<CASE>/development_api/*/transport.json`, none started at or after the first test.
+  - The last submission was at 23:02:55. Manifests were created 23:03:13–16, and `development_complete.json` is stamped 23:03:16 with 0 training starts. `study/attempts.sqlite3` has 0 rows, matching `development_attempt_count` 0.
+  - Testing ran from 2026-11-22 01:28:10 (first reservation) to 11:41:57 (last end).
+  - In `<ROOT>/queue.sqlite3`, the only RAX `develop` job finished at 23:03:20. No file under `<CASE>/development/` was modified at or after 01:28:10.
+- **No test-time model calls.** `api_budget.calls_used` is 0 and `gemini_api_seconds` is 0 in all 800 results, as is `evaluation/api_usage.json`.
+- **No state carried between episodes.**
+  - Each episode is its own worker, whose supervisor root is its own `episode_NNN/` (`unified_study.py:205`). Each simulator process runs one episode (`session.py:46`).
+  - Each episode starts a fresh container (`rax/services/controller/sandbox.py:110-119,155-168`): `--network=none --read-only`, with the bundle, SDK and workspace scaffold mounted read-only. Only that episode's new `writable/` is mounted for output, and `/tmp` is a fresh tmpfs.
+  - The policies write only to `/workspace/output` and read only their own run's frames. Every episode `state.json` holds exactly one `formal` result.
+- **No test results reached development or selection.** Manifests record `test_feedback_to_agent: false`. Development had already finished, and every submission predates the freeze.
+
+Notes
+- The host-environment gap is not a policy change. The manifests do not pin the host `.venv`, but nothing in it changed during testing. The post-test `freeze_supplement_20261122/host_env_demo_only.json` shows no change, and my own stat of 56,870 venv entries found the newest mtime or ctime at 2026-11-21 17:47:24, before the first test.
+- `audit/corrections/provider_restart_20261122/` (11:03) concerns ASPIRE's SAM3, graspnet, pyroki and curobo services and a scheduler overlay. `retry_candidates.json` lists no RAX job, and the RAX runtime hashes are unchanged.
+- The patch is evaluation tooling, not policy. The manifests can be rewritten in place, so the `before/` copies, `evaluation.patch` and `correction.json` are the audit trail.
+- This run had no OOM retries.
+
 </details>
 
 <details>
@@ -386,6 +420,40 @@ Starts are given as total (interactive + rehearsal). The seed column lists start
 - An ASPIRE-only provider-port fix edited the shared harness file `unified_study.py` during RAX development. It is disclosed in `<ROOT>/audit/corrections/provider_ports/` and has no effect on RAX inputs or the start count.
 - Development API usage: 1,307 requests, all logged through the proxy, with an estimated cost of $87.93. This is reported for completeness; cost accuracy is not judged.
 
+#### Check 3 (added 2026-11-23 under the updated skill)
+
+**Check 3: no test-time optimization — PASS**
+
+Scope: RAX · Interaction-only · budget 10 · 16 tasks × 50 = 800 test episodes. `<CASE>` = `r10_20261121/rax/interaction-only/R10`, `<ROOT>` = `r10_20261121/`. Auditor: Claude Opus 5.5, 2026-11-22. Read-only inspection. Times are host local (EST, UTC−5).
+
+Evidence
+- **Same policy in every episode.** For all 16 tasks, `<CASE>/evaluation/<Task>/policy/` (58 files) recomputes to `policy_sha256` in `frozen_evaluation.json`. That equals the submission bundle in `<CASE>/development/<Task>/state.json`, and `development/<Task>/bundles/<id>/` recomputes to the same files. All 800 `evaluation/episodes/<Task>/episode_NNN/state.json` files hold one bundle whose copied files recompute to the frozen hashes. Each task has a single `native_result.sha256` across its 50 results. All 800 use the SDK snapshot `runtime.py` `33e2e976…` and the image `sha256:d143d08a…` (`<ROOT>/study_plan.json`).
+- **The manifests were never rewritten and the harness is unchanged.** Every manifest's mtime equals its `created` time (2026-11-21 19:15:04–07), and none has `operator_harness_corrections`. The current `<ROOT>/runtime_source/`, `protocol/`, `runtime_policy.json` and `study_plan.json` reproduce all 757 `execution_sha256` entries exactly. That count includes the empty `workspace-storage.lock` (`e3b0c442…`), which was created at 17:58, during development. `verify_frozen` (`runtime_source/benchmark_io/evaluation.py:79-90`) runs on every `reserve` (`:92-93`) and at simulator reset (`rax/services/robomme_plus/session.py:52`).
+- **Development ended before testing.**
+  - The last development API call ended 19:15:02. Of 1,307 records in `<CASE>/development_api/`, none started at or after the first test.
+  - `study/attempts.sqlite3` has 123 rows; the last ended 19:13:56, and the count equals `development_attempt_count` 123. The last submission was at 19:14:41, and `development_complete.json` is stamped 19:15:07.
+  - In `<ROOT>/queue.sqlite3`, the RAX `develop` job finished at 19:15:13.
+  - Testing started at 19:59:44, and the main pass ended 2026-11-21 22:56:30.
+  - No file under `<CASE>/development/` was modified at or after 19:59:44. Evaluation made 0 API calls (`calls_used` 0 in all 800 results).
+- **The six OOM retries used the same frozen policy.** Retried episodes: BinFill 12, ButtonUnmask 12, RouteStick 11, SwingXtimes 13, VideoPlaceButton 10 and VideoPlaceOrder 10. They ran 2026-11-22 19:40:18–19:45:50. Each `oom_retry_20261122/records/r10_20261121/rax/interaction-only/R10/<Task>/episode_NNN.json` shows:
+  - frozen policy and execution hashes equal to the manifest;
+  - the same seed as the original run;
+  - original and retry `native_result.sha256` identical;
+  - `policy_changes: 0`.
+
+  Against `oom_retry_20261122/database_backups/.../evaluation_attempts.sqlite3`, each affected ledger lost only the original OOM reservation and gained one new reservation (id 51) for the same episode and seed. No other row changed. The six were every RAX episode in this run with a simulator CUDA OOM (`runs/agentic_oom_audit_20261122/episodes.csv`). Each retry outcome replaces the original whether or not it succeeds (`oom_retry_20261122/operator/retry.py:126-132`). These are reruns of an unchanged policy, not optimization.
+- **No state carried between episodes.**
+  - Each episode is a separate worker with its own supervisor root (`unified_study.py:205`), and each simulator process runs one episode (`session.py:46`).
+  - Each episode starts a fresh container (`rax/services/controller/sandbox.py:110-119,155-168`): `--network=none --read-only`, with the bundle, SDK and workspace mounted read-only, plus a new per-episode output mount and tmpfs.
+  - Policy file I/O goes only to `/workspace/output` and to the current run's frames. Each episode state holds one `formal` result.
+- **No test results reached development or selection.** `test_feedback_to_agent` is false, all RAX development preceded testing, and the submissions predate the freeze.
+
+Notes
+- The host `.venv` is not pinned in the manifests. The post-test `freeze_supplement_20261122/host_env_r10.json` and my own stat (newest venv change at 2026-11-21 17:47:24) show no change during testing.
+- `audit/rax_evaluation_start/operator_scheduler_changes.patch` only raised the scheduler's concurrency limits, in a separate snapshot (`runtime/operator_scheduler_20`). The frozen `runtime_source/` hashes still match.
+- ASPIRE development continued in the same study root during RAX testing, including `audit/movecube_submission_20261121/` (ASPIRE, at 21:22). That is another method's activity, and no RAX record changed.
+- The released copies in `release_r10_20261122/staging/rax/solutions/interaction-only/R10/` match the frozen policy hashes for 16 of 16 tasks.
+
 </details>
 
 <details>
@@ -465,5 +533,39 @@ cover every agent session and every start.
 - The compaction child sessions have no native transcript files. Their prompts and responses are in `development_api/` (`0632`, `0667`, `0680`, `0796`, `0870`, `1138`, `1534`, `1603`) and in the SubagentStop hook records.
 - The ASPIRE-only provider-port fix changed `runtime_source/benchmark_io/unified_study.py` at 22:53 UTC on 2026-11-21, during RAX development. It is disclosed in `<STUDY_ROOT>/audit/corrections/provider_ports/` and does not affect access or accounting.
 - This report supersedes my earlier `harness_audit.md` and `development_audit.md` under the new rules. Their H7 finding (the unpinned host environment) and the OOM reruns concern freezing and test-time evaluation, which are no longer judged.
+
+#### Check 3 (added 2026-11-23 under the updated skill)
+
+**Check 3: no test-time optimization — PASS**
+
+Scope: RAX · Hybrid (`demo&interaction`) · budget 10 · 16 tasks × 50 = 800 test episodes. `<CASE>` = `r10_20261121/rax/demo&interaction/R10`, `<ROOT>` = `r10_20261121/`. Auditor: Claude Opus 5.5, 2026-11-22. Read-only inspection. Times are host local (EST, UTC−5).
+
+Evidence
+- **Same policy in every episode.** For all 16 tasks, `<CASE>/evaluation/<Task>/policy/` (74 files) recomputes to `policy_sha256` in `frozen_evaluation.json`. That equals the submission bundle in `<CASE>/development/<Task>/state.json`, and `development/<Task>/bundles/<id>/` recomputes to the same files. All 800 `evaluation/episodes/<Task>/episode_NNN/state.json` files hold one bundle whose copied files recompute to the frozen hashes. Each task has a single `native_result.sha256` across its 50 results. All 800 use the SDK `runtime.py` `33e2e976…` and the image `sha256:d143d08a…` (`<ROOT>/study_plan.json`).
+- **The manifests were never rewritten and the harness is unchanged.** Every manifest's mtime equals its `created` time (2026-11-21 19:25:23–25), and none has `operator_harness_corrections`. The current `<ROOT>/runtime_source/`, `protocol/`, `runtime_policy.json` and `study_plan.json` reproduce all 757 `execution_sha256` entries exactly. `verify_frozen` (`runtime_source/benchmark_io/evaluation.py:79-90`) runs on every `reserve` (`:92-93`) and at simulator reset (`rax/services/robomme_plus/session.py:52`).
+- **Development ended before testing.**
+  - The last development API call ended 19:25:19. Of 1,638 records in `<CASE>/development_api/`, none started at or after the first test.
+  - `study/attempts.sqlite3` has 121 rows; the last ended 19:24:28, and the count equals `development_attempt_count` 121. The last submission was at 19:24:49, and `development_complete.json` is stamped 19:25:25.
+  - In `<ROOT>/queue.sqlite3`, the RAX `develop` job finished at 19:25:30.
+  - Testing started at 19:59:44, and the main pass ended 2026-11-21 22:55:58.
+  - No file under `<CASE>/development/` was modified at or after 19:59:44. Evaluation made 0 API calls (`calls_used` 0 in all 800 results).
+- **The six OOM retries used the same frozen policy.** Retried episodes: BinFill 11, ButtonUnmaskSwap 11, PickXtimes 10 and 11, VideoPlaceOrder 10 and VideoRepick 10. They ran 2026-11-22 19:34:45–19:41:10. Each `oom_retry_20261122/records/r10_20261121/rax/demo&interaction/R10/<Task>/episode_NNN.json` shows:
+  - frozen policy and execution hashes equal to the manifest;
+  - the same seed as the original run;
+  - original and retry `native_result.sha256` identical;
+  - `policy_changes: 0`.
+
+  Against `oom_retry_20261122/database_backups/.../evaluation_attempts.sqlite3`, each affected ledger lost only the original OOM reservations and gained one new reservation per retried episode with the same episode and seed (PickXtimes: ids 11 and 12 replaced by 51 and 52). No other row changed. The six were every RAX episode in this run with a simulator CUDA OOM (`runs/agentic_oom_audit_20261122/episodes.csv`). Each retry outcome replaces the original whether or not it succeeds (`oom_retry_20261122/operator/retry.py:126-132`). These are reruns of an unchanged policy, not optimization.
+- **No state carried between episodes.**
+  - Each episode is a separate worker with its own supervisor root (`unified_study.py:205`), and each simulator process runs one episode (`session.py:46`).
+  - Each episode starts a fresh container (`rax/services/controller/sandbox.py:110-119,155-168`): `--network=none --read-only`, with the bundle, SDK and workspace mounted read-only, plus a new per-episode output mount and tmpfs.
+  - Policy file I/O goes only to `/workspace/output` and to the current run's frames; for example, `ButtonUnmaskSwap/policy/controller.py:151` writes `track_history.json` there. Each episode state holds one `formal` result.
+- **No test results reached development or selection.** `test_feedback_to_agent` is false, all RAX development preceded testing, and the submissions predate the freeze.
+
+Notes
+- The host `.venv` is not pinned in the manifests. The post-test `freeze_supplement_20261122/host_env_r10.json` and my own stat (newest venv change at 2026-11-21 17:47:24) show no change during testing.
+- `audit/rax_evaluation_start/operator_scheduler_changes.patch` only raised the scheduler's concurrency limits, in a separate snapshot (`runtime/operator_scheduler_20`). The frozen `runtime_source/` hashes still match.
+- ASPIRE development continued in the same study root during RAX testing, including the ASPIRE Hybrid MoveCube submission continuation at 21:22 (`audit/movecube_submission_20261121/`). That is another method's activity, and no RAX record changed.
+- The released copies in `release_r10_20261122/staging/rax/solutions/hybrid/R10/` match the frozen policy hashes for 16 of 16 tasks.
 
 </details>
